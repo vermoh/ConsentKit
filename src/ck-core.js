@@ -34,18 +34,86 @@
   var CATEGORIES = ['necessary', 'functional', 'analytics', 'marketing'];
   var OPT_IN = ['functional', 'analytics', 'marketing'];
 
-  // Domain database: host -> category.
+  // Domain database: host -> category. Matching is suffix-based (see
+  // categoryForUrl), so a bare registrable domain also covers its subdomains.
+  // Bare entries are used ONLY for domains dedicated entirely to tracking;
+  // where a parent domain also serves ordinary site assets (CDNs, fonts,
+  // images) the specific tracking subdomain is listed instead.
+  // Snapshot: 2026-08. Not exhaustive — extended as new trackers appear.
   var HOST_DB = {
+    // --- analytics -----------------------------------------------------
     'google-analytics.com': 'analytics',
     'googletagmanager.com': 'analytics',
     'ssl.google-analytics.com': 'analytics',
+    'analytics.google.com': 'analytics',      // subdomain only: google.com is not a tracker
     'mc.yandex.ru': 'analytics',
-    'static.hotjar.com': 'analytics',
-    'script.hotjar.com': 'analytics',
+    'mc.yandex.com': 'analytics',
+    'hotjar.com': 'analytics',                // static./script./vars. subdomains
+    'hotjar.io': 'analytics',
+    'clarity.ms': 'analytics',                // Microsoft Clarity
+    'matomo.cloud': 'analytics',              // Matomo Cloud tenants
+    'mixpanel.com': 'analytics',              // cdn.mxpnl.com below
+    'mxpnl.com': 'analytics',
+    'amplitude.com': 'analytics',
+    'segment.com': 'analytics',
+    'segment.io': 'analytics',
+    'heap.io': 'analytics',
+    'heapanalytics.com': 'analytics',
+    'fullstory.com': 'analytics',
+    'mouseflow.com': 'analytics',
+    'smartlook.com': 'analytics',
+    'smartlook.cloud': 'analytics',
+    'plausible.io': 'analytics',
+    'crazyegg.com': 'analytics',
+    'logrocket.com': 'analytics',
+    'lr-ingest.io': 'analytics',              // LogRocket ingest
+    'newrelic.com': 'analytics',              // browser agent
+    'nr-data.net': 'analytics',               // New Relic beacon
+    'datadoghq.com': 'analytics',             // RUM
+    'datadoghq-browser-agent.com': 'analytics',
+
+    // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
+    'facebook.net': 'marketing',              // connect.facebook.net covered above
     'analytics.tiktok.com': 'marketing',
     'googleadservices.com': 'marketing',
-    'doubleclick.net': 'marketing'
+    'doubleclick.net': 'marketing',
+    'googlesyndication.com': 'marketing',
+    'criteo.com': 'marketing',
+    'criteo.net': 'marketing',
+    'taboola.com': 'marketing',
+    'outbrain.com': 'marketing',
+    'snap.licdn.com': 'marketing',            // subdomain: licdn.com serves LinkedIn assets
+    'ads.linkedin.com': 'marketing',
+    'static.ads-twitter.com': 'marketing',
+    'ads-twitter.com': 'marketing',
+    'ct.pinterest.com': 'marketing',          // subdomain: pinterest.com is a normal site
+    'sc-static.net': 'marketing',             // Snapchat pixel CDN
+    'bat.bing.com': 'marketing',              // subdomain: bing.com is a normal site
+    'adroll.com': 'marketing',
+    'hs-analytics.net': 'marketing',          // HubSpot tracking
+    'hs-scripts.com': 'marketing',
+    'hsadspixel.net': 'marketing',
+    'chimpstatic.com': 'marketing',           // Mailchimp connected sites
+    'list-manage.com': 'marketing',
+    'redditstatic.com': 'marketing',
+    'q.quora.com': 'marketing',               // subdomain: quora.com is a normal site
+    'amazon-adsystem.com': 'marketing',
+
+    // --- functional ----------------------------------------------------
+    'intercom.io': 'functional',
+    'intercomcdn.com': 'functional',
+    'zopim.com': 'functional',                // Zendesk Chat
+    'zdassets.com': 'functional',             // Zendesk widget
+    'crisp.chat': 'functional',
+    'tawk.to': 'functional',
+    'livechatinc.com': 'functional',
+    'drift.com': 'functional',
+    'driftt.com': 'functional',
+    'jivosite.com': 'functional',
+    'jivo.chat': 'functional',
+    'tidio.co': 'functional',
+    'tidiochat.com': 'functional'
   };
 
   // Path-fragment database: URL substring -> category (demo trackers).
@@ -57,15 +125,59 @@
 
   // Cookie masks cleared on reject/withdraw, grouped by the category that owns
   // them, so a partial accept only clears the categories that stay denied.
+  //
+  // Scope note: only FIRST-PARTY cookies (written on the host site's domain) can
+  // be removed via document.cookie. Cookies a vendor sets on its own domain
+  // (e.g. LinkedIn's bcookie on .linkedin.com) are out of reach and deliberately
+  // not listed. Exact names are preferred over prefixes; prefixes are used only
+  // where the suffix is dynamic (a property/site id) and the stem is distinctive
+  // enough not to collide with unrelated cookies. Snapshot: 2026-08.
   var COOKIE_EXACT = {
-    analytics: ['_ga', '_gid', 'demo_ga'],
-    marketing: ['_fbp', '_fbc', '_ttp', '_gcl_au', 'demo_fbp'],
-    functional: ['demo_chat']
+    analytics: [
+      '_ga', '_gid', '_gat',
+      '_clck', '_clsk',                       // Clarity (NOT a _cl prefix: too broad)
+      '_hjSessionUser', '_hjSession', '_hjIncludedInSessionSample',
+      '_fs_uid',                              // FullStory
+      'mf_user',                              // Mouseflow
+      'ajs_user_id', 'ajs_anonymous_id',      // Segment
+      'is_returning',                         // Crazy Egg
+      'demo_ga'
+    ],
+    marketing: [
+      '_fbp', '_fbc', '_ttp', '_gcl_au', '_gcl_aw',
+      '_scid', '_scid_r',                     // Snapchat
+      '_uetsid', '_uetvid',                   // Microsoft/Bing Ads
+      '_rdt_uuid',                            // Reddit
+      '_pin_unauth',                          // Pinterest
+      'li_fat_id',                            // LinkedIn Insight (first-party)
+      '__adroll', '__adroll_fpc',
+      'demo_fbp'
+    ],
+    functional: [
+      'demo_chat'
+    ]
   };
   var COOKIE_PREFIX = {
-    analytics: ['_ga_', '_ym_', '_hj', '_gat'],
-    marketing: ['_gac_', '_ttp_'],
-    functional: []
+    analytics: [
+      '_ga_',                                 // GA4 per-property
+      '_ym_',                                 // Yandex Metrica
+      '_hj',                                  // Hotjar (vendor-owned stem)
+      '_pk_',                                 // Matomo
+      'ajs_',                                 // Segment
+      '_dd_'                                  // Datadog RUM
+    ],
+    marketing: [
+      '_gac_',                                // Google Ads per-campaign
+      '_ttp_',
+      'cto_',                                 // Criteo
+      'hubspotutk', '__hstc', '__hssrc', '__hssc'
+    ],
+    functional: [
+      'intercom-',                            // Intercom widget state
+      'drift_', 'driftt_',
+      'crisp-client',
+      '__tawkuuid'
+    ]
   };
   // demo_* cookies not matched above are only cleared on a full purge.
   var FULL_PURGE_PREFIX = ['demo_'];
@@ -836,7 +948,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.3.0',
+    version: '0.3.1',
     config: config,
 
     init: function (userConfig) {
