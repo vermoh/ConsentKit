@@ -1,0 +1,1864 @@
+<script>
+/* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
+ *
+ * Версия ConsentKit: 0.3.0
+ * Дата сборки:      2026-08-27
+ * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
+ * Язык баннера:     auto (по языку браузера посетителя)
+ * Вид:              bar / bottom, тема auto, акцент #2B50D8
+ * Версия политики:  1
+ *
+ * Ноль внешних запросов: до согласия посетителя ничего никуда не отправляется.
+ * Файл собран автоматически — правьте не его, а исходники и пересоберите:
+ *   node tools/build-inline.mjs --langs=bg,ca,cs,da,de,el,en,es,et,fi,fr,ga,hr,hu,is,it,lt,lv,mk,mt,nb,nl,no,pl,pt,ro,ru,sk,sl,sq,sr,sv,tr,uk --language=auto --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/eu-bar.html
+ */
+;
+/*!
+ * ConsentKit Core — consent state + storage + blocking engine + Google Consent Mode v2.
+ * Vanilla ES2020, zero dependencies, no build step.
+ * Blocking activates at parse time, before ConsentKit.init().
+ *
+ * Copyright (c) 2026 E-COM CONSULT PLUS. MIT License — see LICENSE.
+ */
+(function (global) {
+  'use strict';
+
+  if (!global) { return; }
+  var doc = global.document;
+
+  // ---------------------------------------------------------------------------
+  // Natives captured before any patching, so unblocking never re-enters patches.
+  // ---------------------------------------------------------------------------
+  var nativeCreateElement = doc && doc.createElement ? doc.createElement.bind(doc) : null;
+  var nativeSetAttribute = (global.Element && global.Element.prototype && global.Element.prototype.setAttribute) || null;
+  var nativeScriptSrcDesc = null;
+  try {
+    if (global.HTMLScriptElement && global.HTMLScriptElement.prototype) {
+      nativeScriptSrcDesc = Object.getOwnPropertyDescriptor(global.HTMLScriptElement.prototype, 'src');
+    }
+  } catch (e) { /* noop */ }
+
+  // Internal flag: while true, patches let everything through (used when we
+  // re-create previously blocked scripts after consent).
+  var bypass = false;
+
+  // ---------------------------------------------------------------------------
+  // Constants
+  // ---------------------------------------------------------------------------
+  var STORAGE_KEY = 'ck_consent';
+  var CATEGORIES = ['necessary', 'functional', 'analytics', 'marketing'];
+  var OPT_IN = ['functional', 'analytics', 'marketing'];
+
+  // Domain database: host -> category.
+  var HOST_DB = {
+    'google-analytics.com': 'analytics',
+    'googletagmanager.com': 'analytics',
+    'ssl.google-analytics.com': 'analytics',
+    'mc.yandex.ru': 'analytics',
+    'static.hotjar.com': 'analytics',
+    'script.hotjar.com': 'analytics',
+    'connect.facebook.net': 'marketing',
+    'analytics.tiktok.com': 'marketing',
+    'googleadservices.com': 'marketing',
+    'doubleclick.net': 'marketing'
+  };
+
+  // Path-fragment database: URL substring -> category (demo trackers).
+  var PATH_DB = {
+    '/trackers/ga.js': 'analytics',
+    '/trackers/pixel.js': 'marketing',
+    '/trackers/chat.js': 'functional'
+  };
+
+  // Cookie masks cleared on reject/withdraw, grouped by the category that owns
+  // them, so a partial accept only clears the categories that stay denied.
+  var COOKIE_EXACT = {
+    analytics: ['_ga', '_gid', 'demo_ga'],
+    marketing: ['_fbp', '_fbc', '_ttp', '_gcl_au', 'demo_fbp'],
+    functional: ['demo_chat']
+  };
+  var COOKIE_PREFIX = {
+    analytics: ['_ga_', '_ym_', '_hj', '_gat'],
+    marketing: ['_gac_', '_ttp_'],
+    functional: []
+  };
+  // demo_* cookies not matched above are only cleared on a full purge.
+  var FULL_PURGE_PREFIX = ['demo_'];
+
+  var DEFAULT_CONFIG = {
+    policyVersion: '1',
+    language: 'auto',
+    layout: { type: 'bar', position: 'bottom' },
+    theme: { accent: '#2B50D8', radius: '10px' },
+    categories: {
+      functional: { enabled: true },
+      analytics: { enabled: true },
+      marketing: { enabled: true }
+    },
+    consentTtlDays: 365,
+    integrations: { gcm: true, gtmDataLayer: true },
+    cookieTable: []
+  };
+
+  // ---------------------------------------------------------------------------
+  // Small utilities (all defensive — core must never throw)
+  // ---------------------------------------------------------------------------
+  function noop() {}
+
+  function clone(o) {
+    try { return JSON.parse(JSON.stringify(o)); } catch (e) { return {}; }
+  }
+
+  function isPlainObject(v) {
+    return !!v && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  // Shallow merge one level deep so partial nested config keeps sibling defaults.
+  function mergeConfig(base, patch) {
+    var out = clone(base);
+    if (!isPlainObject(patch)) { return out; }
+    Object.keys(patch).forEach(function (k) {
+      var v = patch[k];
+      if (isPlainObject(v) && isPlainObject(out[k])) {
+        Object.keys(v).forEach(function (k2) {
+          if (isPlainObject(v[k2]) && isPlainObject(out[k][k2])) {
+            var inner = out[k][k2];
+            Object.keys(v[k2]).forEach(function (k3) { inner[k3] = v[k2][k3]; });
+          } else {
+            out[k][k2] = v[k2];
+          }
+        });
+      } else {
+        out[k] = v;
+      }
+    });
+    return out;
+  }
+
+  function uuid() {
+    try {
+      if (global.crypto && typeof global.crypto.randomUUID === 'function') {
+        return global.crypto.randomUUID();
+      }
+      if (global.crypto && typeof global.crypto.getRandomValues === 'function') {
+        var b = new Uint8Array(16);
+        global.crypto.getRandomValues(b);
+        b[6] = (b[6] & 0x0f) | 0x40;
+        b[8] = (b[8] & 0x3f) | 0x80;
+        var hex = [];
+        for (var i = 0; i < 16; i++) { hex.push((b[i] + 0x100).toString(16).slice(1)); }
+        return hex.slice(0, 4).join('') + '-' + hex.slice(4, 6).join('') + '-' +
+               hex.slice(6, 8).join('') + '-' + hex.slice(8, 10).join('') + '-' +
+               hex.slice(10, 16).join('');
+      }
+    } catch (e) { /* fall through */ }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      return (c === 'x' ? r : ((r & 0x3) | 0x8)).toString(16);
+    });
+  }
+
+  function b64encode(str) {
+    try {
+      if (typeof global.btoa === 'function') {
+        return global.btoa(unescape(encodeURIComponent(str)));
+      }
+      if (typeof global.Buffer === 'function') {
+        return global.Buffer.from(str, 'utf8').toString('base64');
+      }
+    } catch (e) { /* noop */ }
+    return '';
+  }
+
+  function b64decode(str) {
+    try {
+      if (typeof global.atob === 'function') {
+        return decodeURIComponent(escape(global.atob(str)));
+      }
+      if (typeof global.Buffer === 'function') {
+        return global.Buffer.from(str, 'base64').toString('utf8');
+      }
+    } catch (e) { /* noop */ }
+    return '';
+  }
+
+  function emptyCategories() {
+    return { necessary: true, functional: false, analytics: false, marketing: false };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cookie helpers
+  // ---------------------------------------------------------------------------
+  function readCookie(name) {
+    try {
+      var raw = doc && typeof doc.cookie === 'string' ? doc.cookie : '';
+      var parts = raw.split(';');
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i].trim();
+        var eq = p.indexOf('=');
+        if (eq > -1 && p.slice(0, eq) === name) { return p.slice(eq + 1); }
+      }
+    } catch (e) { /* noop */ }
+    return null;
+  }
+
+  function writeCookie(name, value, days) {
+    try {
+      var exp = new Date(Date.now() + days * 864e5).toUTCString();
+      doc.cookie = name + '=' + value + '; expires=' + exp + '; path=/; SameSite=Lax';
+    } catch (e) { /* noop */ }
+  }
+
+  function hostname() {
+    try { return (global.location && global.location.hostname) || ''; } catch (e) { return ''; }
+  }
+
+  // Delete on no-domain, host and .host variants — localhost rejects domain=.
+  function deleteCookie(name) {
+    var h = hostname();
+    var variants = ['', h ? '; domain=' + h : '', h ? '; domain=.' + h : ''];
+    // Also try the registrable parent (a.b.example.com -> .example.com).
+    var labels = h ? h.split('.') : [];
+    if (labels.length > 2) { variants.push('; domain=.' + labels.slice(-2).join('.')); }
+    for (var i = 0; i < variants.length; i++) {
+      try {
+        doc.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + variants[i];
+      } catch (e) { /* noop */ }
+    }
+  }
+
+  function listCookieNames() {
+    var names = [];
+    try {
+      var raw = doc && typeof doc.cookie === 'string' ? doc.cookie : '';
+      raw.split(';').forEach(function (p) {
+        var t = p.trim();
+        if (!t) { return; }
+        var eq = t.indexOf('=');
+        names.push(eq > -1 ? t.slice(0, eq) : t);
+      });
+    } catch (e) { /* noop */ }
+    return names;
+  }
+
+  // Purges cookies owned by the given categories. `full` also sweeps the
+  // catch-all demo_* prefix (used by rejectAll/withdraw).
+  function purgeCookies(cats, full) {
+    var exact = [];
+    var prefixes = full ? FULL_PURGE_PREFIX.slice() : [];
+    cats.forEach(function (c) {
+      exact = exact.concat(COOKIE_EXACT[c] || []);
+      prefixes = prefixes.concat(COOKIE_PREFIX[c] || []);
+    });
+
+    listCookieNames().forEach(function (n) {
+      if (n === STORAGE_KEY) { return; }
+      var hit = exact.indexOf(n) > -1;
+      if (!hit) {
+        for (var i = 0; i < prefixes.length; i++) {
+          if (n.indexOf(prefixes[i]) === 0) { hit = true; break; }
+        }
+      }
+      if (hit) { deleteCookie(n); }
+    });
+    // Masks may name cookies invisible to document.cookie: try them anyway.
+    exact.forEach(deleteCookie);
+  }
+
+  // Clears every known tracker cookie (reject / withdraw).
+  function purgeKnownCookies() {
+    purgeCookies(OPT_IN, true);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Storage
+  // ---------------------------------------------------------------------------
+  function lsGet(k) {
+    try { return global.localStorage ? global.localStorage.getItem(k) : null; } catch (e) { return null; }
+  }
+  function lsSet(k, v) {
+    try { if (global.localStorage) { global.localStorage.setItem(k, v); } } catch (e) { /* noop */ }
+  }
+  function lsDel(k) {
+    try { if (global.localStorage) { global.localStorage.removeItem(k); } } catch (e) { /* noop */ }
+  }
+
+  function saveRecord(rec) {
+    var payload = b64encode(JSON.stringify(rec));
+    if (!payload) { return; }
+    writeCookie(STORAGE_KEY, payload, ttlDays());
+    lsSet(STORAGE_KEY, payload);
+  }
+
+  function clearRecord() {
+    deleteCookie(STORAGE_KEY);
+    lsDel(STORAGE_KEY);
+  }
+
+  function ttlDays() {
+    var d = config && Number(config.consentTtlDays);
+    return (isFinite(d) && d > 0) ? d : 365;
+  }
+
+  function parseRecord(payload) {
+    if (!payload) { return null; }
+    var json = b64decode(payload);
+    if (!json) { return null; }
+    var rec;
+    try { rec = JSON.parse(json); } catch (e) { return null; }
+    if (!rec || typeof rec !== 'object' || !rec.categories) { return null; }
+    return rec;
+  }
+
+  // Reads cookie first, falls back to localStorage. Returns null when invalid,
+  // stale (policyVersion mismatch) or expired.
+  function loadRecord() {
+    var rec = parseRecord(readCookie(STORAGE_KEY)) || parseRecord(lsGet(STORAGE_KEY));
+    if (!rec) { return null; }
+    if (String(rec.policyVersion) !== String(config.policyVersion)) {
+      clearRecord();
+      return null;
+    }
+    var t = Date.parse(rec.ts);
+    if (!isFinite(t) || (Date.now() - t) > ttlDays() * 864e5) {
+      clearRecord();
+      return null;
+    }
+    var cats = emptyCategories();
+    CATEGORIES.forEach(function (c) {
+      if (c === 'necessary') { return; }
+      cats[c] = rec.categories[c] === true;
+    });
+    return {
+      id: rec.id || uuid(),
+      ts: rec.ts,
+      policyVersion: String(rec.policyVersion),
+      categories: cats,
+      method: rec.method || 'custom'
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------------
+  var config = clone(DEFAULT_CONFIG);
+  var initialized = false;
+  var state = {
+    decided: false,
+    id: null,
+    ts: null,
+    policyVersion: String(config.policyVersion),
+    categories: emptyCategories(),
+    method: null
+  };
+
+  function publicState() {
+    return {
+      decided: state.decided,
+      id: state.id,
+      ts: state.ts,
+      policyVersion: state.policyVersion,
+      categories: {
+        necessary: true,
+        functional: !!state.categories.functional,
+        analytics: !!state.categories.analytics,
+        marketing: !!state.categories.marketing
+      },
+      method: state.method
+    };
+  }
+
+  function dispatch(name, detail) {
+    try {
+      if (!doc || typeof doc.dispatchEvent !== 'function') { return; }
+      var ev;
+      if (typeof global.CustomEvent === 'function') {
+        ev = new global.CustomEvent(name, { detail: detail, bubbles: false, cancelable: false });
+      } else if (doc.createEvent) {
+        ev = doc.createEvent('CustomEvent');
+        ev.initCustomEvent(name, false, false, detail);
+      } else {
+        return;
+      }
+      doc.dispatchEvent(ev);
+    } catch (e) { /* UI layer absent or event system unavailable */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Google Consent Mode v2
+  // ---------------------------------------------------------------------------
+  function dataLayerPush(args) {
+    try {
+      global.dataLayer = global.dataLayer || [];
+      global.dataLayer.push(args);
+    } catch (e) { /* noop */ }
+  }
+
+  // Internal gtag shim; never clobbers a host-page window.gtag.
+  function ckGtag() { dataLayerPush(arguments); }
+
+  // Pushed exactly once, at parse time — before init() reveals
+  // integrations.gcm, and before any tag can load. Consent Mode expects a
+  // single 'default'; every later change goes through gcmUpdate().
+  function gcmDefault() {
+    var signals = gcmSignals(emptyCategories());
+    signals.wait_for_update = 500;
+    ckGtag('consent', 'default', signals);
+  }
+
+  // Maps consent categories onto GCM v2 signals. Shared by 'default' and
+  // 'update' pushes so the mapping lives in exactly one place.
+  function gcmSignals(c) {
+    var g = function (b) { return b ? 'granted' : 'denied'; };
+    return {
+      ad_storage: g(c.marketing),
+      analytics_storage: g(c.analytics),
+      ad_user_data: g(c.marketing),
+      ad_personalization: g(c.marketing),
+      functionality_storage: g(c.functional),
+      personalization_storage: g(c.functional),
+      security_storage: 'granted'
+    };
+  }
+
+  // Pushes the current state to both integrations. Withdraw relies on this too:
+  // it resets state.categories to all-false first, so every signal goes denied.
+  //
+  // The two gates are independent by design: Consent Mode signals answer to
+  // integrations.gcm, the ck_consent_update event answers to gtmDataLayer.
+  // A {gcm:false, gtmDataLayer:true} config must still populate the GTM
+  // ck_consent.* variables.
+  function gcmUpdate() {
+    try {
+      var integrations = config.integrations || {};
+      var c = state.categories;
+
+      if (integrations.gcm !== false) {
+        ckGtag('consent', 'update', gcmSignals(c));
+      }
+
+      if (integrations.gtmDataLayer !== false) {
+        dataLayerPush({
+          event: 'ck_consent_update',
+          ck_consent: {
+            necessary: true,
+            functional: !!c.functional,
+            analytics: !!c.analytics,
+            marketing: !!c.marketing
+          },
+          ck_method: state.method
+        });
+      }
+    } catch (e) { /* noop */ }
+  }
+
+  // Categories that already emitted a ck_consent_<cat> event on this page load.
+  // Never cleared: GTM cannot unload a tag that has already fired, so a second
+  // event for the same category would double-count. A fresh page load is the
+  // only reset boundary — withdraw/reject deliberately leave this set intact.
+  var firedCatEvents = {};
+
+  // Pushes { event: 'ck_consent_<category>' } for each granted opt-in category,
+  // once per page load. Gated on gtmDataLayer only: these drive GTM triggers and
+  // must fire even when Consent Mode is switched off.
+  function pushCategoryEvents() {
+    try {
+      if (config.integrations && config.integrations.gtmDataLayer === false) { return; }
+      OPT_IN.forEach(function (cat) {
+        if (!state.categories[cat] || firedCatEvents[cat]) { return; }
+        firedCatEvents[cat] = true;
+        dataLayerPush({ event: 'ck_consent_' + cat });
+      });
+    } catch (e) { /* noop */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Blocking engine — URL classification
+  // ---------------------------------------------------------------------------
+  function categoryForUrl(src) {
+    if (!src || typeof src !== 'string') { return null; }
+    var s = src;
+    var host = '';
+    try {
+      var base = (global.location && global.location.href) || 'http://localhost/';
+      var u = new URL(s, base);
+      host = (u.hostname || '').toLowerCase();
+      s = u.href;
+    } catch (e) {
+      var m = /^(?:[a-z]+:)?\/\/([^/?#]+)/i.exec(src);
+      host = m ? m[1].toLowerCase().replace(/:\d+$/, '') : '';
+    }
+    if (host) {
+      var keys = Object.keys(HOST_DB);
+      for (var i = 0; i < keys.length; i++) {
+        var e2 = keys[i];
+        if (host === e2 || host.length > e2.length && host.slice(-(e2.length + 1)) === '.' + e2) {
+          return HOST_DB[e2];
+        }
+      }
+    }
+    var low = String(s).toLowerCase();
+    var pkeys = Object.keys(PATH_DB);
+    for (var j = 0; j < pkeys.length; j++) {
+      if (low.indexOf(pkeys[j]) > -1) { return PATH_DB[pkeys[j]]; }
+    }
+    return null;
+  }
+
+  function allowed(cat) {
+    if (cat === 'necessary' || !cat) { return true; }
+    if (CATEGORIES.indexOf(cat) === -1) { return true; }
+    return state.categories[cat] === true;
+  }
+
+  // True when the URL is a known tracker whose category is not (yet) granted.
+  function shouldBlock(src) {
+    if (bypass) { return false; }
+    var cat = categoryForUrl(src);
+    if (!cat) { return false; }
+    return !allowed(cat);
+  }
+
+  function markBlocked(el, src, cat) {
+    try {
+      if (nativeSetAttribute) {
+        nativeSetAttribute.call(el, 'data-ck-blocked', '1');
+        nativeSetAttribute.call(el, 'data-ck-src', src);
+        nativeSetAttribute.call(el, 'data-ck', cat || 'marketing');
+      }
+      // Remember the real type (e.g. "module") so revival can restore it.
+      var origType = el.getAttribute ? el.getAttribute('type') : null;
+      if (origType && origType !== 'text/plain' && nativeSetAttribute) {
+        nativeSetAttribute.call(el, 'data-ck-type', origType);
+      }
+      if (el.type !== 'text/plain') {
+        try { el.type = 'text/plain'; } catch (e2) { /* noop */ }
+      }
+    } catch (e) { /* noop */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Blocking engine — patches (installed at parse time)
+  // ---------------------------------------------------------------------------
+  function installPatches() {
+    // 1. HTMLScriptElement.prototype.src setter.
+    try {
+      if (nativeScriptSrcDesc && nativeScriptSrcDesc.set && nativeScriptSrcDesc.configurable !== false) {
+        Object.defineProperty(global.HTMLScriptElement.prototype, 'src', {
+          configurable: true,
+          enumerable: nativeScriptSrcDesc.enumerable,
+          get: function () {
+            try { return nativeScriptSrcDesc.get.call(this); } catch (e) { return ''; }
+          },
+          set: function (v) {
+            if (shouldBlock(v)) {
+              markBlocked(this, String(v), categoryForUrl(v));
+              return;
+            }
+            try { nativeScriptSrcDesc.set.call(this, v); } catch (e) { /* noop */ }
+          }
+        });
+      }
+    } catch (e) { /* noop */ }
+
+    // 2. Element.prototype.setAttribute — covers setAttribute('src', ...).
+    try {
+      if (nativeSetAttribute && global.Element && global.Element.prototype) {
+        global.Element.prototype.setAttribute = function (name, value) {
+          try {
+            if (!bypass && typeof name === 'string' && name.toLowerCase() === 'src' &&
+                this && this.tagName && String(this.tagName).toUpperCase() === 'SCRIPT' &&
+                shouldBlock(value)) {
+              markBlocked(this, String(value), categoryForUrl(value));
+              return undefined;
+            }
+          } catch (e) { /* fall through to native */ }
+          return nativeSetAttribute.apply(this, arguments);
+        };
+      }
+    } catch (e) { /* noop */ }
+
+    // 3. document.createElement — pre-neutralize dynamically created scripts.
+    try {
+      if (nativeCreateElement && doc) {
+        doc.createElement = function (tag) {
+          var el = nativeCreateElement.apply(null, arguments);
+          try {
+            if (!bypass && typeof tag === 'string' && tag.toLowerCase() === 'script' &&
+                nativeScriptSrcDesc && nativeScriptSrcDesc.set) {
+              // Own-property guard so the element is covered even if the
+              // prototype patch was reverted by another library.
+              Object.defineProperty(el, 'src', {
+                configurable: true,
+                enumerable: false,
+                get: function () {
+                  try { return nativeScriptSrcDesc.get.call(this); } catch (e) { return ''; }
+                },
+                set: function (v) {
+                  if (shouldBlock(v)) {
+                    markBlocked(this, String(v), categoryForUrl(v));
+                    return;
+                  }
+                  try { nativeScriptSrcDesc.set.call(this, v); } catch (e) { /* noop */ }
+                }
+              });
+            }
+          } catch (e) { /* noop */ }
+          return el;
+        };
+      }
+    } catch (e) { /* noop */ }
+  }
+
+  // 4. MutationObserver on documentElement — catches markup-inserted scripts.
+  var observer = null;
+  function installObserver() {
+    try {
+      if (typeof global.MutationObserver !== 'function' || !doc || !doc.documentElement) { return; }
+      observer = new global.MutationObserver(function (records) {
+        if (bypass) { return; }
+        try {
+          for (var i = 0; i < records.length; i++) {
+            var added = records[i].addedNodes || [];
+            for (var j = 0; j < added.length; j++) { inspectNode(added[j]); }
+          }
+        } catch (e) { /* noop */ }
+      });
+      observer.observe(doc.documentElement, { childList: true, subtree: true });
+    } catch (e) { /* noop */ }
+  }
+
+  function inspectNode(node) {
+    try {
+      if (!node || node.nodeType !== 1) { return; }
+      var tag = node.tagName ? String(node.tagName).toUpperCase() : '';
+      if (tag === 'SCRIPT') { inspectScript(node); }
+      if (typeof node.querySelectorAll === 'function') {
+        var kids = node.querySelectorAll('script');
+        for (var i = 0; i < kids.length; i++) { inspectScript(kids[i]); }
+      }
+    } catch (e) { /* noop */ }
+  }
+
+  function inspectScript(el) {
+    try {
+      if (!el || el.getAttribute === undefined) { return; }
+      if (el.getAttribute('data-ck-blocked')) { return; }
+      var type = el.getAttribute('type');
+      if (type === 'text/plain' && el.getAttribute('data-ck')) { return; } // manual markup
+      var src = el.getAttribute('src');
+      if (!src) { return; }
+      if (shouldBlock(src)) {
+        var cat = categoryForUrl(src);
+        markBlocked(el, src, cat);
+        // Clear the attribute. Note: if the element was already connected the
+        // request may already be in flight — the createElement/src patches are
+        // the reliable path; this is a late net for markup-inserted scripts.
+        try { if (nativeSetAttribute) { nativeSetAttribute.call(el, 'src', ''); } } catch (e2) { /* noop */ }
+        try { if (nativeSetAttribute) { nativeSetAttribute.call(el, 'data-ck-src', src); } } catch (e3) { /* noop */ }
+      }
+    } catch (e) { /* noop */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Blocking engine — unblocking after consent
+  // ---------------------------------------------------------------------------
+  var SKIP_ATTRS = { type: 1, src: 1, 'data-src': 1, 'data-ck': 1, 'data-ck-src': 1, 'data-ck-blocked': 1 };
+
+  function reviveScript(old) {
+    if (!nativeCreateElement || !old || !old.parentNode) { return; }
+    var prev = bypass;
+    bypass = true;
+    try {
+      var fresh = nativeCreateElement('script');
+      // Copy attributes, minus our own bookkeeping.
+      var attrs = old.attributes || [];
+      for (var i = 0; i < attrs.length; i++) {
+        var a = attrs[i];
+        if (SKIP_ATTRS[String(a.name).toLowerCase()]) { continue; }
+        try { nativeSetAttribute.call(fresh, a.name, a.value); } catch (e) { /* noop */ }
+      }
+      var realType = old.getAttribute('data-ck-type');
+      if (realType) {
+        try { nativeSetAttribute.call(fresh, 'type', realType); } catch (e) { /* noop */ }
+      }
+      var src = old.getAttribute('data-src') || old.getAttribute('data-ck-src') || '';
+      if (src) {
+        // Preserve document order for external scripts.
+        try { fresh.async = false; } catch (e) { /* noop */ }
+        if (nativeScriptSrcDesc && nativeScriptSrcDesc.set) {
+          nativeScriptSrcDesc.set.call(fresh, src);
+        } else {
+          nativeSetAttribute.call(fresh, 'src', src);
+        }
+      } else {
+        try { fresh.text = old.text || old.textContent || ''; } catch (e) { /* noop */ }
+      }
+      try { nativeSetAttribute.call(fresh, 'data-ck-restored', '1'); } catch (e) { /* noop */ }
+      old.parentNode.insertBefore(fresh, old);
+      try { old.parentNode.removeChild(old); } catch (e) { /* noop */ }
+    } catch (e) {
+      /* noop */
+    } finally {
+      bypass = prev;
+    }
+  }
+
+  function qsa(sel) {
+    try {
+      if (!doc || typeof doc.querySelectorAll !== 'function') { return []; }
+      return Array.prototype.slice.call(doc.querySelectorAll(sel));
+    } catch (e) { return []; }
+  }
+
+  // Applies the current consent state to the DOM: revives newly-allowed scripts
+  // and iframes, in document order.
+  function applyConsentToDom() {
+    // Manual markup + auto-blocked scripts, one ordered pass.
+    var scripts = qsa('script[type="text/plain"][data-ck], script[data-ck-blocked]');
+    scripts.forEach(function (el) {
+      try {
+        if (el.getAttribute('data-ck-restored')) { return; }
+        var cat = el.getAttribute('data-ck');
+        if (!cat) { cat = categoryForUrl(el.getAttribute('data-src') || el.getAttribute('data-ck-src') || ''); }
+        if (!allowed(cat)) { return; }
+        reviveScript(el);
+      } catch (e) { /* noop */ }
+    });
+
+    // Iframes: set src from data-src once the category is granted.
+    qsa('iframe[data-ck][data-src]').forEach(function (el) {
+      try {
+        var cat = el.getAttribute('data-ck');
+        if (!allowed(cat)) { return; }
+        if (el.getAttribute('src')) { return; }
+        var src = el.getAttribute('data-src');
+        if (!src) { return; }
+        var prev = bypass;
+        bypass = true;
+        try { nativeSetAttribute.call(el, 'src', src); } finally { bypass = prev; }
+      } catch (e) { /* noop */ }
+    });
+  }
+
+  // Initial sweep for scripts already parsed before the observer attached.
+  function initialScan() {
+    qsa('script[src]').forEach(inspectScript);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Decisions
+  // ---------------------------------------------------------------------------
+  function commit(categories, method) {
+    var wasDecided = state.decided;
+    state.categories = {
+      necessary: true,
+      functional: categories.functional === true,
+      analytics: categories.analytics === true,
+      marketing: categories.marketing === true
+    };
+    state.decided = true;
+    state.method = method;
+    state.id = state.id || uuid();
+    state.ts = new Date().toISOString();
+    state.policyVersion = String(config.policyVersion);
+
+    saveRecord({
+      id: state.id,
+      ts: state.ts,
+      policyVersion: state.policyVersion,
+      categories: {
+        necessary: true,
+        functional: state.categories.functional,
+        analytics: state.categories.analytics,
+        marketing: state.categories.marketing
+      },
+      method: state.method
+    });
+
+    gcmUpdate();
+    pushCategoryEvents();
+
+    // Clear cookies of the categories that stay denied; a full reject sweeps
+    // the catch-all demo_* prefix too.
+    var denied = OPT_IN.filter(function (c) { return !state.categories[c]; });
+    if (denied.length) { purgeCookies(denied, denied.length === OPT_IN.length); }
+
+    applyConsentToDom();
+
+    if (!wasDecided) { dispatch('ck:consent', { state: publicState() }); }
+    dispatch('ck:change', { state: publicState() });
+  }
+
+  // Only categories enabled in config can be granted.
+  function filterByConfig(cats) {
+    var out = { functional: false, analytics: false, marketing: false };
+    OPT_IN.forEach(function (c) {
+      var cfg = config.categories && config.categories[c];
+      var enabled = !cfg || cfg.enabled !== false;
+      out[c] = enabled && cats[c] === true;
+    });
+    return out;
+  }
+
+  function accept(arg) {
+    try {
+      var cats, method;
+      if (arg === 'all' || arg === undefined || arg === null) {
+        cats = { functional: true, analytics: true, marketing: true };
+        method = 'accept_all';
+      } else if (isPlainObject(arg)) {
+        cats = { functional: arg.functional === true, analytics: arg.analytics === true, marketing: arg.marketing === true };
+        method = 'custom';
+      } else {
+        cats = { functional: true, analytics: true, marketing: true };
+        method = 'accept_all';
+      }
+      commit(filterByConfig(cats), method);
+    } catch (e) { /* noop */ }
+    return publicState();
+  }
+
+  function rejectAll() {
+    try {
+      commit({ functional: false, analytics: false, marketing: false }, 'reject_all');
+    } catch (e) { /* noop */ }
+    return publicState();
+  }
+
+  function withdraw() {
+    try {
+      state.decided = false;
+      state.id = null;
+      state.ts = null;
+      state.method = null;
+      state.categories = emptyCategories();
+      state.policyVersion = String(config.policyVersion);
+
+      clearRecord();
+      purgeKnownCookies();
+      // 'update' with everything denied, not a second 'default': Consent Mode
+      // accepts only one default, set before tags load. State was reset above,
+      // so gcmUpdate() emits all-denied and honours integrations.gcm.
+      gcmUpdate();
+      // Loaded scripts are not unloaded; a fresh page load starts clean.
+      dispatch('ck:change', { state: publicState() });
+    } catch (e) { /* noop */ }
+    return publicState();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
+  var ConsentKit = {
+    version: '0.3.0',
+    config: config,
+
+    init: function (userConfig) {
+      try {
+        config = mergeConfig(config, userConfig);
+        ConsentKit.config = config;
+
+        if (initialized) {
+          // Idempotent: merge config, no re-restore, no duplicate ck:init.
+          return publicState();
+        }
+        initialized = true;
+
+        var rec = loadRecord();
+        if (rec) {
+          state.decided = true;
+          state.id = rec.id;
+          state.ts = rec.ts;
+          state.policyVersion = rec.policyVersion;
+          state.categories = rec.categories;
+          state.method = rec.method;
+          gcmUpdate();
+          // Return visit: GTM triggers must fire for the restored categories.
+          pushCategoryEvents();
+        } else {
+          state.policyVersion = String(config.policyVersion);
+        }
+
+        initialScan();
+        applyConsentToDom();
+
+        dispatch('ck:init', { state: publicState(), config: config });
+      } catch (e) { /* core must never throw */ }
+      return publicState();
+    },
+
+    allowed: function (cat) {
+      try { return allowed(cat); } catch (e) { return false; }
+    },
+
+    getState: function () {
+      try { return publicState(); } catch (e) {
+        return { decided: false, id: null, ts: null, policyVersion: '1', categories: emptyCategories(), method: null };
+      }
+    },
+
+    accept: accept,
+    rejectAll: rejectAll,
+    withdraw: withdraw,
+
+    show: function () { dispatch('ck:ui:open-preferences', { state: publicState(), config: config }); },
+    hide: function () { dispatch('ck:ui:close', { state: publicState() }); },
+
+    // Introspection helpers for the demo status panel (read-only).
+    _categoryForUrl: categoryForUrl,
+    _categories: CATEGORIES.slice()
+  };
+
+  // ---------------------------------------------------------------------------
+  // Bootstrap — runs at parse time, before init().
+  // ---------------------------------------------------------------------------
+  // Each step is isolated: a failure in one (or a double-load re-patching an
+  // already-patched document) must never stop the API from being published.
+  try { gcmDefault(); } catch (e) { /* noop */ }
+  try { installPatches(); } catch (e) { /* noop */ }
+  try { installObserver(); } catch (e) { /* noop */ }
+  try { initialScan(); } catch (e) { /* noop */ }
+
+  try {
+    if (doc && typeof doc.addEventListener === 'function') {
+      doc.addEventListener('DOMContentLoaded', function () {
+        try { initialScan(); applyConsentToDom(); } catch (e) { /* noop */ }
+      }, false);
+    }
+  } catch (e) { /* noop */ }
+
+  global.ConsentKit = ConsentKit;
+  if (typeof module === 'object' && module && module.exports) { module.exports = ConsentKit; }
+  void noop;
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
+
+;
+/* ConsentKit locales (bg, ca, cs, da, de, el, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, sk, sl, sq, sr, sv, tr, uk) — filtered subset of src/ck-locales.js */
+(function(){if(typeof window==="undefined")return;window.__ckLocales=Object.assign(window.__ckLocales||{},{"bg":{"bannerTitle":"Използваме бисквитки","bannerText":"Необходимите бисквитки поддържат сайта работещ. Всичко останало — анализи, маркетинг, допълнителни удобства — се включва само с ваше съгласие. Можете да промените решението си по всяко време.","more":"Научете повече","acceptAll":"Приемам всички","rejectAll":"Отхвърлям всички","customize":"Настройки","bannerLabel":"Съгласие за бисквитки","panelTitle":"Настройки на бисквитките","panelIntro":"Изберете кои бисквитки разрешавате. Нищо по избор не е включено, докато не го включите сами.","save":"Запази избора","close":"Затвори","alwaysOn":"винаги активни","cookiesIn":"Бисквитки в тази група","noCookies":"За тази група не са обявени бисквитки.","colName":"Име","colVendor":"Доставчик","colPurpose":"Цел","colExpiry":"Изтича","floating":"Настройки на бисквитките","cat":{"necessary":{"title":"Необходими","desc":"Нужни са, за да работи сайтът — вход, сигурност, запомняне на съгласието ви. Не могат да се изключат."},"functional":{"title":"Функционални","desc":"Запомнят предпочитанията ви, например език или чат, за да не ги задавате отново."},"analytics":{"title":"Анализи","desc":"Помагат ни да видим кои страници се използват, за да поправим неудобното. Само числа, без имена."},"marketing":{"title":"Маркетинг","desc":"Позволяват да ви показваме реклами в други сайтове и да преценим дали са били от полза."}}},"ca":{"bannerTitle":"Utilitzem galetes","bannerText":"Les galetes necessàries mantenen el lloc en funcionament. Tota la resta — analítica, màrqueting, funcions addicionals — només s’activa si ho permeteu. Podeu canviar d’opinió en qualsevol moment.","more":"Més informació","acceptAll":"Accepta-ho tot","rejectAll":"Rebutja-ho tot","customize":"Personalitza","bannerLabel":"Consentiment de galetes","panelTitle":"Configuració de galetes","panelIntro":"Trieu quines galetes permeteu. Res opcional no està activat fins que no ho activeu vosaltres.","save":"Desa la selecció","close":"Tanca","alwaysOn":"sempre actives","cookiesIn":"Galetes d’aquest grup","noCookies":"No s’ha declarat cap galeta per a aquest grup.","colName":"Nom","colVendor":"Proveïdor","colPurpose":"Finalitat","colExpiry":"Caduca","floating":"Configuració de galetes","cat":{"necessary":{"title":"Necessàries","desc":"Calen perquè el lloc funcioni: inici de sessió, seguretat i memòria del vostre consentiment. No es poden desactivar."},"functional":{"title":"Funcionals","desc":"Recorden les vostres preferències, com l’idioma o el xat, perquè no les hàgiu de tornar a configurar."},"analytics":{"title":"Analítica","desc":"Ens mostren quines pàgines es fan servir per corregir allò que confon. Només xifres, sense noms."},"marketing":{"title":"Màrqueting","desc":"Ens permeten mostrar-vos anuncis en altres llocs i mesurar si han servit d’alguna cosa."}}},"cs":{"bannerTitle":"Používáme cookies","bannerText":"Nezbytné cookies udržují web v chodu. Vše ostatní — analytika, marketing, další vylepšení — se zapne jen s vaším souhlasem. Rozhodnutí můžete kdykoli změnit.","more":"Více informací","acceptAll":"Přijmout vše","rejectAll":"Odmítnout vše","customize":"Nastavit","bannerLabel":"Souhlas s cookies","panelTitle":"Nastavení cookies","panelIntro":"Vyberte, které cookies povolíte. Nic volitelného není zapnuté, dokud to sami nezapnete.","save":"Uložit volbu","close":"Zavřít","alwaysOn":"vždy aktivní","cookiesIn":"Cookies v této skupině","noCookies":"Pro tuto skupinu nejsou uvedeny žádné cookies.","colName":"Název","colVendor":"Poskytovatel","colPurpose":"Účel","colExpiry":"Platnost","floating":"Nastavení cookies","cat":{"necessary":{"title":"Nezbytné","desc":"Bez nich web nefunguje — přihlášení, bezpečnost, uložení vašeho souhlasu. Nelze je vypnout."},"functional":{"title":"Funkční","desc":"Pamatují si vaše předvolby, třeba jazyk nebo chat, abyste je nenastavovali znovu."},"analytics":{"title":"Analytické","desc":"Ukazují nám, které stránky lidé používají, abychom opravili to nepřehledné. Jen čísla, žádná jména."},"marketing":{"title":"Marketingové","desc":"Umožňují nám zobrazovat vám reklamy na jiných webech a měřit, zda byly k něčemu."}}},"da":{"bannerTitle":"Vi bruger cookies","bannerText":"Nødvendige cookies holder siden i gang. Alt andet — statistik, markedsføring, ekstra funktioner — sættes kun til, hvis du tillader det. Du kan altid ombestemme dig.","more":"Læs mere","acceptAll":"Accepter alle","rejectAll":"Afvis alle","customize":"Tilpas","bannerLabel":"Cookiesamtykke","panelTitle":"Cookieindstillinger","panelIntro":"Vælg, hvilke cookies du tillader. Intet valgfrit er slået til, før du selv slår det til.","save":"Gem valg","close":"Luk","alwaysOn":"altid aktive","cookiesIn":"Cookies i denne gruppe","noCookies":"Der er ikke angivet cookies for denne gruppe.","colName":"Navn","colVendor":"Udbyder","colPurpose":"Formål","colExpiry":"Udløber","floating":"Cookieindstillinger","cat":{"necessary":{"title":"Nødvendige","desc":"Nødvendige for at siden virker — login, sikkerhed, hukommelse om dit samtykke. De kan ikke slås fra."},"functional":{"title":"Funktionelle","desc":"Husker dine indstillinger, fx sprog eller chat, så du ikke skal vælge dem igen."},"analytics":{"title":"Statistik","desc":"Viser os, hvilke sider folk bruger, så vi kan rette det, der forvirrer. Kun tal, ingen navne."},"marketing":{"title":"Markedsføring","desc":"Giver os mulighed for at vise dig annoncer på andre sider og måle, om de virkede."}}},"de":{"bannerTitle":"Wir verwenden Cookies","bannerText":"Notwendige Cookies halten die Website am Laufen. Alles Weitere — Statistik, Marketing, zusätzliche Funktionen — läuft nur, wenn Sie es erlauben. Sie können Ihre Entscheidung jederzeit ändern.","more":"Mehr erfahren","acceptAll":"Alle akzeptieren","rejectAll":"Alle ablehnen","customize":"Einstellen","bannerLabel":"Cookie-Einwilligung","panelTitle":"Cookie-Einstellungen","panelIntro":"Wählen Sie, welche Cookies Sie erlauben. Nichts Optionales ist aktiv, bis Sie es einschalten.","save":"Auswahl speichern","close":"Schließen","alwaysOn":"immer aktiv","cookiesIn":"Cookies in dieser Gruppe","noCookies":"Für diese Gruppe sind keine Cookies angegeben.","colName":"Name","colVendor":"Anbieter","colPurpose":"Zweck","colExpiry":"Laufzeit","floating":"Cookie-Einstellungen","cat":{"necessary":{"title":"Notwendig","desc":"Nötig, damit die Website funktioniert — Anmeldung, Sicherheit, Speichern Ihrer Einwilligung. Sie lassen sich nicht abschalten."},"functional":{"title":"Funktional","desc":"Merken sich Ihre Einstellungen, etwa Sprache oder Chat, damit Sie sie nicht erneut wählen müssen."},"analytics":{"title":"Statistik","desc":"Zeigen uns, welche Seiten genutzt werden, damit wir Unklares verbessern. Nur Zahlen, keine Namen."},"marketing":{"title":"Marketing","desc":"Erlauben uns, Ihnen Werbung auf anderen Seiten zu zeigen und zu messen, ob sie etwas gebracht hat."}}},"el":{"bannerTitle":"Χρησιμοποιούμε cookies","bannerText":"Τα απαραίτητα cookies κρατούν τον ιστότοπο σε λειτουργία. Όλα τα υπόλοιπα — στατιστικά, μάρκετινγκ, πρόσθετες ευκολίες — ενεργοποιούνται μόνο με τη συγκατάθεσή σας. Μπορείτε να αλλάξετε γνώμη ανά πάσα στιγμή.","more":"Μάθετε περισσότερα","acceptAll":"Αποδοχή όλων","rejectAll":"Απόρριψη όλων","customize":"Ρυθμίσεις","bannerLabel":"Συγκατάθεση για cookies","panelTitle":"Ρυθμίσεις cookies","panelIntro":"Επιλέξτε ποια cookies επιτρέπετε. Τίποτα προαιρετικό δεν είναι ενεργό μέχρι να το ενεργοποιήσετε εσείς.","save":"Αποθήκευση επιλογών","close":"Κλείσιμο","alwaysOn":"πάντα ενεργά","cookiesIn":"Cookies αυτής της ομάδας","noCookies":"Δεν έχουν δηλωθεί cookies για αυτήν την ομάδα.","colName":"Όνομα","colVendor":"Πάροχος","colPurpose":"Σκοπός","colExpiry":"Λήξη","floating":"Ρυθμίσεις cookies","cat":{"necessary":{"title":"Απαραίτητα","desc":"Χρειάζονται για να λειτουργεί ο ιστότοπος — σύνδεση, ασφάλεια, διατήρηση της επιλογής σας. Δεν απενεργοποιούνται."},"functional":{"title":"Λειτουργικά","desc":"Θυμούνται τις προτιμήσεις σας, όπως γλώσσα ή συνομιλία, ώστε να μην τις ορίζετε ξανά."},"analytics":{"title":"Στατιστικά","desc":"Μας δείχνουν ποιες σελίδες χρησιμοποιούνται, για να διορθώσουμε ό,τι μπερδεύει. Μόνο αριθμοί, χωρίς ονόματα."},"marketing":{"title":"Μάρκετινγκ","desc":"Μας επιτρέπουν να σας δείχνουμε διαφημίσεις σε άλλους ιστότοπους και να μετράμε αν ήταν χρήσιμες."}}},"es":{"bannerTitle":"Usamos cookies","bannerText":"Las cookies necesarias mantienen el sitio en funcionamiento. Todo lo demás — analítica, marketing, funciones adicionales — solo se activa si usted lo permite. Puede cambiar de opinión cuando quiera.","more":"Más información","acceptAll":"Aceptar todo","rejectAll":"Rechazar todo","customize":"Personalizar","bannerLabel":"Consentimiento de cookies","panelTitle":"Configuración de cookies","panelIntro":"Elija qué cookies permite. Nada opcional está activo hasta que usted lo active.","save":"Guardar selección","close":"Cerrar","alwaysOn":"siempre activas","cookiesIn":"Cookies de este grupo","noCookies":"No se han declarado cookies para este grupo.","colName":"Nombre","colVendor":"Proveedor","colPurpose":"Finalidad","colExpiry":"Caduca","floating":"Configuración de cookies","cat":{"necessary":{"title":"Necesarias","desc":"Imprescindibles para que el sitio funcione: inicio de sesión, seguridad y memoria de su consentimiento. No se pueden desactivar."},"functional":{"title":"Funcionales","desc":"Recuerdan sus preferencias, como el idioma o el chat, para que no tenga que configurarlas de nuevo."},"analytics":{"title":"Analítica","desc":"Nos muestran qué páginas se usan para corregir lo que resulta confuso. Solo cifras, sin nombres."},"marketing":{"title":"Marketing","desc":"Nos permiten mostrarle anuncios en otros sitios y medir si han servido de algo."}}},"et":{"bannerTitle":"Kasutame küpsiseid","bannerText":"Vajalikud küpsised hoiavad saidi töös. Kõik muu — statistika, turundus, lisamugavused — lülitub sisse ainult teie nõusolekul. Võite oma otsust igal ajal muuta.","more":"Loe lähemalt","acceptAll":"Nõustu kõigiga","rejectAll":"Keeldu kõigist","customize":"Seadista","bannerLabel":"Küpsiste nõusolek","panelTitle":"Küpsiste seaded","panelIntro":"Valige, milliseid küpsiseid lubate. Miski valikuline ei ole sees, enne kui te selle ise sisse lülitate.","save":"Salvesta valik","close":"Sulge","alwaysOn":"alati aktiivsed","cookiesIn":"Selle rühma küpsised","noCookies":"Selle rühma kohta ei ole küpsiseid deklareeritud.","colName":"Nimi","colVendor":"Pakkuja","colPurpose":"Eesmärk","colExpiry":"Kehtivus","floating":"Küpsiste seaded","cat":{"necessary":{"title":"Vajalikud","desc":"Vajalikud saidi tööks — sisselogimine, turvalisus, teie nõusoleku meelespidamine. Neid ei saa välja lülitada."},"functional":{"title":"Funktsionaalsed","desc":"Jätavad meelde teie eelistused, näiteks keele või vestluse, et te ei peaks neid uuesti valima."},"analytics":{"title":"Statistika","desc":"Näitavad meile, milliseid lehti kasutatakse, et saaksime segadust tekitava korda teha. Ainult numbrid, ilma nimedeta."},"marketing":{"title":"Turundus","desc":"Võimaldavad näidata teile reklaame teistel saitidel ja mõõta, kas neist oli kasu."}}},"fi":{"bannerTitle":"Käytämme evästeitä","bannerText":"Välttämättömät evästeet pitävät sivuston toiminnassa. Kaikki muu — tilastot, markkinointi, lisämukavuudet — otetaan käyttöön vain suostumuksellanne. Voitte muuttaa valintaanne milloin tahansa.","more":"Lue lisää","acceptAll":"Hyväksy kaikki","rejectAll":"Hylkää kaikki","customize":"Muokkaa","bannerLabel":"Evästesuostumus","panelTitle":"Evästeasetukset","panelIntro":"Valitkaa, mitkä evästeet sallitte. Mikään valinnainen ei ole päällä, ennen kuin otatte sen itse käyttöön.","save":"Tallenna valinta","close":"Sulje","alwaysOn":"aina käytössä","cookiesIn":"Tämän ryhmän evästeet","noCookies":"Tälle ryhmälle ei ole ilmoitettu evästeitä.","colName":"Nimi","colVendor":"Toimittaja","colPurpose":"Tarkoitus","colExpiry":"Voimassaolo","floating":"Evästeasetukset","cat":{"necessary":{"title":"Välttämättömät","desc":"Tarvitaan sivuston toimintaan: kirjautuminen, turvallisuus ja suostumuksenne muistaminen. Näitä ei voi poistaa käytöstä."},"functional":{"title":"Toiminnalliset","desc":"Muistavat asetuksenne, kuten kielen tai chatin, jottei niitä tarvitse valita uudelleen."},"analytics":{"title":"Tilastot","desc":"Kertovat meille, mitä sivuja käytetään, jotta voimme korjata sekavat kohdat. Vain lukuja, ei nimiä."},"marketing":{"title":"Markkinointi","desc":"Antavat meidän näyttää teille mainoksia muilla sivustoilla ja mitata, oliko niistä hyötyä."}}},"fr":{"bannerTitle":"Nous utilisons des cookies","bannerText":"Les cookies nécessaires font fonctionner le site. Tout le reste — mesure d’audience, marketing, options de confort — ne s’active que si vous l’autorisez. Vous pouvez changer d’avis à tout moment.","more":"En savoir plus","acceptAll":"Tout accepter","rejectAll":"Tout refuser","customize":"Personnaliser","bannerLabel":"Consentement aux cookies","panelTitle":"Paramètres des cookies","panelIntro":"Choisissez les cookies que vous autorisez. Rien d’optionnel n’est activé tant que vous ne l’activez pas.","save":"Enregistrer","close":"Fermer","alwaysOn":"toujours actifs","cookiesIn":"Cookies de ce groupe","noCookies":"Aucun cookie déclaré pour ce groupe.","colName":"Nom","colVendor":"Fournisseur","colPurpose":"Finalité","colExpiry":"Expiration","floating":"Paramètres des cookies","cat":{"necessary":{"title":"Nécessaires","desc":"Indispensables au fonctionnement du site : connexion, sécurité, mémorisation de votre choix. Ils ne peuvent pas être désactivés."},"functional":{"title":"Fonctionnels","desc":"Retiennent vos préférences, par exemple la langue ou le chat, pour ne pas avoir à les régler de nouveau."},"analytics":{"title":"Mesure d’audience","desc":"Nous montrent quelles pages sont consultées, afin de corriger ce qui prête à confusion. Des chiffres seulement, aucun nom."},"marketing":{"title":"Marketing","desc":"Nous permettent de vous montrer des publicités sur d’autres sites et de mesurer leur utilité."}}},"ga":{"bannerTitle":"Úsáidimid fianáin","bannerText":"Coinníonn fianáin riachtanacha an suíomh ag obair. Gach rud eile — anailísíocht, margaíocht, áiseanna breise — ní ritheann sé ach le do chead. Is féidir leat d’intinn a athrú am ar bith.","more":"Tuilleadh eolais","acceptAll":"Glac le gach ceann","rejectAll":"Diúltaigh do gach ceann","customize":"Saincheap","bannerLabel":"Toiliú fianán","panelTitle":"Socruithe fianán","panelIntro":"Roghnaigh na fianáin a cheadaíonn tú. Níl aon rud roghnach ar siúl go dtí go gcuireann tú féin ar siúl é.","save":"Sábháil an rogha","close":"Dún","alwaysOn":"gníomhach i gcónaí","cookiesIn":"Fianáin sa ghrúpa seo","noCookies":"Níl aon fhianán dearbhaithe don ghrúpa seo.","colName":"Ainm","colVendor":"Soláthraí","colPurpose":"Cuspóir","colExpiry":"Éagann","floating":"Socruithe fianán","cat":{"necessary":{"title":"Riachtanach","desc":"Ag teastáil chun an suíomh a oibriú — logáil isteach, slándáil, do thoiliú a choinneáil. Ní féidir iad a mhúchadh."},"functional":{"title":"Feidhmiúil","desc":"Coinníonn siad do roghanna, mar shampla an teanga nó an comhrá, ionas nach gá duit iad a shocrú arís."},"analytics":{"title":"Anailísíocht","desc":"Taispeánann siad dúinn na leathanaigh a úsáidtear, chun an rud atá mearbhallach a cheartú. Uimhreacha amháin, gan ainmneacha."},"marketing":{"title":"Margaíocht","desc":"Ligeann siad dúinn fógraí a thaispeáint duit ar shuímh eile agus a thomhas an raibh aon mhaith leo."}}},"hr":{"bannerTitle":"Koristimo kolačiće","bannerText":"Nužni kolačići održavaju stranicu u radu. Sve ostalo — analitika, marketing, dodatne pogodnosti — uključuje se samo uz vaš pristanak. Odluku možete promijeniti u svakom trenutku.","more":"Saznajte više","acceptAll":"Prihvati sve","rejectAll":"Odbij sve","customize":"Postavke","bannerLabel":"Privola za kolačiće","panelTitle":"Postavke kolačića","panelIntro":"Odaberite koje kolačiće dopuštate. Ništa neobavezno nije uključeno dok to sami ne uključite.","save":"Spremi odabir","close":"Zatvori","alwaysOn":"uvijek aktivni","cookiesIn":"Kolačići u ovoj skupini","noCookies":"Za ovu skupinu nisu navedeni kolačići.","colName":"Naziv","colVendor":"Pružatelj","colPurpose":"Svrha","colExpiry":"Istječe","floating":"Postavke kolačića","cat":{"necessary":{"title":"Nužni","desc":"Potrebni su za rad stranice — prijava, sigurnost, pamćenje vaše privole. Ne mogu se isključiti."},"functional":{"title":"Funkcionalni","desc":"Pamte vaše postavke, primjerice jezik ili chat, da ih ne morate ponovno birati."},"analytics":{"title":"Analitika","desc":"Pokazuju nam koje se stranice koriste kako bismo ispravili ono što zbunjuje. Samo brojke, bez imena."},"marketing":{"title":"Marketing","desc":"Omogućuju nam da vam prikazujemo oglase na drugim stranicama i izmjerimo jesu li bili od koristi."}}},"hu":{"bannerTitle":"Sütiket használunk","bannerText":"A szükséges sütik tartják működésben az oldalt. Minden más — statisztika, marketing, kényelmi funkciók — csak az Ön hozzájárulásával indul el. Döntését bármikor módosíthatja.","more":"További információ","acceptAll":"Mind elfogadása","rejectAll":"Mind elutasítása","customize":"Beállítás","bannerLabel":"Süti-hozzájárulás","panelTitle":"Sütibeállítások","panelIntro":"Válassza ki, mely sütiket engedélyezi. Semmi választható nincs bekapcsolva, amíg Ön be nem kapcsolja.","save":"Választás mentése","close":"Bezárás","alwaysOn":"mindig aktív","cookiesIn":"A csoport sütijei","noCookies":"Ehhez a csoporthoz nincs süti megadva.","colName":"Név","colVendor":"Szolgáltató","colPurpose":"Cél","colExpiry":"Lejárat","floating":"Sütibeállítások","cat":{"necessary":{"title":"Szükséges","desc":"Az oldal működéséhez kellenek: belépés, biztonság, a hozzájárulása megjegyzése. Nem kapcsolhatók ki."},"functional":{"title":"Funkcionális","desc":"Megjegyzik a beállításait, például a nyelvet vagy a chatet, hogy ne kelljen újra megadnia őket."},"analytics":{"title":"Statisztika","desc":"Megmutatják, mely oldalakat használják, hogy javíthassuk a zavarosat. Csak számok, nevek nélkül."},"marketing":{"title":"Marketing","desc":"Lehetővé teszik, hogy hirdetéseket mutassunk Önnek más oldalakon, és mérjük, volt-e belőlük haszon."}}},"is":{"bannerTitle":"Við notum vefkökur","bannerText":"Nauðsynlegar vefkökur halda vefnum gangandi. Allt annað — tölfræði, markaðssetning, aukaþægindi — fer aðeins í gang ef þú leyfir það. Þú getur skipt um skoðun hvenær sem er.","more":"Nánar","acceptAll":"Samþykkja allt","rejectAll":"Hafna öllu","customize":"Stillingar","bannerLabel":"Samþykki fyrir vefkökum","panelTitle":"Stillingar vefkaka","panelIntro":"Veldu hvaða vefkökur þú leyfir. Ekkert valfrjálst er kveikt fyrr en þú kveikir á því sjálf.","save":"Vista val","close":"Loka","alwaysOn":"alltaf virkar","cookiesIn":"Vefkökur í þessum flokki","noCookies":"Engar vefkökur eru skráðar fyrir þennan flokk.","colName":"Heiti","colVendor":"Þjónustuaðili","colPurpose":"Tilgangur","colExpiry":"Gildistími","floating":"Stillingar vefkaka","cat":{"necessary":{"title":"Nauðsynlegar","desc":"Nauðsynlegar til að vefurinn virki — innskráning, öryggi, að muna samþykki þitt. Ekki er hægt að slökkva á þeim."},"functional":{"title":"Virknivefkökur","desc":"Muna stillingar þínar, til dæmis tungumál eða spjall, svo þú þurfir ekki að velja aftur."},"analytics":{"title":"Tölfræði","desc":"Sýna okkur hvaða síður eru notaðar svo við getum lagað það sem ruglar. Aðeins tölur, engin nöfn."},"marketing":{"title":"Markaðssetning","desc":"Leyfa okkur að sýna þér auglýsingar á öðrum vefjum og mæla hvort þær komu að gagni."}}},"it":{"bannerTitle":"Utilizziamo i cookie","bannerText":"I cookie necessari fanno funzionare il sito. Tutto il resto — statistiche, marketing, funzioni aggiuntive — si attiva solo se lo consente. Può cambiare idea in qualsiasi momento.","more":"Scopri di più","acceptAll":"Accetta tutto","rejectAll":"Rifiuta tutto","customize":"Personalizza","bannerLabel":"Consenso ai cookie","panelTitle":"Impostazioni dei cookie","panelIntro":"Scelga quali cookie autorizzare. Nulla di facoltativo è attivo finché non lo attiva Lei.","save":"Salva le scelte","close":"Chiudi","alwaysOn":"sempre attivi","cookiesIn":"Cookie di questo gruppo","noCookies":"Nessun cookie dichiarato per questo gruppo.","colName":"Nome","colVendor":"Fornitore","colPurpose":"Finalità","colExpiry":"Scadenza","floating":"Impostazioni dei cookie","cat":{"necessary":{"title":"Necessari","desc":"Servono al funzionamento del sito: accesso, sicurezza, memoria del suo consenso. Non possono essere disattivati."},"functional":{"title":"Funzionali","desc":"Ricordano le sue preferenze, come la lingua o la chat, così non deve impostarle di nuovo."},"analytics":{"title":"Statistiche","desc":"Ci mostrano quali pagine vengono usate, per correggere ciò che risulta poco chiaro. Solo numeri, nessun nome."},"marketing":{"title":"Marketing","desc":"Ci permettono di mostrarle annunci su altri siti e di misurare se sono serviti a qualcosa."}}},"lt":{"bannerTitle":"Naudojame slapukus","bannerText":"Būtini slapukai palaiko svetainės veikimą. Visa kita — analitika, rinkodara, papildomi patogumai — įsijungia tik jums sutikus. Sprendimą galite pakeisti bet kada.","more":"Sužinoti daugiau","acceptAll":"Priimti visus","rejectAll":"Atmesti visus","customize":"Tinkinti","bannerLabel":"Sutikimas dėl slapukų","panelTitle":"Slapukų nustatymai","panelIntro":"Pasirinkite, kuriuos slapukus leidžiate. Nieko pasirenkamo nėra įjungta, kol patys neįjungiate.","save":"Įrašyti pasirinkimą","close":"Uždaryti","alwaysOn":"visada aktyvūs","cookiesIn":"Šios grupės slapukai","noCookies":"Šiai grupei slapukų nenurodyta.","colName":"Pavadinimas","colVendor":"Teikėjas","colPurpose":"Paskirtis","colExpiry":"Galiojimas","floating":"Slapukų nustatymai","cat":{"necessary":{"title":"Būtini","desc":"Reikalingi, kad svetainė veiktų: prisijungimas, saugumas, jūsų sutikimo įsiminimas. Jų išjungti negalima."},"functional":{"title":"Funkciniai","desc":"Įsimena jūsų nustatymus, pavyzdžiui, kalbą ar pokalbius, kad jų nereikėtų nurodyti iš naujo."},"analytics":{"title":"Analitika","desc":"Rodo mums, kurie puslapiai naudojami, kad pataisytume tai, kas painu. Tik skaičiai, be vardų."},"marketing":{"title":"Rinkodara","desc":"Leidžia rodyti jums reklamą kitose svetainėse ir įvertinti, ar iš jos buvo naudos."}}},"lv":{"bannerTitle":"Mēs izmantojam sīkdatnes","bannerText":"Nepieciešamās sīkdatnes nodrošina vietnes darbību. Viss pārējais — analītika, mārketings, papildu ērtības — darbojas tikai ar jūsu piekrišanu. Savu izvēli varat mainīt jebkurā brīdī.","more":"Uzzināt vairāk","acceptAll":"Piekrist visām","rejectAll":"Noraidīt visas","customize":"Pielāgot","bannerLabel":"Piekrišana sīkdatnēm","panelTitle":"Sīkdatņu iestatījumi","panelIntro":"Izvēlieties, kuras sīkdatnes atļaujat. Nekas neobligāts nav ieslēgts, kamēr to neieslēdzat pats.","save":"Saglabāt izvēli","close":"Aizvērt","alwaysOn":"vienmēr aktīvas","cookiesIn":"Šīs grupas sīkdatnes","noCookies":"Šai grupai sīkdatnes nav norādītas.","colName":"Nosaukums","colVendor":"Sniedzējs","colPurpose":"Nolūks","colExpiry":"Derīgums","floating":"Sīkdatņu iestatījumi","cat":{"necessary":{"title":"Nepieciešamās","desc":"Vajadzīgas vietnes darbībai — pieteikšanās, drošība, jūsu piekrišanas saglabāšana. Tās nevar izslēgt."},"functional":{"title":"Funkcionālās","desc":"Atceras jūsu iestatījumus, piemēram, valodu vai tērzēšanu, lai tie nebūtu jānorāda atkārtoti."},"analytics":{"title":"Analītika","desc":"Rāda mums, kuras lapas tiek lietotas, lai varam labot neskaidro. Tikai skaitļi, bez vārdiem."},"marketing":{"title":"Mārketings","desc":"Ļauj rādīt jums reklāmas citās vietnēs un novērtēt, vai no tām bija labums."}}},"mk":{"bannerTitle":"Користиме колачиња","bannerText":"Неопходните колачиња ја одржуваат страницата во работа. Сè останато — аналитика, маркетинг, дополнителни погодности — се вклучува само со ваша согласност. Одлуката можете да ја промените во секое време.","more":"Дознајте повеќе","acceptAll":"Прифати сè","rejectAll":"Одбиј сè","customize":"Прилагоди","bannerLabel":"Согласност за колачиња","panelTitle":"Поставки за колачиња","panelIntro":"Изберете кои колачиња ги дозволувате. Ништо изборно не е вклучено додека сами не го вклучите.","save":"Зачувај избор","close":"Затвори","alwaysOn":"секогаш активни","cookiesIn":"Колачиња во оваа група","noCookies":"За оваа група не се наведени колачиња.","colName":"Име","colVendor":"Доставувач","colPurpose":"Цел","colExpiry":"Истекува","floating":"Поставки за колачиња","cat":{"necessary":{"title":"Неопходни","desc":"Потребни се за страницата да работи — најава, безбедност, помнење на вашата согласност. Не можат да се исклучат."},"functional":{"title":"Функционални","desc":"Ги паметат вашите поставки, на пример јазикот или разговорот, за да не ги задавате повторно."},"analytics":{"title":"Аналитика","desc":"Ни покажуваат кои страници се користат за да го поправиме тоа што збунува. Само бројки, без имиња."},"marketing":{"title":"Маркетинг","desc":"Ни овозможуваат да ви прикажуваме реклами на други страници и да измериме дали имало корист од нив."}}},"mt":{"bannerTitle":"Nużaw il-cookies","bannerText":"Il-cookies meħtieġa jżommu s-sit jaħdem. Kollox ieħor — analitika, marketing, faċilitajiet żejda — jitħaddem biss jekk tippermettih. Tista’ tbiddel il-fehma tiegħek f’kull ħin.","more":"Aktar informazzjoni","acceptAll":"Aċċetta kollox","rejectAll":"Irrifjuta kollox","customize":"Ippersonalizza","bannerLabel":"Kunsens għall-cookies","panelTitle":"Issettjar tal-cookies","panelIntro":"Agħżel liema cookies tippermetti. Xejn fakultattiv mhu mixgħul sakemm ma tixgħelux int.","save":"Issejvja l-għażla","close":"Agħlaq","alwaysOn":"dejjem attivi","cookiesIn":"Cookies f’dan il-grupp","noCookies":"Ma ġie ddikjarat l-ebda cookie għal dan il-grupp.","colName":"Isem","colVendor":"Fornitur","colPurpose":"Skop","colExpiry":"Skadenza","floating":"Issettjar tal-cookies","cat":{"necessary":{"title":"Meħtieġa","desc":"Meħtieġa biex is-sit jaħdem — login, sigurtà, tifkira tal-kunsens tiegħek. Ma jistgħux jintfew."},"functional":{"title":"Funzjonali","desc":"Jiftakru l-preferenzi tiegħek, bħal-lingwa jew iċ-chat, biex ma jkollokx terġa’ tissettjahom."},"analytics":{"title":"Analitika","desc":"Juruna liema paġni jintużaw, biex nirranġaw dak li jħawwad. Numri biss, bla ismijiet."},"marketing":{"title":"Marketing","desc":"Jippermettulna nurulek reklami fuq siti oħra u nkejlu jekk kinux ta’ siwi."}}},"nb":{"bannerTitle":"Vi bruker informasjonskapsler","bannerText":"Nødvendige informasjonskapsler holder nettstedet i gang. Alt annet — statistikk, markedsføring, ekstra funksjoner — slås bare på hvis du tillater det. Du kan ombestemme deg når som helst.","more":"Les mer","acceptAll":"Godta alle","rejectAll":"Avvis alle","customize":"Tilpass","bannerLabel":"Samtykke til informasjonskapsler","panelTitle":"Innstillinger for informasjonskapsler","panelIntro":"Velg hvilke informasjonskapsler du tillater. Ingenting valgfritt er på før du slår det på selv.","save":"Lagre valg","close":"Lukk","alwaysOn":"alltid aktive","cookiesIn":"Informasjonskapsler i denne gruppen","noCookies":"Ingen informasjonskapsler er oppgitt for denne gruppen.","colName":"Navn","colVendor":"Leverandør","colPurpose":"Formål","colExpiry":"Utløper","floating":"Innstillinger for informasjonskapsler","cat":{"necessary":{"title":"Nødvendige","desc":"Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av."},"functional":{"title":"Funksjonelle","desc":"Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt."},"analytics":{"title":"Statistikk","desc":"Viser oss hvilke sider som brukes, så vi kan rette opp det som forvirrer. Bare tall, ingen navn."},"marketing":{"title":"Markedsføring","desc":"Lar oss vise deg annonser på andre nettsteder og måle om de var til nytte."}}},"nl":{"bannerTitle":"Wij gebruiken cookies","bannerText":"Noodzakelijke cookies houden de site draaiende. Al het overige — statistieken, marketing, extra gemak — wordt alleen ingeschakeld als u dat toestaat. U kunt uw keuze altijd wijzigen.","more":"Meer informatie","acceptAll":"Alles accepteren","rejectAll":"Alles weigeren","customize":"Instellen","bannerLabel":"Cookietoestemming","panelTitle":"Cookie-instellingen","panelIntro":"Kies welke cookies u toestaat. Niets optioneels staat aan totdat u het zelf aanzet.","save":"Keuze opslaan","close":"Sluiten","alwaysOn":"altijd actief","cookiesIn":"Cookies in deze groep","noCookies":"Voor deze groep zijn geen cookies opgegeven.","colName":"Naam","colVendor":"Aanbieder","colPurpose":"Doel","colExpiry":"Vervalt","floating":"Cookie-instellingen","cat":{"necessary":{"title":"Noodzakelijk","desc":"Nodig om de site te laten werken: inloggen, beveiliging en het onthouden van uw keuze. Ze kunnen niet uit."},"functional":{"title":"Functioneel","desc":"Onthouden uw voorkeuren, zoals taal of chat, zodat u ze niet opnieuw hoeft in te stellen."},"analytics":{"title":"Statistieken","desc":"Laten ons zien welke pagina’s worden gebruikt, zodat we verwarrende dingen kunnen verbeteren. Alleen cijfers, geen namen."},"marketing":{"title":"Marketing","desc":"Stellen ons in staat u advertenties op andere sites te tonen en te meten of ze iets opleverden."}}},"no":{"bannerTitle":"Vi bruker informasjonskapsler","bannerText":"Nødvendige informasjonskapsler holder nettstedet i gang. Alt annet — statistikk, markedsføring, ekstra funksjoner — slås bare på hvis du tillater det. Du kan ombestemme deg når som helst.","more":"Les mer","acceptAll":"Godta alle","rejectAll":"Avvis alle","customize":"Tilpass","bannerLabel":"Samtykke til informasjonskapsler","panelTitle":"Innstillinger for informasjonskapsler","panelIntro":"Velg hvilke informasjonskapsler du tillater. Ingenting valgfritt er på før du slår det på selv.","save":"Lagre valg","close":"Lukk","alwaysOn":"alltid aktive","cookiesIn":"Informasjonskapsler i denne gruppen","noCookies":"Ingen informasjonskapsler er oppgitt for denne gruppen.","colName":"Navn","colVendor":"Leverandør","colPurpose":"Formål","colExpiry":"Utløper","floating":"Innstillinger for informasjonskapsler","cat":{"necessary":{"title":"Nødvendige","desc":"Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av."},"functional":{"title":"Funksjonelle","desc":"Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt."},"analytics":{"title":"Statistikk","desc":"Viser oss hvilke sider som brukes, så vi kan rette opp det som forvirrer. Bare tall, ingen navn."},"marketing":{"title":"Markedsføring","desc":"Lar oss vise deg annonser på andre nettsteder og måle om de var til nytte."}}},"pl":{"bannerTitle":"Używamy plików cookie","bannerText":"Niezbędne pliki cookie utrzymują działanie strony. Cała reszta — analityka, marketing, dodatkowe udogodnienia — działa tylko za Pana/Pani zgodą. Decyzję można zmienić w każdej chwili.","more":"Dowiedz się więcej","acceptAll":"Zaakceptuj wszystkie","rejectAll":"Odrzuć wszystkie","customize":"Dostosuj","bannerLabel":"Zgoda na pliki cookie","panelTitle":"Ustawienia plików cookie","panelIntro":"Proszę wybrać, na które pliki cookie wyrażają Państwo zgodę. Nic opcjonalnego nie jest włączone, dopóki sami tego nie włączycie.","save":"Zapisz wybór","close":"Zamknij","alwaysOn":"zawsze aktywne","cookiesIn":"Pliki cookie w tej grupie","noCookies":"Dla tej grupy nie zadeklarowano plików cookie.","colName":"Nazwa","colVendor":"Dostawca","colPurpose":"Cel","colExpiry":"Wygasa","floating":"Ustawienia plików cookie","cat":{"necessary":{"title":"Niezbędne","desc":"Potrzebne, by strona działała: logowanie, bezpieczeństwo, zapamiętanie zgody. Nie można ich wyłączyć."},"functional":{"title":"Funkcjonalne","desc":"Zapamiętują ustawienia, na przykład język lub czat, żeby nie trzeba było wybierać ich ponownie."},"analytics":{"title":"Analityczne","desc":"Pokazują nam, z których stron korzystają użytkownicy, byśmy poprawili to, co myli. Tylko liczby, bez nazwisk."},"marketing":{"title":"Marketingowe","desc":"Pozwalają pokazywać reklamy na innych stronach i sprawdzać, czy przyniosły efekt."}}},"pt":{"bannerTitle":"Utilizamos cookies","bannerText":"Os cookies necessários mantêm o site a funcionar. Tudo o resto — análise, marketing, funcionalidades extra — só é ativado se o permitir. Pode mudar de ideias a qualquer momento.","more":"Saber mais","acceptAll":"Aceitar tudo","rejectAll":"Recusar tudo","customize":"Personalizar","bannerLabel":"Consentimento de cookies","panelTitle":"Definições de cookies","panelIntro":"Escolha que cookies permite. Nada opcional está ativo até que o ative.","save":"Guardar escolhas","close":"Fechar","alwaysOn":"sempre ativos","cookiesIn":"Cookies deste grupo","noCookies":"Não foram declarados cookies para este grupo.","colName":"Nome","colVendor":"Fornecedor","colPurpose":"Finalidade","colExpiry":"Validade","floating":"Definições de cookies","cat":{"necessary":{"title":"Necessários","desc":"Precisos para o site funcionar: início de sessão, segurança e memória do seu consentimento. Não podem ser desativados."},"functional":{"title":"Funcionais","desc":"Guardam as suas preferências, como o idioma ou o chat, para não ter de as definir outra vez."},"analytics":{"title":"Análise","desc":"Mostram-nos que páginas são usadas, para corrigirmos o que confunde. Apenas números, sem nomes."},"marketing":{"title":"Marketing","desc":"Permitem mostrar-lhe anúncios noutros sites e medir se foram úteis."}}},"ro":{"bannerTitle":"Folosim cookie-uri","bannerText":"Cookie-urile necesare mențin site-ul în funcțiune. Restul — analiză, marketing, funcții suplimentare — pornește doar dacă permiteți. Vă puteți răzgândi oricând.","more":"Aflați mai multe","acceptAll":"Acceptă tot","rejectAll":"Respinge tot","customize":"Personalizează","bannerLabel":"Consimțământ pentru cookie-uri","panelTitle":"Setări cookie-uri","panelIntro":"Alegeți ce cookie-uri permiteți. Nimic opțional nu este pornit până nu îl porniți dumneavoastră.","save":"Salvează alegerea","close":"Închide","alwaysOn":"mereu active","cookiesIn":"Cookie-uri din acest grup","noCookies":"Nu au fost declarate cookie-uri pentru acest grup.","colName":"Nume","colVendor":"Furnizor","colPurpose":"Scop","colExpiry":"Expiră","floating":"Setări cookie-uri","cat":{"necessary":{"title":"Necesare","desc":"Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea consimțământului. Nu pot fi dezactivate."},"functional":{"title":"Funcționale","desc":"Rețin preferințele dumneavoastră, precum limba sau chatul, ca să nu le setați din nou."},"analytics":{"title":"Analiză","desc":"Ne arată ce pagini sunt folosite, ca să reparăm ce derutează. Doar cifre, fără nume."},"marketing":{"title":"Marketing","desc":"Ne permit să vă arătăm reclame pe alte site-uri și să măsurăm dacă au fost de folos."}}},"sk":{"bannerTitle":"Používame súbory cookie","bannerText":"Nevyhnutné súbory cookie udržiavajú stránku v chode. Všetko ostatné — analytika, marketing, doplnkové pohodlie — sa zapne len s vaším súhlasom. Rozhodnutie môžete kedykoľvek zmeniť.","more":"Viac informácií","acceptAll":"Prijať všetko","rejectAll":"Odmietnuť všetko","customize":"Nastaviť","bannerLabel":"Súhlas so súbormi cookie","panelTitle":"Nastavenia cookies","panelIntro":"Vyberte, ktoré súbory cookie povolíte. Nič voliteľné nie je zapnuté, kým to sami nezapnete.","save":"Uložiť voľbu","close":"Zavrieť","alwaysOn":"vždy aktívne","cookiesIn":"Cookies v tejto skupine","noCookies":"Pre túto skupinu nie sú uvedené žiadne cookies.","colName":"Názov","colVendor":"Poskytovateľ","colPurpose":"Účel","colExpiry":"Platnosť","floating":"Nastavenia cookies","cat":{"necessary":{"title":"Nevyhnutné","desc":"Bez nich stránka nefunguje — prihlásenie, bezpečnosť, zapamätanie vášho súhlasu. Nedajú sa vypnúť."},"functional":{"title":"Funkčné","desc":"Pamätajú si vaše nastavenia, napríklad jazyk alebo chat, aby ste ich nezadávali znova."},"analytics":{"title":"Analytické","desc":"Ukazujú nám, ktoré stránky ľudia používajú, aby sme opravili to nejasné. Len čísla, žiadne mená."},"marketing":{"title":"Marketingové","desc":"Umožňujú nám zobrazovať vám reklamy na iných stránkach a merať, či boli na niečo dobré."}}},"sl":{"bannerTitle":"Uporabljamo piškotke","bannerText":"Nujni piškotki ohranjajo delovanje spletnega mesta. Vse ostalo — analitika, trženje, dodatne ugodnosti — se vklopi le z vašim soglasjem. Odločitev lahko kadar koli spremenite.","more":"Več o tem","acceptAll":"Sprejmi vse","rejectAll":"Zavrni vse","customize":"Nastavi","bannerLabel":"Soglasje za piškotke","panelTitle":"Nastavitve piškotkov","panelIntro":"Izberite, katere piškotke dovolite. Nič neobveznega ni vklopljeno, dokler tega ne vklopite sami.","save":"Shrani izbiro","close":"Zapri","alwaysOn":"vedno aktivni","cookiesIn":"Piškotki v tej skupini","noCookies":"Za to skupino piškotki niso navedeni.","colName":"Ime","colVendor":"Ponudnik","colPurpose":"Namen","colExpiry":"Poteče","floating":"Nastavitve piškotkov","cat":{"necessary":{"title":"Nujni","desc":"Potrebni za delovanje spletnega mesta — prijava, varnost, pomnjenje vašega soglasja. Ni jih mogoče izklopiti."},"functional":{"title":"Funkcionalni","desc":"Zapomnijo si vaše nastavitve, na primer jezik ali klepet, da jih ni treba določati znova."},"analytics":{"title":"Analitika","desc":"Pokažejo nam, katere strani ljudje uporabljajo, da popravimo, kar je nejasno. Samo številke, brez imen."},"marketing":{"title":"Trženje","desc":"Omogočajo nam, da vam prikazujemo oglase na drugih straneh in izmerimo, ali so bili koristni."}}},"sq":{"bannerTitle":"Ne përdorim cookie-t","bannerText":"Cookie-t e nevojshme e mbajnë faqen në punë. Gjithçka tjetër — analitika, marketingu, lehtësirat shtesë — aktivizohet vetëm nëse e lejoni. Mund ta ndryshoni vendimin në çdo kohë.","more":"Mëso më shumë","acceptAll":"Prano të gjitha","rejectAll":"Refuzo të gjitha","customize":"Përshtat","bannerLabel":"Pëlqimi për cookie-t","panelTitle":"Cilësimet e cookie-ve","panelIntro":"Zgjidhni cilat cookie lejoni. Asgjë opsionale nuk është e ndezur derisa ta ndizni vetë.","save":"Ruaj zgjedhjen","close":"Mbyll","alwaysOn":"gjithmonë aktive","cookiesIn":"Cookie-t e këtij grupi","noCookies":"Nuk ka cookie të deklaruara për këtë grup.","colName":"Emri","colVendor":"Ofruesi","colPurpose":"Qëllimi","colExpiry":"Skadon","floating":"Cilësimet e cookie-ve","cat":{"necessary":{"title":"Të nevojshme","desc":"Nevojiten që faqja të funksionojë — hyrja, siguria, ruajtja e pëlqimit tuaj. Nuk mund të fiken."},"functional":{"title":"Funksionale","desc":"Mbajnë mend preferencat tuaja, si gjuha ose biseda, që të mos i vendosni sërish."},"analytics":{"title":"Analitika","desc":"Na tregojnë cilat faqe përdoren, që të rregullojmë atë që ngatërron. Vetëm numra, pa emra."},"marketing":{"title":"Marketingu","desc":"Na lejojnë t’ju shfaqim reklama në faqe të tjera dhe të matim nëse patën ndonjë dobi."}}},"sr":{"bannerTitle":"Користимо колачиће","bannerText":"Неопходни колачићи одржавају сајт у раду. Све остало — аналитика, маркетинг, додатне погодности — укључује се само уз вашу сагласност. Одлуку можете променити у сваком тренутку.","more":"Сазнајте више","acceptAll":"Прихвати све","rejectAll":"Одбиј све","customize":"Подеси","bannerLabel":"Сагласност за колачиће","panelTitle":"Подешавања колачића","panelIntro":"Изаберите које колачиће дозвољавате. Ништа необавезно није укључено док то сами не укључите.","save":"Сачувај избор","close":"Затвори","alwaysOn":"увек активни","cookiesIn":"Колачићи у овој групи","noCookies":"За ову групу нису наведени колачићи.","colName":"Назив","colVendor":"Пружалац","colPurpose":"Сврха","colExpiry":"Истиче","floating":"Подешавања колачића","cat":{"necessary":{"title":"Неопходни","desc":"Потребни су да би сајт радио — пријава, безбедност, памћење ваше сагласности. Не могу се искључити."},"functional":{"title":"Функционални","desc":"Памте ваша подешавања, на пример језик или ћаскање, да их не бисте бирали поново."},"analytics":{"title":"Аналитика","desc":"Показују нам које се странице користе како бисмо исправили оно што збуњује. Само бројеви, без имена."},"marketing":{"title":"Маркетинг","desc":"Омогућавају нам да вам приказујемо огласе на другим сајтовима и измеримо да ли су били од користи."}}},"sv":{"bannerTitle":"Vi använder cookies","bannerText":"Nödvändiga cookies håller webbplatsen igång. Allt annat — statistik, marknadsföring, extra funktioner — startar bara om du tillåter det. Du kan ändra dig när som helst.","more":"Läs mer","acceptAll":"Godkänn alla","rejectAll":"Avvisa alla","customize":"Anpassa","bannerLabel":"Cookiesamtycke","panelTitle":"Cookieinställningar","panelIntro":"Välj vilka cookies du tillåter. Inget valfritt är påslaget förrän du slår på det själv.","save":"Spara val","close":"Stäng","alwaysOn":"alltid aktiva","cookiesIn":"Cookies i denna grupp","noCookies":"Inga cookies har angetts för denna grupp.","colName":"Namn","colVendor":"Leverantör","colPurpose":"Syfte","colExpiry":"Upphör","floating":"Cookieinställningar","cat":{"necessary":{"title":"Nödvändiga","desc":"Krävs för att webbplatsen ska fungera — inloggning, säkerhet, minne av ditt samtycke. De kan inte stängas av."},"functional":{"title":"Funktionella","desc":"Kommer ihåg dina inställningar, till exempel språk eller chatt, så att du slipper välja igen."},"analytics":{"title":"Statistik","desc":"Visar oss vilka sidor som används, så att vi kan rätta till det som förvirrar. Bara siffror, inga namn."},"marketing":{"title":"Marknadsföring","desc":"Låter oss visa dig annonser på andra webbplatser och mäta om de gjorde nytta."}}},"tr":{"bannerTitle":"Çerezleri kullanıyoruz","bannerText":"Zorunlu çerezler sitenin çalışmasını sağlar. Diğer her şey — analiz, pazarlama, ek kolaylıklar — yalnızca siz izin verirseniz çalışır. Kararınızı istediğiniz zaman değiştirebilirsiniz.","more":"Daha fazla bilgi","acceptAll":"Tümünü kabul et","rejectAll":"Tümünü reddet","customize":"Özelleştir","bannerLabel":"Çerez onayı","panelTitle":"Çerez ayarları","panelIntro":"Hangi çerezlere izin verdiğinizi seçin. Siz açmadıkça isteğe bağlı hiçbir şey açık değildir.","save":"Seçimi kaydet","close":"Kapat","alwaysOn":"her zaman etkin","cookiesIn":"Bu gruptaki çerezler","noCookies":"Bu grup için çerez bildirilmemiş.","colName":"Ad","colVendor":"Sağlayıcı","colPurpose":"Amaç","colExpiry":"Süre","floating":"Çerez ayarları","cat":{"necessary":{"title":"Zorunlu","desc":"Sitenin çalışması için gerekli: oturum açma, güvenlik, onayınızın hatırlanması. Kapatılamazlar."},"functional":{"title":"İşlevsel","desc":"Dil veya sohbet gibi tercihlerinizi hatırlar, böylece yeniden ayarlamanız gerekmez."},"analytics":{"title":"Analiz","desc":"Hangi sayfaların kullanıldığını görmemizi sağlar, kafa karıştıranı düzeltiriz. Yalnızca sayılar, isim yok."},"marketing":{"title":"Pazarlama","desc":"Başka sitelerde size reklam göstermemize ve işe yarayıp yaramadığını ölçmemize olanak tanır."}}},"uk":{"bannerTitle":"Ми використовуємо файли cookie","bannerText":"Необхідні файли cookie підтримують роботу сайту. Усе інше — аналітика, маркетинг, додаткові зручності — вмикається лише за вашою згодою. Рішення можна змінити будь-коли.","more":"Докладніше","acceptAll":"Прийняти все","rejectAll":"Відхилити все","customize":"Налаштувати","bannerLabel":"Згода на файли cookie","panelTitle":"Налаштування cookie","panelIntro":"Виберіть, які файли cookie ви дозволяєте. Нічого необов’язкового не ввімкнено, доки ви цього не зробите.","save":"Зберегти вибір","close":"Закрити","alwaysOn":"завжди активні","cookiesIn":"Файли cookie цієї групи","noCookies":"Для цієї групи файли cookie не заявлені.","colName":"Назва","colVendor":"Постачальник","colPurpose":"Мета","colExpiry":"Термін","floating":"Налаштування cookie","cat":{"necessary":{"title":"Необхідні","desc":"Без них сайт не працює: вхід, безпека, пам’ять про ваш вибір. Вимкнути неможливо."},"functional":{"title":"Функціональні","desc":"Запам’ятовують ваші налаштування — наприклад мову або чат, — щоб ви не задавали їх знову."},"analytics":{"title":"Аналітика","desc":"Показують нам, якими сторінками користуються, щоб ми виправили незручне. Лише цифри, без імен."},"marketing":{"title":"Маркетинг","desc":"Дозволяють показувати вам рекламу на інших сайтах і оцінювати, чи була з неї користь."}}}});})();
+;
+/* ConsentKit UI layer. Shadow DOM banner, preferences panel, floating button.
+   Talks to the core only through the public API and ck:* events. No imports, no external assets.
+
+   Copyright (c) 2026 E-COM CONSULT PLUS. MIT License — see LICENSE. */
+(function () {
+  'use strict';
+
+  var OPT_IN = ['functional', 'analytics', 'marketing'];
+  var ALL_CATS = ['necessary'].concat(OPT_IN);
+
+  /* ---------------------------------------------------------------- i18n */
+
+  var DICT = {
+    en: {
+      bannerTitle: 'We use cookies',
+      bannerText: 'Necessary cookies keep the site working. Everything else — analytics, marketing, extra features — runs only if you allow it. You can change your mind at any time.',
+      more: 'Learn more',
+      acceptAll: 'Accept all',
+      rejectAll: 'Reject all',
+      customize: 'Customize',
+      bannerLabel: 'Cookie consent',
+      panelTitle: 'Cookie settings',
+      panelIntro: 'Choose which cookies you allow. Nothing optional is on until you turn it on.',
+      save: 'Save choices',
+      close: 'Close',
+      alwaysOn: 'always on',
+      cookiesIn: 'Cookies in this group',
+      noCookies: 'No cookies declared for this group.',
+      colName: 'Name',
+      colVendor: 'Provider',
+      colPurpose: 'Purpose',
+      colExpiry: 'Expires',
+      floating: 'Cookie settings',
+      cat: {
+        necessary: {
+          title: 'Necessary',
+          desc: 'Needed for the site to work — signing in, security, remembering your consent. They cannot be turned off.'
+        },
+        functional: {
+          title: 'Functional',
+          desc: 'Remember your preferences, such as language or chat, so you do not set them up again.'
+        },
+        analytics: {
+          title: 'Analytics',
+          desc: 'Help us see which pages people use, so we can fix what is confusing. Numbers only, no names.'
+        },
+        marketing: {
+          title: 'Marketing',
+          desc: 'Let us show you ads on other sites and measure whether they were any use.'
+        }
+      }
+    },
+    ru: {
+      bannerTitle: 'Мы используем cookie',
+      bannerText: 'Необходимые cookie нужны, чтобы сайт работал. Всё остальное — аналитика, маркетинг, дополнительные удобства — включается только с вашего согласия. Решение можно изменить в любой момент.',
+      more: 'Подробнее',
+      acceptAll: 'Принять всё',
+      rejectAll: 'Отклонить всё',
+      customize: 'Настроить',
+      bannerLabel: 'Согласие на cookie',
+      panelTitle: 'Настройки cookie',
+      panelIntro: 'Выберите, какие cookie вы разрешаете. Ничего необязательного не включено, пока вы сами это не сделаете.',
+      save: 'Сохранить выбор',
+      close: 'Закрыть',
+      alwaysOn: 'всегда активны',
+      cookiesIn: 'Cookie в этой группе',
+      noCookies: 'Для этой группы cookie не заявлены.',
+      colName: 'Имя',
+      colVendor: 'Поставщик',
+      colPurpose: 'Цель',
+      colExpiry: 'Срок',
+      floating: 'Настройки cookie',
+      cat: {
+        necessary: {
+          title: 'Необходимые',
+          desc: 'Без них сайт не работает: вход, безопасность, память о вашем выборе. Отключить нельзя.'
+        },
+        functional: {
+          title: 'Функциональные',
+          desc: 'Запоминают ваши настройки — например язык или чат, — чтобы вы не задавали их заново.'
+        },
+        analytics: {
+          title: 'Аналитика',
+          desc: 'Показывают нам, какими страницами вы пользуетесь, чтобы мы исправили неудобное. Только цифры, без имён.'
+        },
+        marketing: {
+          title: 'Маркетинг',
+          desc: 'Позволяют показывать вам рекламу на других сайтах и понимать, была ли от неё польза.'
+        }
+      }
+    }
+  };
+
+  // Keys an external locale may supply. Kept in sync with DICT.en by shape.
+  var STR_KEYS = [
+    'bannerTitle', 'bannerText', 'more', 'acceptAll', 'rejectAll', 'customize',
+    'bannerLabel', 'panelTitle', 'panelIntro', 'save', 'close', 'alwaysOn',
+    'cookiesIn', 'noCookies', 'colName', 'colVendor', 'colPurpose', 'colExpiry', 'floating'
+  ];
+
+  // builtin(en,ru) <- window.__ckLocales, read at render time so the locales
+  // file may load in any order relative to this one.
+  function localeTable() {
+    var table = {};
+    var k;
+    for (k in DICT) {
+      if (Object.prototype.hasOwnProperty.call(DICT, k)) table[k.toLowerCase()] = DICT[k];
+    }
+    var ext = (typeof window !== 'undefined') && window.__ckLocales;
+    if (!ext || typeof ext !== 'object') return table;
+    for (k in ext) {
+      if (!Object.prototype.hasOwnProperty.call(ext, k)) continue;
+      var v = ext[k];
+      if (v && typeof v === 'object') table[String(k).toLowerCase()] = v;
+    }
+    return table;
+  }
+
+  // exact lowercase match -> first two letters (pt-BR -> pt) -> en
+  function resolveLang(cfgLang, table) {
+    var raw = cfgLang;
+    if (!raw || raw === 'auto') {
+      raw = (typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) || 'en';
+    }
+    var code = String(raw).toLowerCase();
+    if (table[code]) return code;
+    var short = code.slice(0, 2);
+    if (table[short]) return short;
+    return 'en';
+  }
+
+  // Deep two-level fill from en: a partial locale must never yield undefined,
+  // which would render the literal string "undefined".
+  function buildStrings(lang, table) {
+    var src = table[lang] || {};
+    var base = DICT.en;
+    var out = {};
+    var i, c;
+    for (i = 0; i < STR_KEYS.length; i++) {
+      var k = STR_KEYS[i];
+      out[k] = (typeof src[k] === 'string' && src[k]) ? src[k] : base[k];
+    }
+    out.cat = {};
+    var sc = (src.cat && typeof src.cat === 'object') ? src.cat : {};
+    for (i = 0; i < ALL_CATS.length; i++) {
+      c = ALL_CATS[i];
+      var e = (sc[c] && typeof sc[c] === 'object') ? sc[c] : {};
+      out.cat[c] = {
+        title: (typeof e.title === 'string' && e.title) ? e.title : base.cat[c].title,
+        desc: (typeof e.desc === 'string' && e.desc) ? e.desc : base.cat[c].desc
+      };
+    }
+    return out;
+  }
+
+  /* --------------------------------------------------------------- styles */
+
+  var CSS = [
+    ':host{all:initial}',
+    '*,*::before,*::after{box-sizing:border-box}',
+    /* Palette tokens live in a second, generated stylesheet (see buildThemeCss).
+       They must NOT be inline host styles: an inline value outbeats every :host
+       rule, which would make the dark media query and the forced-mode class dead. */
+    ':host{',
+    'font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;',
+    'font-size:15px;line-height:1.5;color:var(--ck-ink);',
+    '-webkit-font-smoothing:antialiased}',
+
+    '.ck-hidden{display:none !important}',
+
+    'button{font:inherit;color:inherit;margin:0;cursor:pointer}',
+    'a{color:var(--ck-accent)}',
+    ':focus-visible{outline:2px solid var(--ck-accent);outline-offset:2px;border-radius:4px}',
+
+    /* ---- banner ---- */
+    '.ck-scrim{position:fixed;inset:0;background:rgba(16,20,30,.28);z-index:2147483000;pointer-events:none}',
+    '.ck-banner{position:fixed;z-index:2147483001;background:var(--ck-bg);color:var(--ck-ink);',
+    'border:1px solid var(--ck-line);border-radius:var(--ck-radius);pointer-events:auto}',
+    '.ck-banner--bar{left:16px;right:16px;padding:18px 20px;',
+    'display:flex;gap:20px;align-items:center;flex-wrap:wrap}',
+    '.ck-banner--bar.ck-pos-bottom{bottom:16px}',
+    '.ck-banner--bar.ck-pos-top{top:16px}',
+    '.ck-banner--modal{top:50%;left:50%;transform:translate(-50%,-50%);',
+    'width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:24px}',
+
+    /* box: compact card, corner-anchored, no scrim */
+    '.ck-banner--box{width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 32px);',
+    'overflow:auto;padding:20px;display:block}',
+    '.ck-banner--box.ck-pos-bottom-right{bottom:16px;right:16px}',
+    '.ck-banner--box.ck-pos-bottom-left{bottom:16px;left:16px}',
+    '.ck-banner--box p{margin-bottom:16px}',
+    /* both filled buttons share one equal row; outline spans the width below */
+    '.ck-banner--box .ck-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.ck-banner--box .ck-btn{min-width:0;width:100%}',
+    '.ck-banner--box .ck-btn--outline{grid-column:1 / -1}',
+    '.ck-banner__body{flex:1 1 320px;min-width:0}',
+    '.ck-banner h2{margin:0 0 6px;font-size:17px;font-weight:600;letter-spacing:-.01em}',
+    '.ck-banner p{margin:0;color:var(--ck-muted);font-size:14px}',
+    '.ck-banner--modal p{margin-bottom:20px}',
+    '.ck-banner__more{white-space:nowrap}',
+
+    /* ---- equal-weight action row ---- */
+    '.ck-actions{display:flex;gap:10px;flex-wrap:wrap;flex:0 1 auto}',
+    '.ck-banner--modal .ck-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}',
+    '.ck-btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;',
+    'min-width:150px;min-height:44px;padding:11px 18px;font-size:14px;font-weight:600;line-height:1.2;',
+    'border-radius:var(--ck-radius);border:1px solid transparent;background:transparent;flex:1 1 auto}',
+    '.ck-btn--filled{background:var(--ck-accent);border-color:var(--ck-accent);color:var(--ck-on-accent)}',
+    '.ck-btn--outline{background:transparent;border-color:var(--ck-accent);color:var(--ck-accent)}',
+    '.ck-btn--ghost{min-width:0;border-color:var(--ck-line);color:var(--ck-ink);font-weight:500}',
+
+    /* ---- panel ---- */
+    '.ck-panel-scrim{position:fixed;inset:0;background:rgba(16,20,30,.34);z-index:2147483002;pointer-events:none}',
+    '.ck-panel{position:fixed;z-index:2147483003;top:50%;left:50%;transform:translate(-50%,-50%);',
+    'width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 48px);',
+    'display:flex;flex-direction:column;background:var(--ck-bg);color:var(--ck-ink);',
+    'border:1px solid var(--ck-line);border-radius:var(--ck-radius);overflow:hidden}',
+    '.ck-panel__head{display:flex;align-items:flex-start;gap:16px;padding:22px 24px 14px;',
+    'border-bottom:1px solid var(--ck-line)}',
+    '.ck-panel__head h2{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-.01em}',
+    '.ck-panel__head p{margin:0;font-size:14px;color:var(--ck-muted)}',
+    '.ck-x{flex:none;width:36px;height:36px;border-radius:var(--ck-radius);border:1px solid var(--ck-line);',
+    'background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--ck-muted)}',
+    '.ck-panel__body{overflow:auto;padding:6px 24px 10px;-webkit-overflow-scrolling:touch}',
+    '.ck-panel__foot{display:flex;gap:10px;flex-wrap:wrap;padding:16px 24px;',
+    'border-top:1px solid var(--ck-line);background:var(--ck-soft)}',
+    '.ck-panel__foot .ck-btn{flex:1 1 150px}',
+
+    /* ---- category row ---- */
+    '.ck-cat{padding:16px 0;border-bottom:1px solid var(--ck-line)}',
+    '.ck-cat:last-child{border-bottom:0}',
+    '.ck-cat__top{display:flex;gap:16px;align-items:flex-start}',
+    '.ck-cat__txt{flex:1 1 auto;min-width:0}',
+    '.ck-cat__name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;font-weight:600}',
+    '.ck-cat__badge{font-size:12px;font-weight:500;color:var(--ck-muted);',
+    'border:1px solid var(--ck-line);border-radius:999px;padding:1px 8px}',
+    '.ck-cat__desc{margin:4px 0 0;font-size:13.5px;color:var(--ck-muted)}',
+
+    /* ---- switch ---- */
+    '.ck-switch{flex:none;width:46px;height:27px;padding:0;border-radius:999px;',
+    'border:1px solid var(--ck-line);background:var(--ck-soft);position:relative}',
+    '.ck-switch::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;',
+    'border-radius:50%;background:var(--ck-bg);border:1px solid var(--ck-line)}',
+    '.ck-switch[aria-checked="true"]{background:var(--ck-accent);border-color:var(--ck-accent)}',
+    '.ck-switch[aria-checked="true"]::after{left:auto;right:2px;border-color:transparent}',
+    '.ck-switch[disabled]{cursor:not-allowed;opacity:.55}',
+
+    /* ---- cookie table ---- */
+    '.ck-det{margin-top:12px}',
+    '.ck-det>summary{cursor:pointer;font-size:13px;color:var(--ck-accent);',
+    'list-style:none;display:inline-flex;align-items:center;gap:6px;padding:2px 0}',
+    '.ck-det>summary::-webkit-details-marker{display:none}',
+    '.ck-det>summary::before{content:"";width:0;height:0;border:4px solid transparent;',
+    'border-left-color:currentColor;border-right:0}',
+    '.ck-det[open]>summary::before{transform:rotate(90deg)}',
+    '.ck-tablewrap{margin-top:8px;overflow-x:auto;border:1px solid var(--ck-line);border-radius:var(--ck-radius)}',
+    'table{border-collapse:collapse;width:100%;font-size:13px;min-width:420px}',
+    'th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--ck-line);vertical-align:top}',
+    'thead th{background:var(--ck-soft);font-weight:600;font-size:12px;color:var(--ck-muted);white-space:nowrap}',
+    'tbody tr:last-child td{border-bottom:0}',
+    'td.ck-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}',
+    '.ck-empty{margin:8px 0 0;font-size:13px;color:var(--ck-muted)}',
+
+    /* ---- floating button ---- */
+    '.ck-fab{position:fixed;left:16px;bottom:16px;z-index:2147482999;width:48px;height:48px;',
+    'border-radius:50%;border:1px solid var(--ck-line);background:var(--ck-bg);color:var(--ck-accent);',
+    'display:inline-flex;align-items:center;justify-content:center;padding:0}',
+    '.ck-fab svg{width:24px;height:24px;display:block}',
+
+    '@media (max-width:560px){',
+    '.ck-banner--bar{left:8px;right:8px;bottom:8px;padding:16px}',
+    '.ck-actions{width:100%}.ck-btn{min-width:0;flex:1 1 100%}}',
+
+    '@media (prefers-reduced-motion: no-preference){',
+    '.ck-btn,.ck-x,.ck-fab,.ck-switch,.ck-switch::after{transition:background-color .16s ease,border-color .16s ease,color .16s ease,left .16s ease,right .16s ease}}'
+  ].join('\n');
+
+  var COOKIE_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<path d="M21 12a9 9 0 1 1-9-9 3.4 3.4 0 0 0 4.2 4.2A3.4 3.4 0 0 0 21 12Z"/>' +
+    '<circle cx="9" cy="10" r="1"/><circle cx="14.5" cy="15" r="1"/><circle cx="8.5" cy="15.5" r="1"/>' +
+    '</svg>';
+
+  /* --------------------------------------------------------------- helpers */
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function api() {
+    return (typeof window !== 'undefined' && window.ConsentKit) || null;
+  }
+
+  function safeState() {
+    var ck = api();
+    var s = null;
+    try {
+      if (ck && typeof ck.getState === 'function') s = ck.getState();
+    } catch (e) { s = null; }
+    if (!s || typeof s !== 'object') s = { decided: false, categories: {} };
+    if (!s.categories || typeof s.categories !== 'object') s.categories = {};
+    return s;
+  }
+
+  function safeConfig() {
+    var ck = api();
+    var c = (ck && ck.config) || {};
+    return (c && typeof c === 'object') ? c : {};
+  }
+
+  /* ----------------------------------------------------------------- state */
+
+  var mounted = false;
+  var mountedSig = null;
+  var host = null, root = null;
+  var T = DICT.en;
+  var nodes = {};              // banner/panel/fab refs
+  var switches = {};           // category -> button
+  var panelOpen = false;
+  var lastFocus = null;
+
+  /* ---------------------------------------------------------------- build */
+
+  function activeOptIn(cfg) {
+    var cats = (cfg && cfg.categories) || {};
+    var out = [];
+    for (var i = 0; i < OPT_IN.length; i++) {
+      var k = OPT_IN[i];
+      var entry = cats[k];
+      // absent -> shown; explicit enabled:false -> hidden
+      if (entry && entry.enabled === false) continue;
+      out.push(k);
+    }
+    return out;
+  }
+
+  function cookiesFor(cfg, cat) {
+    var list = (cfg && cfg.cookieTable) || [];
+    if (!Array.isArray(list)) return [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var row = list[i];
+      if (row && typeof row === 'object' && String(row.category || '') === cat) out.push(row);
+    }
+    return out;
+  }
+
+  /* ----------------------------------------------------------------- theme */
+
+  // Built-in palettes. Dark values are picked for >= 4.5:1 text contrast.
+  var LIGHT_RADIUS = '10px';
+  var LIGHT = {
+    bg: '#fff', ink: '#1B2437', accent: '#2B50D8', onAccent: '#fff',
+    muted: '#5b6478', line: '#dfe3ea', soft: '#f4f6f9'
+  };
+  var DARK = {
+    bg: '#1A202D', ink: '#E6EAF4', accent: '#7B96F0', onAccent: '#12182A',
+    muted: '#A6B0C6', line: '#333C4F', soft: '#232B3A'
+  };
+
+  function str(v) {
+    return (typeof v === 'string' && v.trim()) ? v.trim() : null;
+  }
+
+  // One :host{} block of custom properties for a resolved palette.
+  function tokenBlock(sel, p, radius) {
+    var d = [
+      '--ck-bg:' + p.bg,
+      '--ck-ink:' + p.ink,
+      '--ck-accent:' + p.accent,
+      '--ck-on-accent:' + p.onAccent,
+      '--ck-muted:' + p.muted,
+      '--ck-line:' + p.line,
+      '--ck-soft:' + p.soft
+    ];
+    if (radius) d.push('--ck-radius:' + radius);
+    return sel + '{' + d.join(';') + '}';
+  }
+
+  // Derived tokens follow the explicit bg/ink the caller supplied, so a custom
+  // light palette keeps readable muted/line/soft values.
+  function derive(base, bg, ink) {
+    var p = {
+      bg: bg, ink: ink, accent: base.accent, onAccent: base.onAccent,
+      muted: base.muted, line: base.line, soft: base.soft
+    };
+    if (bg !== base.bg || ink !== base.ink) {
+      p.muted = 'color-mix(in srgb, ' + ink + ' 62%, ' + bg + ')';
+      p.line = 'color-mix(in srgb, ' + ink + ' 14%, ' + bg + ')';
+      p.soft = 'color-mix(in srgb, ' + ink + ' 5%, ' + bg + ')';
+    }
+    return p;
+  }
+
+  function buildThemeCss(cfg) {
+    var theme = (cfg && cfg.theme) || {};
+    var dk = (theme.dark && typeof theme.dark === 'object') ? theme.dark : {};
+    var radius = str(theme.radius) || LIGHT_RADIUS;
+
+    // Light: config overrides on top of the built-in light palette.
+    var light = derive(LIGHT, str(theme.bg) || LIGHT.bg, str(theme.ink) || LIGHT.ink);
+    if (str(theme.accent)) light.accent = str(theme.accent);
+
+    // Dark: theme.dark overrides on top of the built-in dark palette.
+    // A light-only theme.accent deliberately does NOT carry into dark — the
+    // default #2B50D8 on #1A202D is ~2.5:1 and would fail AA.
+    var dark = derive(DARK, str(dk.bg) || DARK.bg, str(dk.ink) || DARK.ink);
+    if (str(dk.accent)) dark.accent = str(dk.accent);
+    if (str(dk.onAccent)) dark.onAccent = str(dk.onAccent);
+
+    var mode = theme.mode;
+    if (mode !== 'light' && mode !== 'dark') mode = 'auto';
+
+    var out = [tokenBlock(':host', light, radius)];
+    if (mode === 'auto') {
+      // forced-light class must still beat a dark system preference
+      out.push('@media (prefers-color-scheme: dark){' +
+        tokenBlock(':host(:not(.ck-mode-light))', dark, null) + '}');
+    }
+    out.push(tokenBlock(':host(.ck-mode-dark)', dark, null));
+
+    // color-mix fallback, per context, so a custom palette without color-mix
+    // still lands on readable static values rather than transparent.
+    out.push('@supports not (color: color-mix(in srgb, #000 50%, #fff)){' +
+      ':host{--ck-muted:' + LIGHT.muted + ';--ck-line:' + LIGHT.line + ';--ck-soft:' + LIGHT.soft + '}' +
+      (mode === 'auto'
+        ? '@media (prefers-color-scheme: dark){:host(:not(.ck-mode-light)){--ck-muted:' + DARK.muted +
+          ';--ck-line:' + DARK.line + ';--ck-soft:' + DARK.soft + '}}'
+        : '') +
+      ':host(.ck-mode-dark){--ck-muted:' + DARK.muted + ';--ck-line:' + DARK.line +
+      ';--ck-soft:' + DARK.soft + '}}');
+
+    return { css: out.join('\n'), mode: mode };
+  }
+
+  function applyTheme(cfg) {
+    if (!host || !nodes.themeStyle) return;
+    var built = buildThemeCss(cfg);
+    nodes.themeStyle.textContent = built.css;   // replace, never append
+    host.classList.remove('ck-mode-dark', 'ck-mode-light');
+    if (built.mode === 'dark') host.classList.add('ck-mode-dark');
+    else if (built.mode === 'light') host.classList.add('ck-mode-light');
+  }
+
+  function makeSwitch(cat, locked) {
+    var b = el('button', 'ck-switch');
+    b.type = 'button';
+    b.setAttribute('role', 'switch');
+    b.setAttribute('aria-checked', locked ? 'true' : 'false');
+    b.dataset.cat = cat;
+    if (locked) {
+      b.disabled = true;
+      b.setAttribute('aria-disabled', 'true');
+    } else {
+      b.addEventListener('click', function () {
+        var on = b.getAttribute('aria-checked') === 'true';
+        b.setAttribute('aria-checked', on ? 'false' : 'true');
+      });
+    }
+    return b;
+  }
+
+  function buildCategory(cfg, cat) {
+    var meta = T.cat[cat] || { title: cat, desc: '' };
+    var locked = cat === 'necessary';
+
+    var wrap = el('div', 'ck-cat');
+    var top = el('div', 'ck-cat__top');
+    var txt = el('div', 'ck-cat__txt');
+
+    var nameId = 'ck-cat-' + cat;
+    var name = el('div', 'ck-cat__name');
+    var nameSpan = el('span', null, meta.title);
+    nameSpan.id = nameId;
+    name.appendChild(nameSpan);
+    if (locked) name.appendChild(el('span', 'ck-cat__badge', T.alwaysOn));
+    txt.appendChild(name);
+
+    var descId = nameId + '-desc';
+    var desc = el('p', 'ck-cat__desc', meta.desc);
+    desc.id = descId;
+    txt.appendChild(desc);
+
+    var sw = makeSwitch(cat, locked);
+    sw.setAttribute('aria-labelledby', nameId);
+    sw.setAttribute('aria-describedby', descId);
+    switches[cat] = sw;
+
+    top.appendChild(txt);
+    top.appendChild(sw);
+    wrap.appendChild(top);
+
+    var rows = cookiesFor(cfg, cat);
+    if (rows.length) {
+      var det = el('details', 'ck-det');
+      var sum = el('summary');
+      sum.appendChild(document.createTextNode(T.cookiesIn + ' (' + rows.length + ')'));
+      det.appendChild(sum);
+
+      var tw = el('div', 'ck-tablewrap');
+      var table = el('table');
+      var thead = el('thead');
+      var htr = el('tr');
+      var heads = [T.colName, T.colVendor, T.colPurpose, T.colExpiry];
+      for (var h = 0; h < heads.length; h++) {
+        var th = el('th', null, heads[h]);
+        th.setAttribute('scope', 'col');
+        htr.appendChild(th);
+      }
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      var tbody = el('tbody');
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
+        var tr = el('tr');
+        tr.appendChild(el('td', 'ck-mono', String(row.name == null ? '—' : row.name)));
+        tr.appendChild(el('td', null, String(row.vendor == null ? '—' : row.vendor)));
+        tr.appendChild(el('td', null, String(row.purpose == null ? '—' : row.purpose)));
+        tr.appendChild(el('td', null, String(row.expiry == null ? '—' : row.expiry)));
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      tw.appendChild(table);
+      det.appendChild(tw);
+      wrap.appendChild(det);
+    }
+
+    return wrap;
+  }
+
+  // Unknown type -> bar/bottom. Known type with an unrecognized position ->
+  // that type's own default (bar: bottom, box: bottom-right).
+  function resolveLayout(cfg) {
+    var layout = (cfg && cfg.layout) || {};
+    var type = layout.type;
+    if (type !== 'modal' && type !== 'box') type = 'bar';
+    var pos = layout.position;
+    if (type === 'bar') pos = (pos === 'top') ? 'top' : 'bottom';
+    else if (type === 'box') pos = (pos === 'bottom-left') ? 'bottom-left' : 'bottom-right';
+    else pos = null;                                  // modal is centered
+    return { type: type, position: pos };
+  }
+
+  function buildBanner(cfg) {
+    var lay = resolveLayout(cfg);
+    var isModal = lay.type === 'modal';
+
+    var scrim = el('div', 'ck-scrim ck-hidden');       // decorative, never blocks scroll
+    scrim.setAttribute('aria-hidden', 'true');
+    if (!isModal) scrim.classList.add('ck-hidden');
+
+    var b = el('section', 'ck-banner ck-hidden');
+    b.className = 'ck-banner ck-hidden ck-banner--' + lay.type +
+      (lay.position ? ' ck-pos-' + lay.position : '');
+    b.setAttribute('role', 'region');
+    b.setAttribute('aria-label', T.bannerLabel);
+
+    var body = el('div', 'ck-banner__body');
+    var h = el('h2', null, T.bannerTitle);
+    h.id = 'ck-banner-title';
+    body.appendChild(h);
+
+    var p = el('p');
+    p.appendChild(document.createTextNode(T.bannerText + ' '));
+    var link = el('a', 'ck-banner__more', T.more);
+    link.href = '#';
+    p.appendChild(link);
+    body.appendChild(p);
+    b.appendChild(body);
+
+    var actions = el('div', 'ck-actions');
+    var accept = el('button', 'ck-btn ck-btn--filled', T.acceptAll);
+    accept.type = 'button';
+    var reject = el('button', 'ck-btn ck-btn--filled', T.rejectAll);
+    reject.type = 'button';
+    var custom = el('button', 'ck-btn ck-btn--outline', T.customize);
+    custom.type = 'button';
+
+    accept.addEventListener('click', function () { doAcceptAll(); });
+    reject.addEventListener('click', function () { doRejectAll(); });
+    custom.addEventListener('click', function () { openPanel(custom); });
+
+    actions.appendChild(accept);
+    actions.appendChild(reject);
+    actions.appendChild(custom);
+    b.appendChild(actions);
+
+    nodes.scrim = scrim;
+    nodes.banner = b;
+    nodes.bannerModal = isModal;
+    root.appendChild(scrim);
+    root.appendChild(b);
+  }
+
+  function buildPanel(cfg) {
+    var scrim = el('div', 'ck-panel-scrim ck-hidden');
+    scrim.setAttribute('aria-hidden', 'true');
+
+    var p = el('div', 'ck-panel ck-hidden');
+    p.setAttribute('role', 'dialog');
+    p.setAttribute('aria-modal', 'true');
+    p.setAttribute('aria-label', T.panelTitle);
+    p.tabIndex = -1;
+
+    var head = el('div', 'ck-panel__head');
+    var htxt = el('div');
+    htxt.appendChild(el('h2', null, T.panelTitle));
+    htxt.appendChild(el('p', null, T.panelIntro));
+    head.appendChild(htxt);
+
+    var x = el('button', 'ck-x');
+    x.type = 'button';
+    x.setAttribute('aria-label', T.close);
+    x.appendChild(document.createTextNode('✕'));
+    x.addEventListener('click', function () { closePanel(); });
+    head.appendChild(x);
+    p.appendChild(head);
+
+    var body = el('div', 'ck-panel__body');
+    var cats = ['necessary'].concat(activeOptIn(cfg));
+    for (var i = 0; i < cats.length; i++) body.appendChild(buildCategory(cfg, cats[i]));
+    p.appendChild(body);
+
+    var foot = el('div', 'ck-panel__foot');
+    var save = el('button', 'ck-btn ck-btn--filled', T.save);
+    save.type = 'button';
+    var acc = el('button', 'ck-btn ck-btn--outline', T.acceptAll);
+    acc.type = 'button';
+    var rej = el('button', 'ck-btn ck-btn--outline', T.rejectAll);
+    rej.type = 'button';
+
+    save.addEventListener('click', function () { doSave(); });
+    acc.addEventListener('click', function () { doAcceptAll(); });
+    rej.addEventListener('click', function () { doRejectAll(); });
+
+    foot.appendChild(save);
+    foot.appendChild(acc);
+    foot.appendChild(rej);
+    p.appendChild(foot);
+
+    p.addEventListener('keydown', onPanelKeydown);
+
+    nodes.panelScrim = scrim;
+    nodes.panel = p;
+    root.appendChild(scrim);
+    root.appendChild(p);
+  }
+
+  function buildFab() {
+    var f = el('button', 'ck-fab ck-hidden');
+    f.type = 'button';
+    f.setAttribute('aria-label', T.floating);
+    f.title = T.floating;
+    f.innerHTML = COOKIE_ICON;  // static literal, no config data
+    f.addEventListener('click', function () { openPanel(f); });
+    nodes.fab = f;
+    root.appendChild(f);
+  }
+
+  /* -------------------------------------------------------------- a11y/trap */
+
+  function focusables() {
+    if (!nodes.panel) return [];
+    var sel = 'button:not([disabled]),a[href],summary,input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    var all = nodes.panel.querySelectorAll(sel);
+    var out = [];
+    for (var i = 0; i < all.length; i++) {
+      var n = all[i];
+      if (n.hasAttribute('disabled')) continue;
+      if (n.offsetParent === null && n.getClientRects().length === 0) continue;
+      out.push(n);
+    }
+    return out;
+  }
+
+  function onPanelKeydown(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      e.preventDefault();
+      e.stopPropagation();
+      closePanel();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    var list = focusables();               // queried live: <details> changes the set
+    if (!list.length) { e.preventDefault(); return; }
+    var current = root.activeElement || document.activeElement;
+    var idx = list.indexOf(current);
+    var next;
+    if (e.shiftKey) next = idx <= 0 ? list[list.length - 1] : list[idx - 1];
+    else next = (idx === -1 || idx === list.length - 1) ? list[0] : list[idx + 1];
+    e.preventDefault();
+    next.focus();
+  }
+
+  /* ---------------------------------------------------------------- actions */
+
+  function readSwitches() {
+    var out = {};
+    for (var i = 0; i < OPT_IN.length; i++) {
+      var k = OPT_IN[i];
+      var sw = switches[k];
+      out[k] = !!(sw && sw.getAttribute('aria-checked') === 'true');
+    }
+    return out;
+  }
+
+  function doAcceptAll() {
+    var ck = api();
+    try { if (ck && typeof ck.accept === 'function') ck.accept('all'); } catch (e) {}
+    closePanel(true);
+    syncFromState();
+  }
+
+  function doRejectAll() {
+    var ck = api();
+    try { if (ck && typeof ck.rejectAll === 'function') ck.rejectAll(); } catch (e) {}
+    closePanel(true);
+    syncFromState();
+  }
+
+  // Saving without touching anything is a valid refusal of every opt-in category.
+  function doSave() {
+    var ck = api();
+    var choice = readSwitches();
+    try { if (ck && typeof ck.accept === 'function') ck.accept(choice); } catch (e) {}
+    closePanel(true);
+    syncFromState();
+  }
+
+  /* ------------------------------------------------------------ open/close */
+
+  function openPanel(invoker) {
+    if (!mounted || !nodes.panel) return;
+    lastFocus = invoker || root.activeElement || document.activeElement;
+    syncSwitches(safeState());
+    nodes.panelScrim.classList.remove('ck-hidden');
+    nodes.panel.classList.remove('ck-hidden');
+    panelOpen = true;
+    try { nodes.panel.focus(); } catch (e) {}
+  }
+
+  function closePanel(skipRestore) {
+    if (!nodes.panel) return;
+    var wasOpen = panelOpen;
+    nodes.panelScrim.classList.add('ck-hidden');
+    nodes.panel.classList.add('ck-hidden');
+    panelOpen = false;
+    if (wasOpen && !skipRestore && lastFocus && typeof lastFocus.focus === 'function') {
+      try { if (lastFocus.isConnected !== false) lastFocus.focus(); } catch (e) {}
+    }
+    lastFocus = null;
+  }
+
+  /* ------------------------------------------------------------------ sync */
+
+  function syncSwitches(state) {
+    var cats = (state && state.categories) || {};
+    for (var i = 0; i < OPT_IN.length; i++) {
+      var k = OPT_IN[i];
+      var sw = switches[k];
+      if (!sw) continue;
+      // before a decision every opt-in switch stays off
+      var on = state && state.decided ? cats[k] === true : false;
+      sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    if (switches.necessary) switches.necessary.setAttribute('aria-checked', 'true');
+  }
+
+  // Idempotent: safe to call from ck:init, ck:change and right after our own API calls.
+  function syncFromState(state) {
+    if (!mounted) return;
+    var s = state || safeState();
+    var decided = !!s.decided;
+
+    if (nodes.banner) nodes.banner.classList.toggle('ck-hidden', decided);
+    if (nodes.scrim) nodes.scrim.classList.toggle('ck-hidden', decided || !nodes.bannerModal);
+    if (nodes.fab) nodes.fab.classList.toggle('ck-hidden', !decided);
+    if (!panelOpen) syncSwitches(s);
+  }
+
+  /* ----------------------------------------------------------------- mount */
+
+  // Structural inputs: a change to any of these needs a rebuild, not a restyle.
+  function signature(cfg) {
+    var c = cfg || {};
+    var lay = resolveLayout(c);
+    var table = c.cookieTable;
+    return [
+      String(c.language || 'auto'),
+      lay.type, String(lay.position),
+      Array.isArray(table) ? table.length : 0
+    ].join('|');
+  }
+
+  function remount(cfg) {
+    mounted = false;
+    panelOpen = false;
+    lastFocus = null;
+    mount(cfg);
+  }
+
+  function mount(cfg) {
+    if (mounted) return;
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', function () { mount(safeConfig()); }, { once: true });
+      return;
+    }
+
+    var table = localeTable();                       // read at render time
+    T = buildStrings(resolveLang(cfg && cfg.language, table), table);
+
+    host = document.getElementById('ck-root');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'ck-root';
+      document.body.appendChild(host);
+    }
+    root = host.shadowRoot || host.attachShadow({ mode: 'open' });
+    root.innerHTML = '';
+
+    var style = document.createElement('style');
+    style.textContent = CSS;
+    root.appendChild(style);
+
+    switches = {};
+    nodes = {};
+
+    // Palette sheet comes after the base sheet so its :host tokens win.
+    nodes.themeStyle = document.createElement('style');
+    root.appendChild(nodes.themeStyle);
+    applyTheme(cfg);
+
+    buildBanner(cfg);
+    buildPanel(cfg);
+    buildFab();
+
+    mounted = true;
+    mountedSig = signature(cfg);
+    syncFromState();
+  }
+
+  /* ---------------------------------------------------------------- events */
+
+  // SSR-safe: with no DOM there is nothing to render or listen to, so importing
+  // this file in Node is a no-op rather than a throw (mirrors the core).
+  if (typeof document === 'undefined') return;
+
+  document.addEventListener('ck:init', function (e) {
+    var d = (e && e.detail) || {};
+    var cfg = d.config || safeConfig();
+    if (!mounted) {
+      mount(cfg);
+    } else if (signature(cfg) !== mountedSig) {
+      remount(cfg);           // language/layout changed since the first render
+    } else {
+      applyTheme(cfg);        // palette-only changes need no rebuild
+    }
+    syncFromState(d.state);
+  });
+
+  document.addEventListener('ck:change', function (e) {
+    var d = (e && e.detail) || {};
+    syncFromState(d.state);
+  });
+
+  // Insurance: sync is idempotent, so a core that only signals the first choice
+  // via ck:consent still updates the UI.
+  document.addEventListener('ck:consent', function (e) {
+    var d = (e && e.detail) || {};
+    syncFromState(d.state);
+  });
+
+  document.addEventListener('ck:ui:open-preferences', function () {
+    if (!mounted) mount(safeConfig());
+    openPanel(null);
+  });
+
+  document.addEventListener('ck:ui:close', function () {
+    closePanel();
+  });
+
+  // Fallback for a missed ck:init (this file loaded after init() already ran).
+  // Deferred to a macrotask on purpose: the core publishes a DEFAULT config at
+  // parse time, so mounting synchronously here would render with those defaults
+  // before the real init() config arrives and — mount() being one-shot — lock in
+  // the wrong language and layout. By the time the timeout runs, a normally
+  // ordered page has already dispatched ck:init and mounted, so this no-ops;
+  // only a genuinely missed ck:init reaches mount(), and by then
+  // ConsentKit.config holds the merged real config.
+  setTimeout(function () {
+    if (!mounted && api() && api().config) mount(safeConfig());
+  }, 0);
+})();
+
+;
+/* ConsentKit init — config from build flags */
+(function(){
+  var CFG = {
+    "policyVersion": "1",
+    "language": "auto",
+    "layout": {
+      "type": "bar",
+      "position": "bottom"
+    },
+    "theme": {
+      "accent": "#2B50D8",
+      "radius": "10px",
+      "mode": "auto"
+    },
+    "cookieTable": []
+  };
+  function start(){
+    try { window.ConsentKit.init(CFG); }
+    catch (e) { if (window.console && console.error) console.error("[ConsentKit] init failed", e); }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else { start(); }
+})();
+</script>
