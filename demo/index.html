@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кофейня ConsentKit — демо</title>
+<style>
+  :root {
+    --ink: #1B2437;
+    --muted: #6B7488;
+    --line: #E3E7EF;
+    --accent: #2B50D8;
+    --bg: #F6F7FB;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+
+  header.site {
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+  header.site .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+  .brand .logo { font-size: 26px; }
+  nav.site a {
+    color: var(--muted);
+    text-decoration: none;
+    margin-left: 18px;
+    font-size: 15px;
+  }
+  nav.site a:hover { color: var(--accent); }
+
+  .hero { padding: 40px 0 8px; }
+  .hero h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+  .hero p { margin: 0; color: var(--muted); max-width: 46em; }
+
+  .note {
+    margin: 24px 0 8px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .note h2 { margin: 0 0 6px; font-size: 16px; }
+  .note p { margin: 0; font-size: 14px; color: var(--muted); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 24px 0 32px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .card .pic {
+    font-size: 44px;
+    text-align: center;
+    padding: 14px 0 10px;
+  }
+  .card h3 { margin: 0 0 4px; font-size: 17px; }
+  .card .desc { margin: 0 0 14px; font-size: 14px; color: var(--muted); flex: 1; }
+  .card .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .price { font-weight: 700; font-size: 17px; }
+  .buy {
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .buy:hover { filter: brightness(1.08); }
+
+  .media {
+    margin: 0 0 32px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .media h3 { margin: 0 0 10px; font-size: 17px; }
+  .media .frame {
+    position: relative;
+    background: #DCDFE7;
+    border-radius: 10px;
+    overflow: hidden;
+    height: 180px;
+  }
+  .media iframe { display: block; width: 100%; height: 100%; border: 0; background: #DCDFE7; }
+  .media .caption {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7488;
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  footer.site {
+    background: #fff;
+    border-top: 1px solid var(--line);
+    padding: 22px 0 40px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  footer.site .wrap { display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: space-between; }
+  footer.site a { color: var(--accent); cursor: pointer; }
+
+  /* --- Status panel (plain DOM, not shadow) --- */
+  #status-panel {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 2147483000;
+    width: 300px;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(27, 36, 55, .14);
+    padding: 12px;
+    font-size: 12px;
+  }
+  #status-panel h4 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  #status-panel section { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  #status-panel .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+  }
+  #status-panel .tr {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    padding: 2px 0;
+  }
+  #status-panel .tr b { font-weight: 600; }
+  #status-panel .reset {
+    margin-top: 10px;
+    width: 100%;
+    border: 1px solid var(--line);
+    background: #F6F7FB;
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #status-panel .reset:hover { background: #ECEFF6; }
+  #status-panel .warn { color: #B23B3B; }
+
+  /* Dev switcher — own selectors, no overlap with the sp-* rows above */
+  #dev-block .dev-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 4px 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  #dev-block .dev-row select,
+  #dev-block .dev-row input {
+    font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3px 5px;
+    width: 130px;
+  }
+  #dev-block .dev-apply {
+    margin-top: 8px;
+    width: 100%;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #dev-block .dev-apply:hover { filter: brightness(1.08); }
+  /* Reserve a gutter so the fixed panel never overlaps the content column */
+  @media (min-width: 761px) {
+    body { padding-right: 324px; }
+  }
+  @media (max-width: 760px) {
+    #status-panel { position: static; width: auto; max-height: none; margin: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="brand"><span class="logo">☕</span> Кофейня ConsentKit</div>
+    <nav class="site">
+      <a href="#">Меню</a>
+      <a href="#">Доставка</a>
+      <a href="#">О нас</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Свежая обжарка каждую неделю</h1>
+    <p>Зерно из небольших хозяйств, обжарка в день заказа, доставка по городу за пару часов.</p>
+  </div>
+
+  <div class="note">
+    <h2>Что это за страница</h2>
+    <p>Это демонстрационный магазин для прототипа ConsentKit — движка согласия на cookie по GDPR.
+       На странице стоят три фейковых трекера (аналитика, маркетинговый пиксель, чат поддержки) и заглушка видео,
+       и до вашего выбора в баннере ни один из них не должен загрузиться.
+       Следите за панелью статуса справа сверху: там видно, какие скрипты уже загружены, какие cookie реально стоят в браузере
+       и как выглядит текущее состояние согласия. Нажмите «Принять всё», «Отклонить всё» или настройте категории по отдельности
+       и сравните результат, а кнопка «Сбросить всё» вернёт страницу в исходное состояние.</p>
+  </div>
+
+  <div class="grid">
+    <article class="card">
+      <div class="pic">🫘</div>
+      <h3>Эфиопия Иргачеффе</h3>
+      <p class="desc">Светлая обжарка, ноты жасмина и лимона. 250 г зерна.</p>
+      <div class="row"><span class="price">690 ₽</span><button class="buy" type="button">В корзину</button></div>
+    </article>
+    <article class="card">
+      <div class="pic">☕</div>
+      <h3>Бразилия Сантос</h3>
+      <p class="desc">Средняя обжарка, шоколад и орех. Хорош с молоком. 250 г.</p>
+      <div class="row"><span class="price">540 ₽</span><button class="buy" type="button">В корзину</button></div>
+    </article>
+    <article class="card">
+      <div class="pic">🍰</div>
+      <h3>Набор «Выходные»</h3>
+      <p class="desc">Два пакета зерна на выбор плюс печенье к кофе.</p>
+      <div class="row"><span class="price">1 290 ₽</span><button class="buy" type="button">В корзину</button></div>
+    </article>
+  </div>
+
+  <div class="media">
+    <h3>Как мы обжариваем</h3>
+    <div class="frame">
+      <iframe data-ck="marketing" data-src="about:blank" title="Видео (маркетинг)"></iframe>
+      <div class="caption">Видео (маркетинг)</div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>© 2026 Кофейня ConsentKit — демо-страница прототипа</span>
+    <a id="ck-prefs-link" href="#">Настройки cookie</a>
+  </div>
+</footer>
+
+<!-- Status panel: plain DOM, filled by the inline script below -->
+<div id="status-panel">
+  <h4>Панель статуса</h4>
+  <div id="sp-trackers">
+    <div class="tr"><b>GA (analytics)</b><span id="sp-ga">⛔ заблокирован</span></div>
+    <div class="tr"><b>Pixel (marketing)</b><span id="sp-pixel">⛔ заблокирован</span></div>
+    <div class="tr"><b>Chat (functional)</b><span id="sp-chat">⛔ заблокирован</span></div>
+  </div>
+  <section>
+    <h4>document.cookie</h4>
+    <pre class="mono" id="sp-cookies">—</pre>
+  </section>
+  <section>
+    <h4>ConsentKit.getState()</h4>
+    <pre class="mono" id="sp-state">—</pre>
+  </section>
+  <section id="dev-block">
+    <h4>Dev</h4>
+    <label class="dev-row" for="dev-mode"><span>Тема</span>
+      <select id="dev-mode">
+        <option value="auto">auto</option>
+        <option value="light">light</option>
+        <option value="dark">dark</option>
+      </select>
+    </label>
+    <label class="dev-row" for="dev-layout"><span>Layout</span>
+      <select id="dev-layout">
+        <option value="bar">bar</option>
+        <option value="box">box</option>
+        <option value="modal">modal</option>
+      </select>
+    </label>
+    <label class="dev-row" for="dev-lang"><span>Язык</span>
+      <input id="dev-lang" list="dev-lang-list" autocomplete="off" spellcheck="false" placeholder="auto">
+      <datalist id="dev-lang-list">
+        <option value="auto"></option>
+        <option value="en"></option>
+        <option value="ru"></option>
+        <option value="de"></option>
+        <option value="fr"></option>
+        <option value="pl"></option>
+        <option value="es"></option>
+        <option value="it"></option>
+      </datalist>
+    </label>
+    <button class="dev-apply" type="button" id="dev-apply">Применить</button>
+  </section>
+  <button class="reset" type="button" id="sp-reset">Сбросить всё</button>
+</div>
+
+<!-- Manual markup: blocked until consent for the category is given -->
+<script type="text/plain" data-ck="marketing" data-src="trackers/pixel.js"></script>
+<script type="text/plain" data-ck="functional" data-src="trackers/chat.js"></script>
+
+<!-- Contract load order -->
+<script src="../src/ck-core.js"></script>
+<script src="../src/ck-locales.js"></script>
+<script src="../src/ck-ui.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var els = {
+    ga: document.getElementById('sp-ga'),
+    pixel: document.getElementById('sp-pixel'),
+    chat: document.getElementById('sp-chat'),
+    cookies: document.getElementById('sp-cookies'),
+    state: document.getElementById('sp-state')
+  };
+
+  function label(on) { return on ? '✅ загружен' : '⛔ заблокирован'; }
+
+  function renderTrackers() {
+    var l = window.__loaded || {};
+    els.ga.textContent = label(!!l.ga);
+    els.pixel.textContent = label(!!l.pixel);
+    els.chat.textContent = label(!!l.chat);
+  }
+
+  function renderCookies() {
+    var raw = document.cookie;
+    if (!raw) { els.cookies.textContent = '(нет cookie)'; return; }
+    els.cookies.textContent = raw.split('; ').join('\n');
+  }
+
+  function renderState() {
+    if (!window.ConsentKit || typeof window.ConsentKit.getState !== 'function') {
+      els.state.textContent = 'ConsentKit не загружен';
+      els.state.className = 'mono warn';
+      return;
+    }
+    try {
+      els.state.textContent = JSON.stringify(window.ConsentKit.getState(), null, 2);
+      els.state.className = 'mono';
+    } catch (e) {
+      els.state.textContent = 'ошибка getState(): ' + e.message;
+      els.state.className = 'mono warn';
+    }
+  }
+
+  function renderAll() { renderTrackers(); renderCookies(); renderState(); }
+
+  // --- Dev switcher: demo_cfg overrides the base init config ---
+  var MODES = ['auto', 'light', 'dark'];
+  var LAYOUTS = ['bar', 'box', 'modal'];
+  // box uses a corner position; bar uses bottom/top; modal ignores position.
+  var POSITION_BY_LAYOUT = { bar: 'bottom', box: 'bottom-right' };
+
+  function readDevCfg() {
+    try {
+      var raw = localStorage.getItem('demo_cfg');
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) {
+      console.warn('[demo] demo_cfg unreadable, ignoring', e);
+      return {};
+    }
+  }
+
+  // Apply only recognised values; language passes through as-is (arbitrary codes are the point).
+  function mergeDevCfg(base, dev) {
+    if (typeof dev.language === 'string' && dev.language) base.language = dev.language;
+    if (MODES.indexOf(dev.mode) !== -1) base.theme.mode = dev.mode;
+    if (LAYOUTS.indexOf(dev.layout) !== -1) {
+      base.layout.type = dev.layout;
+      if (POSITION_BY_LAYOUT[dev.layout]) base.layout.position = POSITION_BY_LAYOUT[dev.layout];
+    }
+    return base;
+  }
+
+  // Populated once at startup — never from renderAll, so the timer can't reset a field mid-edit.
+  function initDevControls(dev) {
+    var mode = document.getElementById('dev-mode');
+    var layout = document.getElementById('dev-layout');
+    var lang = document.getElementById('dev-lang');
+    mode.value = MODES.indexOf(dev.mode) !== -1 ? dev.mode : 'auto';
+    layout.value = LAYOUTS.indexOf(dev.layout) !== -1 ? dev.layout : 'bar';
+    lang.value = typeof dev.language === 'string' ? dev.language : '';
+    document.getElementById('dev-apply').addEventListener('click', function () {
+      var next = { mode: mode.value, layout: layout.value, language: lang.value.trim() || 'auto' };
+      try {
+        localStorage.setItem('demo_cfg', JSON.stringify(next));
+      } catch (e) {
+        console.error('[demo] cannot persist demo_cfg', e);
+      }
+      location.reload();
+    });
+  }
+
+  // Listeners must be registered BEFORE init() — ck:init fires from inside it.
+  document.addEventListener('ck:init', renderAll);
+  document.addEventListener('ck:consent', renderAll);
+  document.addEventListener('ck:change', renderAll);
+
+  document.getElementById('sp-reset').addEventListener('click', function () {
+    try {
+      if (window.ConsentKit && typeof window.ConsentKit.withdraw === 'function') {
+        window.ConsentKit.withdraw();
+      }
+    } catch (e) {
+      console.error('[demo] withdraw failed', e);
+    }
+    location.reload();
+  });
+
+  document.getElementById('ck-prefs-link').addEventListener('click', function (ev) {
+    ev.preventDefault();
+    try {
+      if (window.ConsentKit && typeof window.ConsentKit.show === 'function') {
+        window.ConsentKit.show();
+      } else {
+        console.warn('[demo] ConsentKit.show() недоступен');
+      }
+    } catch (e) {
+      console.error('[demo] show failed', e);
+    }
+  });
+
+  renderAll();
+  setInterval(renderAll, 800);
+
+  var devCfg = readDevCfg();
+  initDevControls(devCfg);
+
+  // Init ConsentKit with the demo cookie table.
+  try {
+    if (window.ConsentKit && typeof window.ConsentKit.init === 'function') {
+      window.ConsentKit.init(mergeDevCfg({
+        policyVersion: '1',
+        language: 'auto',
+        layout: { type: 'bar', position: 'bottom' },
+        theme: { accent: '#2B50D8', radius: '10px' },
+        cookieTable: [
+          {
+            name: 'demo_ga',
+            category: 'analytics',
+            vendor: 'Демо-аналитика',
+            purpose: 'Считает визиты и просмотры страниц, чтобы оценивать посещаемость магазина.',
+            expiry: '1 час'
+          },
+          {
+            name: 'demo_fbp',
+            category: 'marketing',
+            vendor: 'Демо-пиксель',
+            purpose: 'Отмечает посетителя для показа рекламы и оценки её эффективности.',
+            expiry: '1 час'
+          },
+          {
+            name: 'demo_chat',
+            category: 'functional',
+            vendor: 'Демо-чат поддержки',
+            purpose: 'Хранит идентификатор диалога, чтобы переписка с поддержкой не терялась.',
+            expiry: '1 час'
+          },
+          {
+            name: 'ck_consent',
+            category: 'necessary',
+            vendor: 'ConsentKit',
+            purpose: 'Запоминает ваш выбор по категориям cookie, чтобы баннер не показывался повторно.',
+            expiry: '365 дней'
+          }
+        ]
+      }, devCfg));
+    } else {
+      console.warn('[demo] ConsentKit.init() недоступен — ядро не загрузилось');
+    }
+  } catch (e) {
+    console.error('[demo] init failed', e);
+  }
+
+  // Dynamic insertion: must be caught by the autoblock via the /trackers/ga.js path.
+  var s = document.createElement('script');
+  s.src = 'trackers/ga.js';
+  s.async = true;
+  document.head.appendChild(s);
+
+  renderAll();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+{
+  "name": "consentkit",
+  "version": "0.3.0",
+  "private": true,
+  "description": "GDPR cookie consent core with blocking engine, Shadow DOM UI and Google Consent Mode v2. Zero dependencies, no build step.",
+  "license": "GPL-2.0-or-later",
+  "type": "module",
+  "sideEffects": true,
+  "types": "./npm/index.d.ts",
+  "main": "./npm/index.cjs",
+  "module": "./npm/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./npm/index.d.ts",
+      "import": "./npm/index.mjs",
+      "require": "./npm/index.cjs",
+      "default": "./npm/index.mjs"
+    },
+    "./react": {
+      "types": "./npm/index.d.ts",
+      "import": "./npm/react.mjs",
+      "default": "./npm/react.mjs"
+    },
+    "./core": {
+      "types": "./npm/index.d.ts",
+      "import": "./npm/core.mjs",
+      "require": "./npm/core.cjs",
+      "default": "./npm/core.mjs"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "npm",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "gdpr",
+    "cookie",
+    "consent",
+    "cookie-banner",
+    "consent-mode",
+    "privacy"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConsentKit — GDPR cookie-баннер</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground: #F7F8FB; --surface: #FFFFFF;
+    --ink: #1B2437; --ink-soft: #4A5468;
+    --line: #DDE2EC; --accent: #2B50D8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #12161F; --surface: #1A202D;
+      --ink: #E6EAF4; --ink-soft: #AEB7CB;
+      --line: #2C3446; --accent: #7B96F0;
+    }
+  }
+  body {
+    margin: 0; min-height: 100vh;
+    display: grid; place-items: center;
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--ground); color: var(--ink);
+  }
+  main { max-width: 34rem; padding: 2rem 1.5rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
+  .muted { color: var(--ink-soft); }
+  .links { display: grid; gap: .75rem; margin-top: 2rem; }
+  a.card {
+    display: block; padding: 1rem 1.25rem; text-decoration: none;
+    color: inherit; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  a.card:hover, a.card:focus-visible { border-color: var(--accent); }
+  a.card b { display: block; color: var(--accent); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ConsentKit</h1>
+  <p class="muted">Баннер согласия на cookie, который действительно блокирует трекеры до выбора посетителя. Прототип v0.3.</p>
+  <div class="links">
+    <a class="card" href="demo/"><b>Демо →</b> Магазин с трекерами, панелью статуса и переключателем темы, макета и языка</a>
+    <a class="card" href="INSTALL.ru.md"><b>Инструкция по установке (RU) →</b> Пошагово для WordPress, конструкторов и разработчиков</a>
+    <a class="card" href="README.md"><b>README (EN) →</b> API, npm-пакет, React-хук</a>
+  </div>
+  <p class="muted" style="margin-top:2rem"><small>Исходный код распространяется под GPL-2.0-or-later.</small></p>
+</main>
+</body>
+</html>
