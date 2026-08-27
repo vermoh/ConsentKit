@@ -1222,9 +1222,19 @@
     '.ck-brand{display:flex;align-items:center;gap:10px;margin:0 0 8px}',
     /* Attribution foot of the banner: logo + credit on one muted line below
        the buttons. flex-basis 100% keeps it on its own row in the bar layout,
-       where the actions sit beside the text. */
+       where the actions sit beside the text.
+
+       The mark is desaturated here rather than shipped as a second grey asset:
+       an agency logo in full brand colour reads as a second call to action
+       competing with the consent buttons. grayscale() flattens the hue and the
+       opacity lifts it off pure black, so it sits at signature weight in both
+       themes without the integrator preparing anything. */
     '.ck-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;',
-    'flex:1 1 100%;margin:12px 0 0;opacity:.75}',
+    'flex:1 1 100%;margin:12px 0 0}',
+    '.ck-foot .ck-brand__logo,.ck-foot .ck-brand__logo svg{',
+    'filter:grayscale(1);opacity:.55}',
+    '.ck-foot .ck-brand__link:hover .ck-brand__logo,',
+    '.ck-foot .ck-brand__link:focus-visible .ck-brand__logo{opacity:.8}',
     '.ck-foot .ck-brand{margin:0}',
     /* Beats the flex:1 1 100% the standalone .ck-powered carries (it needs a
        full row of its own when there is no logo beside it). */
@@ -1962,8 +1972,6 @@
 
     var head = el('div', 'ck-panel__head');
     var htxt = el('div');
-    var pbrand = buildBrandLogo(cfg);
-    if (pbrand) htxt.appendChild(pbrand);
     htxt.appendChild(el('h2', null, T.panelTitle));
     htxt.appendChild(el('p', null, T.panelIntro));
     head.appendChild(htxt);
@@ -1996,8 +2004,16 @@
     foot.appendChild(save);
     foot.appendChild(acc);
     foot.appendChild(rej);
+    // Same attribution foot as the banner: mark and credit sign the bottom,
+    // below the action buttons, never the panel heading.
     var pfoot = buildPoweredBy(cfg);
-    if (pfoot) foot.appendChild(pfoot);            // wraps to its own line (flex 1 1 100%)
+    var pbrand = buildBrandLogo(cfg);
+    if (pbrand || pfoot) {
+      var pfootWrap = el('div', 'ck-foot');
+      if (pbrand) pfootWrap.appendChild(pbrand);
+      if (pfoot) pfootWrap.appendChild(pfoot);
+      foot.appendChild(pfootWrap);
+    }
     p.appendChild(foot);
 
     p.addEventListener('keydown', onPanelKeydown);
