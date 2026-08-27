@@ -196,7 +196,10 @@
     'overflow:auto;padding:20px;display:block}',
     '.ck-banner--box.ck-pos-bottom-right{bottom:16px;right:16px}',
     '.ck-banner--box.ck-pos-bottom-left{bottom:16px;left:16px}',
-    '.ck-banner--box p{margin-bottom:16px}',
+    /* Vertical layouts: the copy ends with the "learn more" link, so the gap
+       below it has to clear a text baseline, not just a block edge — 16px
+       reads as attached to the buttons. */
+    '.ck-banner.ck-banner--box p,.ck-banner.ck-banner--modal p{margin-bottom:22px}',
     /* both filled buttons share one equal row; outline spans the width below */
     '.ck-banner--box .ck-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
     '.ck-banner--box .ck-btn{min-width:0;width:100%}',
@@ -338,6 +341,7 @@
     '@media (max-width:560px){',
     '.ck-banner--bar{left:8px;right:8px;bottom:8px;padding:16px}',
     '.ck-actions{width:100%}.ck-btn{min-width:0;flex:1 1 100%}',
+    '.ck-banner.ck-banner--bar p{margin-bottom:22px}',
     /* Narrow bar stacks into a column, so the foot — which lives at the end of
        the text block for the wide side-by-side layout — would sit between the
        question and the buttons answering it. Lift it out of the text block and
