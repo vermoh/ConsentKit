@@ -337,7 +337,16 @@
 
     '@media (max-width:560px){',
     '.ck-banner--bar{left:8px;right:8px;bottom:8px;padding:16px}',
-    '.ck-actions{width:100%}.ck-btn{min-width:0;flex:1 1 100%}}',
+    '.ck-actions{width:100%}.ck-btn{min-width:0;flex:1 1 100%}',
+    /* Narrow bar stacks into a column, so the foot — which lives at the end of
+       the text block for the wide side-by-side layout — would sit between the
+       question and the buttons answering it. Lift it out of the text block and
+       order it last. */
+    '.ck-banner--bar{flex-direction:column;align-items:stretch}',
+    '.ck-banner--bar .ck-banner__body{display:contents}',
+    '.ck-banner--bar .ck-banner__body>*{order:1}',
+    '.ck-banner--bar .ck-actions{order:2}',
+    '.ck-banner--bar .ck-foot{order:3;margin-top:14px}}',
 
     '@media (prefers-reduced-motion: no-preference){',
     '.ck-btn,.ck-x,.ck-fab,.ck-switch,.ck-switch::after{transition:background-color .16s ease,border-color .16s ease,color .16s ease,left .16s ease,right .16s ease}}'
