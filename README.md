@@ -1,7 +1,7 @@
 # ConsentKit
 
 ![status: prototype v0.3](https://img.shields.io/badge/status-prototype%20v0.3-orange)
-![license: GPL--2.0--or--later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
+![license: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![no build step](https://img.shields.io/badge/build-none-lightgrey)
 
@@ -377,6 +377,17 @@ to run the checks: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[GPL-2.0-or-later](LICENSE). The WordPress plugin already ships as GPLv2+, and
-distributing WordPress plugins effectively requires GPL, so the whole repository
-uses a single licence.
+Copyright (c) 2026 E-COM CONSULT PLUS.
+
+| Part | Licence |
+|---|---|
+| Client (`src/`), npm package, inline builder, demo | [MIT](LICENSE) |
+| WordPress plugin (`plugins/wordpress/consentkit/`) | [GPL-2.0-or-later](plugins/wordpress/consentkit/LICENSE) |
+
+The client is MIT so it can be embedded anywhere without licence friction. The
+WordPress plugin ships under GPLv2+ because the WordPress ecosystem effectively
+requires it; MIT permits the plugin to bundle copies of the client in its
+`assets/` directory.
+
+Contributions require a `Signed-off-by` line (DCO) — see
+[CONTRIBUTING.md](CONTRIBUTING.md).

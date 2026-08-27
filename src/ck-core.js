@@ -2,6 +2,8 @@
  * ConsentKit Core — consent state + storage + blocking engine + Google Consent Mode v2.
  * Vanilla ES2020, zero dependencies, no build step.
  * Blocking activates at parse time, before ConsentKit.init().
+ *
+ * Copyright (c) 2026 E-COM CONSULT PLUS. MIT License — see LICENSE.
  */
 (function (global) {
   'use strict';

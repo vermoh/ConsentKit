@@ -1,4 +1,6 @@
-/* ConsentKit locale pack (Agent D). Self-contained IIFE, zero dependencies.
+/* ConsentKit locale pack. Self-contained IIFE, zero dependencies.
+   Copyright (c) 2026 E-COM CONSULT PLUS. MIT License — see LICENSE.
+
    Loaded between ck-core.js and ck-ui.js; ck-ui.js merges builtin(en,ru) <- window.__ckLocales.
 
    Locales (32): bg cs da de el es et fi fr ga hr hu it lt lv mt nl pl pt ro sk sl sv

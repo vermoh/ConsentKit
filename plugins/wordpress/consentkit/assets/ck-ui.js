@@ -1,5 +1,7 @@
-/* ConsentKit UI layer (Agent B). Shadow DOM banner, preferences panel, floating button.
-   Talks to the core only through the public API and ck:* events. No imports, no external assets. */
+/* ConsentKit UI layer. Shadow DOM banner, preferences panel, floating button.
+   Talks to the core only through the public API and ck:* events. No imports, no external assets.
+
+   Copyright (c) 2026 E-COM CONSULT PLUS. MIT License — see LICENSE. */
 (function () {
   'use strict';
 
