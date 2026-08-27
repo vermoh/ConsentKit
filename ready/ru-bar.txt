@@ -1229,8 +1229,8 @@
        competing with the consent buttons. grayscale() flattens the hue and the
        opacity lifts it off pure black, so it sits at signature weight in both
        themes without the integrator preparing anything. */
-    '.ck-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;',
-    'flex:1 1 100%;margin:12px 0 0}',
+    '.ck-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;',
+    'margin:14px 0 0}',
     '.ck-foot .ck-brand__logo,.ck-foot .ck-brand__logo svg{',
     'filter:grayscale(1);opacity:.55}',
     '.ck-foot .ck-brand__link:hover .ck-brand__logo,',
@@ -1239,6 +1239,9 @@
     /* Beats the flex:1 1 100% the standalone .ck-powered carries (it needs a
        full row of its own when there is no logo beside it). */
     '.ck-foot p.ck-powered,.ck-banner .ck-foot p.ck-powered{margin:0;flex:0 1 auto}',
+    /* In the panel the foot shares a flex row with the action buttons, so it
+       claims a row of its own below them. */
+    '.ck-panel__foot .ck-foot{flex:1 1 100%;margin:2px 0 0}',
     '.ck-brand__logo{display:block;width:auto;max-width:160px;height:var(--ck-logo-h,24px);',
     'flex:none;object-fit:contain}',
     '.ck-brand__logo svg{display:block;width:auto;height:100%;max-width:160px}',
@@ -1921,6 +1924,23 @@
     link.href = '#';
     p.appendChild(link);
     body.appendChild(p);
+
+    var pb = buildPoweredBy(cfg);
+    var brand = buildBrandLogo(cfg);
+    var foot = null;
+    if (brand || pb) {
+      foot = el('div', 'ck-foot');
+      if (brand) foot.appendChild(brand);
+      if (pb) foot.appendChild(pb);
+    }
+
+    // Where the attribution goes depends on the layout's flow direction.
+    // bar: text and actions sit side by side and are centred against each
+    // other, so a full-width row underneath would stretch the first row and
+    // leave the buttons floating — the foot belongs at the end of the text
+    // column instead. box/modal stack vertically, so it simply follows the
+    // buttons, which is also the correct reading order there.
+    if (foot && lay.type === 'bar') body.appendChild(foot);
     b.appendChild(body);
 
     var actions = el('div', 'ck-actions');
@@ -1940,18 +1960,9 @@
     actions.appendChild(custom);
     b.appendChild(actions);
 
-    // Attribution foot: logo and credit line together, AFTER the actions.
-    // The banner asks the visitor a legal question on behalf of the site they
-    // are on — an agency mark above that question reframes whose dialogue it
-    // is, so the mark signs the bottom instead of heading the top.
-    var pb = buildPoweredBy(cfg);
-    var brand = buildBrandLogo(cfg);
-    if (brand || pb) {
-      var foot = el('div', 'ck-foot');
-      if (brand) foot.appendChild(brand);
-      if (pb) foot.appendChild(pb);
-      b.appendChild(foot);
-    }
+    // box/modal: the foot follows the buttons (see the note above).
+    if (foot && lay.type !== 'bar') b.appendChild(foot);
+
 
     nodes.scrim = scrim;
     nodes.banner = b;
