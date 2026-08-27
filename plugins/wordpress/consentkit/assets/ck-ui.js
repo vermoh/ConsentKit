@@ -534,14 +534,15 @@
   }
 
   // Unknown type -> bar/bottom. Known type with an unrecognized position ->
-  // that type's own default (bar: bottom, box: bottom-right).
+  // that type's own default (bar: bottom, box: bottom-left — the side away
+  // from the chat widgets and scroll-to-top buttons most sites put on the right).
   function resolveLayout(cfg) {
     var layout = (cfg && cfg.layout) || {};
     var type = layout.type;
     if (type !== 'modal' && type !== 'box') type = 'bar';
     var pos = layout.position;
     if (type === 'bar') pos = (pos === 'top') ? 'top' : 'bottom';
-    else if (type === 'box') pos = (pos === 'bottom-left') ? 'bottom-left' : 'bottom-right';
+    else if (type === 'box') pos = (pos === 'bottom-right') ? 'bottom-right' : 'bottom-left';
     else pos = null;                                  // modal is centered
     return { type: type, position: pos };
   }

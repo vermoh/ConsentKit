@@ -5,12 +5,12 @@
  * Дата сборки:      2026-08-27
  * Языки:            ru, en (встроенные, пакет локалей не нужен)
  * Язык баннера:     auto (по языку браузера посетителя)
- * Вид:              box / bottom-left, тема auto, акцент #2B50D8
+ * Вид:              box / bottom-right, тема auto, акцент #2B50D8
  * Версия политики:  1
  *
  * Ноль внешних запросов: до согласия посетителя ничего никуда не отправляется.
  * Файл собран автоматически — правьте не его, а исходники и пересоберите:
- *   node tools/build-inline.mjs --langs=ru,en --language=auto --layout=box --position=bottom-left --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-box.txt
+ *   node tools/build-inline.mjs --langs=ru,en --language=auto --layout=box --position=bottom-right --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-box-right.txt
  */
 ;
 /*!
@@ -1842,7 +1842,7 @@
     "language": "auto",
     "layout": {
       "type": "box",
-      "position": "bottom-left"
+      "position": "bottom-right"
     },
     "theme": {
       "accent": "#2B50D8",

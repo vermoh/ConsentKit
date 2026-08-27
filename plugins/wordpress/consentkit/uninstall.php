@@ -26,6 +26,7 @@ $consentkit_options = array(
 	'consentkit_language',
 	'consentkit_language_custom',
 	'consentkit_layout',
+	'consentkit_position',
 	'consentkit_theme_mode',
 	'consentkit_accent',
 	'consentkit_policy_version',

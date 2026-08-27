@@ -98,8 +98,10 @@ policy, your legal basis, your processors and your record keeping.
 
 = 0.3.0 =
 * First WordPress packaging of the ConsentKit prototype.
-* Settings page: categories, language, layout, theme mode, accent, policy
-  version, cookie table.
+* Settings page: categories, language, layout, banner position, theme mode,
+  accent, policy version, cookie table.
+* Banner position is selectable per layout: bottom or top for the bar, bottom
+  left or bottom right for the box. "Automatic" leaves the choice to the core.
 * `[consentkit_settings]` shortcode.
 * dataLayer events per granted category for Google Tag Manager triggers.
 

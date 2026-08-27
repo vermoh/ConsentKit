@@ -48,7 +48,7 @@ export type CkLayoutPosition = 'bottom' | 'top' | 'bottom-right' | 'bottom-left'
 export interface CkLayoutConfig {
   /** Default `'bar'`. Unknown combinations degrade to `bar` / `bottom`. */
   type?: CkLayoutType;
-  /** `bar`: `'bottom' | 'top'`. `box`: `'bottom-right' | 'bottom-left'`. */
+  /** `bar`: `'bottom'` (default) | `'top'`. `box`: `'bottom-left'` (default) | `'bottom-right'`. */
   position?: CkLayoutPosition;
 }
 

@@ -23,7 +23,7 @@ const BUILTIN_LANGS = ['en', 'ru'];
 const LAYOUTS = ['bar', 'modal', 'box'];
 const MODES = ['auto', 'light', 'dark'];
 // Per v0.2: bar keeps bottom|top, box sits in a corner.
-const DEFAULT_POSITION = { bar: 'bottom', modal: 'bottom', box: 'bottom-right' };
+const DEFAULT_POSITION = { bar: 'bottom', modal: 'bottom', box: 'bottom-left' };
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 /* ------------------------------------------------------------------ errors */
@@ -51,7 +51,7 @@ ConsentKit — сборщик инлайн-версии (один <script> дл�
                        он обязан входить в --langs.
   --layout=bar         Вид баннера: bar | modal | box. По умолчанию: bar.
   --position=bottom    Положение. Для bar: bottom | top (по умолчанию bottom).
-                       Для box: bottom-right | bottom-left (по умолчанию bottom-right).
+                       Для box: bottom-left | bottom-right (по умолчанию bottom-left).
   --accent=#2B50D8     Акцентный цвет кнопок, HEX. По умолчанию: #2B50D8.
   --mode=auto          Тема: auto | light | dark. По умолчанию: auto.
   --policy=1           Версия политики. Поднимите её, когда меняете текст
@@ -260,7 +260,7 @@ function build(flags) {
   const ALLOWED_POS = {
     bar: ['bottom', 'top'],
     modal: ['bottom'],
-    box: ['bottom-right', 'bottom-left']
+    box: ['bottom-left', 'bottom-right']
   };
   let position = DEFAULT_POSITION[layout];
   if (flags.position != null) {

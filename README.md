@@ -66,7 +66,7 @@ must come first and should not be deferred.
   ConsentKit.init({
     policyVersion: '1',
     language: 'auto',
-    layout: { type: 'box', position: 'bottom-right' },
+    layout: { type: 'box', position: 'bottom-left' },
     theme: { accent: '#2B50D8', mode: 'auto' }
   });
 </script>
@@ -174,7 +174,7 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `policyVersion` | `string \| number` | `"1"` | Bump to invalidate stored consent and re-show the banner |
 | `language` | `string` | `"auto"` | `"auto"` reads `navigator.language`. Falls back `pt-BR` → `pt` → `en` |
 | `layout.type` | `"bar" \| "modal" \| "box"` | `"bar"` | `box` is a compact ~360px card |
-| `layout.position` | `string` | `"bottom"` | `bar`: `bottom`/`top`. `box`: `bottom-right`/`bottom-left`. Unknown combinations degrade to `bar`/`bottom` |
+| `layout.position` | `string` | per type | `bar`: `bottom` (default) / `top`. `box`: `bottom-left` (default) / `bottom-right`. `modal` is always centred. A position that does not belong to the chosen type falls back to that type's default; the type itself is unaffected |
 | `theme.accent` | `string` | `"#2B50D8"` | Exposed as `--ck-accent` |
 | `theme.radius` | `string` | `"10px"` | Exposed as `--ck-radius` |
 | `theme.mode` | `"auto" \| "light" \| "dark"` | `"auto"` | `auto` follows `prefers-color-scheme` |

@@ -42,6 +42,7 @@ function consentkit_option_defaults() {
 		'consentkit_language'       => 'auto',
 		'consentkit_language_custom' => '',
 		'consentkit_layout'         => 'bar',
+		'consentkit_position'       => 'auto',
 		'consentkit_theme_mode'     => 'auto',
 		'consentkit_accent'         => '#2B50D8',
 		'consentkit_policy_version' => '1',
@@ -83,6 +84,37 @@ function consentkit_allowed_languages() {
  */
 function consentkit_allowed_layouts() {
 	return array( 'bar', 'box', 'modal' );
+}
+
+/**
+ * Allowed banner positions.
+ *
+ * 'auto' means "do not send a position at all" — the core then applies its own
+ * per-type default. The remaining values are type-specific: bottom|top belong to
+ * the bar layout, bottom-left|bottom-right to the box layout.
+ *
+ * @return array<int, string>
+ */
+function consentkit_allowed_positions() {
+	return array( 'auto', 'bottom', 'top', 'bottom-left', 'bottom-right' );
+}
+
+/**
+ * Positions that are meaningful for a given layout type.
+ *
+ * modal is centered and has no position, hence the empty list.
+ *
+ * @param string $layout Layout type.
+ * @return array<int, string>
+ */
+function consentkit_positions_for_layout( $layout ) {
+	$map = array(
+		'bar'   => array( 'bottom', 'top' ),
+		'box'   => array( 'bottom-left', 'bottom-right' ),
+		'modal' => array(),
+	);
+
+	return isset( $map[ $layout ] ) ? $map[ $layout ] : array();
 }
 
 /**
@@ -151,6 +183,22 @@ function consentkit_sanitize_layout( $value ) {
 	$value = sanitize_text_field( (string) $value );
 
 	return in_array( $value, consentkit_allowed_layouts(), true ) ? $value : 'bar';
+}
+
+/**
+ * Validate the banner position against the whitelist.
+ *
+ * Only the whitelist is enforced here; whether the value actually fits the
+ * chosen layout is decided at render time in consentkit_build_config(), so an
+ * admin can switch the layout back and forth without losing the stored choice.
+ *
+ * @param mixed $value Raw value.
+ * @return string
+ */
+function consentkit_sanitize_position( $value ) {
+	$value = sanitize_text_field( (string) $value );
+
+	return in_array( $value, consentkit_allowed_positions(), true ) ? $value : 'auto';
 }
 
 /**
@@ -275,6 +323,7 @@ function consentkit_register_settings() {
 		'consentkit_language'        => 'consentkit_sanitize_language',
 		'consentkit_language_custom' => 'consentkit_sanitize_language_custom',
 		'consentkit_layout'          => 'consentkit_sanitize_layout',
+		'consentkit_position'        => 'consentkit_sanitize_position',
 		'consentkit_theme_mode'      => 'consentkit_sanitize_theme_mode',
 		'consentkit_accent'          => 'consentkit_sanitize_accent',
 		'consentkit_policy_version'  => 'consentkit_sanitize_policy_version',
@@ -472,6 +521,32 @@ function consentkit_render_admin_page() {
 
 					<tr>
 						<th scope="row">
+							<label for="consentkit_position"><?php echo esc_html__( 'Banner position', 'consentkit' ); ?></label>
+						</th>
+						<td>
+							<?php
+							consentkit_render_select(
+								'consentkit_position',
+								array(
+									'auto'         => __( 'Automatic (based on layout)', 'consentkit' ),
+									'bottom'       => __( 'Bottom', 'consentkit' ),
+									'top'          => __( 'Top', 'consentkit' ),
+									'bottom-left'  => __( 'Bottom left', 'consentkit' ),
+									'bottom-right' => __( 'Bottom right', 'consentkit' ),
+								)
+							);
+							?>
+							<p class="description">
+								<?php echo esc_html__( 'Bottom and Top apply to the bar layout; Bottom left and Bottom right apply to the box layout. The centered modal ignores the position entirely.', 'consentkit' ); ?>
+							</p>
+							<p class="description">
+								<?php echo esc_html__( '"Automatic" picks a sensible position for the chosen layout: bottom for the bar, bottom left for the box. A position that does not match the layout is ignored the same way.', 'consentkit' ); ?>
+							</p>
+						</td>
+					</tr>
+
+					<tr>
+						<th scope="row">
 							<label for="consentkit_theme_mode"><?php echo esc_html__( 'Theme mode', 'consentkit' ); ?></label>
 						</th>
 						<td>
@@ -566,10 +641,12 @@ function consentkit_render_admin_page() {
  * The shape must match src/ck-core.js exactly:
  *  - categories values are OBJECTS ({"enabled":bool}), not booleans — core
  *    reads cfg.enabled !== false, so a bare `false` would read as enabled;
- *  - layout carries only `type`: bar accepts bottom|top and box accepts
- *    bottom-right|bottom-left, so a hardcoded position would be an unknown
- *    combination for one of them and degrade the layout back to bar/bottom.
- *    Omitting it lets the UI apply the correct per-type default;
+ *  - layout carries `type` and, only when it is meaningful, `position`. The
+ *    accepted positions are type-specific: bar takes bottom|top, box takes
+ *    bottom-left|bottom-right and the centered modal takes none. A position
+ *    belonging to a different type carries no information for the chosen one,
+ *    so it is dropped here rather than forwarded — the core then applies its
+ *    own per-type default, which is also what 'auto' selects;
  *  - theme mode nests inside `theme`, next to `accent`;
  *  - policyVersion stays a string, compared verbatim by the core;
  *  - cookieTable is decoded to a real array — the UI iterates it.
@@ -594,12 +671,20 @@ function consentkit_build_config() {
 		}
 	}
 
+	$layout_type = consentkit_get_option( 'consentkit_layout' );
+	$layout      = array( 'type' => $layout_type );
+	$position    = consentkit_get_option( 'consentkit_position' );
+
+	// 'auto' and any position that belongs to a different layout type are both
+	// expressed by sending no position at all.
+	if ( 'auto' !== $position && in_array( $position, consentkit_positions_for_layout( $layout_type ), true ) ) {
+		$layout['position'] = $position;
+	}
+
 	return array(
 		'policyVersion' => consentkit_get_option( 'consentkit_policy_version' ),
 		'language'      => $language,
-		'layout'        => array(
-			'type' => consentkit_get_option( 'consentkit_layout' ),
-		),
+		'layout'        => $layout,
 		'theme'         => array(
 			'accent' => consentkit_get_option( 'consentkit_accent' ),
 			'mode'   => consentkit_get_option( 'consentkit_theme_mode' ),
