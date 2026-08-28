@@ -2,7 +2,7 @@
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
  * Версия ConsentKit: 0.3.1
- * Дата сборки:      2026-08-27
+ * Дата сборки:      2026-08-28
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
@@ -1844,6 +1844,38 @@
     return (typeof v === 'string' && v.trim()) ? v.trim() : null;
   }
 
+  /* Config values are interpolated into the TEXT of a generated stylesheet, so
+     an unvalidated value can close the declaration and open rules of its own
+     ("10px;}.ck-btn--filled{display:none" hides "Reject all"). config.theme is
+     not trusted input: in standalone mode it comes straight from the embedding
+     page or an integrator's admin panel, with no server-side validation
+     anywhere in the path. So every value is matched against a strict grammar
+     for its kind and silently replaced by the token default when it does not
+     fit — a broken colour is a cosmetic bug, an injected rule is a defacement
+     and can strip the reject button, which is a consent-validity problem.
+
+     Sanitising happens at the entry points in buildThemeCss (the eight
+     config reads), not in tokenBlock(): by the time values reach derive() and
+     color-mix() they are already clean, and the built-in constants and
+     generated color-mix() strings must not be re-validated by this grammar. */
+  var RE_CSS = {
+    // #RGB / #RRGGBB / #RRGGBBAA (and #RGBA), rgb()/rgba()/hsl()/hsla() with
+    // numbers, commas, spaces, %, decimals and slashes, or a bare colour name.
+    color: /^(#[0-9a-fA-F]{3,8}|(rgb|rgba|hsl|hsla)\([0-9.,%\s/]+\)|[a-zA-Z]+)$/,
+    length: /^\d+(\.\d+)?(px|rem|em|%)$/
+  };
+  // Belt-and-braces: nothing that passed above may still carry CSS structure.
+  var RE_CSS_UNSAFE = /[;{}<>]/;
+
+  function sanitizeCssValue(kind, value, fallback) {
+    var v = str(value);
+    if (!v) return fallback;
+    var re = RE_CSS[kind];
+    if (!re || !re.test(v)) return fallback;
+    if (RE_CSS_UNSAFE.test(v)) return fallback;
+    return v;
+  }
+
   // One :host{} block of custom properties for a resolved palette.
   function tokenBlock(sel, p, radius) {
     var d = [
@@ -1877,18 +1909,26 @@
   function buildThemeCss(cfg) {
     var theme = (cfg && cfg.theme) || {};
     var dk = (theme.dark && typeof theme.dark === 'object') ? theme.dark : {};
-    var radius = str(theme.radius) || LIGHT_RADIUS;
+    // Every value below is interpolated into stylesheet text — see
+    // sanitizeCssValue(). A rejected value falls back to the token default, so
+    // derive()'s "bg !== base.bg" check collapses to exactly the built-in
+    // palette rather than a half-substituted one.
+    var radius = sanitizeCssValue('length', theme.radius, LIGHT_RADIUS);
 
     // Light: config overrides on top of the built-in light palette.
-    var light = derive(LIGHT, str(theme.bg) || LIGHT.bg, str(theme.ink) || LIGHT.ink);
-    if (str(theme.accent)) light.accent = str(theme.accent);
+    var light = derive(LIGHT,
+      sanitizeCssValue('color', theme.bg, LIGHT.bg),
+      sanitizeCssValue('color', theme.ink, LIGHT.ink));
+    if (str(theme.accent)) light.accent = sanitizeCssValue('color', theme.accent, LIGHT.accent);
 
     // Dark: theme.dark overrides on top of the built-in dark palette.
     // A light-only theme.accent deliberately does NOT carry into dark — the
     // default #2B50D8 on #1A202D is ~2.5:1 and would fail AA.
-    var dark = derive(DARK, str(dk.bg) || DARK.bg, str(dk.ink) || DARK.ink);
-    if (str(dk.accent)) dark.accent = str(dk.accent);
-    if (str(dk.onAccent)) dark.onAccent = str(dk.onAccent);
+    var dark = derive(DARK,
+      sanitizeCssValue('color', dk.bg, DARK.bg),
+      sanitizeCssValue('color', dk.ink, DARK.ink));
+    if (str(dk.accent)) dark.accent = sanitizeCssValue('color', dk.accent, DARK.accent);
+    if (str(dk.onAccent)) dark.onAccent = sanitizeCssValue('color', dk.onAccent, DARK.onAccent);
 
     var mode = theme.mode;
     if (mode !== 'light' && mode !== 'dark') mode = 'auto';
