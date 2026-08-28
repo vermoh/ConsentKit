@@ -136,11 +136,14 @@
     initWith({ policyVersion: 'strict-fallback' });
   }
 
-  function fetchConfig(etag, onOk, onFail) {
+  // cacheMode: 'default' lets the HTTP cache answer (cold load); 'no-cache'
+  // forces a conditional request to the origin (background revalidation).
+  function fetchConfig(etag, cacheMode, onOk, onFail) {
     if (typeof global.fetch !== 'function') { onFail('fetch unsupported'); return; }
     var ctrl = null, timer = null;
     try { ctrl = new global.AbortController(); } catch (e) { ctrl = null; }
     var opts = { method: 'GET', credentials: 'omit', mode: 'cors' };
+    if (cacheMode) { opts.cache = cacheMode; }
     if (etag) { opts.headers = { 'If-None-Match': etag }; }
     if (ctrl) { opts.signal = ctrl.signal; }
     try {
@@ -176,7 +179,16 @@
   if (cached) {
     // Cache hit: init synchronously, then revalidate in the background.
     initWith(cached.config, 'cache');
-    fetchConfig(cached.etag, function (r) {
+    // cache:'no-cache' is REQUIRED here and deliberately differs from the cold
+    // path below. The server sends `Cache-Control: public, max-age=300`, so a
+    // plain fetch is answered by the browser's HTTP cache for five minutes and
+    // never reaches the origin — a freshly published config would stay
+    // invisible until that expired, and this revalidation would be a no-op.
+    // 'no-cache' means "always ask the origin, but a conditional request is
+    // fine": unchanged -> 304 (cheap), changed -> 200 with the new body.
+    // Do not "unify" the two modes: on the cold path the HTTP cache is a
+    // legitimate saving, because there is nothing cached to go stale against.
+    fetchConfig(cached.etag, 'no-cache', function (r) {
       if (r.notModified) { return; }
       // Fresh config is cached but NOT applied now: init() is idempotent and
       // re-initialising would swap ConsentKit.config identity mid-session.
@@ -186,7 +198,9 @@
       warn('background revalidation failed (' + reason + '); continuing with cached config.');
     });
   } else {
-    fetchConfig(null, function (r) {
+    // Cold path: no cached config exists, so the HTTP cache cannot serve a
+    // stale one. Default caching is the right economy here.
+    fetchConfig(null, null, function (r) {
       if (r.notModified || !r.config) { initStrict('empty response without cache'); return; }
       writeCache(r.etag, r.config);
       initWith(r.config, 'network');

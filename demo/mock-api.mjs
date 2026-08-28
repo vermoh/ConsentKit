@@ -19,14 +19,14 @@ const FAIL = process.argv.includes('--fail');
 const COUNTRY = 'DE';
 
 // cfg id doubles as the ETag (SPEC §5: "ETag: cfg id").
-const CFG_V = 'cfg_demo_v1';
+const CFG_V = process.env.CK_CFG_V || 'cfg_demo_v1';
 
 const CONFIG = {
   v: CFG_V,
   policyVersion: '1',
   language: 'auto',
   layout: { type: 'bar', position: 'bottom' },
-  theme: { accent: '#2B50D8', radius: '10px' },
+  theme: { accent: process.env.CK_ACCENT || '#2B50D8', radius: '10px' },
   categories: { functional: { enabled: true }, analytics: { enabled: true }, marketing: { enabled: true } },
   consentTtlDays: 365,
   integrations: { gcm: true, gtmDataLayer: true },
