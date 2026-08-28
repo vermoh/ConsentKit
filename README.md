@@ -330,6 +330,46 @@ uses `exports` subpaths, which the legacy `node` resolution cannot read.
 Any browser with Shadow DOM and ES2020: Chrome/Edge 79+, Firefox 72+, Safari
 13.1+. No polyfills, no external fonts or assets.
 
+## SaaS mode (experimental)
+
+> Not announced, not supported, and not part of any release. The hosted API it
+> talks to does not exist publicly yet. Everything below can change without
+> notice.
+
+`src/ck-saas.js` is an optional extra file that fetches the configuration from a
+server instead of taking it from an inline `init()` call, and (optionally) writes
+each consent decision to a journal endpoint. Standalone usage is completely
+unaffected: pages that do not load this file behave exactly as documented above,
+and the prebuilt inline bundles do not contain it.
+
+```html
+<script src="ck-core.js"></script>
+<script src="ck-locales.js"></script>
+<script src="ck-ui.js"></script>
+<script src="ck-saas.js" data-ck-id="YOUR_SITE_ID"></script>
+```
+
+`ck-saas.js` calls `ConsentKit.init()` itself once it has a configuration, so the
+page must **not** call `init()` as well. `data-ck-api` overrides the API base URL.
+
+| Situation | Behaviour |
+|---|---|
+| Config cached in `localStorage` | `init()` runs immediately from cache; the config is revalidated in the background with `If-None-Match`. A changed config applies from the **next** page load. |
+| No cache | Config is fetched with a 3s timeout, then `init()` runs and the result is cached. |
+| Fetch fails, times out, or returns 404 | **Strict fallback**: the banner is shown, every opt-in category stays denied, the journal is disabled, and the reason is logged with `console.warn`. |
+
+When the configuration contains a `log` endpoint, each decision is POSTed with
+`fetch(keepalive: true)`, retried once after 2s on a network error, and flushed
+via `sendBeacon` on `pagehide`. Withdrawals are sent with `method: "withdraw"`.
+No other network requests are made.
+
+To try it locally, a mock API is included:
+
+```sh
+node demo/mock-api.mjs          # http://localhost:8788
+# serve the repo root, then open demo/saas.html
+```
+
 ## Project status
 
 **This is a prototype (v0.3), not a released product.** It is honest about what

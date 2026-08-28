@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кофейня ConsentKit — SaaS-режим (демо)</title>
+<style>
+  :root {
+    --ink: #1B2437; --muted: #6B7488; --line: #E3E7EF;
+    --accent: #2B50D8; --bg: #F6F7FB; --surface: #fff;
+    --ok: #1E7F4F; --bad: #B23B3B; --warn: #A66A00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #E6EAF4; --muted: #AEB7CB; --line: #2C3446;
+      --accent: #7B96F0; --bg: #12161F; --surface: #1A202D;
+      --ok: #5FD39B; --bad: #F08B8B; --warn: #E0B25F;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--bg); line-height: 1.55;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+  header.site { background: var(--surface); border-bottom: 1px solid var(--line); padding: 18px 0; }
+  header.site .wrap { display: flex; align-items: baseline; gap: 12px; }
+  header.site h1 { font-size: 20px; margin: 0; }
+  header.site .tag {
+    font-size: 12px; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 999px; padding: 2px 10px;
+  }
+  main { padding: 28px 0 60px; }
+  .lead { color: var(--muted); margin: 0 0 22px; max-width: 60ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+  .price { font-weight: 600; }
+  .frame { margin-top: 22px; }
+  .frame iframe { width: 100%; height: 160px; border: 1px solid var(--line); border-radius: 12px; background: #DDE1EA; }
+  .frame figcaption { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  #status-panel {
+    position: fixed; top: 12px; right: 12px; width: 330px; max-height: calc(100vh - 24px);
+    overflow: auto; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; font-size: 13px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.08); z-index: 5;
+  }
+  #status-panel h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  #status-panel section { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  #status-panel .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    white-space: pre-wrap; word-break: break-word; color: var(--muted);
+  }
+  #status-panel .tr { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  #status-panel .tr b { font-weight: 600; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warnc { color: var(--warn); }
+  #status-panel button {
+    font: inherit; cursor: pointer; background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 6px 6px 0 0;
+  }
+  #status-panel button:hover { filter: brightness(.96); }
+  @media (max-width: 900px) {
+    #status-panel { position: static; width: auto; max-height: none; margin: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <h1>Кофейня ConsentKit</h1>
+    <span class="tag">SaaS-режим · demo</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="lead">
+    Та же витрина, что и в <code>demo/index.html</code>, но конфигурация баннера приходит
+    с сервера, а выбор посетителя уходит в журнал согласий. Страница НЕ вызывает
+    <code>ConsentKit.init()</code> — это делает <code>ck-saas.js</code> после получения конфига.
+  </p>
+
+  <div class="grid">
+    <article class="card"><h3>Эфиопия Иргачеффе</h3><p>Цитрус, жасмин, светлая обжарка.</p><div class="price">690 ₽ / 250 г</div></article>
+    <article class="card"><h3>Колумбия Уила</h3><p>Карамель, красное яблоко, средняя обжарка.</p><div class="price">620 ₽ / 250 г</div></article>
+    <article class="card"><h3>Бразилия Сантос</h3><p>Орех, молочный шоколад, тёмная обжарка.</p><div class="price">540 ₽ / 250 г</div></article>
+  </div>
+
+  <figure class="frame">
+    <iframe data-ck="marketing" data-src="about:blank" title="Видео (маркетинг)"></iframe>
+    <figcaption>iframe с <code>data-ck="marketing"</code> — src подставится после согласия.</figcaption>
+  </figure>
+</main>
+
+<aside id="status-panel" aria-label="Панель статуса демо">
+  <h4>SaaS</h4>
+  <div class="tr"><span>Источник конфига</span><b id="sp-src" class="mono">—</b></div>
+  <div class="tr"><span>siteId</span><b id="sp-site" class="mono">—</b></div>
+  <div class="tr"><span>API</span><b id="sp-api" class="mono">—</b></div>
+  <div class="tr"><span>cfg (v)</span><b id="sp-cfg" class="mono">—</b></div>
+  <div class="tr"><span>ETag в кэше</span><b id="sp-etag" class="mono">—</b></div>
+  <div class="tr"><span>_geo</span><b id="sp-geo" class="mono">—</b></div>
+  <div class="tr"><span>Журнал</span><b id="sp-log" class="mono">—</b></div>
+
+  <section>
+    <h4>Трекеры</h4>
+    <div class="tr"><span>GA (analytics)</span><b id="sp-ga">—</b></div>
+    <div class="tr"><span>Pixel (marketing)</span><b id="sp-pixel">—</b></div>
+    <div class="tr"><span>Chat (functional)</span><b id="sp-chat">—</b></div>
+  </section>
+
+  <section>
+    <h4>Cookie документа</h4>
+    <div id="sp-cookies" class="mono">—</div>
+  </section>
+
+  <section>
+    <h4>ConsentKit.getState()</h4>
+    <div id="sp-state" class="mono">—</div>
+  </section>
+
+  <section>
+    <button type="button" id="btn-prefs">Настройки</button>
+    <button type="button" id="btn-withdraw">Отозвать</button>
+    <button type="button" id="btn-coldload">Очистить кэш конфига</button>
+    <div class="mono" id="sp-hint" style="margin-top:6px">
+      «Очистить кэш» + перезагрузка = холодный старт (fetch → init).
+    </div>
+  </section>
+</aside>
+
+<!-- Manual markup, identical to the standalone demo -->
+<script type="text/plain" data-ck="marketing" data-src="trackers/pixel.js"></script>
+<script type="text/plain" data-ck="functional" data-src="trackers/chat.js"></script>
+
+<!-- SaaS load order: core -> locales -> ui -> ck-saas.js -->
+<script src="../src/ck-core.js"></script>
+<script src="../src/ck-locales.js"></script>
+<script src="../src/ck-ui.js"></script>
+<script src="../src/ck-saas.js" data-ck-id="site_demo" data-ck-api="http://localhost:8788"></script>
+
+<script>
+// Status panel only. ConsentKit.init() is intentionally NOT called here.
+(function () {
+  'use strict';
+  var SITE_ID = 'site_demo';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function mark(el, loaded) {
+    if (!el) { return; }
+    el.textContent = loaded ? '✅ загружен' : '⛔ заблокирован';
+    el.className = loaded ? 'ok' : 'bad';
+  }
+
+  function renderSaas() {
+    var s = window.ConsentKit && window.ConsentKit._saas;
+    if (!s) { $('sp-src').textContent = 'ck-saas.js не активен'; return; }
+    var cfg = s.config();
+    $('sp-site').textContent = s.siteId;
+    $('sp-api').textContent = s.api;
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem('ck_cfg_' + SITE_ID) || 'null'); } catch (e) {}
+    $('sp-etag').textContent = (cached && cached.etag) || '—';
+    if (cfg && cfg.policyVersion === 'strict-fallback') {
+      $('sp-src').innerHTML = '<span class="warnc">строгий режим</span>';
+      $('sp-cfg').textContent = '—';
+    } else if (cfg) {
+      $('sp-src').textContent = cached ? 'кэш + ревалидация' : 'сеть';
+      $('sp-cfg').textContent = cfg.v || '—';
+    }
+    var geo = window.ConsentKit._geo;
+    $('sp-geo').textContent = geo ? (geo.country || '—') : '—';
+    var hasLog = !!(cfg && cfg.log && cfg.log.endpoint);
+    $('sp-log').innerHTML = hasLog
+      ? '<span class="ok">включён</span>'
+      : '<span class="warnc">выключен</span>';
+  }
+
+  function renderAll() {
+    var L = window.__loaded || {};
+    mark($('sp-ga'), !!L.ga);
+    mark($('sp-pixel'), !!L.pixel);
+    mark($('sp-chat'), !!L.chat);
+    $('sp-cookies').textContent = document.cookie ? document.cookie.split(';').map(function (c) { return c.trim(); }).join('\n') : '(пусто)';
+    if (window.ConsentKit && typeof window.ConsentKit.getState === 'function') {
+      $('sp-state').textContent = JSON.stringify(window.ConsentKit.getState(), null, 2);
+    }
+    renderSaas();
+  }
+
+  document.addEventListener('ck:init', renderAll);
+  document.addEventListener('ck:consent', renderAll);
+  document.addEventListener('ck:change', renderAll);
+  setInterval(renderAll, 1000);
+
+  $('btn-prefs').addEventListener('click', function () {
+    if (window.ConsentKit && window.ConsentKit.show) { window.ConsentKit.show(); }
+  });
+  $('btn-withdraw').addEventListener('click', function () {
+    if (window.ConsentKit && window.ConsentKit.withdraw) { window.ConsentKit.withdraw(); }
+    renderAll();
+  });
+  $('btn-coldload').addEventListener('click', function () {
+    try { localStorage.removeItem('ck_cfg_' + SITE_ID); } catch (e) {}
+    $('sp-hint').textContent = 'Кэш очищен — перезагрузите страницу.';
+  });
+
+  // Dynamic insertion: must be caught by the auto-blocker via /trackers/ga.js.
+  var s = document.createElement('script');
+  s.src = 'trackers/ga.js';
+  s.async = true;
+  document.head.appendChild(s);
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
