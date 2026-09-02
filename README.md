@@ -10,8 +10,11 @@ trackers *before* they run, a Shadow DOM banner, and Google Consent Mode v2.
 
 Most cookie banners are decoration — the trackers fire on the first frame no
 matter which button you press. ConsentKit blocks at parse time: nothing but
-`necessary` runs until the visitor says so, and no request leaves the page
-before that, including requests to a CDN or a font host.
+`necessary` runs until the visitor says so. Dynamically injected trackers (the
+official Metrika / GTM / Meta / TikTok / Hotjar snippets) and anything marked
+`type="text/plain"` never fire a request; a plain `<script src>` tag written
+into the HTML is prevented from executing and setting cookies, but its network
+request may already be in flight — mark such tags up manually.
 
 Vanilla ES2020, zero dependencies, no build step.
 
