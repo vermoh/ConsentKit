@@ -173,7 +173,7 @@ declare global {
   }
 }
 
-declare module 'consentkit' {
+declare module '@ecomconsult/consentkit' {
   const ConsentKit: ConsentKitApi;
   export default ConsentKit;
   export { ConsentKit };
@@ -187,7 +187,7 @@ declare module 'consentkit' {
   export function hide(): void;
 }
 
-declare module 'consentkit/core' {
+declare module '@ecomconsult/consentkit/core' {
   const ConsentKit: ConsentKitApi;
   export default ConsentKit;
   export { ConsentKit };
@@ -214,7 +214,7 @@ export interface UseConsentResult {
   show(): void;
 }
 
-declare module 'consentkit/react' {
+declare module '@ecomconsult/consentkit/react' {
   /**
    * Subscribes to `ck:init` / `ck:consent` / `ck:change` and re-renders on
    * change. SSR-safe: returns `decided:false` and no-op actions on the server.

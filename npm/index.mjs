@@ -7,8 +7,9 @@
  *
  * Only the core is DOM-optional. `src/ck-ui.js` touches `document` at module
  * scope, so it is imported dynamically behind a `typeof document` guard —
- * otherwise `import 'consentkit'` would throw during SSR. Locales are imported
- * dynamically too, so a build that ships without that file still works.
+ * otherwise `import '@ecomconsult/consentkit'` would throw during SSR. Locales
+ * are imported dynamically too, so a build that ships without that file still
+ * works.
  */
 
 import { resolveApi } from './internal-stub.mjs';

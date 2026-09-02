@@ -1,5 +1,5 @@
 /*!
- * consentkit/core — ESM entry, core only (no UI, no locales).
+ * @ecomconsult/consentkit/core — ESM entry, core only (no UI, no locales).
  *
  * `src/ck-core.js` is a classic side-effect script: it attaches the public API
  * to the global object and (under CommonJS) to `module.exports`. Because this

@@ -1,5 +1,5 @@
 /*!
- * consentkit/react — `useConsent()` hook.
+ * @ecomconsult/consentkit/react — `useConsent()` hook.
  *
  * React is a peerDependency (>=17), never a dependency: this file imports it,
  * the host app provides it.
@@ -19,7 +19,8 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { resolveApi, undecidedState } from './internal-stub.mjs';
 
 // Side-effect import of the core only. The UI layer is intentionally NOT
-// imported here — apps that want the banner import 'consentkit' as well.
+// imported here — apps that want the banner also import
+// '@ecomconsult/consentkit'.
 import '../src/ck-core.js';
 
 const EVENTS = ['ck:init', 'ck:consent', 'ck:change'];

@@ -1,5 +1,5 @@
 /*!
- * consentkit/core — CommonJS entry, core only (no UI, no locales).
+ * @ecomconsult/consentkit/core — CommonJS entry, core only (no UI, no locales).
  * Present for `exports` symmetry with core.mjs. See index.cjs for why the
  * require() return value is ignored in favour of the global.
  */

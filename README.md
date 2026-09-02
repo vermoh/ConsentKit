@@ -38,12 +38,12 @@ Four ways to add ConsentKit to a site, from simplest to most integrated.
 | # | Method | Best for | Docs |
 |---|---|---|---|
 | 1 | **Script tags** — copy `src/` to your server, three `<script>` tags in `<head>` | Any site you control | [Quickstart below](#quickstart--script-tags) |
-| 2 | **npm** — `npm install consentkit` | Bundled apps, React | [Quickstart below](#quickstart--npm) |
+| 2 | **npm** — `npm install @ecomconsult/consentkit` | Bundled apps, React | [Quickstart below](#quickstart--npm) |
 | 3 | **WordPress plugin** — copy the plugin folder to `wp-content/plugins/` | WordPress / WooCommerce | [`plugins/wordpress/consentkit/`](plugins/wordpress/consentkit/) |
 | 4 | **Google Tag Manager** — import the container, trigger tags on consent events | Sites already running GTM | [`integrations/gtm/README.md`](integrations/gtm/README.md) |
 
 ```sh
-npm install consentkit
+npm install @ecomconsult/consentkit
 ```
 
 Or drop the files in directly — no bundler required.
@@ -78,7 +78,7 @@ The main entry is a side-effect import: it loads the core, the locales and the
 UI, then re-exports the API.
 
 ```js
-import ConsentKit from 'consentkit';
+import ConsentKit from '@ecomconsult/consentkit';
 
 ConsentKit.init({
   policyVersion: '1',
@@ -94,23 +94,23 @@ if (ConsentKit.allowed('analytics')) {
 CommonJS works too:
 
 ```js
-const ConsentKit = require('consentkit');
+const ConsentKit = require('@ecomconsult/consentkit');
 ConsentKit.init({ policyVersion: '1' });
 ```
 
 Named exports are available alongside the default:
 
 ```js
-import { init, allowed, getState, accept, rejectAll, withdraw, show } from 'consentkit';
+import { init, allowed, getState, accept, rejectAll, withdraw, show } from '@ecomconsult/consentkit';
 ```
 
 ### Core without the UI
 
-`consentkit/core` loads the consent engine and blocking only — no banner, no
+`@ecomconsult/consentkit/core` loads the consent engine and blocking only — no banner, no
 locales. Use it when you ship your own interface.
 
 ```js
-import ConsentKit from 'consentkit/core';
+import ConsentKit from '@ecomconsult/consentkit/core';
 
 ConsentKit.init({ policyVersion: '1' });
 ConsentKit.accept({ analytics: true, marketing: false });
@@ -118,7 +118,7 @@ ConsentKit.accept({ analytics: true, marketing: false });
 
 ### Import it once
 
-`consentkit` is a side-effect module and the core is a singleton on the global
+`@ecomconsult/consentkit` is a side-effect module and the core is a singleton on the global
 object. Import it at your entry point; importing it again elsewhere is harmless
 but does not create a second instance.
 
@@ -128,8 +128,8 @@ but does not create a second instance.
 `useConsent()` subscribes to the event bus and unsubscribes on unmount.
 
 ```jsx
-import 'consentkit';                       // side effect: core + locales + UI
-import { useConsent } from 'consentkit/react';
+import '@ecomconsult/consentkit';   // side effect: core + locales + UI
+import { useConsent } from '@ecomconsult/consentkit/react';
 
 function CookieStatus() {
   const { state, allowed, accept, rejectAll, withdraw, show } = useConsent();
@@ -315,8 +315,8 @@ expires.
 Types ship with the package; no `@types` needed.
 
 ```ts
-import ConsentKit from 'consentkit';
-import type { CkConfig, CkState, CkCategory, UseConsentResult } from 'consentkit';
+import ConsentKit from '@ecomconsult/consentkit';
+import type { CkConfig, CkState, CkCategory, UseConsentResult } from '@ecomconsult/consentkit';
 ```
 
 `document.addEventListener('ck:change', …)` is typed through a
