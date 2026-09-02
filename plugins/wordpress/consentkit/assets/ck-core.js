@@ -43,7 +43,6 @@
   var HOST_DB = {
     // --- analytics -----------------------------------------------------
     'google-analytics.com': 'analytics',
-    'googletagmanager.com': 'analytics',
     'ssl.google-analytics.com': 'analytics',
     'analytics.google.com': 'analytics',      // subdomain only: google.com is not a tracker
     'mc.yandex.ru': 'analytics',
@@ -116,8 +115,22 @@
     'tidiochat.com': 'functional'
   };
 
-  // Path-fragment database: URL substring -> category (demo trackers).
+  // Path-fragment database: URL substring -> category. Matched against the full
+  // resolved URL, so it can distinguish two very different scripts served from
+  // the SAME host (googletagmanager.com).
+  //
+  // WHY THE GTM CONTAINER IS NOT BLOCKED (do not "fix" this by putting
+  // googletagmanager.com back into HOST_DB):
+  //   gtm.js is a CONTAINER, not a tracker. Google's consent model is that the
+  //   container always loads and the tags INSIDE it wait — Google tags obey
+  //   Consent Mode (our 'default: denied' is pushed at parse time, before any
+  //   tag can fire), and everything else can hang off our ck_consent_* trigger
+  //   events. Blocking the container breaks that model for every GTM site: the
+  //   tags never get the chance to see consent at all.
+  //   gtag.js is the opposite case — a direct GA4/Ads install with no container
+  //   in front of it — so it stays blocked by path.
   var PATH_DB = {
+    '/gtag/js': 'analytics',            // googletagmanager.com/gtag/js?id=G-XXXX
     '/trackers/ga.js': 'analytics',
     '/trackers/pixel.js': 'marketing',
     '/trackers/chat.js': 'functional'
@@ -948,7 +961,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.3.1',
+    version: '0.3.2',
     config: config,
 
     init: function (userConfig) {
