@@ -17,7 +17,9 @@ Vanilla ES2020, zero dependencies, no build step.
 
 - **Categories:** `necessary` (always on), `functional`, `analytics`, `marketing`
 - **Blocking:** manual markup (`type="text/plain"`) plus automatic interception
-  of dynamically injected scripts
+  of dynamically injected scripts. Plain `<script src>` tags written into the HTML
+  (e.g. a direct GA4 `gtag/js` tag) cannot be intercepted before the request
+  leaves — mark those up manually; the SaaS install check points at the exact tag
 - **UI:** banner (`bar` / `box` / `modal`), preferences panel, floating re-open
   button, light/dark, 30+ locales
 - **SSR-safe:** importing on the server never touches the DOM
