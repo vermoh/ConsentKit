@@ -18,7 +18,7 @@
   var doc = global.document;
   if (!doc) { return; }
 
-  var DEFAULT_API = 'https://api.ecomconsult.net';
+  var DEFAULT_API = 'https://consent.ecomconsult.net';
   var CFG_TIMEOUT_MS = 3000;
   var RETRY_DELAY_MS = 2000;
   var CACHE_PREFIX = 'ck_cfg_';
