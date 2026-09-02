@@ -1,8 +1,24 @@
 {
   "name": "consentkit",
-  "version": "0.3.0",
-  "private": true,
+  "version": "0.3.2",
   "description": "GDPR cookie consent core with blocking engine, Shadow DOM UI and Google Consent Mode v2. Zero dependencies, no build step.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vermoh/ConsentKit.git"
+  },
+  "homepage": "https://vermoh.github.io/ConsentKit/",
+  "bugs": {
+    "url": "https://github.com/vermoh/ConsentKit/issues"
+  },
+  "keywords": [
+    "gdpr",
+    "cookie",
+    "consent",
+    "cookie-banner",
+    "consent-mode",
+    "privacy"
+  ],
+  "author": "E-COM CONSULT PLUS",
   "license": "MIT",
   "type": "module",
   "sideEffects": true,
@@ -43,14 +59,6 @@
       "optional": true
     }
   },
-  "keywords": [
-    "gdpr",
-    "cookie",
-    "consent",
-    "cookie-banner",
-    "consent-mode",
-    "privacy"
-  ],
   "engines": {
     "node": ">=16"
   }
