@@ -57,6 +57,10 @@ ConsentKit — сборщик инлайн-версии (один <script> дл�
   --policy=1           Версия политики. Поднимите её, когда меняете текст
                        политики — баннер покажется посетителям заново.
   --cookies=table.json Файл со списком cookie (JSON-массив) для панели настроек.
+  --no-branding        Собрать блок без объекта branding в конфиге. Флаг без
+                       значения. По умолчанию сборщик и так не добавляет
+                       branding, поэтому флаг ничего не вырезает — он лишь
+                       гарантирует это явно для сборок из своих конфигов.
   --out=inline.html    Куда записать результат. Без флага — вывод в stdout.
   --help               Эта справка.
 
@@ -70,6 +74,14 @@ function parseArgv(argv) {
   const out = {};
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') { out.help = true; continue; }
+    // Bare (valueless) flags. Everything else must be --name=value.
+    if (arg === '--no-branding') {
+      if (out['no-branding'] !== undefined) {
+        fail('Флаг "--no-branding" указан дважды. Оставьте одно упоминание.');
+      }
+      out['no-branding'] = true;
+      continue;
+    }
     if (!arg.startsWith('--')) {
       fail(`Не понимаю аргумент "${arg}".\n` +
         `Все параметры задаются в виде --имя=значение, например --layout=bar.\n` +
@@ -86,7 +98,7 @@ function parseArgv(argv) {
     const known = ['langs', 'language', 'layout', 'position', 'accent', 'mode', 'policy', 'cookies', 'out'];
     if (!known.includes(name)) {
       fail(`Неизвестный флаг "--${name}".\n` +
-        `Доступные флаги: ${known.map((k) => '--' + k).join(', ')}, --help.\n` +
+        `Доступные флаги: ${known.map((k) => '--' + k).join(', ')}, --no-branding, --help.\n` +
         `Проверьте, нет ли опечатки.`);
     }
     if (out[name] !== undefined) {
@@ -301,6 +313,33 @@ function build(flags) {
   const version = readCoreVersion(coreSrc);
   const stamp = new Date().toISOString().slice(0, 10);
 
+  // Branding ships by default; --no-branding drops the object entirely.
+  //
+  // Only the attribution line is emitted, deliberately — not the logo. The
+  // shipped brand/ecom-consult-logo.svg is a white wordmark authored for dark
+  // backgrounds (fill="white" plus a #FF4242 mark), and .ck-brand paints no
+  // background of its own, so as `branding.logo` it would render invisible on
+  // the banner's light surface. src/ck-ui.js says so at buildBrandLogo(): this
+  // asset belongs in `logoDark`, with a dark-ink variant in `logo` — and
+  // logoDark alone is not an option either, because buildBrandLogo() returns
+  // null when `logo` is missing, which would drop the logo AND keep the 9 КБ of
+  // config. Shipping a recoloured variant is an authoring decision for the
+  // brand owner, not something to invent here. ck-ui.js's own restraint rule
+  // asks for one logo OR one line; the line is the part that is unambiguous,
+  // and it costs ~130 Б instead of ~9,3 КБ per block.
+  const noBranding = flags['no-branding'] === true;
+
+  // Which language the visitor actually gets first: an explicit --language, or
+  // for --language=auto the first bundled language (ck-ui falls back to en when
+  // the browser matches nothing). Keeps ru-* blocks Russian and en/eu English.
+  const primaryLang = language === 'auto' ? requested[0] : language;
+  const branding = {
+    poweredBy: {
+      text: primaryLang === 'ru' ? 'Сделано в E-COM Consult' : 'Made by E-COM Consult',
+      url: 'https://ecomconsult.net'
+    }
+  };
+
   const config = {
     policyVersion: policy,
     // 'auto' -> visitor's browser language among the bundled ones, else en.
@@ -310,12 +349,14 @@ function build(flags) {
     theme: { accent, radius: '10px', mode },
     cookieTable
   };
+  if (!noBranding) config.branding = branding;
 
   // Reconstruct the exact command for the header, so a future maintainer can rebuild.
   const cmdParts = ['node tools/build-inline.mjs', `--langs=${requested.join(',')}`,
     `--language=${language}`, `--layout=${layout}`, `--position=${position}`,
     `--accent=${accent}`, `--mode=${mode}`, `--policy=${policy}`];
   if (flags.cookies != null) cmdParts.push(`--cookies=${flags.cookies}`);
+  if (noBranding) cmdParts.push('--no-branding');
   if (flags.out != null) cmdParts.push(`--out=${flags.out}`);
   const command = cmdParts.join(' ');
 
@@ -328,12 +369,14 @@ function build(flags) {
     ` * Язык баннера:     ${language === 'auto' ? 'auto (по языку браузера посетителя)' : language + ' (задан жёстко)'}`,
     ` * Вид:              ${layout} / ${position}, тема ${mode}, акцент ${accent}`,
     ` * Версия политики:  ${policy}`,
+    ` * Брендинг:         ${noBranding ? 'нет (--no-branding)' : 'строка «' + branding.poweredBy.text + '»'}`,
+  ].concat([
     ' *',
     ' * Ноль внешних запросов: до согласия посетителя ничего никуда не отправляется.',
     ' * Файл собран автоматически — правьте не его, а исходники и пересоберите:',
     ` *   ${command}`,
     ' */'
-  ].join('\n');
+  ]).join('\n');
 
   const pieces = [header, coreSrc];
 
@@ -387,7 +430,8 @@ function build(flags) {
     html,
     escaped,
     stats: {
-      version, stamp, command, langs: requested, fromPack, language, layout, position, mode, accent, policy,
+      version, stamp, command, langs: requested, fromPack, language, layout, position, mode, accent, policy, noBranding,
+      brandingText: noBranding ? '' : 'строка «' + branding.poweredBy.text + '»',
       cookieRows: cookieTable.length,
       coreBytes: Buffer.byteLength(coreSrc, 'utf8'),
       uiBytes: Buffer.byteLength(uiSrc, 'utf8'),
@@ -433,6 +477,7 @@ function main() {
         : ` (${stats.fromPack.length} из пакета локалей)`),
     `  язык баннера  ${stats.language === 'auto' ? 'auto — по языку браузера посетителя' : stats.language + ' — задан жёстко'}`,
     `  cookie в таблице  ${stats.cookieRows}`,
+    `  брендинг      ${stats.noBranding ? 'нет (--no-branding)' : stats.brandingText}`,
     '  ---',
     `  ядро          ${kb(stats.coreBytes)}`,
     `  локали        ${stats.localeBytes === 0 ? '— (не нужны)' : kb(stats.localeBytes)}`,

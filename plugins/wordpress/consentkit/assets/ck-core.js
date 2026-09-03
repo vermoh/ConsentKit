@@ -961,7 +961,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.3.2',
+    version: '0.3.4',
     config: config,
 
     init: function (userConfig) {

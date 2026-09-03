@@ -315,6 +315,56 @@ The decision is stored in a `ck_consent` cookie (base64 JSON, `path=/`,
 discarded — and the banner shown again — when `policyVersion` changes or the TTL
 expires.
 
+## Branding
+
+By default the banner shows a small "Made by E-COM Consult" attribution line,
+linking to ecomconsult.net. It is emitted as a `branding` object in the config,
+and the prebuilt blocks in `ready/` carry it.
+
+Removing it is a supported, first-class option — no obligation, no nag:
+
+```sh
+node tools/build-inline.mjs --langs=en,ru --no-branding   # block without it
+```
+
+If you write the config by hand, simply omit the `branding` object; nothing
+renders without it. Either way costs you ~200 bytes, not a licence: the client
+is MIT and the line is yours to drop.
+
+Note that only the attribution line ships, not the logo — `brand/ecom-consult-logo.svg`
+is a white wordmark authored for dark backgrounds, so it would be invisible on
+the banner's light surface. Supply your own `branding.logo` (and `logoDark`) if
+you want a mark; see the branding notes in `src/ck-ui.js`.
+
+In the **hosted service** the line is on by default and switching it off is part
+of the paid plans. To be clear about what is being charged for: the fee covers
+hosting, the cabinet and the scanner — not the line itself.
+
+## Prebuilt inline blocks
+
+For site builders that will not let you upload files, `ready/` holds
+ready-to-paste `<script>` blocks — copy one wholesale into `<head>`. Zero
+external requests. Rebuild them with `tools/build-inline.mjs` (see
+[`tools/README.md`](tools/README.md)); each block's header records the exact
+command that produced it.
+
+ConsentKit 0.3.4, rebuilt 2026-09-04, uncompressed — gzip on the server cuts
+this roughly three- to fourfold. Every block includes the attribution line;
+`--no-branding` takes ~200 bytes back off:
+
+| Block | Languages | Bytes |
+|---|---|---|
+| `ready/en-bar.txt` | en | 102,128 |
+| `ready/ru-bar.txt` | ru, en | 102,191 |
+| `ready/ru-box.txt` | ru, en | 102,206 |
+| `ready/ru-box-right.txt` | ru, en | 102,215 |
+| `ready/ru-modal.txt` | ru, en | 102,199 |
+| `ready/eu-bar.txt` | 34 languages | 152,403 |
+
+Size is driven almost entirely by the bundled languages: `en` and `ru` are
+built into the UI and cost nothing extra, while layout, position, theme and
+accent change only a few bytes of config.
+
 ## TypeScript
 
 Types ship with the package; no `@types` needed.

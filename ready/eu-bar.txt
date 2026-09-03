@@ -1,12 +1,13 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.3.2
- * Дата сборки:      2026-09-02
+ * Версия ConsentKit: 0.3.4
+ * Дата сборки:      2026-09-03
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
  * Версия политики:  1
+ * Брендинг:         строка «Made by E-COM Consult»
  *
  * Ноль внешних запросов: до согласия посетителя ничего никуда не отправляется.
  * Файл собран автоматически — правьте не его, а исходники и пересоберите:
@@ -976,7 +977,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.3.2',
+    version: '0.3.4',
     config: config,
 
     init: function (userConfig) {
@@ -2499,7 +2500,13 @@
       "radius": "10px",
       "mode": "auto"
     },
-    "cookieTable": []
+    "cookieTable": [],
+    "branding": {
+      "poweredBy": {
+        "text": "Made by E-COM Consult",
+        "url": "https://ecomconsult.net"
+      }
+    }
   };
   function start(){
     try { window.ConsentKit.init(CFG); }
