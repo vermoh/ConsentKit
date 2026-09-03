@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConsentKit — баннер согласия на cookie для сайта</title>
+<meta name="description" content="Баннер согласия на cookie, который блокирует трекеры до ответа посетителя. 34 языка, Google Consent Mode v2, сканер cookie и журнал согласий. Открытый код MIT.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://consentkit.ecomconsult.net/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ConsentKit">
+<meta property="og:url" content="https://consentkit.ecomconsult.net/">
+<meta property="og:title" content="ConsentKit — баннер согласия на cookie для сайта">
+<meta property="og:description" content="Баннер согласия на cookie, который блокирует трекеры до ответа посетителя. 34 языка, Google Consent Mode v2, сканер и журнал согласий.">
+<meta property="og:image" content="https://consentkit.ecomconsult.net/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#main" data-i18n="skip">К основному содержанию</a>
+
+<header class="site-head">
+  <div class="wrap head-row">
+    <a class="brand" href="#main">
+      <svg class="brand-mark" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <path d="M12 2.6 20.4 6v6.1c0 5-3.5 8.4-8.4 9.3-4.9-.9-8.4-4.3-8.4-9.3V6L12 2.6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="m8.2 12.1 2.7 2.7 5-5.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>ConsentKit</span>
+    </a>
+
+    <nav class="head-nav" aria-label="Разделы" data-i18n-aria-label="navSections">
+      <a href="#demo" data-i18n="navDemo">Демо</a>
+      <a href="#how" data-i18n="navHow">Как это работает</a>
+      <a href="#features" data-i18n="navFeatures">Что умеет</a>
+      <a href="#pricing" data-i18n="navPricing">Тарифы</a>
+      <a href="#faq" data-i18n="navFaq">Вопросы</a>
+    </nav>
+
+    <div class="head-actions">
+      <div class="lang-switch" role="group" aria-label="Язык страницы" data-i18n-aria-label="pageLanguage">
+        <button type="button" class="lang-btn" data-lang="ru" aria-pressed="true">RU</button>
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <a class="btn btn--sm btn--primary" href="https://app.ecomconsult.net" data-i18n="ctaCabinet">Открыть кабинет</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ── offer ─────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow" data-i18n="heroEyebrow">Открытый код · MIT · без зависимостей</p>
+        <h1 data-i18n="heroTitle">Баннер согласия, который блокирует трекеры до ответа посетителя</h1>
+        <p class="lede" data-i18n="heroLine1">Большинство баннеров — декорация: счётчики срабатывают на первом кадре, какую бы кнопку ни нажал посетитель.</p>
+        <p class="lede" data-i18n="heroLine2">ConsentKit удерживает динамически вставляемые скрипты (GTM, Метрика, Meta, TikTok, Hotjar) и теги с разметкой type="text/plain" до согласия. Обычный тег &lt;script src&gt;, написанный прямо в HTML, нужно один раз разметить — кабинет показывает, какие именно. 34 языка и Google Consent Mode v2.</p>
+        <p class="hero-cta">
+          <a class="btn btn--primary" href="https://app.ecomconsult.net" data-i18n="ctaCabinet">Открыть кабинет</a>
+          <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">Посмотреть демо</a>
+        </p>
+        <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.</p>
+      </div>
+
+      <div class="hero-code" aria-hidden="true">
+        <div class="code-head"><span></span><span></span><span></span></div>
+<pre><code>&lt;script src="ck-core.js"&gt;&lt;/script&gt;
+&lt;script src="ck-locales.js"&gt;&lt;/script&gt;
+&lt;script src="ck-ui.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  ConsentKit.init({
+    language: 'auto',
+    layout: { type: 'bar' }
+  });
+&lt;/script&gt;</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── live demo ─────────────────────────────────────────────────── -->
+  <section id="demo" class="band">
+    <div class="wrap">
+      <h2 data-i18n="demoTitle">Живое демо</h2>
+      <p class="section-lede" data-i18n="demoLede">Это настоящий баннер на этой странице — не картинка. Меняйте режим, тему и язык, нажимайте кнопки.</p>
+
+      <div class="panel">
+        <div class="panel-grid">
+          <p class="field">
+            <label for="d-layout" data-i18n="fieldLayout">Режим</label>
+            <select id="d-layout">
+              <option value="bar" data-i18n="layoutBar">Полоса</option>
+              <option value="box" data-i18n="layoutBox">Уголок</option>
+              <option value="modal" data-i18n="layoutModal">Окно по центру</option>
+            </select>
+          </p>
+
+          <p class="field" id="d-position-field">
+            <label for="d-position" data-i18n="fieldPosition">Положение</label>
+            <select id="d-position"></select>
+          </p>
+
+          <p class="field">
+            <label for="d-theme" data-i18n="fieldTheme">Тема</label>
+            <select id="d-theme">
+              <option value="auto" data-i18n="themeAuto">Как в системе</option>
+              <option value="light" data-i18n="themeLight">Светлая</option>
+              <option value="dark" data-i18n="themeDark">Тёмная</option>
+            </select>
+          </p>
+
+          <p class="field">
+            <label for="d-lang" data-i18n="fieldBannerLang">Язык баннера</label>
+            <select id="d-lang"></select>
+          </p>
+        </div>
+
+        <p class="panel-foot">
+          <button type="button" class="btn btn--primary btn--sm" id="d-again" data-i18n="btnShowAgain">Показать снова</button>
+          <span class="panel-hint" data-i18n="demoHint">Сбрасывает сохранённое согласие и показывает баннер заново.</span>
+        </p>
+
+        <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── how it works ──────────────────────────────────────────────── -->
+  <section id="how">
+    <div class="wrap">
+      <h2 data-i18n="howTitle">Как это работает</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-n" aria-hidden="true">1</span>
+          <h3 data-i18n="how1Title">Вставьте строку</h3>
+          <p data-i18n="how1Text">Одна строка в &lt;head&gt; — на Tilda, WordPress, через Google Tag Manager или в обычный HTML. Сборки нет, зависимостей нет.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">2</span>
+          <h3 data-i18n="how2Title">Подтвердите домен</h3>
+          <p data-i18n="how2Text">Сначала подтверждение владения доменом — meta-тегом или записью DNS. После этого проверка установки показывает, стоит ли баннер на сайте и какие теги остались без разметки.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">3</span>
+          <h3 data-i18n="how3Title">Скан и таблица cookie</h3>
+          <p data-i18n="how3Text">Сканер обходит сайт, находит трекеры и cookie и заполняет таблицу, которую посетитель видит в настройках баннера.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── features ──────────────────────────────────────────────────── -->
+  <section id="features" class="band">
+    <div class="wrap">
+      <h2 data-i18n="featTitle">Что умеет</h2>
+      <div class="cards">
+        <article class="card">
+          <h3 data-i18n="feat1Title">Блокировка до согласия</h3>
+          <p data-i18n="feat1Text">Скрипты, добавленные динамически (официальные сниппеты GTM, Метрики, Meta, TikTok, Hotjar), и теги с разметкой type="text/plain" не отправляют запрос вовсе. Обычный тег &lt;script src&gt;, написанный прямо в HTML, мы не даём выполниться и поставить cookie, но его сетевой запрос может уже уйти — такие теги нужно разметить вручную. Кабинет показывает, какие именно.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat2Title">Сканер cookie</h3>
+          <p data-i18n="feat2Text">Обходит страницы сайта в настоящем браузере, собирает cookie и запросы к трекерам и раскладывает находки по категориям. Результат — готовая таблица cookie и список тегов, которые стоит разметить.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat3Title">Журнал согласий</h3>
+          <p data-i18n="feat3Text">Каждое решение посетителя записывается: время, версия политики, выбранные категории, способ. Выгрузка в CSV на платных тарифах — на случай запроса регулятора.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat4Title">34 языка</h3>
+          <p data-i18n="feat4Text">Все языки ЕС и соседей: баннер сам выбирает язык по браузеру посетителя или берёт заданный вами. Тексты можно переопределить своими.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat5Title">Google Consent Mode v2</h3>
+          <p data-i18n="feat5Text">Сигналы ad_storage, analytics_storage, ad_user_data и ad_personalization выставляются до загрузки тегов и обновляются при выборе. События уходят и в dataLayer для триггеров GTM.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat6Title">WordPress, GTM, Tilda</h3>
+          <p data-i18n="feat6Text">Плагин для WordPress, готовый контейнер для Google Tag Manager и самодостаточный блок &lt;script&gt; для конструкторов, куда нельзя загружать файлы, — например для бесплатной Tilda.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── pricing ───────────────────────────────────────────────────── -->
+  <section id="pricing">
+    <div class="wrap">
+      <h2 data-i18n="priceTitle">Тарифы</h2>
+      <p class="section-lede" data-i18n="priceLede">Тариф действует на организацию. Понижение тарифа не ломает сайт: баннер продолжает работать, возвращается строка о разработчике, расписание сканов останавливается.</p>
+      <div class="plans" id="plans"></div>
+      <p class="price-note" data-i18n="priceFoot">Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS, Литва.</p>
+    </div>
+  </section>
+
+  <!-- ── who ───────────────────────────────────────────────────────── -->
+  <section id="who" class="band">
+    <div class="wrap">
+      <h2 data-i18n="whoTitle">Для кого</h2>
+      <div class="cards cards--4">
+        <article class="card">
+          <h3 data-i18n="who1Title">Сайты на Tilda</h3>
+          <p data-i18n="who1Text">Файлы загружать некуда — берите самодостаточный блок и вставляйте в «HTML-код для HEAD». Одна вставка, никаких плагинов.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="who2Title">WordPress и WooCommerce</h3>
+          <p data-i18n="who2Text">Плагин ставится копированием папки, настройки — в админке. Работает и с кэширующими плагинами: баннер не зависит от PHP.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="who3Title">Интернет-магазины</h3>
+          <p data-i18n="who3Text">Реклама и ремаркетинг живут по Consent Mode v2: теги получают корректные сигналы, а не отключаются целиком.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="who4Title">Агентства</h3>
+          <p data-i18n="who4Text">Много сайтов клиентов в одном кабинете, сканы по расписанию и оповещения о новых трекерах. Условия — по договору.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── faq ───────────────────────────────────────────────────────── -->
+  <section id="faq">
+    <div class="wrap wrap--narrow">
+      <h2 data-i18n="faqTitle">Частые вопросы</h2>
+      <div class="faq" id="faq-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-grid">
+    <div>
+      <p class="foot-brand">E-COM CONSULT PLUS</p>
+      <p class="foot-small" data-i18n="footLegal">Литва, ЕС. ConsentKit — открытый код под лицензией MIT.</p>
+    </div>
+    <nav class="foot-links" aria-label="Ссылки" data-i18n-aria-label="footLinksLabel">
+      <a href="https://github.com/vermoh/ConsentKit" rel="noopener">GitHub</a>
+      <a href="https://www.npmjs.com/package/@ecomconsult/consentkit" rel="noopener">npm</a>
+      <a href="https://github.com/vermoh/ConsentKit/blob/main/INSTALL.ru.md" rel="noopener" data-i18n="footDocs">Инструкция по установке</a>
+      <a href="https://app.ecomconsult.net" data-i18n="footCabinet">Кабинет</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="vendor/ck-core.js"></script>
+<script src="vendor/ck-locales.js"></script>
+<script src="vendor/ck-ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# The public product page is meant to be indexed (unlike the dashboard).
+User-agent: *
+Allow: /
+
+Sitemap: https://consentkit.ecomconsult.net/sitemap.xml
