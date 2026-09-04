@@ -127,6 +127,8 @@
           <span class="panel-hint" data-i18n="demoHint">Сбрасывает сохранённое согласие и показывает баннер заново.</span>
         </p>
 
+        <p class="panel-hint" data-i18n="demoDebug">Режим отладки: откройте эту страницу с ?ck_debug=1 — внизу справа появится панель, которая показывает, что клиент заблокировал, какие запросы к трекерам ушли и что получил Consent Mode. Видна только в вашем браузере; выключается через ?ck_debug=0.</p>
+
         <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
       </div>
     </div>
@@ -252,6 +254,8 @@
 <script src="vendor/ck-core.js"></script>
 <script src="vendor/ck-locales.js"></script>
 <script src="vendor/ck-ui.js"></script>
+<!-- Debug panel: inert unless the page is opened with ?ck_debug=1 -->
+<script src="vendor/ck-debug.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

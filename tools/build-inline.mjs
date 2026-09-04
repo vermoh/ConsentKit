@@ -239,6 +239,10 @@ function build(flags) {
   const coreSrc = readSource('ck-core.js');
   const uiSrc = readSource('ck-ui.js');
   const localeSrc = readSource('ck-locales.js');
+  // Opt-in debug panel: inert unless the visitor opens the page with
+  // ?ck_debug=1 (see README «Debug mode»). It ships in the block so the site
+  // owner can inspect a live page without editing the block.
+  const debugSrc = readSource('ck-debug.js');
 
   const pack = loadLocalePack(localeSrc);
   const available = Object.keys(pack).sort();
@@ -395,6 +399,10 @@ function build(flags) {
 
   pieces.push(uiSrc);
 
+  // After the UI (the panel measures the banner) and before init(), so the
+  // panel's ck:init listener is attached when init() fires.
+  pieces.push(debugSrc);
+
   // Safety net: init() is called once the DOM is ready, regardless of where the
   // block is pasted. ck-ui.js already defers its own mount() when document.body
   // is missing, so this is belt-and-braces rather than a requirement. The core's
@@ -435,6 +443,7 @@ function build(flags) {
       cookieRows: cookieTable.length,
       coreBytes: Buffer.byteLength(coreSrc, 'utf8'),
       uiBytes: Buffer.byteLength(uiSrc, 'utf8'),
+      debugBytes: Buffer.byteLength(debugSrc, 'utf8'),
       localeBytes,
       totalBytes: Buffer.byteLength(html, 'utf8')
     }
@@ -482,6 +491,7 @@ function main() {
     `  ядро          ${kb(stats.coreBytes)}`,
     `  локали        ${stats.localeBytes === 0 ? '— (не нужны)' : kb(stats.localeBytes)}`,
     `  интерфейс     ${kb(stats.uiBytes)}`,
+    `  отладка       ${kb(stats.debugBytes)} (панель ?ck_debug=1, выключена по умолчанию)`,
     `  ИТОГО         ${kb(stats.totalBytes)}${target ? ' → ' + target : ' → stdout'}`,
     '',
     '  Вставьте содержимое файла целиком в <head> сайта, как можно выше.',

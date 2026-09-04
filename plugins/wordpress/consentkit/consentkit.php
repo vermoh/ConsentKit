@@ -786,9 +786,11 @@ function consentkit_asset_url( $filename ) {
  * theme-independent way. (Only a theme that omits wp_head() entirely could
  * defeat this, and such a theme breaks WordPress itself.)
  *
- * The three tags are printed in contract order core -> locales -> ui with no
+ * The tags are printed in contract order core -> locales -> ui -> debug with no
  * async/defer: document-order, blocking execution is exactly what guarantees
  * both the ordering and the parse-time activation of the blocking engine.
+ * ck-debug.js is last and inert: it builds nothing unless the page is opened
+ * with ?ck_debug=1, so a normal visitor pays only for its bytes.
  *
  * @return void
  */
@@ -797,7 +799,7 @@ function consentkit_print_scripts() {
 		return;
 	}
 
-	$files = array( 'ck-core.js', 'ck-locales.js', 'ck-ui.js' );
+	$files = array( 'ck-core.js', 'ck-locales.js', 'ck-ui.js', 'ck-debug.js' );
 
 	foreach ( $files as $file ) {
 		printf(

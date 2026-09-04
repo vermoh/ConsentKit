@@ -20,7 +20,9 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // ck-saas.js is deliberately NOT vendored: the demo runs on a static config,
 // it never talks to the SaaS API.
-export const VENDORED = ['ck-core.js', 'ck-ui.js', 'ck-locales.js'];
+// ck-debug.js is vendored too: the page documents ?ck_debug=1 on the demo,
+// and the panel is inert unless the visitor asks for it.
+export const VENDORED = ['ck-core.js', 'ck-ui.js', 'ck-locales.js', 'ck-debug.js'];
 
 export const SRC_DIR = join(REPO, 'src');
 export const VENDOR_DIR = join(REPO, 'site', 'vendor');

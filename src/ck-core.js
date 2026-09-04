@@ -629,7 +629,62 @@
     return !allowed(cat);
   }
 
+  // Registry of everything the engine intercepted, for the debug panel (§8.1
+  // item 3). Kept deliberately small: host + path only, никаких query strings —
+  // a tracker URL's query carries ids and, on badly built sites, PII.
+  // Capped so a page that injects trackers in a loop cannot grow it without
+  // bound; the panel shows the first BLOCKED_MAX, which is always enough to see
+  // what is happening.
+  var BLOCKED_MAX = 200;
+  var blockedLog = [];
+
+  // host + path, query and fragment dropped.
+  function safeUrlParts(src) {
+    var host = '';
+    var path = '';
+    try {
+      var base = (global.location && global.location.href) || 'http://localhost/';
+      var u = new URL(String(src), base);
+      host = (u.hostname || '').toLowerCase();
+      path = u.pathname || '';
+    } catch (e) {
+      var s = String(src || '');
+      var m = /^(?:[a-z]+:)?\/\/([^/?#]+)([^?#]*)/i.exec(s);
+      if (m) {
+        host = m[1].toLowerCase().replace(/:\d+$/, '');
+        path = m[2] || '';
+      } else {
+        path = s.split('?')[0].split('#')[0];
+      }
+    }
+    return { host: host, path: path };
+  }
+
+  function noteBlocked(el, src, cat, origin) {
+    try {
+      if (blockedLog.length >= BLOCKED_MAX) { return; }
+      var kind = 'script';
+      try {
+        var tag = el && el.tagName ? String(el.tagName).toLowerCase() : '';
+        if (tag) { kind = tag === 'img' ? 'img' : tag; }
+      } catch (e2) { /* noop */ }
+      var parts = safeUrlParts(src);
+      for (var i = 0; i < blockedLog.length; i++) {
+        var p = blockedLog[i];
+        if (p.host === parts.host && p.path === parts.path && p.kind === kind) { return; }
+      }
+      blockedLog.push({
+        host: parts.host,
+        path: parts.path,
+        kind: kind,
+        category: cat || null,
+        origin: origin || 'engine'
+      });
+    } catch (e) { /* noop */ }
+  }
+
   function markBlocked(el, src, cat) {
+    noteBlocked(el, src, cat, 'engine');
     try {
       if (nativeSetAttribute) {
         nativeSetAttribute.call(el, 'data-ck-blocked', '1');
@@ -961,7 +1016,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.3.4',
+    version: '0.3.5',
     config: config,
 
     init: function (userConfig) {
@@ -1017,7 +1072,58 @@
 
     // Introspection helpers for the demo status panel (read-only).
     _categoryForUrl: categoryForUrl,
-    _categories: CATEGORIES.slice()
+    _categories: CATEGORIES.slice(),
+
+    // What is being held back until consent: everything the engine intercepted
+    // (origin 'engine') plus what the site author marked up by hand (origin
+    // 'markup'), which never goes through markBlocked. Read-only, host+path
+    // only — no query strings, so no ids and no PII. Used by src/ck-debug.js.
+    _blocked: function () {
+      var out = [];
+      var seen = {};
+      function add(rec) {
+        var key = rec.kind + '|' + rec.host + '|' + rec.path;
+        if (seen[key]) { return; }
+        seen[key] = 1;
+        out.push(rec);
+      }
+      try {
+        for (var i = 0; i < blockedLog.length; i++) {
+          var b = blockedLog[i];
+          // Interceptions are kept for the life of the page, but once the
+          // category is granted the element has been revived and is no longer
+          // held back — reporting it as still blocked would be false.
+          if (allowed(b.category)) { continue; }
+          add({ host: b.host, path: b.path, kind: b.kind, category: b.category, origin: b.origin });
+        }
+      } catch (e) { /* noop */ }
+      // Hand-marked tags still waiting for their category.
+      try {
+        // Only what applyConsentToDom() can actually revive. An img is never
+        // revived by the core, so listing hand-marked images here would show a
+        // pending state that never clears after the visitor accepts.
+        qsa('script[type="text/plain"][data-ck], iframe[data-ck][data-src]')
+          .forEach(function (el) {
+            try {
+              if (el.getAttribute('data-ck-restored')) { return; }
+              if (el.getAttribute('data-ck-blocked')) { return; } // already in the registry
+              var tag = String(el.tagName || '').toLowerCase();
+              if (tag === 'iframe' && el.getAttribute('src')) { return; }
+              var src = el.getAttribute('data-src') || el.getAttribute('data-ck-src') || '';
+              if (!src) { return; }
+              var cat = el.getAttribute('data-ck') || categoryForUrl(src);
+              if (allowed(cat)) { return; }
+              var parts = safeUrlParts(src);
+              add({
+                host: parts.host, path: parts.path,
+                kind: tag === 'iframe' ? 'iframe' : 'script',
+                category: cat || null, origin: 'markup'
+              });
+            } catch (e2) { /* noop */ }
+          });
+      } catch (e3) { /* noop */ }
+      return out;
+    }
   };
 
   // ---------------------------------------------------------------------------

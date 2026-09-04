@@ -24,7 +24,7 @@ function undecidedState() {
 
 function createStub() {
   return {
-    version: '0.3.4',
+    version: '0.3.5',
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },

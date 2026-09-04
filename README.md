@@ -348,22 +348,85 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.3.4, rebuilt 2026-09-04, uncompressed — gzip on the server cuts
+ConsentKit 0.3.5, rebuilt 2026-09-04, uncompressed — gzip on the server cuts
 this roughly three- to fourfold. Every block includes the attribution line;
 `--no-branding` takes ~200 bytes back off:
 
 | Block | Languages | Bytes |
 |---|---|---|
-| `ready/en-bar.txt` | en | 102,128 |
-| `ready/ru-bar.txt` | ru, en | 102,191 |
-| `ready/ru-box.txt` | ru, en | 102,206 |
-| `ready/ru-box-right.txt` | ru, en | 102,215 |
-| `ready/ru-modal.txt` | ru, en | 102,199 |
-| `ready/eu-bar.txt` | 34 languages | 152,403 |
+| `ready/en-bar.txt` | en | 136,364 |
+| `ready/ru-bar.txt` | ru, en | 136,427 |
+| `ready/ru-box.txt` | ru, en | 136,442 |
+| `ready/ru-box-right.txt` | ru, en | 136,451 |
+| `ready/ru-modal.txt` | ru, en | 136,435 |
+| `ready/eu-bar.txt` | 34 languages | 186,639 |
 
 Size is driven almost entirely by the bundled languages: `en` and `ru` are
 built into the UI and cost nothing extra, while layout, position, theme and
 accent change only a few bytes of config.
+
+Every block since 0.3.5 also carries the ~29 KB debug panel (`src/ck-debug.js`),
+which is why the numbers above are larger than in 0.3.4. It is off unless the
+page is opened with `?ck_debug=1` — no DOM, no observers, no requests — so an
+ordinary visitor pays for its bytes and nothing else.
+
+## Debug mode
+
+A panel that shows what the client actually did on a live page — useful when a
+site owner asks "is this thing working?" and screenshots of the banner do not
+answer it.
+
+**Open it** by adding `?ck_debug=1` to the page URL (`#ck_debug` works too):
+
+```
+https://example.com/?ck_debug=1
+```
+
+A dark, monospace panel appears bottom-right in its own Shadow DOM. The flag is
+remembered in `localStorage` for that browser, so it survives navigation.
+
+**It shows**, in order: the client version, config source (SaaS or inline),
+siteId and policy version / ETag; the consent status, granted categories,
+decision time and cookie lifetime; what the blocking engine is holding back
+(`ConsentKit._blocked()`); which requests to known trackers actually left the
+page, each marked *before* or *after* consent; the recent `ck_*` dataLayer
+events and `gtag('consent', …)` calls; and three buttons — reset consent
+(withdraw, clear the cookie, reload), open preferences, and copy a JSON report.
+
+The request list carries the same caveat as the blocking engine itself:
+requests that left **before** ck-core.js parsed — a plain `<script src>` written
+into the HTML — show up there but could not have been blocked. Mark those tags
+up manually.
+
+**Turn it off** with `?ck_debug=0`, or the × in the panel's header.
+
+**Privacy.** Nothing is sent anywhere: the panel is local to that browser and
+that page. It never renders cookie *values* (names only) and never shows URL
+query strings (host and path only), so the copied report is safe to paste into
+a support ticket. Off by default — with no flag set, `ck-debug.js` creates no
+DOM, installs no observers and registers no listeners.
+
+`ck-debug.js` ships in `ready/*.txt`, in the WordPress plugin and in the npm
+package; load it after `ck-ui.js` (and after `ck-saas.js` if you use it):
+
+```html
+<script src="/js/ck-core.js"></script>
+<script src="/js/ck-locales.js"></script>
+<script src="/js/ck-ui.js"></script>
+<script src="/js/ck-debug.js"></script>
+```
+
+Omit that last line if you do not want the ~29 KB in your page at all.
+
+From npm it is a deliberate opt-in — `@ecomconsult/consentkit` does not pull
+it in for you. Import it yourself, after the UI:
+
+```js
+import '@ecomconsult/consentkit';           // core + locales + UI
+import '@ecomconsult/consentkit/src/ck-debug.js';
+```
+
+The panel's own text is Russian; the report it copies is language-neutral JSON.
 
 ## TypeScript
 
