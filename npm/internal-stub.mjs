@@ -28,7 +28,7 @@ export function undecidedState() {
  */
 export function createStub() {
   const stub = {
-    version: '0.3.6',
+    version: '0.4.0',
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },
@@ -39,6 +39,12 @@ export function createStub() {
     show: function () {},
     hide: function () {},
     _categories: CATEGORIES.slice(),
+    // v0.4.0: the stub mirrors the real surface, so consumer code that calls
+    // these needs no branching when the core failed to attach.
+    _extendHostDb: function () { return 0; },
+    _baseAllow: [],
+    _categoryForUrl: function () { return null; },
+    _blocked: function () { return []; },
     _isStub: true
   };
   return stub;

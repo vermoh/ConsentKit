@@ -137,7 +137,16 @@
         ttlDays: d.ttlDays == null ? null : Number(d.ttlDays)
       },
       blocked: (d.blocked || []).map(function (b) {
-        return { host: b.host, path: b.path, kind: b.kind, category: b.category, origin: b.origin };
+        // `strict` marks an entry the engine held back only because strict mode
+        // is on and the host is an unknown third party — not because the
+        // tracker database recognised it.
+        return {
+          host: b.host, path: b.path, kind: b.kind,
+          category: b.category, origin: b.origin, strict: b.strict === true,
+          // false when the visitor granted the category but the element never
+          // loaded — usually a script that was created and never appended.
+          revived: b.revived !== false
+        };
       }),
       requests: buildRequests(d.entries, d.consentAtMs, d.classify),
       consentMode: (d.consentMode || []).slice(),
@@ -180,6 +189,8 @@
       secBlocked: 'Заблокировано до согласия',
       noBlocked: 'ничего не перехвачено',
       markup: ' (разметка)',
+      strict: 'strict',
+      notRevived: ' — не ожил после согласия',
       secRequests: 'Запросы к трекерам',
       noRequests: 'запросов к известным трекерам не было',
       after: 'после согласия',
@@ -215,6 +226,8 @@
       secBlocked: 'Blocked until consent',
       noBlocked: 'nothing intercepted',
       markup: ' (markup)',
+      strict: 'strict',
+      notRevived: ' — did not come back after consent',
       secRequests: 'Tracker requests',
       noRequests: 'no requests to known trackers',
       after: 'after consent',
@@ -594,8 +607,10 @@
         var li = doc.createElement('li');
         li.appendChild(tag(b.kind));
         li.appendChild(tag(b.category || '?'));
+        if (b.strict) { li.appendChild(tag(T.strict, 'off')); }
         li.appendChild(doc.createTextNode(b.host + b.path +
-          (b.origin === 'markup' ? T.markup : '')));
+          (b.origin === 'markup' ? T.markup : '') +
+          (b.revived === false ? T.notRevived : '')));
         u3.appendChild(li);
       });
       s3.appendChild(u3);

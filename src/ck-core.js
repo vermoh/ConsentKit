@@ -22,6 +22,13 @@
       nativeScriptSrcDesc = Object.getOwnPropertyDescriptor(global.HTMLScriptElement.prototype, 'src');
     }
   } catch (e) { /* noop */ }
+  var nativeIframeSrcDesc = null;
+  try {
+    if (global.HTMLIFrameElement && global.HTMLIFrameElement.prototype) {
+      nativeIframeSrcDesc = Object.getOwnPropertyDescriptor(global.HTMLIFrameElement.prototype, 'src');
+    }
+  } catch (e) { /* noop */ }
+  var nativeRemoveAttribute = (global.Element && global.Element.prototype && global.Element.prototype.removeAttribute) || null;
 
   // Internal flag: while true, patches let everything through (used when we
   // re-create previously blocked scripts after consent).
@@ -115,6 +122,15 @@
     'tidiochat.com': 'functional'
   };
 
+  // Runtime overrides fed in by ConsentKit._extendHostDb(map) — the SaaS
+  // config's `hostdb`, or a hand call on a standalone page. Kept SEPARATE from
+  // HOST_DB on purpose: tools/export-hostdb.mjs extracts the HOST_DB literal
+  // out of this file with node:vm, and tools/sync-hostdb.mjs writes into that
+  // same literal. A runtime map merged into HOST_DB would be invisible to both
+  // (it never exists on disk) yet would blur what "the shipped database" means.
+  // Consulted BEFORE HOST_DB, so an override wins over a built-in entry.
+  var EXTRA_DB = {};
+
   // Path-fragment database: URL substring -> category. Matched against the full
   // resolved URL, so it can distinguish two very different scripts served from
   // the SAME host (googletagmanager.com).
@@ -207,7 +223,59 @@
     },
     consentTtlDays: 365,
     integrations: { gcm: true, gtmDataLayer: true },
+    // 'known'  — block what the tracker database recognises (the default, and
+    //            everything ConsentKit did before 0.4.0).
+    // 'strict' — additionally hold back EVERY third-party script/iframe that is
+    //            not same-site, not in `allow` and not in BASE_ALLOW.
+    blocking: { mode: 'known', allow: [] },
     cookieTable: []
+  };
+
+  // Hosts strict mode never intercepts, even though they are third-party and
+  // unknown to HOST_DB. Two kinds only: asset CDNs that serve the site's own
+  // code, and things a page is broken or unusable without (payment, captcha).
+  // Deliberately short — everything else is the site owner's `blocking.allow`.
+  // Matched with the same suffix semantics as HOST_DB; the recaptcha entries
+  // are hosts because www.google.com/recaptcha and www.gstatic.com/recaptcha
+  // cannot be expressed host-wise without also allowing the whole of google.com,
+  // so they are handled by BASE_ALLOW_PATH below instead.
+  var BASE_ALLOW = [
+    'cdn.jsdelivr.net',
+    'unpkg.com',
+    'cdnjs.cloudflare.com',
+    'code.jquery.com',
+    'fonts.googleapis.com',
+    'fonts.gstatic.com',
+    'hcaptcha.com',
+    'js.stripe.com',
+    'pay.google.com',
+    'checkout.creem.io'
+  ];
+
+  // Path-scoped members of the base allowlist: allowed only on this exact path
+  // prefix, because the host at large is not something to wave through.
+  var BASE_ALLOW_PATH = [
+    { host: 'www.google.com', path: '/recaptcha' },
+    { host: 'www.gstatic.com', path: '/recaptcha' }
+  ];
+
+  // Multi-label public suffixes: without these, `bbc.co.uk` and `itv.co.uk`
+  // would share the registrable domain `co.uk` and count as same-site. The list
+  // only ever WIDENS the registrable domain (two labels -> three), so a missing
+  // entry can only make strict mode treat a sibling as first-party and let it
+  // through — never make it block a genuine first-party asset. A full public
+  // suffix list is ~10k entries and has no place in a zero-dependency client.
+  var PSL_TWO_LABEL = {
+    'co.uk': 1, 'org.uk': 1, 'me.uk': 1, 'ac.uk': 1, 'gov.uk': 1, 'net.uk': 1, 'sch.uk': 1,
+    'com.au': 1, 'net.au': 1, 'org.au': 1, 'edu.au': 1, 'gov.au': 1,
+    'co.nz': 1, 'net.nz': 1, 'org.nz': 1,
+    'com.br': 1, 'net.br': 1, 'org.br': 1,
+    'co.jp': 1, 'ne.jp': 1, 'or.jp': 1, 'ac.jp': 1,
+    'co.za': 1, 'org.za': 1,
+    'com.cn': 1, 'net.cn': 1, 'org.cn': 1,
+    'co.in': 1, 'net.in': 1, 'org.in': 1,
+    'com.tr': 1, 'com.mx': 1, 'com.ar': 1, 'com.sg': 1, 'com.hk': 1,
+    'com.ua': 1, 'com.pl': 1, 'com.ru': 1, 'co.il': 1, 'co.kr': 1
   };
 
   // ---------------------------------------------------------------------------
@@ -585,9 +653,25 @@
   // ---------------------------------------------------------------------------
   // Blocking engine — URL classification
   // ---------------------------------------------------------------------------
-  function categoryForUrl(src) {
-    if (!src || typeof src !== 'string') { return null; }
-    var s = src;
+  // host === key, or host is a subdomain of key. The one matching rule in the
+  // engine: HOST_DB, EXTRA_DB and BASE_ALLOW all use it.
+  function hostMatches(host, key) {
+    if (!host || !key) { return false; }
+    return host === key || (host.length > key.length && host.slice(-(key.length + 1)) === '.' + key);
+  }
+
+  function lookupHostMap(map, host) {
+    var keys = Object.keys(map);
+    for (var i = 0; i < keys.length; i++) {
+      if (hostMatches(host, keys[i])) { return map[keys[i]]; }
+    }
+    return null;
+  }
+
+  // Splits a URL into { host, url } with the page as the resolution base, so a
+  // relative src resolves to the first-party host rather than to nothing.
+  function urlParts(src) {
+    var s = String(src);
     var host = '';
     try {
       var base = (global.location && global.location.href) || 'http://localhost/';
@@ -595,24 +679,138 @@
       host = (u.hostname || '').toLowerCase();
       s = u.href;
     } catch (e) {
-      var m = /^(?:[a-z]+:)?\/\/([^/?#]+)/i.exec(src);
+      var m = /^(?:[a-z]+:)?\/\/([^/?#]+)/i.exec(String(src));
       host = m ? m[1].toLowerCase().replace(/:\d+$/, '') : '';
     }
+    return { host: host, url: s };
+  }
+
+  function categoryForUrl(src) {
+    if (!src || typeof src !== 'string') { return null; }
+    var parts = urlParts(src);
+    var host = parts.host;
     if (host) {
-      var keys = Object.keys(HOST_DB);
-      for (var i = 0; i < keys.length; i++) {
-        var e2 = keys[i];
-        if (host === e2 || host.length > e2.length && host.slice(-(e2.length + 1)) === '.' + e2) {
-          return HOST_DB[e2];
-        }
-      }
+      // Service overrides first: an override exists precisely to correct or
+      // extend what the shipped table says about a host.
+      var over = lookupHostMap(EXTRA_DB, host);
+      if (over) { return over; }
+      var built = lookupHostMap(HOST_DB, host);
+      if (built) { return built; }
     }
-    var low = String(s).toLowerCase();
+    var low = String(parts.url).toLowerCase();
     var pkeys = Object.keys(PATH_DB);
     for (var j = 0; j < pkeys.length; j++) {
       if (low.indexOf(pkeys[j]) > -1) { return PATH_DB[pkeys[j]]; }
     }
     return null;
+  }
+
+  // Merges { host: category } into the runtime database. Safe before and after
+  // init(): after init nothing already inserted is re-evaluated (a script that
+  // has loaded cannot be unloaded), but every later insertion sees the new map.
+  function extendHostDb(map) {
+    var added = 0;
+    try {
+      if (!isPlainObject(map)) { return 0; }
+      Object.keys(map).forEach(function (rawHost) {
+        // The map arrives over the network in the SaaS path: validate both
+        // halves rather than trusting the server's shape.
+        if (typeof rawHost !== 'string') { return; }
+        var host = rawHost.trim().toLowerCase().replace(/:\d+$/, '').replace(/^\.+|\.+$/g, '');
+        if (!host || host.indexOf('.') === -1 || /[^a-z0-9.\-]/.test(host)) { return; }
+        var cat = map[rawHost];
+        if (typeof cat !== 'string' || CATEGORIES.indexOf(cat) === -1) { return; }
+        if (EXTRA_DB[host] === cat) { return; }
+        EXTRA_DB[host] = cat;
+        added++;
+      });
+    } catch (e) { /* noop */ }
+    return added;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Blocking engine — strict mode (§2)
+  // ---------------------------------------------------------------------------
+  // Everything strict intercepts is filed under the strictest category, so it
+  // is released only by a consent that covers marketing.
+  var STRICT_CATEGORY = 'marketing';
+
+  // Registrable domain, best effort: last two labels, or last three when the
+  // last two form a known multi-label public suffix.
+  function registrable(host) {
+    if (!host) { return ''; }
+    var labels = String(host).split('.');
+    if (labels.length <= 2) { return host; }
+    var lastTwo = labels.slice(-2).join('.');
+    if (PSL_TWO_LABEL[lastTwo] && labels.length >= 3) { return labels.slice(-3).join('.'); }
+    return lastTwo;
+  }
+
+  // Conservative on purpose: whenever the answer is not clearly "third party",
+  // this says same-site. A wrong "third party" verdict breaks a live site in
+  // strict mode; a wrong "same-site" verdict merely lets one unknown script
+  // through, which is exactly what every version before 0.4.0 did.
+  function isSameSite(host) {
+    if (!host) { return true; }              // unparseable -> do not intercept
+    var page = hostname().toLowerCase();
+    if (!page) { return true; }              // no location (SSR/about:blank) -> strict is inert
+    if (host === page) { return true; }
+    var r = registrable(host);
+    var pr = registrable(page);
+    return !!r && r === pr;
+  }
+
+  function baseAllowed(host, url) {
+    for (var i = 0; i < BASE_ALLOW.length; i++) {
+      if (hostMatches(host, BASE_ALLOW[i])) { return true; }
+    }
+    for (var j = 0; j < BASE_ALLOW_PATH.length; j++) {
+      var e = BASE_ALLOW_PATH[j];
+      if (host !== e.host) { continue; }
+      var path = '';
+      try { path = new URL(String(url), 'http://localhost/').pathname || ''; } catch (e2) { path = ''; }
+      if (path.indexOf(e.path) === 0) { return true; }
+    }
+    return false;
+  }
+
+  function siteAllowed(host) {
+    try {
+      var list = config.blocking && config.blocking.allow;
+      if (!list || typeof list.length !== 'number') { return false; }
+      for (var i = 0; i < list.length; i++) {
+        var entry = list[i];
+        if (typeof entry !== 'string') { continue; }
+        var key = entry.trim().toLowerCase().replace(/^\.+/, '');
+        if (key && hostMatches(host, key)) { return true; }
+      }
+    } catch (e) { /* noop */ }
+    return false;
+  }
+
+  function strictMode() {
+    try { return !!(config.blocking && config.blocking.mode === 'strict'); } catch (e) { return false; }
+  }
+
+  // True when strict mode should hold this URL back. Reached only for URLs the
+  // tracker database does NOT recognise: a known host has a real category and
+  // is decided by allowed() long before this runs, which is why a HOST_DB
+  // `necessary` or `functional` host passes strict without a special case.
+  function strictBlocks(src) {
+    if (!strictMode()) { return false; }
+    var s = String(src || '');
+    // Non-network schemes carry no third party. A bare "//host/x" has no scheme
+    // and is protocol-relative, so it is deliberately not caught here.
+    if (/^\s*(?:data|blob|javascript|about|mailto|tel):/i.test(s)) { return false; }
+    var parts = urlParts(s);
+    var host = parts.host;
+    if (!host) { return false; }
+    if (isSameSite(host)) { return false; }
+    if (baseAllowed(host, parts.url)) { return false; }
+    if (siteAllowed(host)) { return false; }
+    // Intercepted unknowns are treated as marketing — the strictest category —
+    // so they come back only when the visitor accepts marketing.
+    return !allowed(STRICT_CATEGORY);
   }
 
   function allowed(cat) {
@@ -621,12 +819,25 @@
     return state.categories[cat] === true;
   }
 
-  // True when the URL is a known tracker whose category is not (yet) granted.
+  // True when the URL must be held back: a known tracker whose category is not
+  // yet granted, or — in strict mode — an unknown third party.
   function shouldBlock(src) {
     if (bypass) { return false; }
     var cat = categoryForUrl(src);
-    if (!cat) { return false; }
-    return !allowed(cat);
+    if (cat) { return !allowed(cat); }
+    return strictBlocks(src);
+  }
+
+  // The category an interception is filed under. Known hosts keep their own;
+  // a strict interception is marketing.
+  function blockCategory(src) {
+    return categoryForUrl(src) || STRICT_CATEGORY;
+  }
+
+  // Was this particular interception a strict-mode one (i.e. the URL is not in
+  // the tracker database at all)? Drives the «strict» label in the debug panel.
+  function isStrictHit(src) {
+    return !categoryForUrl(src) && strictMode();
   }
 
   // Registry of everything the engine intercepted, for the debug panel (§8.1
@@ -660,7 +871,7 @@
     return { host: host, path: path };
   }
 
-  function noteBlocked(el, src, cat, origin) {
+  function noteBlocked(el, src, cat, origin, strict) {
     try {
       if (blockedLog.length >= BLOCKED_MAX) { return; }
       var kind = 'script';
@@ -678,13 +889,18 @@
         path: parts.path,
         kind: kind,
         category: cat || null,
-        origin: origin || 'engine'
+        origin: origin || 'engine',
+        strict: strict === true,
+        // Flipped by noteRevived() when applyConsentToDom() actually brings the
+        // element back. An entry that never flips is one the visitor consented
+        // to and that still did not load — worth showing in the debug panel.
+        revived: false
       });
     } catch (e) { /* noop */ }
   }
 
   function markBlocked(el, src, cat) {
-    noteBlocked(el, src, cat, 'engine');
+    noteBlocked(el, src, cat, 'engine', isStrictHit(src));
     try {
       if (nativeSetAttribute) {
         nativeSetAttribute.call(el, 'data-ck-blocked', '1');
@@ -699,6 +915,36 @@
       if (el.type !== 'text/plain') {
         try { el.type = 'text/plain'; } catch (e2) { /* noop */ }
       }
+    } catch (e) { /* noop */ }
+  }
+
+  // An intercepted iframe is left in EXACTLY the shape applyConsentToDom()
+  // already revives — data-ck + data-src and NO src attribute — so revival is
+  // the one code path for hand-marked, plugin-rewritten and engine-blocked
+  // iframes alike. `type="text/plain"` is script-only and must not be set here.
+  // data-ck-blocked also keeps _blocked()'s markup sweep from listing this
+  // element a second time: it matches iframe[data-ck][data-src] too.
+  // Flags the registry entry for this URL+kind as revived, so _blocked() can
+  // tell "came back after consent" from "was intercepted and never returned".
+  function noteRevived(src, kind) {
+    try {
+      var parts = safeUrlParts(src);
+      for (var i = 0; i < blockedLog.length; i++) {
+        var b = blockedLog[i];
+        if (b.host === parts.host && b.path === parts.path && b.kind === kind) { b.revived = true; }
+      }
+    } catch (e) { /* noop */ }
+  }
+
+  function markBlockedIframe(el, src, cat) {
+    noteBlocked(el, src, cat, 'engine', isStrictHit(src));
+    try {
+      if (!nativeSetAttribute) { return; }
+      nativeSetAttribute.call(el, 'data-ck-blocked', '1');
+      nativeSetAttribute.call(el, 'data-src', src);
+      nativeSetAttribute.call(el, 'data-ck', cat || STRICT_CATEGORY);
+      // Any src already on the element must go, or revival skips it.
+      try { if (nativeRemoveAttribute) { nativeRemoveAttribute.call(el, 'src'); } } catch (e2) { /* noop */ }
     } catch (e) { /* noop */ }
   }
 
@@ -726,16 +972,44 @@
       }
     } catch (e) { /* noop */ }
 
-    // 2. Element.prototype.setAttribute — covers setAttribute('src', ...).
+    // 1b. HTMLIFrameElement.prototype.src setter. Strict mode holds back
+    // third-party frames too (§2), and a known tracker embedded as an iframe
+    // was never caught before either.
+    try {
+      if (nativeIframeSrcDesc && nativeIframeSrcDesc.set && nativeIframeSrcDesc.configurable !== false) {
+        Object.defineProperty(global.HTMLIFrameElement.prototype, 'src', {
+          configurable: true,
+          enumerable: nativeIframeSrcDesc.enumerable,
+          get: function () {
+            try { return nativeIframeSrcDesc.get.call(this); } catch (e) { return ''; }
+          },
+          set: function (v) {
+            if (shouldBlock(v)) {
+              markBlockedIframe(this, String(v), blockCategory(v));
+              return;
+            }
+            try { nativeIframeSrcDesc.set.call(this, v); } catch (e) { /* noop */ }
+          }
+        });
+      }
+    } catch (e) { /* noop */ }
+
+    // 2. Element.prototype.setAttribute — covers setAttribute('src', ...) on
+    // both scripts and iframes.
     try {
       if (nativeSetAttribute && global.Element && global.Element.prototype) {
         global.Element.prototype.setAttribute = function (name, value) {
           try {
-            if (!bypass && typeof name === 'string' && name.toLowerCase() === 'src' &&
-                this && this.tagName && String(this.tagName).toUpperCase() === 'SCRIPT' &&
-                shouldBlock(value)) {
-              markBlocked(this, String(value), categoryForUrl(value));
-              return undefined;
+            if (!bypass && typeof name === 'string' && name.toLowerCase() === 'src' && this && this.tagName) {
+              var t = String(this.tagName).toUpperCase();
+              if ((t === 'SCRIPT' || t === 'IFRAME') && shouldBlock(value)) {
+                if (t === 'IFRAME') {
+                  markBlockedIframe(this, String(value), blockCategory(value));
+                } else {
+                  markBlocked(this, String(value), blockCategory(value));
+                }
+                return undefined;
+              }
             }
           } catch (e) { /* fall through to native */ }
           return nativeSetAttribute.apply(this, arguments);
@@ -749,10 +1023,10 @@
         doc.createElement = function (tag) {
           var el = nativeCreateElement.apply(null, arguments);
           try {
-            if (!bypass && typeof tag === 'string' && tag.toLowerCase() === 'script' &&
-                nativeScriptSrcDesc && nativeScriptSrcDesc.set) {
-              // Own-property guard so the element is covered even if the
-              // prototype patch was reverted by another library.
+            var name = (!bypass && typeof tag === 'string') ? tag.toLowerCase() : '';
+            // Own-property guard so the element is covered even if the
+            // prototype patch was reverted by another library.
+            if (name === 'script' && nativeScriptSrcDesc && nativeScriptSrcDesc.set) {
               Object.defineProperty(el, 'src', {
                 configurable: true,
                 enumerable: false,
@@ -761,10 +1035,25 @@
                 },
                 set: function (v) {
                   if (shouldBlock(v)) {
-                    markBlocked(this, String(v), categoryForUrl(v));
+                    markBlocked(this, String(v), blockCategory(v));
                     return;
                   }
                   try { nativeScriptSrcDesc.set.call(this, v); } catch (e) { /* noop */ }
+                }
+              });
+            } else if (name === 'iframe' && nativeIframeSrcDesc && nativeIframeSrcDesc.set) {
+              Object.defineProperty(el, 'src', {
+                configurable: true,
+                enumerable: false,
+                get: function () {
+                  try { return nativeIframeSrcDesc.get.call(this); } catch (e) { return ''; }
+                },
+                set: function (v) {
+                  if (shouldBlock(v)) {
+                    markBlockedIframe(this, String(v), blockCategory(v));
+                    return;
+                  }
+                  try { nativeIframeSrcDesc.set.call(this, v); } catch (e) { /* noop */ }
                 }
               });
             }
@@ -798,10 +1087,27 @@
       if (!node || node.nodeType !== 1) { return; }
       var tag = node.tagName ? String(node.tagName).toUpperCase() : '';
       if (tag === 'SCRIPT') { inspectScript(node); }
+      if (tag === 'IFRAME') { inspectIframe(node); }
       if (typeof node.querySelectorAll === 'function') {
         var kids = node.querySelectorAll('script');
         for (var i = 0; i < kids.length; i++) { inspectScript(kids[i]); }
+        var frames = node.querySelectorAll('iframe');
+        for (var j = 0; j < frames.length; j++) { inspectIframe(frames[j]); }
       }
+    } catch (e) { /* noop */ }
+  }
+
+  // Late net for iframes that arrived as markup. Same honesty as inspectScript:
+  // once the element is connected the request may already be in flight — the
+  // src/createElement patches are the reliable path.
+  function inspectIframe(el) {
+    try {
+      if (!el || el.getAttribute === undefined) { return; }
+      if (el.getAttribute('data-ck-blocked')) { return; }
+      if (el.getAttribute('data-ck') && el.getAttribute('data-src')) { return; } // manual markup
+      var src = el.getAttribute('src');
+      if (!src) { return; }
+      if (shouldBlock(src)) { markBlockedIframe(el, src, blockCategory(src)); }
     } catch (e) { /* noop */ }
   }
 
@@ -814,7 +1120,7 @@
       var src = el.getAttribute('src');
       if (!src) { return; }
       if (shouldBlock(src)) {
-        var cat = categoryForUrl(src);
+        var cat = blockCategory(src);
         markBlocked(el, src, cat);
         // Clear the attribute. Note: if the element was already connected the
         // request may already be in flight — the createElement/src patches are
@@ -862,6 +1168,7 @@
       try { nativeSetAttribute.call(fresh, 'data-ck-restored', '1'); } catch (e) { /* noop */ }
       old.parentNode.insertBefore(fresh, old);
       try { old.parentNode.removeChild(old); } catch (e) { /* noop */ }
+      if (src) { noteRevived(src, 'script'); }
     } catch (e) {
       /* noop */
     } finally {
@@ -902,6 +1209,7 @@
         var prev = bypass;
         bypass = true;
         try { nativeSetAttribute.call(el, 'src', src); } finally { bypass = prev; }
+        noteRevived(src, 'iframe');
       } catch (e) { /* noop */ }
     });
   }
@@ -909,6 +1217,7 @@
   // Initial sweep for scripts already parsed before the observer attached.
   function initialScan() {
     qsa('script[src]').forEach(inspectScript);
+    qsa('iframe[src]').forEach(inspectIframe);
   }
 
   // ---------------------------------------------------------------------------
@@ -1016,13 +1325,19 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.3.6',
+    version: '0.4.0',
     config: config,
 
     init: function (userConfig) {
       try {
         config = mergeConfig(config, userConfig);
         ConsentKit.config = config;
+
+        // Service / author overrides, merged BEFORE initialScan() below so the
+        // scripts already in the markup are classified against them. In SaaS
+        // mode ck-saas.js has usually applied these already; extendHostDb is
+        // idempotent, so doing it twice costs nothing.
+        if (userConfig && isPlainObject(userConfig.hostdb)) { extendHostDb(userConfig.hostdb); }
 
         if (initialized) {
           // Idempotent: merge config, no re-restore, no duplicate ck:init.
@@ -1074,6 +1389,28 @@
     _categoryForUrl: categoryForUrl,
     _categories: CATEGORIES.slice(),
 
+    // Merges { host: category } into the runtime tracker database (§1.3).
+    // Works before AND after init(): after init nothing already inserted is
+    // re-evaluated — a script that has loaded cannot be unloaded — but every
+    // later insertion is classified against the extended map. Returns the
+    // number of entries actually added; unknown categories and malformed hosts
+    // are dropped, because this map arrives over the network in the SaaS path.
+    _extendHostDb: function (map) {
+      try { return extendHostDb(map); } catch (e) { return 0; }
+    },
+
+    // The built-in strict-mode allowlist, exported for docs and tests so the
+    // list a site owner reads is the list the engine actually uses.
+    //
+    // A GETTER, not a plain array: a plain property is evaluated once, and the
+    // single array it produced would be handed to every caller — one
+    // `ConsentKit._baseAllow.push(...)` from page code would then silently
+    // widen what strict mode lets through for the rest of the page load.
+    // Each read returns a fresh copy, so the list is readable and inert.
+    get _baseAllow() {
+      return BASE_ALLOW.slice().concat(BASE_ALLOW_PATH.map(function (e) { return e.host + e.path; }));
+    },
+
     // What is being held back until consent: everything the engine intercepted
     // (origin 'engine') plus what the site author marked up by hand (origin
     // 'markup'), which never goes through markBlocked. Read-only, host+path
@@ -1090,11 +1427,24 @@
       try {
         for (var i = 0; i < blockedLog.length; i++) {
           var b = blockedLog[i];
-          // Interceptions are kept for the life of the page, but once the
-          // category is granted the element has been revived and is no longer
-          // held back — reporting it as still blocked would be false.
-          if (allowed(b.category)) { continue; }
-          add({ host: b.host, path: b.path, kind: b.kind, category: b.category, origin: b.origin });
+          // Interceptions are kept for the life of the page. Once the category
+          // is granted the element has USUALLY been revived and is no longer
+          // held back, so reporting it as blocked would be false — but not
+          // always: applyConsentToDom() can only revive an element that is in
+          // the document, and a script created and given a src without ever
+          // being appended stays dead for the life of the page.
+          //
+          // That case is exactly the strict-mode support ticket ("my widget did
+          // not come back after I accepted"), and both README and INSTALL.ru
+          // send the site owner to this panel to diagnose it. So an entry is
+          // dropped only when something on the page actually came back for it;
+          // otherwise it stays, marked `revived: false`.
+          if (allowed(b.category) && b.revived !== false) { continue; }
+          add({
+            host: b.host, path: b.path, kind: b.kind,
+            category: b.category, origin: b.origin, strict: b.strict === true,
+            revived: b.revived !== false
+          });
         }
       } catch (e) { /* noop */ }
       // Hand-marked tags still waiting for their category.
@@ -1117,7 +1467,10 @@
               add({
                 host: parts.host, path: parts.path,
                 kind: tag === 'iframe' ? 'iframe' : 'script',
-                category: cat || null, origin: 'markup'
+                // revived: true means "not applicable" here, not "came back":
+                // this sweep only ever lists hand-marked tags still waiting for
+                // their category, so none of them can be a failed revival.
+                category: cat || null, origin: 'markup', strict: false, revived: true
               });
             } catch (e2) { /* noop */ }
           });

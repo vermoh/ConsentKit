@@ -189,6 +189,9 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `consentTtlDays` | `number` | `365` | Lifetime of the stored decision |
 | `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2 signals |
 | `integrations.gtmDataLayer` | `boolean` | `true` | Push consent events to `window.dataLayer` |
+| `blocking.mode` | `"known" \| "strict"` | `"known"` | `strict` also holds back unknown third-party scripts and iframes — see [Strict mode](#strict-mode) |
+| `blocking.allow` | `string[]` | `[]` | Hosts strict mode must never intercept. Matched by suffix, so `partner.com` also covers `cdn.partner.com` |
+| `hostdb` | `Record<string, Category>` | — | Extra `host: category` pairs merged into the tracker database, applied before the initial scan. SaaS mode fills this from the service; `ConsentKit._extendHostDb()` does the same at any later point |
 | `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel |
 
 `cookieTable` entries:
@@ -307,6 +310,86 @@ and DoubleClick.
 Because the patches install at parse time, `ck-core.js` must load before any
 tracker — put it first in `<head>` and do not add `defer`.
 
+`<iframe src>` is covered by the same three patches, and a blocked frame keeps
+its URL in `data-src` until its category is granted.
+
+### Extending the tracker database
+
+The built-in host list is a snapshot, not an oracle. `_extendHostDb()` merges
+extra `host: category` pairs into it at runtime:
+
+```js
+ConsentKit._extendHostDb({
+  'analytics.vendor.example': 'analytics',
+  'pixel.partner.example': 'marketing'
+});
+```
+
+Matching is the same as for built-in entries — a bare domain also covers its
+subdomains — and an override wins over the shipped classification for the same
+host. Categories outside `necessary | functional | analytics | marketing` and
+malformed hostnames are ignored; the call returns how many pairs were accepted.
+
+It works both **before and after** `init()`. Calling it afterwards does not
+re-examine anything already inserted (a script that has loaded cannot be
+unloaded), but every later insertion is classified against the extended map.
+
+In SaaS mode this is automatic: `ck-saas.js` applies `config.hostdb` from the
+service *before* it calls `init()`, and again when a background revalidation
+brings a changed table. At release time `node tools/sync-hostdb.mjs` bakes the
+same public table into `src/ck-core.js`, so inline blocks, the npm package and
+the WordPress plugin get it too.
+
+### Strict mode
+
+By default ConsentKit blocks what it **recognises**. `blocking.mode: 'strict'`
+inverts that for third parties: before consent, any `<script src>` or
+`<iframe src>` pointing at a host that is not same-site is intercepted, whether
+or not the tracker database has ever heard of it.
+
+```js
+ConsentKit.init({
+  blocking: { mode: 'strict', allow: ['widgets.partner.example'] }
+});
+```
+
+Four things are never intercepted:
+
+1. **Same-site URLs** — the page's own host, its subdomains, and anything
+   sharing its registrable domain. The check is deliberately conservative: when
+   the answer is unclear it says same-site, because wrongly blocking a
+   first-party asset breaks the site.
+2. **`blocking.allow`** — your own list, matched by suffix.
+3. **The built-in allowlist**, readable as `ConsentKit._baseAllow`: asset CDNs
+   (`cdn.jsdelivr.net`, `unpkg.com`, `cdnjs.cloudflare.com`, `code.jquery.com`,
+   `fonts.googleapis.com`, `fonts.gstatic.com`) and things a page is unusable
+   without (`js.stripe.com`, `pay.google.com`, `checkout.creem.io`,
+   `hcaptcha.com`, and reCAPTCHA — scoped to `www.google.com/recaptcha` and
+   `www.gstatic.com/recaptcha`, not to those hosts at large).
+4. **Known `necessary` / `functional` hosts** already granted, which keep their
+   real category rather than being swept up as marketing.
+
+Anything else is filed under **`marketing`** — the strictest category — and
+comes back only when the visitor accepts marketing.
+
+**Read this before switching it on.** Strict mode will block third-party code
+your site needs and that ConsentKit has no way to recognise as necessary: a
+booking widget, a map, a review embed, a payment provider that is not on the
+list. Turn it on, load the site with `?ck_debug=1`, and read the "Blocked until
+consent" list in the panel — entries the engine held back only because of strict
+mode are labelled `strict`. Everything there that the page genuinely needs
+belongs in `blocking.allow`.
+
+Two limits are worth stating plainly:
+
+* **Dynamic insertions only**, exactly as for known trackers. A tag written
+  straight into the HTML starts its request before ConsentKit runs (see below).
+  The WordPress plugin's server-side rewrite currently marks up *known* trackers
+  only; extending it to strict mode is recorded as a follow-up in SPEC.md.
+* **Strict starts when the config does.** The mode is read from `config`, so in
+  SaaS mode nothing is blocked strictly until the config has arrived. Blocking
+  of *known* trackers still begins at parse time, as always.
+
 ### Static tags: what the browser cannot catch
 
 Runtime injection is covered by the patches above. A tracker tag written
@@ -398,19 +481,23 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.3.6, rebuilt 2026-09-05, uncompressed — gzip on the server cuts
+ConsentKit 0.4.0, rebuilt 2026-09-05, uncompressed — gzip on the server cuts
 this roughly three- to fourfold. Every block includes the branding extension
 and the attribution line; `--no-branding` drops both the code and the config
 and takes **~24 KB** back off:
 
-| Block | Languages | Bytes | `--no-branding` |
-|---|---|---|---|
-| `ready/en-bar.txt` | en | 118,462 | 94,087 |
-| `ready/ru-bar.txt` | ru, ro, en | 120,083 | 95,688 |
-| `ready/ru-box.txt` | ru, ro, en | 120,098 | 95,703 |
-| `ready/ru-box-right.txt` | ru, ro, en | 120,107 | 95,712 |
-| `ready/ru-modal.txt` | ru, ro, en | 120,091 | 95,696 |
-| `ready/eu-bar.txt` | 34 languages | 168,737 | 144,362 |
+| Block | Languages | Bytes | gzip | `--no-branding` |
+|---|---|---|---|---|
+| `ready/en-bar.txt` | en | 134,969 | 40,519 | 110,907 |
+| `ready/ru-bar.txt` | ru, ro, en | 136,590 | 41,315 | 112,508 |
+| `ready/ru-box.txt` | ru, ro, en | 136,605 | 41,320 | 112,523 |
+| `ready/ru-box-right.txt` | ru, ro, en | 136,614 | 41,326 | 112,526 |
+| `ready/ru-modal.txt` | ru, ro, en | 136,598 | 41,318 | 112,514 |
+| `ready/eu-bar.txt` | 34 languages | 185,244 | 59,665 | 161,182 |
+
+0.4.0 adds roughly 16.1 KB over 0.3.6: iframe interception, strict mode
+(same-site detection, the allowlists, the public-suffix table) and the
+extensible tracker database.
 
 Size is driven almost entirely by the bundled languages: `en` and `ru` are
 built into the UI and cost nothing extra, while layout, position, theme and

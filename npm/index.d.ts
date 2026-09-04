@@ -88,6 +88,20 @@ export interface CkIntegrationsConfig {
   gtmDataLayer?: boolean;
 }
 
+/** v0.4.0 (§2). How much the blocking engine holds back before consent. */
+export interface CkBlockingConfig {
+  /**
+   * `'known'` (default) blocks what the tracker database recognises.
+   * `'strict'` additionally intercepts EVERY third-party `<script src>` and
+   * `<iframe src>` that is not same-site, not in `allow`, not in the built-in
+   * allowlist (`ConsentKit._baseAllow`) and not an already-granted
+   * necessary/functional host. Interceptions are filed under `marketing`.
+   */
+  mode?: 'known' | 'strict';
+  /** Hosts strict mode must never intercept. Suffix match: `p.com` covers `cdn.p.com`. */
+  allow?: string[];
+}
+
 /** One declared cookie, shown under its category in the preferences panel. */
 export interface CkCookieTableEntry {
   name: string;
@@ -109,6 +123,15 @@ export interface CkConfig {
   /** Lifetime of the stored decision, in days. Default `365`. */
   consentTtlDays?: number;
   integrations?: CkIntegrationsConfig;
+  /** v0.4.0. Default `{ mode: 'known', allow: [] }`. */
+  blocking?: CkBlockingConfig;
+  /**
+   * v0.4.0 (§1.3). Extra `host: category` pairs merged into the tracker
+   * database. `init()` applies them before its initial scan, so scripts
+   * already in the markup are classified against them. In SaaS mode the
+   * service supplies this; `_extendHostDb()` does the same at any later point.
+   */
+  hostdb?: Record<string, CkCategory>;
   cookieTable?: CkCookieTableEntry[];
 }
 
@@ -141,6 +164,50 @@ export interface ConsentKitApi {
   show(): void;
   /** Dispatches `ck:ui:close`. */
   hide(): void;
+
+  /**
+   * v0.4.0 (§1.3). Merges `{ host: category }` into the runtime tracker
+   * database and returns how many pairs were accepted. Matching follows the
+   * built-in table: a bare domain also covers its subdomains, and an override
+   * wins over the shipped classification for the same host.
+   *
+   * Safe before AND after `init()`. Afterwards, nothing already inserted is
+   * re-examined — a script that has loaded cannot be unloaded — but every
+   * later insertion is classified against the extended map.
+   */
+  _extendHostDb(map: Record<string, CkCategory>): number;
+
+  /**
+   * v0.4.0 (§2). The built-in strict-mode allowlist, as hosts plus a few
+   * `host/path` entries (reCAPTCHA). A copy: mutating it changes nothing.
+   */
+  readonly _baseAllow: string[];
+
+  /** The category the engine would assign to a URL, or `null` if unknown. */
+  _categoryForUrl(url: string): CkCategory | null;
+
+  /** What is currently held back, host+path only — never a query string. */
+  _blocked(): CkBlockedEntry[];
+}
+
+/** One entry of `ConsentKit._blocked()`. */
+export interface CkBlockedEntry {
+  host: string;
+  path: string;
+  /** `'script'`, `'iframe'`, … */
+  kind: string;
+  category: CkCategory | null;
+  /** `'engine'` — intercepted by the patches; `'markup'` — marked up by hand. */
+  origin: 'engine' | 'markup';
+  /** v0.4.0. True when strict mode held this back, i.e. the host is unknown. */
+  strict: boolean;
+  /**
+   * v0.4.0. `false` when the category was granted but the element still never
+   * loaded — typically a script created and given a `src` without ever being
+   * appended, which `applyConsentToDom()` cannot reach. Such entries stay in
+   * the report after consent precisely so they can be diagnosed.
+   */
+  revived: boolean;
 }
 
 declare const ConsentKit: ConsentKitApi;
@@ -156,6 +223,7 @@ export declare function rejectAll(): CkState;
 export declare function withdraw(): CkState;
 export declare function show(): void;
 export declare function hide(): void;
+export declare function _extendHostDb(map: Record<string, CkCategory>): number;
 
 declare global {
   interface Window {

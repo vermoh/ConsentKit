@@ -28,6 +28,9 @@ export const {
   rejectAll,
   withdraw,
   show,
-  hide
+  hide,
+  // v0.4.0 (§1.3): merging service overrides into the tracker database is part
+  // of the public surface, so it must be reachable as a named import too.
+  _extendHostDb
 } = ConsentKit;
 export { ConsentKit };

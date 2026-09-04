@@ -122,15 +122,43 @@
   // ---------------------------------------------------------------------------
   // Boot
   // ---------------------------------------------------------------------------
+  // The service's tracker overrides (§1.3). Applied through the core's
+  // _extendHostDb so the classification the scanner used server-side is the
+  // classification the browser uses on the same page.
+  //
+  // ORDER MATTERS: this must run BEFORE CK.init(), because init() performs the
+  // initial scan and the first applyConsentToDom() pass. A host merged after
+  // that pass would not be recognised on the scripts already in the markup.
+  function applyHostDb(config) {
+    try {
+      var map = config && config.hostdb;
+      if (!map || typeof map !== 'object') { return 0; }
+      if (typeof CK._extendHostDb !== 'function') {
+        // An older core on the page (config contract is newer than the client).
+        warn('this core does not support config.hostdb — update ck-core.js to 0.4.0 or later.');
+        return 0;
+      }
+      return CK._extendHostDb(map);
+    } catch (e) { return 0; }
+  }
+
   function initWith(config, why) {
     activeConfig = config;
+    applyHostDb(config);
     try { CK.init(config); } catch (e) { error('init() failed: ' + (e && e.message)); }
     if (why) { /* reserved for diagnostics */ }
   }
 
-  // Strict mode: banner shows, every opt-in category stays off, no journal.
+  // Strict FALLBACK: banner shows, every opt-in category stays off, no journal.
   // policyVersion 'strict-fallback' deliberately mismatches any stored consent,
   // so a previous decision is not silently reused when the server is unreachable.
+  //
+  // Not to be confused with `blocking.mode: 'strict'` (SPEC §2), which is a
+  // different thing that happens to share the word: this path deliberately does
+  // NOT set it. When the config server is unreachable we know nothing about the
+  // site, and turning on the mode that blocks every third-party script would
+  // break a page precisely when its owner has no way to configure an allowlist.
+  // Known trackers are still blocked, as always.
   function initStrict(reason) {
     warn('config unavailable (' + reason + ') — strict fallback: banner shown, all opt-in categories denied, journal disabled.');
     initWith({ policyVersion: 'strict-fallback' });
@@ -194,6 +222,13 @@
       // re-initialising would swap ConsentKit.config identity mid-session.
       // It takes effect on the next page load.
       writeCache(r.etag, r.config);
+      // `hostdb` is the deliberate exception. Extending the map has exactly the
+      // semantics _extendHostDb documents for a call after init(): nothing
+      // already inserted is re-evaluated, but everything inserted from now on
+      // is classified against the new overrides. Waiting a whole page load to
+      // start blocking a newly classified tracker would be worse, and unlike
+      // the rest of the config this cannot change ConsentKit.config identity.
+      applyHostDb(r.config);
     }, function (reason) {
       warn('background revalidation failed (' + reason + '); continuing with cached config.');
     });

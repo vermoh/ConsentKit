@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.6
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,12 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.4.0 =
+* Клиент 0.4.0: строгий режим блокировки (`blocking.mode: 'strict'`) — до согласия задерживается любой сторонний скрипт и iframe, кроме same-site, разрешённых хостов и встроенного списка; перехваченное относится к категории «маркетинг». В панели отладки такие строки помечены `strict`.
+* Клиент 0.4.0: `ConsentKit._extendHostDb()` — база трекеров расширяется на лету (в режиме SaaS — из настроек сайта, до инициализации).
+* Ядро теперь перехватывает и `<iframe src>`, а не только скрипты.
+* Серверная разметка (`includes/rewrite.php`) по-прежнему размечает только известные хосты: строгий режим действует лишь на теги, которые страница подставляет динамически.
 
 = 0.3.6 =
 * Клиент 0.3.6: код брендинга вынесен в отдельный файл ck-ui-branding.js (подключается плагином перед ck-ui.js).
