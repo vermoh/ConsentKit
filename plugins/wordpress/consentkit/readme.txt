@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.5
+Stable tag: 0.3.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,9 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.3.6 =
+* Клиент 0.3.6: код брендинга вынесен в отдельный файл ck-ui-branding.js (подключается плагином перед ck-ui.js).
 
 = 0.3.5 =
 * **Server-side tracker markup (on by default).** The plugin now rewrites

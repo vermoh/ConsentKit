@@ -66,6 +66,7 @@ must come first and should not be deferred.
 ```html
 <script src="/consentkit/src/ck-core.js"></script>
 <script src="/consentkit/src/ck-locales.js"></script><!-- optional: extra languages -->
+<script src="/consentkit/src/ck-ui-branding.js"></script><!-- optional: logo / attribution -->
 <script src="/consentkit/src/ck-ui.js"></script>
 <script>
   ConsentKit.init({
@@ -397,18 +398,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.3.5, rebuilt 2026-09-04, uncompressed — gzip on the server cuts
-this roughly three- to fourfold. Every block includes the attribution line;
-`--no-branding` takes ~200 bytes back off:
+ConsentKit 0.3.6, rebuilt 2026-09-05, uncompressed — gzip on the server cuts
+this roughly three- to fourfold. Every block includes the branding extension
+and the attribution line; `--no-branding` drops both the code and the config
+and takes **~24 KB** back off:
 
-| Block | Languages | Bytes |
-|---|---|---|
-| `ready/en-bar.txt` | en | 111,664 |
-| `ready/ru-bar.txt` | ru, ro, en | 113,285 |
-| `ready/ru-box.txt` | ru, ro, en | 113,300 |
-| `ready/ru-box-right.txt` | ru, ro, en | 113,309 |
-| `ready/ru-modal.txt` | ru, ro, en | 113,293 |
-| `ready/eu-bar.txt` | 34 languages | 161,939 |
+| Block | Languages | Bytes | `--no-branding` |
+|---|---|---|---|
+| `ready/en-bar.txt` | en | 118,462 | 94,087 |
+| `ready/ru-bar.txt` | ru, ro, en | 120,083 | 95,688 |
+| `ready/ru-box.txt` | ru, ro, en | 120,098 | 95,703 |
+| `ready/ru-box-right.txt` | ru, ro, en | 120,107 | 95,712 |
+| `ready/ru-modal.txt` | ru, ro, en | 120,091 | 95,696 |
+| `ready/eu-bar.txt` | 34 languages | 168,737 | 144,362 |
 
 Size is driven almost entirely by the bundled languages: `en` and `ru` are
 built into the UI and cost nothing extra, while layout, position, theme and

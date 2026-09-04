@@ -32,13 +32,22 @@ for (const name of VENDORED) {
   });
 }
 
-test('the demo page references every vendored file', () => {
-  const html = readFileSync(join(VENDOR_DIR, '..', 'index.html'), 'utf8');
-  for (const name of VENDORED) {
-    assert.match(html, new RegExp(`vendor/${name.replace('.', '\\.')}`),
-      `site/index.html does not load vendor/${name}`);
-  }
-});
+/* All three rendered pages, not just the root one: they are built from one
+   template, so a missing script tag would hit every language at once — but a
+   test that only reads site/index.html would still pass if someone rendered
+   the other two from a different source. */
+const PAGES = ['index.html', join('ru', 'index.html'), join('ro', 'index.html')];
+
+for (const page of PAGES) {
+  test(`site/${page.replace(/\\/g, '/')} references every vendored file`, () => {
+    const html = readFileSync(join(VENDOR_DIR, '..', page), 'utf8');
+    for (const name of VENDORED) {
+      // Absolute paths: a relative "vendor/…" would 404 from /ru and /ro.
+      assert.match(html, new RegExp(`"/vendor/${name.replace('.', '\\.')}"`),
+        `site/${page} does not load /vendor/${name}`);
+    }
+  });
+}
 
 test('ck-saas.js is not vendored (the demo runs offline)', () => {
   assert.ok(!existsSync(join(VENDOR_DIR, 'ck-saas.js')),

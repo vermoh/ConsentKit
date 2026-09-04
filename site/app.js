@@ -51,351 +51,41 @@
   };
 
   /* ══════════════════════════════════════════════════════════════════
-     i18n dictionary. One object per language; keys match data-i18n.
+     i18n dictionary — INLINED BY THE BUILD, not fetched and not switchable.
+
+     tools/build-site.mjs renders one page per language from
+     site/src/index.template.html + site/src/i18n/<lang>.json, writes the whole
+     dictionary into a <script> block ahead of this file, and stamps
+     <html lang>. So the copy in the markup and the copy this file reads for
+     the JS-rendered parts (pricing, FAQ, the demo selects) are the same
+     object, and there is no runtime language switch to keep them in step.
+
+     The language is read from the document, never from a stored preference
+     or the browser's own setting: the URL already decides it, and remembering
+     a choice would make /ru render English for a returning visitor.
      ══════════════════════════════════════════════════════════════════ */
 
-  var I18N = {
-    ru: {
-      htmlLang: 'ru',
-      docTitle: 'ConsentKit — баннер согласия на cookie для сайта',
-      docDesc: 'Баннер согласия на cookie, который блокирует трекеры до ответа посетителя. 34 языка, Google Consent Mode v2, сканер cookie и журнал согласий. Открытый код MIT.',
-
-      skip: 'К основному содержанию',
-      navSections: 'Разделы',
-      pageLanguage: 'Язык страницы',
-      navDemo: 'Демо',
-      navHow: 'Как это работает',
-      navFeatures: 'Что умеет',
-      navPricing: 'Тарифы',
-      navFaq: 'Вопросы',
-
-      ctaCabinet: 'Открыть кабинет',
-      ctaDemo: 'Посмотреть демо',
-
-      heroEyebrow: 'Открытый код · MIT · без зависимостей',
-      heroTitle: 'Баннер согласия, который блокирует трекеры до ответа посетителя',
-      heroLine1: 'Большинство баннеров — декорация: счётчики срабатывают на первом кадре, какую бы кнопку ни нажал посетитель.',
-      heroLine2: 'ConsentKit удерживает динамически вставляемые скрипты (GTM, Метрика, Meta, TikTok, Hotjar) и теги с разметкой type="text/plain" до согласия. Обычный тег <script src>, написанный прямо в HTML, нужно один раз разметить — кабинет показывает, какие именно. 34 языка и Google Consent Mode v2.',
-      heroNote: 'Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.',
-
-      demoTitle: 'Живое демо',
-      demoLede: 'Это настоящий баннер на этой странице — не картинка. Меняйте режим, тему и язык, нажимайте кнопки.',
-      fieldLayout: 'Режим',
-      layoutBar: 'Полоса',
-      layoutBox: 'Уголок',
-      layoutModal: 'Окно по центру',
-      fieldPosition: 'Положение',
-      posTop: 'Сверху',
-      posBottom: 'Снизу',
-      posBottomLeft: 'Снизу слева',
-      posBottomRight: 'Снизу справа',
-      fieldTheme: 'Тема',
-      themeAuto: 'Как в системе',
-      themeLight: 'Светлая',
-      themeDark: 'Тёмная',
-      fieldBannerLang: 'Язык баннера',
-      langAuto: 'Как на странице',
-      btnShowAgain: 'Показать снова',
-      demoHint: 'Сбрасывает сохранённое согласие и показывает баннер заново.',
-      demoDebug: 'Режим отладки: откройте эту страницу с ?ck_debug=1 — внизу справа появится панель, которая показывает, что клиент заблокировал, какие запросы к трекерам ушли и что получил Consent Mode. Видна только в вашем браузере; выключается через ?ck_debug=0.',
-      statusUndecided: 'Согласие не дано — баннер показан.',
-      statusDecided: 'Выбор сохранён. Разрешено: {cats}.',
-      statusNone: 'ничего сверх необходимого',
-      statusBroken: 'Демо не загрузилось: клиент недоступен.',
-
-      howTitle: 'Как это работает',
-      how1Title: 'Вставьте строку',
-      how1Text: 'Одна строка в <head> — на Tilda, WordPress, через Google Tag Manager или в обычный HTML. Сборки нет, зависимостей нет.',
-      how2Title: 'Подтвердите домен',
-      how2Text: 'Сначала подтверждение владения доменом — meta-тегом или записью DNS. После этого проверка установки показывает, стоит ли баннер на сайте и какие теги остались без разметки.',
-      how3Title: 'Скан и таблица cookie',
-      how3Text: 'Сканер обходит сайт, находит трекеры и cookie и заполняет таблицу, которую посетитель видит в настройках баннера.',
-
-      featTitle: 'Что умеет',
-      feat1Title: 'Блокировка до согласия',
-      feat1Text: 'Скрипты, добавленные динамически (официальные сниппеты GTM, Метрики, Meta, TikTok, Hotjar), и теги с разметкой type="text/plain" не отправляют запрос вовсе. Обычный тег <script src>, написанный прямо в HTML, мы не даём выполниться и поставить cookie, но его сетевой запрос может уже уйти — такие теги нужно разметить вручную. Кабинет показывает, какие именно.',
-      feat2Title: 'Сканер cookie',
-      feat2Text: 'Обходит страницы сайта в настоящем браузере, собирает cookie и запросы к трекерам и раскладывает находки по категориям. Результат — готовая таблица cookie и список тегов, которые стоит разметить.',
-      feat3Title: 'Журнал согласий',
-      feat3Text: 'Каждое решение посетителя записывается: время, версия политики, выбранные категории, способ. Выгрузка в CSV на платных тарифах — на случай запроса регулятора.',
-      feat4Title: '34 языка',
-      feat4Text: 'Все языки ЕС и соседей: баннер сам выбирает язык по браузеру посетителя или берёт заданный вами. Тексты можно переопределить своими.',
-      feat5Title: 'Google Consent Mode v2',
-      feat5Text: 'Сигналы ad_storage, analytics_storage, ad_user_data и ad_personalization выставляются до загрузки тегов и обновляются при выборе. События уходят и в dataLayer для триггеров GTM.',
-      feat6Title: 'WordPress, GTM, Tilda',
-      feat6Text: 'Плагин для WordPress, готовый контейнер для Google Tag Manager и самодостаточный блок <script> для конструкторов, куда нельзя загружать файлы, — например для бесплатной Tilda.',
-
-      priceTitle: 'Тарифы',
-      priceLede: 'Тариф действует на организацию. Понижение тарифа не ломает сайт: баннер продолжает работать, возвращается строка о разработчике, расписание сканов останавливается.',
-      priceFoot: 'Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS, Литва.',
-      perMonth: '/ мес',
-      perSitePerMonth: 'за сайт / мес',
-      byAgreement: 'по договору',
-      planFree: 'Free',
-      planStarter: 'Starter',
-      planBusiness: 'Business',
-      planAgency: 'Agency',
-      planFreeNote: 'Бесплатно навсегда',
-      planStarterNote: 'Каждый сайт — отдельная подписка',
-      planBusinessNote: 'До 10 сайтов в организации',
-      planAgencyNote: 'Без лимита сайтов',
-      planCtaFree: 'Начать бесплатно',
-      planCtaPaid: 'Открыть кабинет',
-      planCtaAgency: 'Написать',
-      recommended: 'Чаще всего берут',
-
-      rowSites: 'Сайтов',
-      rowBranding: 'Строка «Сделано в E-COM Consult»',
-      rowScans: 'Сканы',
-      rowLog: 'Журнал согласий',
-      rowAlerts: 'Оповещения о новых трекерах',
-      rowLangs: 'Языки баннера',
-      rowSupport: 'Поддержка',
-
-      sitesOne: '1',
-      sitesOneEach: '1 (каждый отдельно)',
-      sitesUpTo: 'до {n}',
-      sitesUnlimited: 'без лимита',
-      brandingRequired: 'обязательна',
-      brandingOptional: 'отключается',
-      // {n} manual scans a day, with or without the weekly schedule.
-      scansScheduled: 'еженедельно + {n} в день вручную',
-      scansManualOnly: '{n} в день вручную, без расписания',
-      unitScanOne: '{n}',
-      unitScanFew: '{n}',
-      unitScanMany: '{n}',
-      // Retention: days below a year, whole months above it. {n} is filled by
-      // plural(), so «1 месяц» / «24 месяца» / «36 месяцев» all come out right.
-      logDays: '{n}, без CSV',
-      logDaysCsv: '{n}, CSV',
-      logMonths: '{n}, без CSV',
-      logMonthsCsv: '{n}, CSV',
-      unitDayOne: '{n} день',
-      unitDayFew: '{n} дня',
-      unitDayMany: '{n} дней',
-      unitMonthOne: '{n} месяц',
-      unitMonthFew: '{n} месяца',
-      unitMonthMany: '{n} месяцев',
-      yes: 'да',
-      no: 'нет',
-      langsAll: 'все 34',
-      supportFree: 'документация',
-      supportStarter: 'почта',
-      supportBusiness: 'почта, ответ за 1 рабочий день',
-      supportAgency: 'персональный менеджер',
-
-      whoTitle: 'Для кого',
-      who1Title: 'Сайты на Tilda',
-      who1Text: 'Файлы загружать некуда — берите самодостаточный блок и вставляйте в «HTML-код для HEAD». Одна вставка, никаких плагинов.',
-      who2Title: 'WordPress и WooCommerce',
-      who2Text: 'Плагин ставится копированием папки, настройки — в админке. Работает и с кэширующими плагинами: баннер не зависит от PHP.',
-      who3Title: 'Интернет-магазины',
-      who3Text: 'Реклама и ремаркетинг живут по Consent Mode v2: теги получают корректные сигналы, а не отключаются целиком.',
-      who4Title: 'Агентства',
-      who4Text: 'Много сайтов клиентов в одном кабинете, сканы по расписанию и оповещения о новых трекерах. Условия — по договору.',
-
-      faqTitle: 'Частые вопросы',
-      faq: [
-        ['Что такое согласие на cookie и зачем оно нужно?',
-         'По правилам ЕС сайт может ставить cookie и запускать счётчики только после того, как посетитель об этом узнал и согласился — кроме тех, без которых сайт не работает. Согласие должно быть добровольным, отзываемым и подтверждаемым. ConsentKit спрашивает согласие, удерживает трекеры до ответа и записывает решение, чтобы его можно было показать при проверке.'],
-        ['Правда ли ConsentKit блокирует всё до согласия?',
-         'Честно: не всё автоматически. Скрипты, которые страница добавляет динамически (а так работают официальные сниппеты GTM, Яндекс.Метрики, Meta Pixel, TikTok, Hotjar), перехватываются целиком — запрос не уходит. Теги, размеченные вручную как type="text/plain", тоже не срабатывают. Но обычный тег <script src>, написанный прямо в HTML, браузер начинает загружать раньше, чем до него доходит наш код: мы не даём ему выполниться и поставить cookie, однако сетевой запрос может уже уйти. Такие теги нужно разметить вручную — проверка установки в кабинете показывает, какие именно.'],
-        ['Где хранятся данные?',
-         'На серверах в Литве, то есть в Европейском союзе. Юридическое лицо — E-COM CONSULT PLUS. Сам баннер хранит решение посетителя в его браузере (cookie и localStorage); в журнал на сервере попадают факт и параметры согласия, а не персональные данные посетителя.'],
-        ['Можно ли пользоваться без кабинета?',
-         'Да. Клиент открыт под лицензией MIT: скачайте файлы, положите к себе, задайте конфиг руками — платить не нужно и регистрироваться тоже. Кабинет нужен тем, кому удобнее настраивать баннер мышкой, сканировать сайт, вести журнал согласий и получать оповещения о новых трекерах.'],
-        ['Как отключить строку «Сделано в E-COM Consult»?',
-         'На платных тарифах — переключателем в настройках сайта; на Free строка остаётся. В открытом клиенте (MIT) строка есть в примерах конфига и убирается редактированием конфига или флагом --no-branding у генератора инлайн-блоков. Мы берём деньги за хостинг, кабинет, сканы и удобство, а не за скрытие строки.'],
-        ['Что со сканированием чужих сайтов?',
-         'Сканировать можно только те домены, которыми вы владеете или управляете по поручению владельца, — домен нужно подтвердить в кабинете до первого скана. Сканер уважает robots.txt, ходит с понятным User-Agent и ограничивает нагрузку. Полные условия — в кабинете, в разделе условий сканирования.']
-      ],
-
-      footLegal: 'Литва, ЕС. ConsentKit — открытый код под лицензией MIT.',
-      footLinksLabel: 'Ссылки',
-      footDocs: 'Инструкция по установке',
-      footCabinet: 'Кабинет'
-    },
-
-    en: {
-      htmlLang: 'en',
-      docTitle: 'ConsentKit — cookie consent banner for your site',
-      docDesc: 'A cookie consent banner that holds trackers until the visitor answers. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.',
-
-      skip: 'Skip to main content',
-      navSections: 'Sections',
-      pageLanguage: 'Page language',
-      navDemo: 'Demo',
-      navHow: 'How it works',
-      navFeatures: 'Features',
-      navPricing: 'Pricing',
-      navFaq: 'FAQ',
-
-      ctaCabinet: 'Open the dashboard',
-      ctaDemo: 'See the demo',
-
-      heroEyebrow: 'Open source · MIT · zero dependencies',
-      heroTitle: 'A consent banner that holds trackers until the visitor answers',
-      heroLine1: 'Most banners are decoration: the trackers fire on the first frame no matter which button the visitor presses.',
-      heroLine2: 'ConsentKit holds dynamically inserted scripts (GTM, Metrica, Meta, TikTok, Hotjar) and tags marked type="text/plain" until consent. A plain <script src> written straight into the HTML has to be marked once — the dashboard shows which ones. 34 languages and Google Consent Mode v2.',
-      heroNote: 'Free forever: one site, all 34 languages, one manual scan per day.',
-
-      demoTitle: 'Live demo',
-      demoLede: 'This is a real banner on this page, not a screenshot. Change the layout, theme and language, and press the buttons.',
-      fieldLayout: 'Layout',
-      layoutBar: 'Bar',
-      layoutBox: 'Corner box',
-      layoutModal: 'Centred dialog',
-      fieldPosition: 'Position',
-      posTop: 'Top',
-      posBottom: 'Bottom',
-      posBottomLeft: 'Bottom left',
-      posBottomRight: 'Bottom right',
-      fieldTheme: 'Theme',
-      themeAuto: 'Follow the system',
-      themeLight: 'Light',
-      themeDark: 'Dark',
-      fieldBannerLang: 'Banner language',
-      langAuto: 'Follow the page',
-      btnShowAgain: 'Show again',
-      demoHint: 'Clears the stored consent and brings the banner back.',
-      demoDebug: 'Debug mode: open this page with ?ck_debug=1 and a panel appears bottom-right showing what the client blocked, which tracker requests actually left, and what Consent Mode received. Visible only in your browser; turn it off with ?ck_debug=0.',
-      statusUndecided: 'No consent yet — the banner is showing.',
-      statusDecided: 'Choice saved. Allowed: {cats}.',
-      statusNone: 'nothing beyond necessary',
-      statusBroken: 'The demo did not load: the client is unavailable.',
-
-      howTitle: 'How it works',
-      how1Title: 'Paste one line',
-      how1Text: 'A single line in <head> — on Tilda, WordPress, through Google Tag Manager or in plain HTML. No build step, no dependencies.',
-      how2Title: 'Verify the domain',
-      how2Text: 'First you prove you own the domain — with a meta tag or a DNS record. After that the install check shows whether the banner is live on the site and which tags are still unmarked.',
-      how3Title: 'Scan and cookie table',
-      how3Text: 'The scanner walks the site, finds trackers and cookies, and fills in the table your visitors see in the banner settings.',
-
-      featTitle: 'Features',
-      feat1Title: 'Blocking before consent',
-      feat1Text: 'Scripts added dynamically (the official GTM, Yandex Metrica, Meta, TikTok and Hotjar snippets) and tags marked type="text/plain" never send a request at all. A plain <script src> tag written straight into the HTML is prevented from executing and setting cookies, but its network request may already be in flight — those tags have to be marked up by hand. The dashboard shows you exactly which ones.',
-      feat2Title: 'Cookie scanner',
-      feat2Text: 'Walks your pages in a real browser, collects cookies and tracker requests, and sorts the findings into categories. You get a ready cookie table and a list of tags worth marking up.',
-      feat3Title: 'Consent log',
-      feat3Text: 'Every visitor decision is recorded: timestamp, policy version, chosen categories, method. CSV export on paid plans, for when a regulator asks.',
-      feat4Title: '34 languages',
-      feat4Text: 'Every EU language and its neighbours: the banner picks the visitor’s browser language or the one you set. All strings can be overridden with your own.',
-      feat5Title: 'Google Consent Mode v2',
-      feat5Text: 'ad_storage, analytics_storage, ad_user_data and ad_personalization are set before tags load and updated on choice. Events also go to the dataLayer for GTM triggers.',
-      feat6Title: 'WordPress, GTM, Tilda',
-      feat6Text: 'A WordPress plugin, a ready Google Tag Manager container, and a self-contained <script> block for site builders that will not let you upload files — free Tilda, for instance.',
-
-      priceTitle: 'Pricing',
-      priceLede: 'A plan applies to the organisation. Downgrading never breaks your site: the banner keeps working, the attribution line comes back, scheduled scans stop.',
-      priceFoot: 'Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Lithuania.',
-      perMonth: '/ mo',
-      perSitePerMonth: 'per site / mo',
-      byAgreement: 'by agreement',
-      planFree: 'Free',
-      planStarter: 'Starter',
-      planBusiness: 'Business',
-      planAgency: 'Agency',
-      planFreeNote: 'Free forever',
-      planStarterNote: 'One subscription per site',
-      planBusinessNote: 'Up to 10 sites per organisation',
-      planAgencyNote: 'No site limit',
-      planCtaFree: 'Start free',
-      planCtaPaid: 'Open the dashboard',
-      planCtaAgency: 'Get in touch',
-      recommended: 'Most popular',
-
-      rowSites: 'Sites',
-      rowBranding: '“Made by E-COM Consult” line',
-      rowScans: 'Scans',
-      rowLog: 'Consent log',
-      rowAlerts: 'New-tracker alerts',
-      rowLangs: 'Banner languages',
-      rowSupport: 'Support',
-
-      sitesOne: '1',
-      sitesOneEach: '1 (each billed separately)',
-      sitesUpTo: 'up to {n}',
-      sitesUnlimited: 'unlimited',
-      brandingRequired: 'required',
-      brandingOptional: 'can be turned off',
-      scansScheduled: 'weekly + {n} per day manually',
-      scansManualOnly: '{n} per day, no schedule',
-      unitScanOne: '{n} manual scan',
-      unitScanFew: '{n} manual scans',
-      unitScanMany: '{n} manual scans',
-      logDays: '{n}, no CSV',
-      logDaysCsv: '{n}, CSV',
-      logMonths: '{n}, no CSV',
-      logMonthsCsv: '{n}, CSV',
-      unitDayOne: '{n} day',
-      unitDayFew: '{n} days',
-      unitDayMany: '{n} days',
-      unitMonthOne: '{n} month',
-      unitMonthFew: '{n} months',
-      unitMonthMany: '{n} months',
-      yes: 'yes',
-      no: 'no',
-      langsAll: 'all 34',
-      supportFree: 'documentation',
-      supportStarter: 'e-mail',
-      supportBusiness: 'e-mail, 1 business day',
-      supportAgency: 'dedicated manager',
-
-      whoTitle: 'Who it is for',
-      who1Title: 'Tilda sites',
-      who1Text: 'Nowhere to upload files — take the self-contained block and paste it into “HTML code for HEAD”. One paste, no plugins.',
-      who2Title: 'WordPress and WooCommerce',
-      who2Text: 'The plugin installs by copying a folder, settings live in the admin. It works with caching plugins too: the banner does not depend on PHP.',
-      who3Title: 'Online shops',
-      who3Text: 'Ads and remarketing run on Consent Mode v2: your tags get correct signals instead of being switched off wholesale.',
-      who4Title: 'Agencies',
-      who4Text: 'Many client sites in one dashboard, scheduled scans and alerts about new trackers. Terms by agreement.',
-
-      faqTitle: 'Frequently asked questions',
-      faq: [
-        ['What is cookie consent and why is it needed?',
-         'Under EU rules a site may set cookies and start analytics only after the visitor has been told and has agreed — except for the ones the site cannot work without. Consent must be freely given, withdrawable and demonstrable. ConsentKit asks for it, holds the trackers back until there is an answer, and records the decision so you can show it if you are asked.'],
-        ['Does ConsentKit really block everything before consent?',
-         'Honestly: not everything automatically. Scripts the page adds dynamically — and that is how the official GTM, Yandex Metrica, Meta Pixel, TikTok and Hotjar snippets work — are intercepted completely, so no request leaves. Tags marked by hand as type="text/plain" do not run either. But a plain <script src> tag written straight into the HTML is one the browser starts fetching before our code reaches it: we prevent it from executing and setting cookies, yet its network request may already be in flight. Those tags need manual markup — the install check in the dashboard tells you which ones.'],
-        ['Where is the data stored?',
-         'On servers in Lithuania, that is, in the European Union. The legal entity is E-COM CONSULT PLUS. The banner itself keeps the visitor’s decision in their browser (cookie and localStorage); what reaches the server log is the fact and parameters of the consent, not the visitor’s personal data.'],
-        ['Can I use it without the dashboard?',
-         'Yes. The client is open source under MIT: download the files, host them yourself, write the config by hand — no payment, no sign-up. The dashboard is for people who would rather configure the banner by clicking, scan the site, keep a consent log and get alerts about new trackers.'],
-        ['How do I turn off the “Made by E-COM Consult” line?',
-         'On paid plans, with a switch in the site settings; on Free the line stays. In the open-source client the line is present in the config examples and is removed by editing the config or with the --no-branding flag of the inline-block generator. We charge for hosting, the dashboard, scans and convenience — not for hiding a line.'],
-        ['What about scanning sites that are not mine?',
-         'You may only scan domains you own or manage on the owner’s behalf — a domain has to be verified in the dashboard before the first scan. The scanner respects robots.txt, identifies itself with a clear User-Agent and rate-limits itself. The full terms are in the dashboard, under the scanning terms.']
-      ],
-
-      footLegal: 'Lithuania, EU. ConsentKit is open source under the MIT licence.',
-      footLinksLabel: 'Links',
-      footDocs: 'Installation guide',
-      footCabinet: 'Dashboard'
-    }
-  };
+  var I18N = (typeof window !== 'undefined' && window.__CK_SITE_I18N) || {};
 
   /* ══════════════════════════════════════════════════════════════════
      Language state
      ══════════════════════════════════════════════════════════════════ */
 
-  var LS_LANG = 'ck_site_lang';
-  var lang = pickLang();
+  /* The page language, from the document the build stamped. Not a preference
+     and not negotiable at runtime: /ru is Russian because it is /ru. Used for
+     the plural rules below and for the demo banner's default language. */
+  var lang = (function () {
+    var l = '';
+    try { l = String(document.documentElement.lang || '').toLowerCase(); } catch (e) {}
+    return (l === 'ru' || l === 'ro') ? l : 'en';
+  })();
 
-  function pickLang() {
-    try {
-      var saved = localStorage.getItem(LS_LANG);
-      if (saved === 'ru' || saved === 'en') return saved;
-    } catch (e) { /* private mode: fall through to navigator */ }
-    var nav = '';
-    try { nav = String(navigator.language || (navigator.languages || [])[0] || ''); } catch (e) {}
-    return /^ru\b/i.test(nav) ? 'ru' : 'en';
-  }
-
+  /* I18N is one flat dictionary — the build inlined the language this page
+     was rendered in, so there is nothing to index by language here. A missing
+     key returns the key itself, which is loud in the UI rather than silent. */
   function t(key) {
-    var d = I18N[lang] || I18N.ru;
-    var v = d[key];
-    return (typeof v === 'string') ? v : (I18N.ru[key] || key);
+    var v = I18N[key];
+    return (typeof v === 'string') ? v : key;
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -428,20 +118,36 @@
      Numbers come from the descriptor; every word around them comes from I18N.
      ══════════════════════════════════════════════════════════════════ */
 
-  // Russian needs three forms and picks them off the last digit; English has
-  // only singular/plural, and applying the Slavic rule to it would produce
-  // "31 day" and "21 month" for numbers an admin can legitimately set.
+  /* Three plural systems, one dictionary shape (One/Few/Many in every language,
+     so the key sets stay identical and the parity test is a real invariant).
+
+     en  — singular/plural; Few carries the same text as Many. Applying the
+           Slavic rule here would produce "31 day" and "21 month" for numbers
+           an admin can legitimately set.
+     ru  — three forms chosen off the last digit, with the 11–19 exception.
+     ro  — 1 / 2–19 / 20+ , and from 20 up the noun takes the «de» linker
+           ("20 de zile"), which is why unit*Many carries it in ro.json.
+           The rule repeats per hundred: 101 is singular, 120 takes «de».  */
   function plural(n, base) {
-    if (lang !== 'ru') {
-      return t(base + (n === 1 ? 'One' : 'Many')).replace('{n}', String(n));
-    }
-    var abs = Math.abs(n) % 100;
-    var last = abs % 10;
+    var abs = Math.abs(n);
     var form;
-    if (abs > 10 && abs < 20) form = 'Many';
-    else if (last === 1) form = 'One';
-    else if (last >= 2 && last <= 4) form = 'Few';
-    else form = 'Many';
+
+    if (lang === 'ru') {
+      var r100 = abs % 100;
+      var r10 = r100 % 10;
+      if (r100 > 10 && r100 < 20) form = 'Many';
+      else if (r10 === 1) form = 'One';
+      else if (r10 >= 2 && r10 <= 4) form = 'Few';
+      else form = 'Many';
+    } else if (lang === 'ro') {
+      var m100 = abs % 100;
+      if (abs === 1) form = 'One';
+      else if (m100 === 0 || (m100 >= 20 && m100 <= 99)) form = 'Many';
+      else form = 'Few';
+    } else {
+      form = (abs === 1) ? 'One' : 'Many';
+    }
+
     return t(base + form).replace('{n}', String(n));
   }
 
@@ -637,10 +343,8 @@
         var next = normalisePayload(data);
         if (!next) return;
         plans = next;
-        // renderPricing() alone, not applyLang(): re-running the latter would
-        // reset the demo the visitor may already be playing with. t() reads
-        // the live language, so a late response renders in whatever language
-        // is on screen by then.
+        // renderPricing() alone, not renderPage(): re-running the latter would
+        // reset the demo the visitor may already be playing with.
         renderPricing();
       })
       .catch(function () { /* offline, timed out, blocked: keep the constants */ })
@@ -655,7 +359,7 @@
     var host = $('#faq-list');
     if (!host) return;
     host.textContent = '';
-    var items = (I18N[lang] && I18N[lang].faq) || I18N.ru.faq;
+    var items = Array.isArray(I18N.faq) ? I18N.faq : [];
     items.forEach(function (qa, i) {
       var d = el('details', 'qa');
       if (i === 0) d.open = true;
@@ -713,10 +417,13 @@
 
   function brandingFor(l) {
     // PLAN-V1.3, owner decision 5: the Russian line for ru, English otherwise.
-    var ru = l === 'ru';
+    // Deliberately NOT localised any further, including for ro — the demo has to
+    // show what a real build produces, and tools/build-inline.mjs emits exactly
+    // these two variants. A Romanian line here would advertise an attribution
+    // the product does not actually ship.
     return {
       poweredBy: {
-        text: ru ? 'Сделано в E-COM Consult' : 'Made by E-COM Consult',
+        text: l === 'ru' ? 'Сделано в E-COM Consult' : 'Made by E-COM Consult',
         url: 'https://ecomconsult.net'
       }
     };
@@ -739,25 +446,42 @@
       // you click around. Note the core still writes ONE all-denied Consent Mode
       // default into window.dataLayer at parse time — that happens before
       // init() can read this flag. It is an in-memory array on a page with no
-      // Google tags, so nothing is sent anywhere; the page still makes exactly
-      // six same-origin requests and no external ones.
+      // Google tags, so nothing is sent anywhere; the page still makes only
+      // same-origin requests (the document, styles.css, favicon.svg, app.js and
+      // the four vendor scripts) and no external ones.
       integrations: { gcm: false, gtmDataLayer: false },
       cookieTable: cookieTable()
     };
   }
 
   function cookieTable() {
-    var ru = lang === 'ru';
+    // Demo rows only — a real installation gets these from the scanner. Picked
+    // by page language so the panel reads in the same language as the page.
+    var COPY = {
+      en: [
+        ['Stores the visitor\u2019s choice so the banner does not ask again.', '12 months'],
+        ['Example: distinguishes visitors in analytics.', '2 years'],
+        ['Example: links the visit to an ad campaign.', '3 months']
+      ],
+      ru: [
+        ['Хранит выбор посетителя, чтобы не спрашивать снова.', '12 месяцев'],
+        ['Пример: различает посетителей в статистике.', '2 года'],
+        ['Пример: связывает визит с рекламной кампанией.', '3 месяца']
+      ],
+      ro: [
+        ['Păstrează alegerea vizitatorului, ca bannerul să nu întrebe din nou.', '12 luni'],
+        ['Exemplu: deosebește vizitatorii în statistici.', '2 ani'],
+        ['Exemplu: leagă vizita de o campanie publicitară.', '3 luni']
+      ]
+    };
+    var c = COPY[lang] || COPY.en;
     return [
       { name: 'ck_consent', category: 'necessary', provider: 'ConsentKit',
-        purpose: ru ? 'Хранит выбор посетителя, чтобы не спрашивать снова.' : 'Stores the visitor’s choice so the banner does not ask again.',
-        expiry: ru ? '12 месяцев' : '12 months' },
+        purpose: c[0][0], expiry: c[0][1] },
       { name: '_ga', category: 'analytics', provider: 'Google Analytics',
-        purpose: ru ? 'Пример: различает посетителей в статистике.' : 'Example: distinguishes visitors in analytics.',
-        expiry: ru ? '2 года' : '2 years' },
+        purpose: c[1][0], expiry: c[1][1] },
       { name: '_fbp', category: 'marketing', provider: 'Meta',
-        purpose: ru ? 'Пример: связывает визит с рекламной кампанией.' : 'Example: links the visit to an ad campaign.',
-        expiry: ru ? '3 месяца' : '3 months' }
+        purpose: c[2][0], expiry: c[2][1] }
     ];
   }
 
@@ -867,33 +591,17 @@
      Page language application
      ══════════════════════════════════════════════════════════════════ */
 
-  function setMeta(sel, value) {
-    var n = $(sel);
-    if (n) n.setAttribute('content', value);
-  }
+  /* Draw the parts of the page that are built in JavaScript rather than by the
+     site build: the pricing cards, the FAQ list and the demo's select options.
+     Everything with a data-i18n attribute is ALREADY translated in the markup
+     the build wrote — this file must not touch it, or the page would flicker
+     from correct copy to identical copy on every load.
 
-  function applyLang() {
-    document.documentElement.lang = t('htmlLang');
-    document.title = t('docTitle');
-    setMeta('meta[name="description"]', t('docDesc'));
-    setMeta('meta[property="og:title"]', t('docTitle'));
-    setMeta('meta[property="og:description"]', t('docDesc'));
-    setMeta('meta[property="og:locale"]', lang === 'ru' ? 'ru_RU' : 'en_US');
-    setMeta('meta[property="og:locale:alternate"]', lang === 'ru' ? 'en_US' : 'ru_RU');
-
-    $$('[data-i18n]').forEach(function (n) {
-      var v = I18N[lang][n.getAttribute('data-i18n')];
-      if (typeof v === 'string') n.textContent = v;
-    });
-    $$('[data-i18n-aria-label]').forEach(function (n) {
-      var v = I18N[lang][n.getAttribute('data-i18n-aria-label')];
-      if (typeof v === 'string') n.setAttribute('aria-label', v);
-    });
-
-    $$('.lang-btn').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang));
-    });
-
+     There is no language switching left to do here. Each language is its own
+     URL, and the switcher is three plain links; <title>, the meta description,
+     the og: pair and <html lang> are static in each rendered page, so the old
+     applyLang() had nothing left to apply. */
+  function renderPage() {
     renderPricing();
     renderFaq();
     fillPositionSelect();
@@ -902,33 +610,19 @@
     applyDemo();
   }
 
-  function wireLangSwitch() {
-    $$('.lang-btn').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var next = b.getAttribute('data-lang');
-        if (next === lang) return;
-        lang = next;
-        try { localStorage.setItem(LS_LANG, lang); } catch (e) { /* private mode */ }
-        applyLang();
-      });
-    });
-  }
-
   /* ══════════════════════════════════════════════════════════════════
      Boot
      ══════════════════════════════════════════════════════════════════ */
 
-  wireLangSwitch();
   wireDemo();
 
   // First init before the UI's setTimeout(...,0) fallback mount, so the very
   // first render already uses the demo layout and language.
   if (CK) { try { CK.init(demoConfig()); } catch (e) { /* noop */ } }
 
-  applyLang();
+  renderPage();
 
-  // After the first paint, and once — not from applyLang(), which would
-  // re-request on every language switch. The constants are already on screen,
-  // so this only ever replaces them with fresher numbers.
+  // After the first paint, and once. The constants are already on screen, so
+  // this only ever replaces them with fresher numbers.
   loadPricing();
 })();

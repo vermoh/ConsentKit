@@ -26,7 +26,7 @@ const PLUGIN_PHP = join(REPO, 'plugins', 'wordpress', 'consentkit', 'consentkit.
    printed, in this order. Keeping the expectation here rather than parsing it
    out of the PHP means a silent edit to the plugin fails the test instead of
    quietly redefining what "in sync" means. */
-const COPIED = ['ck-core.js', 'ck-locales.js', 'ck-ui.js', 'ck-debug-loader.js'];
+const COPIED = ['ck-core.js', 'ck-locales.js', 'ck-ui-branding.js', 'ck-ui.js', 'ck-debug-loader.js'];
 
 /* The panel is NOT copied: ~30 KB no ordinary visitor would ever use. The
    loader fetches it from the CDN on demand. */

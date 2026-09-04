@@ -3,7 +3,9 @@
  * re-exports the public API.
  *
  * Load order is contractual: ck-core.js (blocking starts at parse time) →
- * ck-locales.js (extra language packs) → ck-ui.js (Shadow DOM layer).
+ * ck-locales.js (extra language packs) → ck-ui-branding.js (optional logo /
+ * attribution extension, which must register before the UI mounts) →
+ * ck-ui.js (Shadow DOM layer).
  *
  * Only the core is DOM-optional. `src/ck-ui.js` touches `document` at module
  * scope, so it is imported dynamically behind a `typeof document` guard —
@@ -24,6 +26,13 @@ if (hasDom) {
   try {
     await import('../src/ck-locales.js');
   } catch (e) { /* locales are optional; ck-ui falls back to built-in en/ru */ }
+
+  // Optional branding extension. Before ck-ui.js on purpose: it registers
+  // itself on ConsentKit._uiExtensions and must be there before the first
+  // mount(). Absent, the UI simply draws no logo and no attribution line.
+  try {
+    await import('../src/ck-ui-branding.js');
+  } catch (e) { /* branding is optional; the UI renders without it */ }
 
   // Required in the browser, fatal in Node — hence the guard above.
   try {

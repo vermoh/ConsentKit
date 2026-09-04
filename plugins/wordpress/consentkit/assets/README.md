@@ -14,7 +14,7 @@ repository root:
 transformed in any way — a plain `cp` is the entire build step:
 
 ```sh
-cp -f src/ck-core.js src/ck-locales.js src/ck-ui.js src/ck-debug-loader.js \
+cp -f src/ck-core.js src/ck-locales.js src/ck-ui-branding.js src/ck-ui.js src/ck-debug-loader.js \
       plugins/wordpress/consentkit/assets/
 ```
 

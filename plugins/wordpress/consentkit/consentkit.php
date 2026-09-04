@@ -3,7 +3,7 @@
  * Plugin Name:       ConsentKit
  * Plugin URI:        https://example.com/consentkit
  * Description:       GDPR cookie banner with a parse-time blocking engine, 30+ locales and Google Consent Mode v2. Prototype.
- * Version:           0.3.5
+ * Version:           0.3.6
  * Requires PHP:      7.4
  * Requires at least: 6.0
  * Author:            E-COM CONSULT PLUS
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CONSENTKIT_VERSION', '0.3.5' );
+define( 'CONSENTKIT_VERSION', '0.3.6' );
 define( 'CONSENTKIT_FILE', __FILE__ );
 define( 'CONSENTKIT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CONSENTKIT_URL', plugin_dir_url( __FILE__ ) );
@@ -842,7 +842,7 @@ function consentkit_print_scripts() {
 		return;
 	}
 
-	$files = array( 'ck-core.js', 'ck-locales.js', 'ck-ui.js', 'ck-debug-loader.js' );
+	$files = array( 'ck-core.js', 'ck-locales.js', 'ck-ui-branding.js', 'ck-ui.js', 'ck-debug-loader.js' );
 
 	foreach ( $files as $file ) {
 		printf(

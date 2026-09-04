@@ -138,6 +138,9 @@
 <!-- SaaS load order: core -> locales -> ui -> ck-saas.js -->
 <script src="../src/ck-core.js"></script>
 <script src="../src/ck-locales.js"></script>
+<!-- Branding extension: optional, and must register before ck-ui.js mounts.
+     The dev switcher's "brand: on" config needs it. -->
+<script src="../src/ck-ui-branding.js"></script>
 <script src="../src/ck-ui.js"></script>
 <script src="../src/ck-saas.js" data-ck-id="site_demo" data-ck-api="http://localhost:8788"></script>
 

@@ -69,7 +69,10 @@ var hasDom = typeof document !== 'undefined' && typeof window !== 'undefined';
 if (hasDom) {
   // 2. Locales — optional language packs.
   try { require('../src/ck-locales.js'); } catch (e) { /* optional */ }
-  // 3. UI — touches `document` at module scope, browser only.
+  // 3. Branding — optional, and before the UI: it registers itself on
+  //    ConsentKit._uiExtensions and must be there before the first mount().
+  try { require('../src/ck-ui-branding.js'); } catch (e) { /* optional */ }
+  // 4. UI — touches `document` at module scope, browser only.
   try { require('../src/ck-ui.js'); } catch (e) { /* best effort */ }
 }
 

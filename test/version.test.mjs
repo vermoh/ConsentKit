@@ -85,6 +85,39 @@ test('--no-branding drops the branding object entirely', () => {
   assert.doesNotMatch(out, /Made by E-COM Consult/);
 });
 
+/* Д11: --no-branding removes the CODE, not just the config object.
+   Before the split it dropped ~200 bytes of config and shipped the whole SVG
+   sanitiser and brand styling anyway, so a site that wanted no branding still
+   paid for all of it. The floor is deliberately well under the real saving
+   (~23 КБ) so ordinary edits to the branding file do not fail the build —
+   what is being asserted is that the file is absent, not its exact size. */
+test('--no-branding builds a substantially smaller block', () => {
+  const withBranding = runBuilder(['--langs=ru,en']);
+  const without = runBuilder(['--langs=ru,en', '--no-branding']);
+
+  const saved = Buffer.byteLength(withBranding, 'utf8') - Buffer.byteLength(without, 'utf8');
+  assert.ok(saved >= 15 * 1024,
+    `--no-branding saved only ${saved} bytes; the branding code should be excluded ` +
+    '(expected at least 15 KB) — is src/ck-ui-branding.js still in the parts list?');
+});
+
+test('--no-branding leaves no branding code in the block', () => {
+  const without = runBuilder(['--langs=ru,en', '--no-branding']);
+  // Markers unique to src/ck-ui-branding.js.
+  assert.doesNotMatch(without, /ConsentKitBranding/,
+    'the branding extension registered itself in a --no-branding build');
+  assert.doesNotMatch(without, /_uiExtensions\s*\|\|/,
+    'the branding extension source is still in a --no-branding build');
+  assert.doesNotMatch(without, /ck-brand__has-dark/,
+    'branding CSS is still in a --no-branding build');
+});
+
+test('the default build DOES carry the branding code', () => {
+  const out = runBuilder(['--langs=ru,en']);
+  assert.match(out, /ConsentKitBranding/, 'the default build lost the branding extension');
+  assert.match(out, /ck-brand__has-dark/, 'the default build lost the branding CSS');
+});
+
 test('the attribution language follows the build, not the machine', () => {
   // --language=auto takes the first bundled language; ck-ui falls back to en.
   assert.match(runBuilder(['--langs=en', '--language=en']), /Made by E-COM Consult/);

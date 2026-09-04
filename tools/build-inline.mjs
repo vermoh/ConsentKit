@@ -57,10 +57,11 @@ ConsentKit — сборщик инлайн-версии (один <script> дл�
   --policy=1           Версия политики. Поднимите её, когда меняете текст
                        политики — баннер покажется посетителям заново.
   --cookies=table.json Файл со списком cookie (JSON-массив) для панели настроек.
-  --no-branding        Собрать блок без объекта branding в конфиге. Флаг без
-                       значения. По умолчанию сборщик и так не добавляет
-                       branding, поэтому флаг ничего не вырезает — он лишь
-                       гарантирует это явно для сборок из своих конфигов.
+  --no-branding        Собрать блок без брендинга совсем: из сборки уходит и
+                       объект branding в конфиге, и код брендинга
+                       (src/ck-ui-branding.js, около 17 КБ). Флаг без значения.
+                       Берите его, если подпись и логотип вам не нужны — блок
+                       заметно легчает.
   --out=inline.html    Куда записать результат. Без флага — вывод в stdout.
   --help               Эта справка.
 
@@ -239,6 +240,9 @@ function build(flags) {
   const coreSrc = readSource('ck-core.js');
   const uiSrc = readSource('ck-ui.js');
   const localeSrc = readSource('ck-locales.js');
+  // Optional branding extension (~17 КБ). Included by default, dropped whole by
+  // --no-branding — the flag now removes the CODE, not just the config object.
+  const brandingSrc = readSource('ck-ui-branding.js');
   // Opt-in debug panel: the block carries only the loader (~1.5 КБ), not the
   // ~30 КБ panel. Without ?ck_debug=1 the loader does nothing at all — no DOM,
   // no request. When the site owner does ask for it, the loader pulls
@@ -375,7 +379,7 @@ function build(flags) {
     ` * Язык баннера:     ${language === 'auto' ? 'auto (по языку браузера посетителя)' : language + ' (задан жёстко)'}`,
     ` * Вид:              ${layout} / ${position}, тема ${mode}, акцент ${accent}`,
     ` * Версия политики:  ${policy}`,
-    ` * Брендинг:         ${noBranding ? 'нет (--no-branding)' : 'строка «' + branding.poweredBy.text + '»'}`,
+    ` * Брендинг:         ${noBranding ? 'нет — код брендинга не включён (--no-branding)' : 'строка «' + branding.poweredBy.text + '»'}`,
   ].concat([
     ' *',
     ' * Ноль внешних запросов: до согласия посетителя ничего никуда не отправляется.',
@@ -397,6 +401,15 @@ function build(flags) {
       JSON.stringify(subset) + ');})();';
     localeBytes = Buffer.byteLength(localeBlock, 'utf8');
     pieces.push(localeBlock);
+  }
+
+  // Before ck-ui.js: the extension must be registered before the first mount(),
+  // and a page that calls init() right after ck-ui.js mounts during the ck:init
+  // dispatch — earlier than a later-loading file could register itself.
+  let brandingBytes = 0;
+  if (!noBranding) {
+    brandingBytes = Buffer.byteLength(brandingSrc, 'utf8');
+    pieces.push(brandingSrc);
   }
 
   pieces.push(uiSrc);
@@ -447,6 +460,7 @@ function build(flags) {
       cookieRows: cookieTable.length,
       coreBytes: Buffer.byteLength(coreSrc, 'utf8'),
       uiBytes: Buffer.byteLength(uiSrc, 'utf8'),
+      brandingBytes,
       debugBytes: Buffer.byteLength(debugSrc, 'utf8'),
       debugPanelBytes: Buffer.byteLength(readSource('ck-debug.js'), 'utf8'),
       localeBytes,
@@ -496,6 +510,7 @@ function main() {
     `  ядро          ${kb(stats.coreBytes)}`,
     `  локали        ${stats.localeBytes === 0 ? '— (не нужны)' : kb(stats.localeBytes)}`,
     `  интерфейс     ${kb(stats.uiBytes)}`,
+    `  брендинг      ${stats.brandingBytes === 0 ? '— (вырезан флагом --no-branding)' : kb(stats.brandingBytes)}`,
     `  отладка       ${kb(stats.debugBytes)} (загрузчик; сама панель ${kb(stats.debugPanelBytes)} грузится с CDN только по ?ck_debug=1)`,
     `  ИТОГО         ${kb(stats.totalBytes)}${target ? ' → ' + target : ' → stdout'}`,
     '',
