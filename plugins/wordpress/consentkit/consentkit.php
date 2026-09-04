@@ -3,7 +3,7 @@
  * Plugin Name:       ConsentKit
  * Plugin URI:        https://example.com/consentkit
  * Description:       GDPR cookie banner with a parse-time blocking engine, 30+ locales and Google Consent Mode v2. Prototype.
- * Version:           0.3.0
+ * Version:           0.3.5
  * Requires PHP:      7.4
  * Requires at least: 6.0
  * Author:            E-COM CONSULT PLUS
@@ -20,10 +20,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CONSENTKIT_VERSION', '0.3.0' );
+define( 'CONSENTKIT_VERSION', '0.3.5' );
 define( 'CONSENTKIT_FILE', __FILE__ );
 define( 'CONSENTKIT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CONSENTKIT_URL', plugin_dir_url( __FILE__ ) );
+
+// The server-side rewriting engine. Pure PHP, no WordPress calls, so that
+// tests/rewrite.test.php can exercise it under a bare `php` CLI.
+require_once CONSENTKIT_PATH . 'includes/rewrite.php';
 
 /**
  * Option name => default value.
@@ -47,6 +51,8 @@ function consentkit_option_defaults() {
 		'consentkit_accent'         => '#2B50D8',
 		'consentkit_policy_version' => '1',
 		'consentkit_cookie_table'   => '',
+		'consentkit_server_markup'  => '1',
+		'consentkit_server_markup_skip_admins' => '0',
 	);
 }
 
@@ -328,6 +334,8 @@ function consentkit_register_settings() {
 		'consentkit_accent'          => 'consentkit_sanitize_accent',
 		'consentkit_policy_version'  => 'consentkit_sanitize_policy_version',
 		'consentkit_cookie_table'    => 'consentkit_sanitize_cookie_table',
+		'consentkit_server_markup'   => 'consentkit_sanitize_checkbox',
+		'consentkit_server_markup_skip_admins' => 'consentkit_sanitize_checkbox',
 	);
 
 	$defaults = consentkit_option_defaults();
@@ -599,6 +607,39 @@ function consentkit_render_admin_page() {
 					</tr>
 
 					<tr>
+						<th scope="row"><?php echo esc_html__( 'Серверная разметка трекеров', 'consentkit' ); ?></th>
+						<td>
+							<?php
+							consentkit_render_checkbox(
+								'consentkit_server_markup',
+								__( 'Размечать теги известных трекеров прямо в HTML страницы', 'consentkit' )
+							);
+							?>
+							<p class="description">
+								<?php echo esc_html__( 'Плагин просматривает готовый HTML страницы перед отправкой браузеру и переписывает теги известных трекеров (Яндекс.Метрика, gtag.js, пиксели Meta и TikTok, чаты и другие — всего около 70 хостов) в безопасный вид: type="text/plain" с адресом в data-ck-src. Скрипт не выполняется, пока посетитель не разрешит соответствующую категорию.', 'consentkit' ); ?>
+							</p>
+							<p class="description">
+								<?php echo esc_html__( 'Честно о том, что это добавляет: скрипты, которые вставляет другой код на странице, движок блокировки перехватывал и раньше — с этим он справлялся всегда. Не поддавались только теги, написанные прямо в HTML: браузер начинает их скачивать ещё до того, как выполнится первая строка ConsentKit, и закрыть этот разрыв со стороны браузера невозможно. Сервер работает раньше разбора страницы по определению — поэтому такие теги закрывает только эта настройка.', 'consentkit' ); ?>
+							</p>
+							<p class="description">
+								<?php echo esc_html__( 'Кэширующие плагины: совместимо. В кэш попадает уже размеченный HTML, потому что разметка выполняется на уровне PHP, до сохранения страницы в кэш.', 'consentkit' ); ?>
+							</p>
+							<p class="description">
+								<?php echo esc_html__( 'Отдельный тег можно исключить из разметки — добавьте ему атрибут data-ck-ignore. Теги, размеченные вручную (type="text/plain" с data-ck), не трогаются. Контейнер GTM (gtm.js) намеренно не блокируется: теги внутри него подчиняются Consent Mode, а блокировка контейнера ломает эту модель.', 'consentkit' ); ?>
+							</p>
+							<?php
+							consentkit_render_checkbox(
+								'consentkit_server_markup_skip_admins',
+								__( 'Не размечать страницы для вошедших редакторов и администраторов', 'consentkit' )
+							);
+							?>
+							<p class="description">
+								<?php echo esc_html__( 'Включите, если разметка мешает редактору или конструктору страниц. На страницы обычных посетителей это не влияет.', 'consentkit' ); ?>
+							</p>
+						</td>
+					</tr>
+
+					<tr>
 						<th scope="row">
 							<label for="consentkit_cookie_table"><?php echo esc_html__( 'Cookie table (JSON)', 'consentkit' ); ?></label>
 						</th>
@@ -831,6 +872,126 @@ function consentkit_print_scripts() {
 	echo '<script>window.ConsentKit&&window.ConsentKit.init(' . $json . ');</script>' . "\n";
 }
 add_action( 'wp_head', 'consentkit_print_scripts', 0 );
+
+/* -------------------------------------------------------------------------
+ * Server-side tracker markup (debt Д10).
+ *
+ * The blocking engine in ck-core.js intercepts every tracker INJECTED by other
+ * JavaScript, but it cannot catch a tag written straight into the page: the
+ * HTML parser issues that request before our first line runs, and the gap is
+ * not closable from the browser. The server runs before the parser by
+ * definition, so the page is rewritten here — turning a static tracker tag into
+ * exactly the manual markup the README documents, which the shipped client
+ * already knows how to restore after consent.
+ *
+ * Cache plugins: compatible, and in the right order. The buffer is a PHP-level
+ * filter on the generated page, so a caching plugin stores the ALREADY
+ * rewritten HTML and every cache hit is served blocked.
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Whether the server-side markup should run for this request.
+ *
+ * @return bool
+ */
+function consentkit_server_markup_enabled() {
+	if ( '1' !== consentkit_get_option( 'consentkit_server_markup' ) ) {
+		return false;
+	}
+
+	// Same front-end gate as the banner: no admin, feeds, REST, AJAX, cron,
+	// XML-RPC, embeds or favicon.
+	if ( ! consentkit_should_output() ) {
+		return false;
+	}
+
+	// Optional escape hatch for page builders, which often preview the page
+	// through the front end while logged in.
+	if ( '1' === consentkit_get_option( 'consentkit_server_markup_skip_admins' )
+		&& function_exists( 'current_user_can' ) && current_user_can( 'edit_posts' ) ) {
+		return false;
+	}
+
+	/**
+	 * Filter whether ConsentKit rewrites tracker tags on this request.
+	 *
+	 * @param bool $enabled Current decision.
+	 */
+	return (bool) apply_filters( 'consentkit_server_markup', true );
+}
+
+/**
+ * Output-buffer callback: rewrite tracker tags in the finished page.
+ *
+ * Everything here is defensive. This callback stands between WordPress and the
+ * visitor's browser, so any failure must degrade to "return the page exactly as
+ * it was" — an unblocked tracker is a compliance problem, a broken page is an
+ * outage.
+ *
+ * The content type is checked HERE and not at template_redirect: headers are
+ * not final until the page has actually been generated, so a request that turns
+ * out to emit XML or JSON (wp-sitemap.xml is the common one — is_feed() does not
+ * cover it) is only recognisable at this point.
+ *
+ * @param string $buffer Complete page output.
+ * @return string
+ */
+function consentkit_filter_output( $buffer ) {
+	try {
+		if ( ! is_string( $buffer ) || '' === $buffer ) {
+			return $buffer;
+		}
+
+		// Not HTML: leave XML, JSON, plain text and binary responses alone.
+		if ( function_exists( 'headers_list' ) ) {
+			foreach ( headers_list() as $header ) {
+				if ( 0 === stripos( $header, 'content-type:' ) ) {
+					$value = strtolower( trim( substr( $header, strlen( 'content-type:' ) ) ) );
+					if ( '' !== $value && false === strpos( $value, 'text/html' ) && false === strpos( $value, 'application/xhtml' ) ) {
+						return $buffer;
+					}
+				}
+			}
+		}
+
+		// Sniff the payload too: a fragment that is not a document (some
+		// endpoints emit bare JSON with no Content-Type) must pass through.
+		$head = ltrim( substr( $buffer, 0, 512 ) );
+		if ( '' !== $head && ( '{' === $head[0] || '[' === $head[0] ) ) {
+			return $buffer;
+		}
+		if ( false === stripos( $head, '<!doctype html' ) && false === stripos( $head, '<html' ) ) {
+			return $buffer;
+		}
+
+		$rewritten = consentkit_rewrite_html( $buffer, CONSENTKIT_URL );
+
+		return ( is_string( $rewritten ) && '' !== $rewritten ) ? $rewritten : $buffer;
+	} catch ( Exception $e ) {
+		return $buffer;
+	} catch ( Throwable $e ) {
+		// PHP 7+: an Error (not an Exception) must not take the page down.
+		return $buffer;
+	}
+}
+
+/**
+ * Start the output buffer.
+ *
+ * template_redirect is the last hook before the theme starts producing output,
+ * which makes it the earliest point at which the request is known to be a
+ * front-end page render.
+ *
+ * @return void
+ */
+function consentkit_start_output_buffer() {
+	if ( ! consentkit_server_markup_enabled() ) {
+		return;
+	}
+
+	ob_start( 'consentkit_filter_output' );
+}
+add_action( 'template_redirect', 'consentkit_start_output_buffer' );
 
 /* -------------------------------------------------------------------------
  * Shortcode.

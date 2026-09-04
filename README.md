@@ -44,7 +44,7 @@ Four ways to add ConsentKit to a site, from simplest to most integrated.
 |---|---|---|---|
 | 1 | **Script tags** — copy `src/` to your server, three `<script>` tags in `<head>` | Any site you control | [Quickstart below](#quickstart--script-tags) |
 | 2 | **npm** — `npm install @ecomconsult/consentkit` | Bundled apps, React | [Quickstart below](#quickstart--npm) |
-| 3 | **WordPress plugin** — copy the plugin folder to `wp-content/plugins/` | WordPress / WooCommerce | [`plugins/wordpress/consentkit/`](plugins/wordpress/consentkit/) |
+| 3 | **WordPress plugin** — copy the plugin folder to `wp-content/plugins/`; rewrites static tracker tags server-side | WordPress / WooCommerce | [`plugins/wordpress/consentkit/`](plugins/wordpress/consentkit/) |
 | 4 | **Google Tag Manager** — import the container, trigger tags on consent events | Sites already running GTM | [`integrations/gtm/README.md`](integrations/gtm/README.md) |
 
 ```sh
@@ -279,6 +279,11 @@ Iframes use `data-src`, which is applied once the category is allowed:
 
 `data-ck` accepts any category name: `functional`, `analytics`, `marketing`.
 
+> On WordPress this markup is applied **automatically, server-side**, for every
+> tracker in the built-in database — see "Server-side markup" below. Manual
+> markup is still needed for trackers the database does not know (your own
+> domain, an unlisted vendor) and for inline snippets.
+
 ### Automatic blocking
 
 Scripts injected at runtime are intercepted without any markup. ConsentKit
@@ -300,6 +305,50 @@ and DoubleClick.
 
 Because the patches install at parse time, `ck-core.js` must load before any
 tracker — put it first in `<head>` and do not add `defer`.
+
+### Static tags: what the browser cannot catch
+
+Runtime injection is covered by the patches above. A tracker tag written
+**directly into the HTML** is not: the parser starts that request before the
+first line of `ck-core.js` runs. The gap was measured (debt Д9: request at
+14 ms, our script at 18 ms) and it is negative — no client-side technique
+closes it. Such tags need either manual markup, or a server that rewrites them
+before the page is sent.
+
+### Server-side markup (WordPress plugin)
+
+The WordPress plugin does exactly that, and it is **on by default** since 0.3.5.
+While the page is generated, it rewrites tracker tags in the finished HTML:
+
+```html
+<!-- what the theme wrote -->
+<script src="https://mc.yandex.ru/metrika/tag.js"></script>
+
+<!-- what the browser receives -->
+<script type="text/plain" data-ck="analytics"
+        data-ck-src="https://mc.yandex.ru/metrika/tag.js"></script>
+```
+
+`<iframe src>` of a known host becomes `data-ck` + `data-src` with `src`
+removed. The categories come from the same HOST_DB/PATH_DB as the browser
+engine: `tools/export-hostdb.mjs` generates
+`plugins/wordpress/consentkit/includes/hostdb.php` from `src/ck-core.js`, and
+`test/hostdb.test.mjs` fails if the two drift.
+
+What it skips: ConsentKit's own assets, tags carrying `data-ck-ignore`, tags
+already marked up by hand, inline scripts (there is no URL to defer), the GTM
+container, and anything inside comments, `<pre>` or `<textarea>`. On any error
+the page is returned unchanged.
+
+The `<pre>` / `<textarea>` skip keeps the *source text* byte-identical, which is
+what a page documenting a tracker snippet needs. It does not keep such a tag
+alive: the browser parses `<pre><script src=…>` as a real script element
+whatever the server did, so the runtime engine may still intercept it. Caching plugins are compatible and get the
+already-rewritten HTML, because the rewrite happens at the PHP level before the
+page is cached.
+
+Outside WordPress the same idea applies to any server-side template: emit the
+`type="text/plain" data-ck` form directly, as in "Manual markup" above.
 
 ## Google Consent Mode v2
 
@@ -540,13 +589,19 @@ has been verified and what has not.
 - `dataLayer` event trace for consent restore, upgrade and withdrawal.
 - npm entry points and TypeScript types: syntax and import smoke tests in Node
   without a DOM.
-- PHP files of the WordPress plugin pass `php -l` on 7.4 and 8.5.
+- PHP files of the WordPress plugin pass `php -l` on 7.4, 8.3 and 8.5.
+- The server-side rewriting engine has its own suite of 61 cases
+  (`plugins/wordpress/consentkit/tests/rewrite.test.php`), green on PHP 7.4,
+  8.3 and 8.5. It is a plain PHP CLI script, so it runs outside `npm test`.
 
 ### Not verified — read before production use
 
-- **The WordPress plugin has never run on a live WordPress install.** It passes
-  linting and review, but no activation, settings round-trip, theme conflict or
-  multisite behaviour has been observed in a real installation.
+- **The WordPress plugin has been verified on a live install, but only one.**
+  It was run on WordPress 7.1 / PHP 8.3 in Docker (activation, settings
+  round-trip, shortcode, uninstall, server-side markup end to end). The declared
+  floor of WordPress 6.0 / PHP 7.4 has not been exercised live — the PHP files
+  pass `php -l` and the rewriting test suite on 7.4, 8.3 and 8.5 — and no theme
+  conflict or multisite behaviour has been observed.
 - **The GTM container has never been through a real import.** The JSON is valid
   and structurally modelled on the documented export format, but Tag Manager has
   not accepted it in practice; some field names (notably GA4 config

@@ -31,6 +31,8 @@ $consentkit_options = array(
 	'consentkit_accent',
 	'consentkit_policy_version',
 	'consentkit_cookie_table',
+	'consentkit_server_markup',
+	'consentkit_server_markup_skip_admins',
 );
 
 foreach ( $consentkit_options as $consentkit_option ) {
