@@ -21,7 +21,7 @@
 
   // Monthly price in EUR. Rendered into both the RU and EN pricing tables,
   // so the number itself lives here once and never in the copy.
-  var PRICES = { free: 0, starter: 9, business: 29 };
+  var PRICES = { free: 0, starter: 9, business: 69 };
 
   // Sites included per plan (null = negotiated).
   var SITE_LIMITS = { free: 1, starter: 1, business: 10, agency: null };
