@@ -17,7 +17,7 @@
      ══════════════════════════════════════════════════════════════════ */
 
   // Agency enquiries. Replace CONTACT_EMAIL with the real address; the
-  // pricing card's mailto: button is built from this and nothing else.
+  // Agency column's mailto: button is built from this and nothing else.
   var CONTACT_EMAIL = 'info@ecomconsult.net';
 
   // The API this page reads prices from. The ONLY external request the page
@@ -229,7 +229,9 @@
   var plans = fallbackPlans();
 
   function priceCell(d) {
-    var box = el('p', 'plan-price');
+    // A span, not a <p>: this now lives inside a <td>, where a block-level
+    // paragraph would inherit the cell's own margins twice over.
+    var box = el('span', 'plan-price');
     if (d.priceEur === null) {
       box.appendChild(el('span', 'plan-price__agreement', t('byAgreement')));
       return box;
@@ -288,41 +290,137 @@
 
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
+  var FEATURED = 'business';
+
+  /* The CTA that used to sit at the foot of each card. Same three cases, and
+     the agency one is still the only link that leaves for mailto:. */
+  function ctaLink(d) {
+    var a = el('a', 'btn btn--sm ' + (d.plan === FEATURED ? 'btn--primary' : 'btn--ghost'));
+    if (d.priceEur === null) {
+      a.href = 'mailto:' + CONTACT_EMAIL;
+      a.textContent = t('planCtaAgency');
+    } else {
+      a.href = CABINET_URL;
+      a.textContent = d.priceEur === 0 ? t('planCtaFree') : t('planCtaPaid');
+    }
+    return a;
+  }
+
+  /* One <td>/<th> per plan, with the featured column's class stamped on every
+     cell. A <col> could paint the background but cannot carry the side borders
+     that make the column read as one highlighted block, so the class goes on
+     the cells — which are generated here anyway. */
+  function planCell(tag, d, cls) {
+    var c = el(tag, (cls ? cls + ' ' : '') + (d.plan === FEATURED ? 'is-featured' : ''));
+    return c;
+  }
+
+  /* P3-8: one comparison table instead of four cards, so a reader compares
+     along a row instead of re-reading four columns for the same seven labels.
+     A real <table> with <caption> and <th scope> in both directions: the row
+     labels are row headers, the plan names are column headers, so a screen
+     reader announces "Business, Scans, weekly + 30 per day manually" for any
+     cell the visitor lands on. */
   function renderPricing() {
     var host = $('#plans');
     if (!host) return;
     host.textContent = '';
 
+    var table = el('table', 'plan-table');
+
+    var caption = el('caption', 'plan-table__caption', t('priceTableCaption'));
+    table.appendChild(caption);
+
+    /* ---- head: plan name, the «most popular» flag and the per-plan note --- */
+    var thead = el('thead');
+    var hrow = el('tr');
+    // The corner cell labels the column of row labels below it.
+    hrow.appendChild(el('th', 'plan-table__corner', t('rowPlan')));
+
     plans.forEach(function (d) {
-      var plan = d.plan;
-      var card = el('article', 'plan' + (plan === 'business' ? ' plan--featured' : ''));
-
-      if (plan === 'business') {
-        card.appendChild(el('p', 'plan-flag', t('recommended')));
+      var th = planCell('th', d, 'plan-col');
+      th.scope = 'col';
+      if (d.plan === FEATURED) {
+        th.appendChild(el('span', 'plan-flag', t('recommended')));
       }
-      card.appendChild(el('h3', 'plan-name', t('plan' + cap(plan))));
-      card.appendChild(priceCell(d));
-      card.appendChild(el('p', 'plan-note', t('plan' + cap(plan) + 'Note')));
-
-      var dl = el('dl', 'plan-rows');
-      PLAN_ROWS.forEach(function (row) {
-        dl.appendChild(el('dt', null, t(row[0])));
-        dl.appendChild(el('dd', null, row[1](d)));
-      });
-      card.appendChild(dl);
-
-      var a = el('a', 'btn btn--sm ' + (plan === 'business' ? 'btn--primary' : 'btn--ghost'));
-      if (d.priceEur === null) {
-        a.href = 'mailto:' + CONTACT_EMAIL;
-        a.textContent = t('planCtaAgency');
-      } else {
-        a.href = CABINET_URL;
-        a.textContent = d.priceEur === 0 ? t('planCtaFree') : t('planCtaPaid');
-      }
-      card.appendChild(a);
-
-      host.appendChild(card);
+      th.appendChild(el('span', 'plan-name', t('plan' + cap(d.plan))));
+      th.appendChild(el('span', 'plan-note', t('plan' + cap(d.plan) + 'Note')));
+      hrow.appendChild(th);
     });
+    thead.appendChild(hrow);
+    table.appendChild(thead);
+
+    /* ---- body: price first, then the seven feature rows ------------------ */
+    var tbody = el('tbody');
+
+    var prow = el('tr', 'plan-table__row plan-table__row--price');
+    var plabel = el('th', null, t('rowPrice'));
+    plabel.scope = 'row';
+    prow.appendChild(plabel);
+    plans.forEach(function (d) {
+      var td = planCell('td', d);
+      td.appendChild(priceCell(d));
+      prow.appendChild(td);
+    });
+    tbody.appendChild(prow);
+
+    PLAN_ROWS.forEach(function (row) {
+      var tr = el('tr', 'plan-table__row');
+      var label = el('th', null, t(row[0]));
+      label.scope = 'row';
+      tr.appendChild(label);
+      plans.forEach(function (d) {
+        tr.appendChild(planCell('td', d, null)).textContent = row[1](d);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    /* ---- foot: the buttons, one per column ------------------------------- */
+    var tfoot = el('tfoot');
+    var frow = el('tr', 'plan-table__row plan-table__row--cta');
+    var flabel = el('th', null, t('rowCta'));
+    flabel.scope = 'row';
+    frow.appendChild(flabel);
+    plans.forEach(function (d) {
+      var td = planCell('td', d);
+      td.appendChild(ctaLink(d));
+      frow.appendChild(td);
+    });
+    tfoot.appendChild(frow);
+    table.appendChild(tfoot);
+
+    /* The table is wider than a phone. It scrolls inside its own wrapper —
+       never the page — and the wrapper is a focusable labelled region so the
+       scroll is reachable from the keyboard, which `overflow:auto` alone is
+       not. The hint below it is visible copy, not a decoration. */
+    var scroller = el('div', 'plan-scroll');
+    scroller.tabIndex = 0;
+    scroller.setAttribute('role', 'region');
+    scroller.setAttribute('aria-label', t('priceTableCaption'));
+    scroller.appendChild(table);
+
+    host.appendChild(scroller);
+
+    /* The hint is a fact about the current layout, not about the viewport: it
+       is shown when the table really does overflow its wrapper and hidden when
+       it does not, so a wide window is never told to scroll something that
+       fits — and a narrow one, or a large browser font, still gets told. */
+    var hint = el('p', 'plan-scroll__hint', t('priceScrollHint'));
+    host.appendChild(hint);
+
+    var syncHint = function () {
+      var overflows = scroller.scrollWidth > scroller.clientWidth + 1;
+      hint.hidden = !overflows;
+      // A region with nothing to scroll should not be a tab stop of its own.
+      scroller.tabIndex = overflows ? 0 : -1;
+    };
+    syncHint();
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(syncHint).observe(scroller);
+    } else if (window.addEventListener) {
+      window.addEventListener('resize', syncHint);
+    }
   }
 
   /* The page's only external request, and it is our own API. Two seconds, no
@@ -592,7 +690,7 @@
      ══════════════════════════════════════════════════════════════════ */
 
   /* Draw the parts of the page that are built in JavaScript rather than by the
-     site build: the pricing cards, the FAQ list and the demo's select options.
+     site build: the pricing table, the FAQ list and the demo's select options.
      Everything with a data-i18n attribute is ALREADY translated in the markup
      the build wrote — this file must not touch it, or the page would flicker
      from correct copy to identical copy on every load.
@@ -611,6 +709,58 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
+     P3-9 — move the floating re-open button off the pricing table
+
+     ck-ui.js mounts everything it draws into the shadow root of #ck-root, and
+     its .ck-fab is position:fixed at left:16px/bottom:16px, 48×48. On this page
+     that lands on the pricing section's left-hand column — the row labels and
+     the leftmost CTA button. A button covering a button is the bad case.
+
+     A rule in site/styles.css cannot fix it: page stylesheets do not cross a
+     shadow boundary, so it would be dead CSS that looks like a fix. The root is
+     attached mode:'open', though, so the page can append a stylesheet of its
+     own into it. That is done here rather than in site/vendor/ck-ui.js, which
+     is a byte-for-byte copy of the shipped client (test/site-vendor.test.mjs):
+     the button sits at bottom-left for every other site that embeds it, and
+     only this page has a reason to move it.
+
+     Specificity, not source order: our block is appended at an unpredictable
+     point relative to the vendor's own, so `.ck-fab.ck-fab` outranks it either
+     way — no !important needed.
+     ══════════════════════════════════════════════════════════════════ */
+
+  var FAB_STYLE_ID = 'ck-site-fab-position';
+
+  function placeFab() {
+    var host = document.getElementById('ck-root');
+    if (!host || !host.shadowRoot) return false;
+    // init() is idempotent and may remount; appending twice would be harmless
+    // but untidy, and this also lets the retry below stop at the first success.
+    if (host.shadowRoot.getElementById(FAB_STYLE_ID)) return true;
+
+    var style = document.createElement('style');
+    style.id = FAB_STYLE_ID;
+    style.textContent =
+      '.ck-fab.ck-fab{left:auto;right:16px;bottom:16px}' +
+      '@media (max-width:560px){.ck-fab.ck-fab{right:12px;bottom:12px}}';
+    host.shadowRoot.appendChild(style);
+    return true;
+  }
+
+  /* The host does not exist yet on the first pass — ck-ui.js creates it when it
+     mounts, which happens on ck:init or its own setTimeout(...,0). A rule does
+     not need its element to exist, so one successful append covers the button
+     whenever it is later built; these few attempts only have to outlast the
+     mount itself. */
+  function placeFabWhenMounted() {
+    if (placeFab()) return;
+    var tries = 0;
+    var timer = setInterval(function () {
+      if (placeFab() || ++tries > 20) clearInterval(timer);
+    }, 50);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
      Boot
      ══════════════════════════════════════════════════════════════════ */
 
@@ -621,6 +771,8 @@
   if (CK) { try { CK.init(demoConfig()); } catch (e) { /* noop */ } }
 
   renderPage();
+
+  placeFabWhenMounted();
 
   // After the first paint, and once. The constants are already on screen, so
   // this only ever replaces them with fresher numbers.

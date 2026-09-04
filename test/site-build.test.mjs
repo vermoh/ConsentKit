@@ -158,6 +158,118 @@ test('no dictionary key is unused', () => {
     'remove them from site/src/i18n/*.json, or use them');
 });
 
+/* ----------------------------------------------------- the pricing table */
+
+/* P3-8 replaced four plan cards with one «feature × plan» comparison table,
+   rendered by site/app.js from the same descriptors the cards used. The parity
+   test above only proves the three dictionaries agree with each other — it
+   would stay green if all three lost the caption at once. These name the keys
+   the table cannot be drawn without. */
+test('the pricing table has its labels in all three dictionaries', () => {
+  const TABLE_KEYS = [
+    'priceTableCaption',  // <caption>, and the scroll region's aria-label
+    'priceScrollHint',    // the visible "scrolls sideways" line under it
+    'rowPlan',            // the corner cell, heading the column of row labels
+    'rowPrice',           // the price row's <th scope="row">
+    'rowCta',             // the button row's <th scope="row">
+    'recommended'         // the flag in the featured column's header
+  ];
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    for (const key of TABLE_KEYS) {
+      assert.ok(Object.prototype.hasOwnProperty.call(dict, key),
+        `site/src/i18n/${code}.json is missing "${key}", which the pricing table needs`);
+      assert.ok(dict[key].trim().length > 0,
+        `"${key}" in ${code}.json is empty`);
+    }
+  }
+});
+
+/* The seven feature rows and the four plans still have a label each: the table
+   reads them by the same composed keys the cards did, so dropping one would
+   render an empty <th> rather than throw. */
+test('every pricing row and plan still has a label in all three dictionaries', () => {
+  const ROW_KEYS = ['rowSites', 'rowBranding', 'rowScans', 'rowLog',
+                    'rowAlerts', 'rowLangs', 'rowSupport'];
+  const PLANS = ['Free', 'Starter', 'Business', 'Agency'];
+
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    for (const key of ROW_KEYS) {
+      assert.ok(dict[key] && dict[key].trim(), `${code}.json has no "${key}"`);
+    }
+    for (const Plan of PLANS) {
+      // The column header draws all three: name, note and CTA.
+      for (const key of [`plan${Plan}`, `plan${Plan}Note`]) {
+        assert.ok(dict[key] && dict[key].trim(), `${code}.json has no "${key}"`);
+      }
+      assert.ok(dict[`support${Plan}`] && dict[`support${Plan}`].trim(),
+        `${code}.json has no "support${Plan}"`);
+    }
+    for (const key of ['planCtaFree', 'planCtaPaid', 'planCtaAgency']) {
+      assert.ok(dict[key] && dict[key].trim(), `${code}.json has no "${key}"`);
+    }
+  }
+});
+
+/* The accessibility contract from the audit fix, asserted against app.js
+   itself: the section is a real table, not a grid of divs wearing table roles.
+   A rewrite that drops <caption> or scope would otherwise pass every other
+   test in this file, because none of them execute the renderer. */
+test('the pricing renderer builds a real table with a caption and scoped headers', () => {
+  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
+
+  assert.match(app, /el\('table'/, 'app.js no longer creates a <table> for the plans');
+  assert.match(app, /el\('caption'/, 'the pricing table has lost its <caption>');
+  assert.match(app, /\.scope = 'col'/, 'the plan columns have no <th scope="col">');
+  assert.match(app, /\.scope = 'row'/, 'the feature rows have no <th scope="row">');
+
+  // The old card renderer must be gone, not merely unused: two renderers means
+  // the next edit lands in whichever one the author happens to open.
+  assert.doesNotMatch(app, /el\('article', 'plan'/,
+    'app.js still contains the old per-plan card renderer');
+
+  // The wrapper is what keeps the page from scrolling sideways on a phone, and
+  // tabIndex is what makes that scroll reachable without a mouse.
+  assert.match(app, /plan-scroll/, 'the table has no scrollable wrapper');
+  assert.match(app, /tabIndex\s*=\s*0/, 'the scroll wrapper is not keyboard-focusable');
+});
+
+/* P3-9: the client's floating re-open button is fixed at the bottom-left of the
+   viewport and used to sit on top of a pricing card — now on the table's label
+   column and its leftmost CTA.
+
+   The fix has to live in site/app.js, and this test exists mostly to say why:
+   ck-ui.js mounts into the shadow root of #ck-root, and a rule in
+   site/styles.css cannot cross that boundary. An earlier attempt at
+   `body .ck-fab { left:auto }` in the stylesheet parsed, shipped, and did
+   nothing at all — the computed style stayed left:16px. So assert on the
+   mechanism that actually reaches the button, and assert that the stylesheet
+   is NOT where anyone tries again. */
+test('the floating button is moved off the pricing column, from inside the shadow root', () => {
+  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
+  const css = readFileSync(join(SRC_DIR, '..', 'styles.css'), 'utf8');
+
+  assert.match(app, /getElementById\('ck-root'\)/,
+    'app.js does not look up the client\'s shadow host');
+  assert.match(app, /\.shadowRoot/,
+    'app.js does not reach into the shadow root, so it cannot restyle .ck-fab');
+  assert.match(app, /\.ck-fab\.ck-fab\{[^}]*left:\s*auto/,
+    'the injected rule does not release .ck-fab from the left edge');
+  assert.match(app, /\.ck-fab\.ck-fab\{[^}]*right:/,
+    'the injected rule gives .ck-fab no right anchor to replace the left one');
+
+  // The dead-CSS trap, closed: styles.css cannot reach a shadow root, so a
+  // .ck-fab rule there is a fix that looks applied and is not.
+  assert.doesNotMatch(css, /\.ck-fab/,
+    'site/styles.css tries to style .ck-fab — page CSS cannot cross the ' +
+    '#ck-root shadow boundary, so that rule does nothing; move it to app.js');
+
+  // Clearance at rest is the other half, and that one IS page CSS.
+  assert.match(css, /#pricing \.wrap\s*\{[^}]*padding-bottom:/,
+    'the pricing section has no bottom clearance for the floating button');
+});
+
 /* ------------------------------------------------------------------- SEO */
 
 test('each page carries its own canonical, lang and og:locale', () => {
