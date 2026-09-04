@@ -17,7 +17,7 @@
 
   // Agency enquiries. Replace CONTACT_EMAIL with the real address; the
   // pricing card's mailto: button is built from this and nothing else.
-  var CONTACT_EMAIL = 'CONTACT_EMAIL';
+  var CONTACT_EMAIL = 'info@ecomconsult.net';
 
   // Monthly price in EUR. Rendered into both the RU and EN pricing tables,
   // so the number itself lives here once and never in the copy.
