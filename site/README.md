@@ -1,9 +1,11 @@
 # `site/` — the public page, consentkit.ecomconsult.net
 
 A single static page: offer, a **live banner demo**, how it works, features,
-pricing, who it is for, FAQ. No framework, no build step, no external requests —
-a page arguing for privacy must not itself load a third-party font, script or
-beacon. Everything it fetches comes from its own origin.
+pricing, who it is for, FAQ. No framework, no build step, and **only our own
+API** — a page arguing for privacy must not itself load a third-party font,
+script or beacon. The single request it makes off its own origin is
+`GET {API_BASE}/v1/public/pricing`, our API, for the prices; there is no
+third-party font, script, beacon or analytics of any kind.
 
 ```
 site/
@@ -49,7 +51,9 @@ There is deliberately **no Content-Security-Policy**. A `style-src` policy
 without `'unsafe-inline'` would block the banner: `ck-ui.js` styles its shadow
 root by creating `<style>` elements and setting their text, which CSP's inline
 check does cover. If a CSP is added later it needs `style-src 'self'
-'unsafe-inline'`, and it must be verified on a Vercel preview deployment — a
+'unsafe-inline'` and a `connect-src` that admits `API_BASE` (otherwise the
+pricing request is blocked and the page silently falls back to the constants),
+and it must be verified on a Vercel preview deployment — a
 plain local static server does not apply these headers, so the failure mode
 (an unstyled banner on the page whose selling point is the banner) is invisible
 locally.
@@ -68,21 +72,50 @@ in the repository.
 
 ## Changing prices
 
-Also one place, immediately below it in `app.js`:
+Prices and limits come from the API at runtime:
 
 ```js
-var PRICES      = { free: 0, starter: 9, business: 29 };   // EUR per month
-var SITE_LIMITS = { free: 1, starter: 1, business: 10, agency: null };
+var API_BASE = 'https://consent.ecomconsult.net';
 ```
 
-The pricing cards are rendered from these numbers, so a price appears **once**
-in the codebase rather than twice (RU and EN). The wording around a number —
-«за сайт / мес», «/ mo», «по договору» — lives in the `I18N` dictionary in the
-same file under `perSitePerMonth`, `perMonth` and `byAgreement`; the plan
-comparison rows are the `PLAN_ROWS` table, whose values are dictionary keys.
+`app.js` requests `GET {API_BASE}/v1/public/pricing` (SPEC-V1.4 §2) once at
+boot, with a **2-second timeout**. So the place to change a price is the
+dashboard's `#/admin/plans`, not this repository — the page picks it up within
+the endpoint's five-minute cache. Plans the admin marks non-public are absent
+from the response and so from the page.
 
-Keep these in step with `PLAN-V1.3.md` §1 and with `src/domain/plans.ts` on the
-server — this page is marketing copy, the server is the enforcement point.
+The constants immediately below `API_BASE` in `app.js` are the **fallback**,
+rendered whenever the API is unreachable, slow, or answers with something
+malformed:
+
+```js
+var PRICES      = { free: 0, starter: 9, business: 69 };   // EUR per month
+var SITE_LIMITS = { free: 1, starter: 1, business: 10, agency: null };
+var PRICE_UNITS = { starter: 'site_month', ... };
+var PLAN_LIMITS = { free: { scansManualPerDay: 1, journalRetentionDays: 30, ... }, ... };
+```
+
+Both sources are normalised into the same plan descriptors *before* anything is
+drawn, and validation is **all-or-nothing**: one malformed plan discards the
+whole response and the constants stay. That is what guarantees the section is
+never empty and never shows a mix of live and fallback numbers. The constants
+paint on the first frame; a good response replaces the block wholesale.
+
+Every word around a number lives in the `I18N` dictionary — `perSitePerMonth`,
+`perMonth`, `byAgreement`, the `scans*` and `log*` templates (`{n}` is
+substituted) and the `unitDay*` / `unitMonth*` plural forms, which Russian
+needs in three variants. The comparison rows are the `PLAN_ROWS` table, whose
+second element is a function from a descriptor to a string.
+
+One deliberate special case: the API sends `limits.sites: null` for Starter
+(per `src/domain/plans.ts`, the real ceiling is `orgs.paid_sites`, not the plan
+table). `sitesText()` therefore checks `priceUnit === 'site_month'` **before**
+treating `null` as "unlimited" — otherwise the card would advertise unlimited
+sites at a per-site price.
+
+Keep the fallback in step with `PLAN-V1.3.md` §1 and with `src/domain/plans.ts`
+on the server — this page is marketing copy, the server is the enforcement
+point.
 
 ## Re-syncing the vendored client
 

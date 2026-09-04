@@ -1,7 +1,8 @@
 /* ConsentKit public page — language switch, pricing render, live demo.
  *
- * No frameworks, no build step, no external requests: the page that argues for
- * privacy must not itself load a third-party font, script or beacon.
+ * No frameworks, no build step, and only our own API: the page that argues for
+ * privacy must not itself load a third-party font, script or beacon. Its one
+ * off-origin request is GET {API_BASE}/v1/public/pricing, for the prices.
  *
  * Load order matters. index.html loads vendor/ck-core.js, ck-locales.js and
  * ck-ui.js before this file, so ConsentKit.init() below runs before the UI's
@@ -19,6 +20,11 @@
   // pricing card's mailto: button is built from this and nothing else.
   var CONTACT_EMAIL = 'info@ecomconsult.net';
 
+  // The API this page reads prices from. The ONLY external request the page
+  // makes, and it is our own API — see PLAN_LIMITS below and loadPricing() for
+  // what happens when it is slow, down or answers with something malformed.
+  var API_BASE = 'https://consent.ecomconsult.net';
+
   // Monthly price in EUR. Rendered into both the RU and EN pricing tables,
   // so the number itself lives here once and never in the copy.
   var PRICES = { free: 0, starter: 9, business: 69 };
@@ -27,6 +33,22 @@
   var SITE_LIMITS = { free: 1, starter: 1, business: 10, agency: null };
 
   var CABINET_URL = 'https://app.ecomconsult.net';
+
+  // The remaining per-plan limits, in the shape GET /v1/public/pricing returns
+  // them (SPEC-V1.4 §2). Together with PRICES / SITE_LIMITS this is the
+  // fallback the page renders when the API cannot be reached — so these
+  // numbers live here as data rather than baked into the RU and EN sentences
+  // twice over, and one code path renders both sources.
+  var PLAN_ORDER = ['free', 'starter', 'business', 'agency'];
+
+  var PRICE_UNITS = { free: 'month', starter: 'site_month', business: 'month', agency: 'month' };
+
+  var PLAN_LIMITS = {
+    free:     { scansManualPerDay: 1,  scheduledScans: false, alerts: false, brandingOff: false, journalCsv: false, journalRetentionDays: 30 },
+    starter:  { scansManualPerDay: 5,  scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 365 },
+    business: { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 730 },
+    agency:   { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 1095 }
+  };
 
   /* ══════════════════════════════════════════════════════════════════
      i18n dictionary. One object per language; keys match data-i18n.
@@ -132,18 +154,28 @@
 
       sitesOne: '1',
       sitesOneEach: '1 (каждый отдельно)',
-      sitesTen: 'до 10',
+      sitesUpTo: 'до {n}',
       sitesUnlimited: 'без лимита',
       brandingRequired: 'обязательна',
       brandingOptional: 'отключается',
-      scansFree: '1 в день вручную, без расписания',
-      scansStarter: 'еженедельно + 5 в день вручную',
-      scansBusiness: 'еженедельно + 30 в день вручную',
-      scansAgency: 'как в Business',
-      logFree: '30 дней, без CSV',
-      logStarter: '12 месяцев, CSV',
-      logBusiness: '24 месяца, CSV',
-      logAgency: '36 месяцев, CSV',
+      // {n} manual scans a day, with or without the weekly schedule.
+      scansScheduled: 'еженедельно + {n} в день вручную',
+      scansManualOnly: '{n} в день вручную, без расписания',
+      unitScanOne: '{n}',
+      unitScanFew: '{n}',
+      unitScanMany: '{n}',
+      // Retention: days below a year, whole months above it. {n} is filled by
+      // plural(), so «1 месяц» / «24 месяца» / «36 месяцев» all come out right.
+      logDays: '{n}, без CSV',
+      logDaysCsv: '{n}, CSV',
+      logMonths: '{n}, без CSV',
+      logMonthsCsv: '{n}, CSV',
+      unitDayOne: '{n} день',
+      unitDayFew: '{n} дня',
+      unitDayMany: '{n} дней',
+      unitMonthOne: '{n} месяц',
+      unitMonthFew: '{n} месяца',
+      unitMonthMany: '{n} месяцев',
       yes: 'да',
       no: 'нет',
       langsAll: 'все 34',
@@ -283,18 +315,25 @@
 
       sitesOne: '1',
       sitesOneEach: '1 (each billed separately)',
-      sitesTen: 'up to 10',
+      sitesUpTo: 'up to {n}',
       sitesUnlimited: 'unlimited',
       brandingRequired: 'required',
       brandingOptional: 'can be turned off',
-      scansFree: '1 manual scan per day, no schedule',
-      scansStarter: 'weekly + 5 per day manually',
-      scansBusiness: 'weekly + 30 per day manually',
-      scansAgency: 'same as Business',
-      logFree: '30 days, no CSV',
-      logStarter: '12 months, CSV',
-      logBusiness: '24 months, CSV',
-      logAgency: '36 months, CSV',
+      scansScheduled: 'weekly + {n} per day manually',
+      scansManualOnly: '{n} per day, no schedule',
+      unitScanOne: '{n} manual scan',
+      unitScanFew: '{n} manual scans',
+      unitScanMany: '{n} manual scans',
+      logDays: '{n}, no CSV',
+      logDaysCsv: '{n}, CSV',
+      logMonths: '{n}, no CSV',
+      logMonthsCsv: '{n}, CSV',
+      unitDayOne: '{n} day',
+      unitDayFew: '{n} days',
+      unitDayMany: '{n} days',
+      unitMonthOne: '{n} month',
+      unitMonthFew: '{n} months',
+      unitMonthMany: '{n} months',
       yes: 'yes',
       no: 'no',
       langsAll: 'all 34',
@@ -377,66 +416,235 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
-     Pricing — built from PRICES / SITE_LIMITS, never from the copy
+     Pricing
+
+     Two sources, one renderer. GET /v1/public/pricing (SPEC-V1.4 §2) is the
+     truth when it answers in time; the constants above are the fallback when
+     it does not. Both are normalised into the same array of plan descriptors
+     BEFORE anything is drawn, so the section can never show a mix of the two
+     and can never be empty — the constants paint on the first frame and a
+     good response replaces the whole block at once.
+
+     Numbers come from the descriptor; every word around them comes from I18N.
      ══════════════════════════════════════════════════════════════════ */
 
-  function priceCell(plan) {
+  // Russian needs three forms and picks them off the last digit; English has
+  // only singular/plural, and applying the Slavic rule to it would produce
+  // "31 day" and "21 month" for numbers an admin can legitimately set.
+  function plural(n, base) {
+    if (lang !== 'ru') {
+      return t(base + (n === 1 ? 'One' : 'Many')).replace('{n}', String(n));
+    }
+    var abs = Math.abs(n) % 100;
+    var last = abs % 10;
+    var form;
+    if (abs > 10 && abs < 20) form = 'Many';
+    else if (last === 1) form = 'One';
+    else if (last >= 2 && last <= 4) form = 'Few';
+    else form = 'Many';
+    return t(base + form).replace('{n}', String(n));
+  }
+
+  function fill(key, n) {
+    return t(key).replace('{n}', String(n));
+  }
+
+  /* The descriptor a card is drawn from. `limits` is the payload shape. */
+  function planDescriptor(plan, priceEur, priceUnit, limits) {
+    return { plan: plan, priceEur: priceEur, priceUnit: priceUnit, limits: limits };
+  }
+
+  function fallbackPlans() {
+    return PLAN_ORDER.map(function (plan) {
+      var limits = PLAN_LIMITS[plan];
+      return planDescriptor(
+        plan,
+        // Agency is «по договору» — no number in the constants either.
+        plan === 'agency' ? null : PRICES[plan],
+        PRICE_UNITS[plan],
+        {
+          sites: SITE_LIMITS[plan],
+          scansManualPerDay: limits.scansManualPerDay,
+          scheduledScans: limits.scheduledScans,
+          alerts: limits.alerts,
+          brandingOff: limits.brandingOff,
+          journalCsv: limits.journalCsv,
+          journalRetentionDays: limits.journalRetentionDays
+        }
+      );
+    });
+  }
+
+  function isNum(v) { return typeof v === 'number' && isFinite(v); }
+  function isBool(v) { return typeof v === 'boolean'; }
+
+  /* All-or-nothing: one malformed plan discards the whole response, because a
+     per-plan fallback is exactly the mix of sources this must never show. */
+  function normalisePayload(data) {
+    if (!data || Object.prototype.toString.call(data.plans) !== '[object Array]') return null;
+
+    var byId = {};
+    for (var i = 0; i < data.plans.length; i++) {
+      var p = data.plans[i];
+      if (!p || typeof p !== 'object') return null;
+      // A plan the dictionary has no name, note or CTA for cannot be drawn
+      // without inventing copy, so it is skipped rather than guessed at.
+      if (PLAN_ORDER.indexOf(p.plan) === -1) continue;
+      if (p.public === false) continue;
+
+      var l = p.limits;
+      if (!l || typeof l !== 'object') return null;
+      if (!(p.priceEur === null || isNum(p.priceEur))) return null;
+      if (p.priceUnit !== 'month' && p.priceUnit !== 'site_month') return null;
+      if (!(l.sites === null || isNum(l.sites))) return null;
+      if (!isNum(l.scansManualPerDay) || !isNum(l.journalRetentionDays)) return null;
+      if (!isBool(l.scheduledScans) || !isBool(l.alerts) ||
+          !isBool(l.brandingOff) || !isBool(l.journalCsv)) return null;
+
+      byId[p.plan] = planDescriptor(p.plan, p.priceEur, p.priceUnit, {
+        sites: l.sites,
+        scansManualPerDay: l.scansManualPerDay,
+        scheduledScans: l.scheduledScans,
+        alerts: l.alerts,
+        brandingOff: l.brandingOff,
+        journalCsv: l.journalCsv,
+        journalRetentionDays: l.journalRetentionDays
+      });
+    }
+
+    // Canonical order, not the array's: the featured card and the column
+    // layout must not move because the API reordered its rows.
+    var out = PLAN_ORDER.filter(function (id) { return byId[id]; })
+      .map(function (id) { return byId[id]; });
+    return out.length ? out : null;
+  }
+
+  // What renderPricing() draws. Replaced wholesale, never patched per plan.
+  var plans = fallbackPlans();
+
+  function priceCell(d) {
     var box = el('p', 'plan-price');
-    if (plan === 'agency') {
+    if (d.priceEur === null) {
       box.appendChild(el('span', 'plan-price__agreement', t('byAgreement')));
       return box;
     }
-    var amount = el('span', 'plan-price__num', '€' + PRICES[plan]);
-    box.appendChild(amount);
-    var unit = plan === 'free' ? '' : (plan === 'starter' ? t('perSitePerMonth') : t('perMonth'));
-    if (unit) box.appendChild(el('span', 'plan-price__unit', unit));
+    box.appendChild(el('span', 'plan-price__num', '€' + d.priceEur));
+    // Free carries no unit: «€0 / мес» reads like a bill.
+    if (d.priceEur !== 0) {
+      box.appendChild(el('span', 'plan-price__unit',
+        d.priceUnit === 'site_month' ? t('perSitePerMonth') : t('perMonth')));
+    }
     return box;
   }
 
+  function sitesText(d) {
+    // Order matters. Starter is sold per site and the API sends sites: null
+    // for it (plans.ts: the real ceiling is orgs.paid_sites, not the table),
+    // so the per-site unit must be read BEFORE null is taken as "unlimited" —
+    // otherwise the card would promise unlimited sites at a per-site price.
+    if (d.priceUnit === 'site_month') return t('sitesOneEach');
+    if (d.limits.sites === null) return t('sitesUnlimited');
+    if (d.limits.sites === 1) return t('sitesOne');
+    return fill('sitesUpTo', d.limits.sites);
+  }
+
+  function scansText(d) {
+    var n = d.limits.scansManualPerDay;
+    // RU keeps the bare number («5 в день вручную»); EN needs the noun to
+    // agree, so the count goes through plural() in both and the dictionary
+    // decides whether a word is attached to it.
+    if (d.limits.scheduledScans) return fill('scansScheduled', n);
+    return t('scansManualOnly').replace('{n}', plural(n, 'unitScan'));
+  }
+
+  function logText(d) {
+    var days = d.limits.journalRetentionDays;
+    // Whole months once past a year, days below it — 365/730/1095 land on
+    // 12/24/36 exactly, and plural() picks the right form for each.
+    var months = days >= 365 ? Math.round(days / 365 * 12) : 0;
+    var amount = months ? plural(months, 'unitMonth') : plural(days, 'unitDay');
+    var key = months
+      ? (d.limits.journalCsv ? 'logMonthsCsv' : 'logMonths')
+      : (d.limits.journalCsv ? 'logDaysCsv' : 'logDays');
+    return t(key).replace('{n}', amount);
+  }
+
   var PLAN_ROWS = [
-    ['rowSites',    { free: 'sitesOne', starter: 'sitesOneEach', business: 'sitesTen', agency: 'sitesUnlimited' }],
-    ['rowBranding', { free: 'brandingRequired', starter: 'brandingOptional', business: 'brandingOptional', agency: 'brandingOptional' }],
-    ['rowScans',    { free: 'scansFree', starter: 'scansStarter', business: 'scansBusiness', agency: 'scansAgency' }],
-    ['rowLog',      { free: 'logFree', starter: 'logStarter', business: 'logBusiness', agency: 'logAgency' }],
-    ['rowAlerts',   { free: 'no', starter: 'yes', business: 'yes', agency: 'yes' }],
-    ['rowLangs',    { free: 'langsAll', starter: 'langsAll', business: 'langsAll', agency: 'langsAll' }],
-    ['rowSupport',  { free: 'supportFree', starter: 'supportStarter', business: 'supportBusiness', agency: 'supportAgency' }]
+    ['rowSites',    sitesText],
+    ['rowBranding', function (d) { return t(d.limits.brandingOff ? 'brandingOptional' : 'brandingRequired'); }],
+    ['rowScans',    scansText],
+    ['rowLog',      logText],
+    ['rowAlerts',   function (d) { return t(d.limits.alerts ? 'yes' : 'no'); }],
+    // Not in the payload — the same for every plan, so it stays dictionary-only.
+    ['rowLangs',    function () { return t('langsAll'); }],
+    ['rowSupport',  function (d) { return t('support' + cap(d.plan)); }]
   ];
+
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   function renderPricing() {
     var host = $('#plans');
     if (!host) return;
     host.textContent = '';
 
-    ['free', 'starter', 'business', 'agency'].forEach(function (plan) {
+    plans.forEach(function (d) {
+      var plan = d.plan;
       var card = el('article', 'plan' + (plan === 'business' ? ' plan--featured' : ''));
 
       if (plan === 'business') {
         card.appendChild(el('p', 'plan-flag', t('recommended')));
       }
-      card.appendChild(el('h3', 'plan-name', t('plan' + plan.charAt(0).toUpperCase() + plan.slice(1))));
-      card.appendChild(priceCell(plan));
-      card.appendChild(el('p', 'plan-note', t('plan' + plan.charAt(0).toUpperCase() + plan.slice(1) + 'Note')));
+      card.appendChild(el('h3', 'plan-name', t('plan' + cap(plan))));
+      card.appendChild(priceCell(d));
+      card.appendChild(el('p', 'plan-note', t('plan' + cap(plan) + 'Note')));
 
       var dl = el('dl', 'plan-rows');
       PLAN_ROWS.forEach(function (row) {
         dl.appendChild(el('dt', null, t(row[0])));
-        dl.appendChild(el('dd', null, t(row[1][plan])));
+        dl.appendChild(el('dd', null, row[1](d)));
       });
       card.appendChild(dl);
 
       var a = el('a', 'btn btn--sm ' + (plan === 'business' ? 'btn--primary' : 'btn--ghost'));
-      if (plan === 'agency') {
+      if (d.priceEur === null) {
         a.href = 'mailto:' + CONTACT_EMAIL;
         a.textContent = t('planCtaAgency');
       } else {
         a.href = CABINET_URL;
-        a.textContent = plan === 'free' ? t('planCtaFree') : t('planCtaPaid');
+        a.textContent = d.priceEur === 0 ? t('planCtaFree') : t('planCtaPaid');
       }
       card.appendChild(a);
 
       host.appendChild(card);
     });
+  }
+
+  /* The page's only external request, and it is our own API. Two seconds, no
+     custom headers (so no preflight) and no cookies; any failure, timeout or
+     malformed body leaves the constants on screen. */
+  function loadPricing() {
+    if (typeof fetch !== 'function' || typeof AbortController !== 'function') return;
+
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 2000);
+
+    fetch(API_BASE + '/v1/public/pricing', {
+      credentials: 'omit',
+      signal: ctl.signal
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        var next = normalisePayload(data);
+        if (!next) return;
+        plans = next;
+        // renderPricing() alone, not applyLang(): re-running the latter would
+        // reset the demo the visitor may already be playing with. t() reads
+        // the live language, so a late response renders in whatever language
+        // is on screen by then.
+        renderPricing();
+      })
+      .catch(function () { /* offline, timed out, blocked: keep the constants */ })
+      .then(function () { clearTimeout(timer); });
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -718,4 +926,9 @@
   if (CK) { try { CK.init(demoConfig()); } catch (e) { /* noop */ } }
 
   applyLang();
+
+  // After the first paint, and once — not from applyLang(), which would
+  // re-request on every language switch. The constants are already on screen,
+  // so this only ever replaces them with fresher numbers.
+  loadPricing();
 })();
