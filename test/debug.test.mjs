@@ -304,3 +304,63 @@ test('ConsentKit._blocked() exists and returns a list', () => {
     }
   }
 });
+
+/* --------------------------------------------------------- panel language */
+
+/* The panel is RU/EN. The banner's own resolved language wins so the person
+   debugging the site reads the panel in the language the site is configured
+   for; navigator.language is the fallback; English is the floor. */
+
+const pickLang = load().pickLang;
+
+test('the configured banner language wins over the browser', () => {
+  assert.equal(pickLang('ru', 'en-US'), 'ru');
+  assert.equal(pickLang('en', 'ru-RU'), 'en');
+});
+
+test("language 'auto' falls through to navigator.language", () => {
+  assert.equal(pickLang('auto', 'ru-RU'), 'ru');
+  assert.equal(pickLang('auto', 'en-GB'), 'en');
+  assert.equal(pickLang('', 'ru'), 'ru');
+});
+
+test('any ru-* variant resolves to ru', () => {
+  for (const l of ['ru', 'ru-RU', 'RU', 'ru-BY', 'ru-KZ']) {
+    assert.equal(pickLang(l, ''), 'ru', `${l} did not resolve to ru`);
+  }
+});
+
+test('everything else, and nothing at all, resolves to en', () => {
+  for (const l of ['de', 'fr', 'pl', 'uk', 'zh-CN', '', null, undefined]) {
+    assert.equal(pickLang(l, ''), 'en', `${JSON.stringify(l)} did not resolve to en`);
+  }
+});
+
+test('ru and en dictionaries cover exactly the same keys', () => {
+  // A missing key renders the literal string "undefined" in the panel.
+  const { ru, en } = load().strings;
+  assert.deepEqual(Object.keys(ru).sort(), Object.keys(en).sort());
+  assert.deepEqual(Object.keys(ru.status).sort(), Object.keys(en.status).sort());
+  for (const k of Object.keys(ru)) {
+    assert.ok(ru[k], `ru.${k} is empty`);
+    assert.ok(en[k], `en.${k} is empty`);
+  }
+});
+
+test('the status dictionary covers every status buildReport can emit', () => {
+  const { ru, en } = load().strings;
+  for (const s of ['none', 'accepted', 'rejected', 'partial']) {
+    assert.ok(ru.status[s], `ru.status.${s} is missing`);
+    assert.ok(en.status[s], `en.status.${s} is missing`);
+  }
+});
+
+test('the JSON report stays language-neutral', () => {
+  // The report is pasted into support tickets read by people who may not share
+  // the visitor's language: its keys and its note must not follow the panel.
+  const api = load();
+  const report = api.buildReport({ version: '0.3.5', state: { decided: true, categories: {} } });
+  assert.match(report.note, /^Requests that left before ConsentKit loaded/);
+  assert.equal(report.consent.status, 'rejected', 'the report must carry the neutral status key');
+  assert.ok(!/[А-Яа-яЁё]/.test(JSON.stringify(report)), 'the JSON report contains Russian text');
+});

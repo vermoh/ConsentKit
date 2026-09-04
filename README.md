@@ -354,21 +354,21 @@ this roughly three- to fourfold. Every block includes the attribution line;
 
 | Block | Languages | Bytes |
 |---|---|---|
-| `ready/en-bar.txt` | en | 136,364 |
-| `ready/ru-bar.txt` | ru, en | 136,427 |
-| `ready/ru-box.txt` | ru, en | 136,442 |
-| `ready/ru-box-right.txt` | ru, en | 136,451 |
-| `ready/ru-modal.txt` | ru, en | 136,435 |
-| `ready/eu-bar.txt` | 34 languages | 186,639 |
+| `ready/en-bar.txt` | en | 111,664 |
+| `ready/ru-bar.txt` | ru, ro, en | 113,285 |
+| `ready/ru-box.txt` | ru, ro, en | 113,300 |
+| `ready/ru-box-right.txt` | ru, ro, en | 113,309 |
+| `ready/ru-modal.txt` | ru, ro, en | 113,293 |
+| `ready/eu-bar.txt` | 34 languages | 161,939 |
 
 Size is driven almost entirely by the bundled languages: `en` and `ru` are
 built into the UI and cost nothing extra, while layout, position, theme and
 accent change only a few bytes of config.
 
-Every block since 0.3.5 also carries the ~29 KB debug panel (`src/ck-debug.js`),
-which is why the numbers above are larger than in 0.3.4. It is off unless the
-page is opened with `?ck_debug=1` — no DOM, no observers, no requests — so an
-ordinary visitor pays for its bytes and nothing else.
+The debug panel is **not** in these numbers. Blocks carry a ~5.1 KB loader
+(`src/ck-debug-loader.js`) which fetches the 33 KB panel only when someone opens
+the page with `?ck_debug=1` — see [Debug mode](#debug-mode). An ordinary visitor
+downloads the loader and nothing more.
 
 ## Debug mode
 
@@ -398,16 +398,47 @@ requests that left **before** ck-core.js parsed — a plain `<script src>` writt
 into the HTML — show up there but could not have been blocked. Mark those tags
 up manually.
 
-**Turn it off** with `?ck_debug=0`, or the × in the panel's header.
+**Turn it off** with `?ck_debug=0`, or the × in the panel's header. The loader
+owns the stored flag, so `?ck_debug=0` clears it whether or not the panel is on
+the page.
 
 **Privacy.** Nothing is sent anywhere: the panel is local to that browser and
 that page. It never renders cookie *values* (names only) and never shows URL
 query strings (host and path only), so the copied report is safe to paste into
-a support ticket. Off by default — with no flag set, `ck-debug.js` creates no
-DOM, installs no observers and registers no listeners.
+a support ticket.
 
-`ck-debug.js` ships in `ready/*.txt`, in the WordPress plugin and in the npm
-package; load it after `ck-ui.js` (and after `ck-saas.js` if you use it):
+### How the panel gets onto the page
+
+The panel is ~33 KB, and on any given page exactly one person will ever open
+it. So `ready/*.txt` and the WordPress plugin ship **`src/ck-debug-loader.js`**
+(~5.1 KB) instead, and the loader fetches the panel on demand. With no flag set
+the loader creates no DOM, installs no observers and makes **no network
+request** — it costs its own bytes and nothing else.
+
+When the panel *is* activated, the loader resolves its URL in this order, first
+match wins:
+
+1. **`window.ConsentKitDebugUrl`**, if you set it — a self-hosted copy, an
+   internal mirror, or a pinned build. Set it before the loader runs.
+2. **`<API_BASE>/client/ck-debug.js`**, when `ck-saas.js` is on the page with a
+   site id — `API_BASE` is that loader's `data-ck-api` (its `ConsentKit._saas.api`).
+   The panel then comes from the same origin as the config, so a locked-down CSP
+   needs no extra host. **A SaaS deployment is expected to serve the panel at
+   that path**; if yours does not, set `window.ConsentKitDebugUrl` instead.
+3. **jsDelivr**, pinned to the running core version:
+   `https://cdn.jsdelivr.net/npm/@ecomconsult/consentkit@<version>/src/ck-debug.js`.
+   The version comes from `ConsentKit.version`, so the panel can never be newer
+   or older than the client it is reporting on. This path is published because
+   `package.json` lists `src` in `files`.
+
+The script is injected `async`, and neither jsDelivr nor a ConsentKit API host
+is in the blocking engine's tracker list, so the panel loads even while the
+visitor has yet to decide.
+
+### Loading the panel directly
+
+If you host the files yourself and would rather have the panel inline, load it
+after `ck-ui.js` (and after `ck-saas.js` if you use it) and skip the loader:
 
 ```html
 <script src="/js/ck-core.js"></script>
@@ -416,7 +447,10 @@ package; load it after `ck-ui.js` (and after `ck-saas.js` if you use it):
 <script src="/js/ck-debug.js"></script>
 ```
 
-Omit that last line if you do not want the ~29 KB in your page at all.
+`ck-debug.js` is self-contained: it repeats the loader's activation check, so it
+works with or without the loader. Do **not** add it to a page that already ships
+the loader (an inline block from `ready/`, or the WordPress plugin) — the loader
+fetches the panel itself, and a second copy would mount a second panel.
 
 From npm it is a deliberate opt-in — `@ecomconsult/consentkit` does not pull
 it in for you. Import it yourself, after the UI:
@@ -426,7 +460,10 @@ import '@ecomconsult/consentkit';           // core + locales + UI
 import '@ecomconsult/consentkit/src/ck-debug.js';
 ```
 
-The panel's own text is Russian; the report it copies is language-neutral JSON.
+**Language.** The panel is Russian or English: it follows the banner's
+configured `language`, falls back to `navigator.language` (`ru-*` → Russian),
+and otherwise renders English. The JSON report it copies is language-neutral
+whichever way the panel reads.
 
 ## TypeScript
 

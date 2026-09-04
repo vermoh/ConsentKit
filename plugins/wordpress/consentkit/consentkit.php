@@ -789,8 +789,10 @@ function consentkit_asset_url( $filename ) {
  * The tags are printed in contract order core -> locales -> ui -> debug with no
  * async/defer: document-order, blocking execution is exactly what guarantees
  * both the ordering and the parse-time activation of the blocking engine.
- * ck-debug.js is last and inert: it builds nothing unless the page is opened
- * with ?ck_debug=1, so a normal visitor pays only for its bytes.
+ * ck-debug-loader.js is last and inert: about 1.5 KB that does nothing at all
+ * unless the page is opened with ?ck_debug=1. Only then does it fetch the
+ * ~30 KB panel (src/ck-debug.js) from the CDN, pinned to the running core
+ * version — so an ordinary visitor never downloads the panel.
  *
  * @return void
  */
@@ -799,7 +801,7 @@ function consentkit_print_scripts() {
 		return;
 	}
 
-	$files = array( 'ck-core.js', 'ck-locales.js', 'ck-ui.js', 'ck-debug.js' );
+	$files = array( 'ck-core.js', 'ck-locales.js', 'ck-ui.js', 'ck-debug-loader.js' );
 
 	foreach ( $files as $file ) {
 		printf(

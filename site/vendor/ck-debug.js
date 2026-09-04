@@ -153,6 +153,94 @@
   var NOTE_EN = 'Requests that left before ConsentKit loaded (a plain <script src> ' +
     'written into the HTML) show up here but cannot be blocked — mark such tags up manually.';
 
+  // ---------------------------------------------------------------------------
+  // Panel language (pure; the JSON report stays language-neutral either way)
+  // ---------------------------------------------------------------------------
+  // The panel is read by whoever is debugging the site, so it follows the same
+  // language the banner resolved for this visitor rather than a build flag.
+  // Only ru and en exist: this is an internal diagnostic surface, and a
+  // half-translated one is worse than an English one.
+  var STRINGS = {
+    ru: {
+      regionLabel: 'ConsentKit — режим отладки',
+      collapse: 'Свернуть',
+      expand: 'Развернуть',
+      closeLabel: 'Закрыть и выключить режим отладки',
+      secClient: 'Клиент',
+      version: 'версия',
+      source: 'источник',
+      srcSaas: 'SaaS',
+      srcInline: 'инлайн',
+      secConsent: 'Согласие',
+      decidedAt: 'решение',
+      method: 'способ',
+      ttl: 'срок cookie',
+      days: ' дн.',
+      status: { none: 'нет решения', accepted: 'принято', rejected: 'отклонено', partial: 'частично' },
+      secBlocked: 'Заблокировано до согласия',
+      noBlocked: 'ничего не перехвачено',
+      markup: ' (разметка)',
+      secRequests: 'Запросы к трекерам',
+      noRequests: 'запросов к известным трекерам не было',
+      after: 'после согласия',
+      before: 'до согласия',
+      ms: ' мс',
+      note: NOTE_RU,
+      secConsentMode: 'Consent Mode / dataLayer',
+      noEvents: 'событий не было',
+      secActions: 'Действия',
+      reset: 'Сбросить согласие',
+      showPrefs: 'Показать настройки',
+      copy: 'Скопировать отчёт',
+      copied: 'Скопировано',
+      copyFailed: 'Не вышло',
+      footer: 'Панель видна только в этом браузере. Выключить: добавьте ?ck_debug=0 к адресу.'
+    },
+    en: {
+      regionLabel: 'ConsentKit — debug mode',
+      collapse: 'Collapse',
+      expand: 'Expand',
+      closeLabel: 'Close and turn debug mode off',
+      secClient: 'Client',
+      version: 'version',
+      source: 'source',
+      srcSaas: 'SaaS',
+      srcInline: 'inline',
+      secConsent: 'Consent',
+      decidedAt: 'decided',
+      method: 'method',
+      ttl: 'cookie lifetime',
+      days: ' days',
+      status: { none: 'no decision', accepted: 'accepted', rejected: 'rejected', partial: 'partial' },
+      secBlocked: 'Blocked until consent',
+      noBlocked: 'nothing intercepted',
+      markup: ' (markup)',
+      secRequests: 'Tracker requests',
+      noRequests: 'no requests to known trackers',
+      after: 'after consent',
+      before: 'before consent',
+      ms: ' ms',
+      note: NOTE_EN,
+      secConsentMode: 'Consent Mode / dataLayer',
+      noEvents: 'no events',
+      secActions: 'Actions',
+      reset: 'Reset consent',
+      showPrefs: 'Show preferences',
+      copy: 'Copy report',
+      copied: 'Copied',
+      copyFailed: 'Failed',
+      footer: 'This panel is visible in this browser only. To turn it off, add ?ck_debug=0 to the URL.'
+    }
+  };
+
+  // banner language (ConsentKit config) -> navigator.language -> en.
+  // `cfgLang` is ConsentKit.config.language, which may be 'auto'.
+  function pickLang(cfgLang, navLang) {
+    var raw = String(cfgLang || '').toLowerCase();
+    if (!raw || raw === 'auto') { raw = String(navLang || '').toLowerCase(); }
+    return raw.slice(0, 2) === 'ru' ? 'ru' : 'en';
+  }
+
   // Testable surface. Published before the activation check so the inactive
   // path is testable too; it is not a public API.
   var API = {
@@ -160,6 +248,8 @@
     buildReport: buildReport,
     buildRequests: buildRequests,
     stripUrl: stripUrl,
+    pickLang: pickLang,
+    strings: STRINGS,
     active: false
   };
   try {
@@ -444,18 +534,31 @@
 
   function tag(text, cls) { return el('span', { class: 't' + (cls ? ' ' + cls : '') }, text); }
 
-  var STATUS_RU = { none: 'нет решения', accepted: 'принято', rejected: 'отклонено', partial: 'частично' };
+  // Resolved lazily, not at parse time: this file runs before ConsentKit.init()
+  // has merged the site's config, so asking for the language now would always
+  // read the built-in default. Re-resolved on every render so a page that
+  // switches language at runtime switches the panel too.
+  var T = STRINGS.en;
+  function refreshLang() {
+    var nav = global.navigator;
+    T = STRINGS[pickLang(
+      (CK && CK.config && CK.config.language) || '',
+      (nav && (nav.language || nav.userLanguage)) || ''
+    )] || STRINGS.en;
+    return T;
+  }
 
   function render() {
     if (!body) { return; }
+    refreshLang();
     var r = buildReport(reportInput());
     body.textContent = '';
 
     // 1. Client
-    var s1 = section('Клиент');
+    var s1 = section(T.secClient);
     s1.appendChild(defs([
-      ['версия', r.client.version],
-      ['источник', r.client.source === 'saas' ? 'SaaS' : 'инлайн'],
+      [T.version, r.client.version],
+      [T.source, r.client.source === 'saas' ? T.srcSaas : T.srcInline],
       ['siteId', r.client.siteId],
       ['policyVersion', r.client.policyVersion],
       ['ETag', r.client.etag]
@@ -463,9 +566,9 @@
     body.appendChild(s1);
 
     // 2. Consent
-    var s2 = section('Согласие');
+    var s2 = section(T.secConsent);
     var line = el('div');
-    line.appendChild(tag(STATUS_RU[r.consent.status] || r.consent.status,
+    line.appendChild(tag(T.status[r.consent.status] || r.consent.status,
       r.consent.status === 'accepted' ? 'on' : r.consent.status === 'rejected' ? 'off' : ''));
     s2.appendChild(line);
     var cl = doc.createElement('div');
@@ -475,16 +578,16 @@
     });
     s2.appendChild(cl);
     s2.appendChild(defs([
-      ['решение', r.consent.decidedAt],
-      ['способ', r.consent.method],
-      ['срок cookie', r.consent.ttlDays == null ? null : r.consent.ttlDays + ' дн.']
+      [T.decidedAt, r.consent.decidedAt],
+      [T.method, r.consent.method],
+      [T.ttl, r.consent.ttlDays == null ? null : r.consent.ttlDays + T.days]
     ]));
     body.appendChild(s2);
 
     // 3. Blocked until consent
-    var s3 = section('Заблокировано до согласия (' + r.blocked.length + ')');
+    var s3 = section(T.secBlocked + ' (' + r.blocked.length + ')');
     if (!r.blocked.length) {
-      s3.appendChild(el('div', { class: 'mut' }, 'ничего не перехвачено'));
+      s3.appendChild(el('div', { class: 'mut' }, T.noBlocked));
     } else {
       var u3 = doc.createElement('ul');
       r.blocked.forEach(function (b) {
@@ -492,7 +595,7 @@
         li.appendChild(tag(b.kind));
         li.appendChild(tag(b.category || '?'));
         li.appendChild(doc.createTextNode(b.host + b.path +
-          (b.origin === 'markup' ? ' (разметка)' : '')));
+          (b.origin === 'markup' ? T.markup : '')));
         u3.appendChild(li);
       });
       s3.appendChild(u3);
@@ -500,34 +603,34 @@
     body.appendChild(s3);
 
     // 4. Tracker requests
-    var s4 = section('Запросы к трекерам (' + r.requests.length + ')');
+    var s4 = section(T.secRequests + ' (' + r.requests.length + ')');
     if (!r.requests.length) {
-      s4.appendChild(el('div', { class: 'mut' }, 'запросов к известным трекерам не было'));
+      s4.appendChild(el('div', { class: 'mut' }, T.noRequests));
     } else {
       var u4 = doc.createElement('ul');
       r.requests.forEach(function (q) {
         var li = doc.createElement('li');
-        li.appendChild(tag(q.when === 'after' ? 'после согласия' : 'до согласия',
+        li.appendChild(tag(q.when === 'after' ? T.after : T.before,
           q.when === 'after' ? 'on' : 'off'));
         li.appendChild(tag(q.category));
-        li.appendChild(doc.createTextNode(q.host + q.path + ' · ' + q.at + ' мс' +
+        li.appendChild(doc.createTextNode(q.host + q.path + ' · ' + q.at + T.ms +
           (q.count > 1 ? ' ×' + q.count : '')));
         u4.appendChild(li);
       });
       s4.appendChild(u4);
     }
-    s4.appendChild(el('p', { class: 'note' }, NOTE_RU));
+    s4.appendChild(el('p', { class: 'note' }, T.note));
     body.appendChild(s4);
 
     // 5. Consent Mode
-    var s5 = section('Consent Mode / dataLayer (' + r.consentMode.length + ')');
+    var s5 = section(T.secConsentMode + ' (' + r.consentMode.length + ')');
     if (!r.consentMode.length) {
-      s5.appendChild(el('div', { class: 'mut' }, 'событий не было'));
+      s5.appendChild(el('div', { class: 'mut' }, T.noEvents));
     } else {
       var u5 = doc.createElement('ul');
       r.consentMode.slice().reverse().forEach(function (c) {
         var li = doc.createElement('li');
-        li.appendChild(tag(c.at + ' мс'));
+        li.appendChild(tag(c.at + T.ms));
         var txt = c.type;
         if (c.signals) {
           var bits = [];
@@ -546,18 +649,17 @@
     body.appendChild(s5);
 
     // 6. Buttons
-    var s6 = section('Действия');
+    var s6 = section(T.secActions);
     var row = el('div', { class: 'row' });
-    var bReset = el('button', { type: 'button' }, 'Сбросить согласие');
+    var bReset = el('button', { type: 'button' }, T.reset);
     bReset.addEventListener('click', resetConsent);
-    var bShow = el('button', { type: 'button' }, 'Показать настройки');
+    var bShow = el('button', { type: 'button' }, T.showPrefs);
     bShow.addEventListener('click', showBanner);
-    var bCopy = el('button', { type: 'button' }, 'Скопировать отчёт');
+    var bCopy = el('button', { type: 'button' }, T.copy);
     bCopy.addEventListener('click', function () { copyReport(bCopy); });
     row.appendChild(bReset); row.appendChild(bShow); row.appendChild(bCopy);
     s6.appendChild(row);
-    s6.appendChild(el('p', { class: 'note' },
-      'Панель видна только в этом браузере. Выключить: добавьте ?ck_debug=0 к адресу.'));
+    s6.appendChild(el('p', { class: 'note' }, T.footer));
     body.appendChild(s6);
   }
 
@@ -604,8 +706,8 @@
     try { text = JSON.stringify(buildReport(reportInput()), null, 2); } catch (e) { text = '{}'; }
     var done = function (ok) {
       try {
-        btn.textContent = ok ? 'Скопировано' : 'Не вышло';
-        global.setTimeout(function () { btn.textContent = 'Скопировать отчёт'; }, 1500);
+        btn.textContent = ok ? T.copied : T.copyFailed;
+        global.setTimeout(function () { btn.textContent = T.copy; }, 1500);
       } catch (e2) { /* noop */ }
     };
     try {
@@ -660,6 +762,10 @@
 
   function mount() {
     if (host || !doc.body) { return; }
+    // A page can carry the loader (inline block) AND a manual <script> tag for
+    // the panel: the second copy must not mount a second panel.
+    if (doc.querySelector('ck-debug')) { return; }
+    refreshLang();
     host = doc.createElement('ck-debug');
     host.setAttribute('aria-live', 'off');
     root = host.attachShadow ? host.attachShadow({ mode: 'open' }) : null;
@@ -669,22 +775,22 @@
     style.textContent = CSS;
     root.appendChild(style);
 
-    var wrap = el('div', { class: 'w', role: 'region', 'aria-label': 'ConsentKit — режим отладки' });
+    var wrap = el('div', { class: 'w', role: 'region', 'aria-label': T.regionLabel });
     var head = el('div', { class: 'hd' });
     head.appendChild(el('b', null, 'ConsentKit debug'));
     head.appendChild(el('span', { class: 'sp' }));
 
-    toggleBtn = el('button', { type: 'button', 'aria-expanded': 'true' }, 'Свернуть');
+    toggleBtn = el('button', { type: 'button', 'aria-expanded': 'true' }, T.collapse);
     toggleBtn.addEventListener('click', function () {
       collapsed = !collapsed;
       body.hidden = collapsed;
-      toggleBtn.textContent = collapsed ? 'Развернуть' : 'Свернуть';
+      toggleBtn.textContent = collapsed ? T.expand : T.collapse;
       toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
       if (!collapsed) { schedule(); }
     });
     head.appendChild(toggleBtn);
 
-    var closeBtn = el('button', { type: 'button', 'aria-label': 'Закрыть и выключить режим отладки' }, '×');
+    var closeBtn = el('button', { type: 'button', 'aria-label': T.closeLabel }, '×');
     closeBtn.addEventListener('click', function () {
       lsDel(LS_KEY);
       try { host.parentNode.removeChild(host); } catch (e) { /* noop */ }

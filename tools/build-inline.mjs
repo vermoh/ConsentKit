@@ -239,10 +239,12 @@ function build(flags) {
   const coreSrc = readSource('ck-core.js');
   const uiSrc = readSource('ck-ui.js');
   const localeSrc = readSource('ck-locales.js');
-  // Opt-in debug panel: inert unless the visitor opens the page with
-  // ?ck_debug=1 (see README «Debug mode»). It ships in the block so the site
-  // owner can inspect a live page without editing the block.
-  const debugSrc = readSource('ck-debug.js');
+  // Opt-in debug panel: the block carries only the loader (~1.5 КБ), not the
+  // ~30 КБ panel. Without ?ck_debug=1 the loader does nothing at all — no DOM,
+  // no request. When the site owner does ask for it, the loader pulls
+  // src/ck-debug.js from the CDN pinned to this exact core version.
+  // See tools/README.md «Отладка» for the full resolution order.
+  const debugSrc = readSource('ck-debug-loader.js');
 
   const pack = loadLocalePack(localeSrc);
   const available = Object.keys(pack).sort();
@@ -400,7 +402,9 @@ function build(flags) {
   pieces.push(uiSrc);
 
   // After the UI (the panel measures the banner) and before init(), so the
-  // panel's ck:init listener is attached when init() fires.
+  // panel's ck:init listener is attached when init() fires. The loader reads
+  // ConsentKit.version to pin the panel it fetches, so it must come after the
+  // core.
   pieces.push(debugSrc);
 
   // Safety net: init() is called once the DOM is ready, regardless of where the
@@ -444,6 +448,7 @@ function build(flags) {
       coreBytes: Buffer.byteLength(coreSrc, 'utf8'),
       uiBytes: Buffer.byteLength(uiSrc, 'utf8'),
       debugBytes: Buffer.byteLength(debugSrc, 'utf8'),
+      debugPanelBytes: Buffer.byteLength(readSource('ck-debug.js'), 'utf8'),
       localeBytes,
       totalBytes: Buffer.byteLength(html, 'utf8')
     }
@@ -491,7 +496,7 @@ function main() {
     `  ядро          ${kb(stats.coreBytes)}`,
     `  локали        ${stats.localeBytes === 0 ? '— (не нужны)' : kb(stats.localeBytes)}`,
     `  интерфейс     ${kb(stats.uiBytes)}`,
-    `  отладка       ${kb(stats.debugBytes)} (панель ?ck_debug=1, выключена по умолчанию)`,
+    `  отладка       ${kb(stats.debugBytes)} (загрузчик; сама панель ${kb(stats.debugPanelBytes)} грузится с CDN только по ?ck_debug=1)`,
     `  ИТОГО         ${kb(stats.totalBytes)}${target ? ' → ' + target : ' → stdout'}`,
     '',
     '  Вставьте содержимое файла целиком в <head> сайта, как можно выше.',
