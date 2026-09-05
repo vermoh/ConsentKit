@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.4
+Stable tag: 0.5.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,9 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.5 =
+* Тексты баннера и окна настроек переписаны простым языком (ru, ro, en)
 
 = 0.5.4 =
 * База: Google Maps — функциональные; сервисы платформы Tilda (feeds/geo/members.tildaapi.one, tildacdn.one) и fonts.google.com — инфраструктура; пинги Google Ads (/pagead/1p-user-list, /ads/ga-audiences) — маркетинг

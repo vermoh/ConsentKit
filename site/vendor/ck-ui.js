@@ -12,82 +12,82 @@
 
   var DICT = {
     en: {
-      bannerTitle: 'We use cookies',
-      bannerText: 'Necessary cookies keep the site working. Everything else — analytics, marketing, extra features — runs only if you allow it. You can change your mind at any time.',
+      bannerTitle: 'Cookies on this site',
+      bannerText: 'Necessary cookies keep the site working. The rest are used only if you allow them. You can change your choice at any time.',
       more: 'Learn more',
       acceptAll: 'Accept all',
       rejectAll: 'Reject all',
       customize: 'Customize',
       bannerLabel: 'Cookie consent',
       panelTitle: 'Cookie settings',
-      panelIntro: 'Choose which cookies you allow. Nothing optional is on until you turn it on.',
+      panelIntro: 'Choose what to allow. By default only the necessary ones are on.',
       save: 'Save choices',
       close: 'Close',
       alwaysOn: 'always on',
-      cookiesIn: 'Cookies in this group',
+      cookiesIn: 'Which cookies',
       noCookies: 'No cookies declared for this group.',
       colName: 'Name',
-      colVendor: 'Provider',
-      colPurpose: 'Purpose',
+      colVendor: 'Who sets it',
+      colPurpose: 'What for',
       colExpiry: 'Expires',
       floating: 'Cookie settings',
       poweredBy: 'Powered by ConsentKit',
       cat: {
         necessary: {
           title: 'Necessary',
-          desc: 'Needed for the site to work — signing in, security, remembering your consent. They cannot be turned off.'
+          desc: 'Needed for the site to work: signing in, security, remembering your choice. They cannot be turned off.'
         },
         functional: {
           title: 'Functional',
-          desc: 'Remember your preferences, such as language or chat, so you do not set them up again.'
+          desc: 'Remember your choices: language, basket, chat.'
         },
         analytics: {
           title: 'Analytics',
-          desc: 'Help us see which pages people use, so we can fix what is confusing. Numbers only, no names.'
+          desc: 'Help us understand what works well on the site and what does not.'
         },
         marketing: {
           title: 'Marketing',
-          desc: 'Let us show you ads on other sites and measure whether they were any use.'
+          desc: 'Match ads to your interests on other sites.'
         }
       }
     },
     ru: {
-      bannerTitle: 'Мы используем cookie',
-      bannerText: 'Необходимые cookie нужны, чтобы сайт работал. Всё остальное — аналитика, маркетинг, дополнительные удобства — включается только с вашего согласия. Решение можно изменить в любой момент.',
+      bannerTitle: 'Cookie на этом сайте',
+      bannerText: 'Необходимые cookie нужны, чтобы сайт работал. Остальные включаются только с вашего согласия. Решение можно изменить в любой момент.',
       more: 'Подробнее',
       acceptAll: 'Принять всё',
       rejectAll: 'Отклонить всё',
       customize: 'Настроить',
       bannerLabel: 'Согласие на cookie',
       panelTitle: 'Настройки cookie',
-      panelIntro: 'Выберите, какие cookie вы разрешаете. Ничего необязательного не включено, пока вы сами это не сделаете.',
+      panelIntro: 'Выберите, что разрешить. По умолчанию включено только необходимое.',
       save: 'Сохранить выбор',
       close: 'Закрыть',
       alwaysOn: 'всегда активны',
-      cookiesIn: 'Cookie в этой группе',
+      cookiesIn: 'Какие cookie',
       noCookies: 'Для этой группы cookie не заявлены.',
-      colName: 'Имя',
-      colVendor: 'Поставщик',
-      colPurpose: 'Цель',
+      colName: 'Название',
+      colVendor: 'Кто ставит',
+      colPurpose: 'Зачем',
       colExpiry: 'Срок',
       floating: 'Настройки cookie',
       poweredBy: 'Работает на ConsentKit',
       cat: {
         necessary: {
           title: 'Необходимые',
-          desc: 'Без них сайт не работает: вход, безопасность, память о вашем выборе. Отключить нельзя.'
+          desc: 'Нужны, чтобы сайт работал: вход, безопасность, память о вашем выборе. Отключить нельзя.'
         },
         functional: {
           title: 'Функциональные',
-          desc: 'Запоминают ваши настройки — например язык или чат, — чтобы вы не задавали их заново.'
+          desc: 'Запоминают ваш выбор: язык, корзину, чат.'
         },
         analytics: {
           title: 'Аналитика',
-          desc: 'Показывают нам, какими страницами вы пользуетесь, чтобы мы исправили неудобное. Только цифры, без имён.'
+          desc: 'Помогают нам понять, что на сайте удобно, а что нет.'
         },
         marketing: {
           title: 'Маркетинг',
-          desc: 'Позволяют показывать вам рекламу на других сайтах и понимать, была ли от неё польза.'
+          desc: 'Подбирают рекламу под ваши интересы на других сайтах.'
         }
       }
     }

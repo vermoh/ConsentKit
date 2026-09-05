@@ -553,30 +553,30 @@
   };
 
   L.ro = {
-    bannerTitle: 'Folosim cookie-uri',
-    bannerText: 'Cookie-urile necesare mențin site-ul în funcțiune. Restul — analiză, marketing, funcții suplimentare — pornește doar dacă permiteți. Vă puteți răzgândi oricând.',
+    bannerTitle: 'Cookie-uri pe acest site',
+    bannerText: 'Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră. Puteți schimba decizia oricând.',
     more: 'Aflați mai multe',
     acceptAll: 'Acceptă tot',
     rejectAll: 'Respinge tot',
     customize: 'Personalizează',
     bannerLabel: 'Consimțământ pentru cookie-uri',
     panelTitle: 'Setări cookie-uri',
-    panelIntro: 'Alegeți ce cookie-uri permiteți. Nimic opțional nu este pornit până nu îl porniți dumneavoastră.',
+    panelIntro: 'Alegeți ce permiteți. Implicit este pornit doar strictul necesar.',
     save: 'Salvează alegerea',
     close: 'Închide',
     alwaysOn: 'mereu active',
-    cookiesIn: 'Cookie-uri din acest grup',
+    cookiesIn: 'Ce cookie-uri',
     noCookies: 'Nu au fost declarate cookie-uri pentru acest grup.',
-    colName: 'Nume',
-    colVendor: 'Furnizor',
-    colPurpose: 'Scop',
+    colName: 'Denumire',
+    colVendor: 'Cine le pune',
+    colPurpose: 'Pentru ce',
     colExpiry: 'Expiră',
     floating: 'Setări cookie-uri',
     cat: {
-      necessary: { title: 'Necesare', desc: 'Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea consimțământului. Nu pot fi dezactivate.' },
-      functional: { title: 'Funcționale', desc: 'Rețin preferințele dumneavoastră, precum limba sau chatul, ca să nu le setați din nou.' },
-      analytics: { title: 'Analiză', desc: 'Ne arată ce pagini sunt folosite, ca să reparăm ce derutează. Doar cifre, fără nume.' },
-      marketing: { title: 'Marketing', desc: 'Ne permit să vă arătăm reclame pe alte site-uri și să măsurăm dacă au fost de folos.' }
+      necessary: { title: 'Necesare', desc: 'Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate.' },
+      functional: { title: 'Funcționale', desc: 'Rețin alegerile dumneavoastră: limba, coșul, chatul.' },
+      analytics: { title: 'Analiză', desc: 'Ne ajută să înțelegem ce merge bine pe site și ce nu.' },
+      marketing: { title: 'Marketing', desc: 'Potrivesc reclamele cu interesele dumneavoastră pe alte site-uri.' }
     }
   };
 
