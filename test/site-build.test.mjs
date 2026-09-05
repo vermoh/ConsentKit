@@ -350,7 +350,7 @@ test('assets are referenced absolutely, so /ru and /ro resolve them', () => {
 /* ------------------------------------------------ «How it works» steps */
 
 /* SPEC V1.7 §2: the section is four steps, in the order the dashboard walks
-   through — banner line, «Verify», scan, publish — and the same order in all
+   through — banner line, «Verify», scan, adjust — and the same order in all
    three languages. Counting <li> alone would pass a page whose numbers read
    1-2-3-3, so assert the visible numbering too, and that every step actually
    carries its own dictionary strings rather than the template's Russian

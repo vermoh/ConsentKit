@@ -207,6 +207,7 @@
       themeFontInherit: 'наследуется',
       themeFontSystem: 'системный',
       themeFontPage: 'со страницы',
+      themeFontTry: 'попытка',
       themeRadius: 'скругления',
       themeCard: 'карточка',
       themeBtn: 'кнопки',
@@ -267,6 +268,7 @@
       themeFontInherit: 'inherited',
       themeFontSystem: 'system',
       themeFontPage: 'from the page',
+      themeFontTry: 'attempt',
       themeRadius: 'radii',
       themeCard: 'card',
       themeBtn: 'buttons',
@@ -607,12 +609,19 @@
      site whose body is unstyled is exactly the Times bug being diagnosed. */
   function fontRow(built, T) {
     if (built.font !== 'inherit') return built.font + ' (' + T.themeFontSystem + ')';
-    var page = null;
+    var page = null, n = 0;
     try {
       if (CK && typeof CK._resolvePageFont === 'function') page = CK._resolvePageFont();
     } catch (e) { page = null; }
-    return page ? page + ' (' + T.themeFontPage + ')'
-                : 'inherit (' + T.themeFontInherit + ')';
+    // The attempt number is the whole point of the 0.5.3 re-probe: a page whose
+    // stylesheets land late resolves on look 2 or 3, and «попытка 1» vs
+    // «попытка 3» is what tells those two pages apart in the panel.
+    try {
+      if (CK && typeof CK._pageFontAttempt === 'function') n = CK._pageFontAttempt();
+    } catch (e) { n = 0; }
+    var tries = (typeof n === 'number' && n > 1) ? ', ' + T.themeFontTry + ' ' + n : '';
+    return page ? page + ' (' + T.themeFontPage + tries + ')'
+                : 'inherit (' + T.themeFontInherit + tries + ')';
   }
 
   // Resolved lazily, not at parse time: this file runs before ConsentKit.init()

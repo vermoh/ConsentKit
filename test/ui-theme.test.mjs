@@ -452,6 +452,61 @@ test('pickPageFont refuses a family that could break out of the declaration', ()
   }
 });
 
+/* -------------------------------------------------------- probe scheduling */
+
+/* 0.5.3. One probe at mount is not enough: on a page whose stylesheets are
+   injected by script (Tilda), a CACHED reload mounts the banner before those
+   sheets apply, every sample computes to the UA default, and the banner stays
+   in Times forever. The fix re-probes on a ladder — and both halves of the
+   decision are pure, so they are asserted here rather than through timers. */
+
+test('nextProbeDelay walks a finite, increasing ladder and then stops', () => {
+  const delays = [];
+  for (let a = 1; ; a++) {
+    const d = C.nextProbeDelay(a);
+    if (d === null) break;
+    delays.push(d);
+    assert.ok(a < 20, 'nextProbeDelay never returned null — the ladder is infinite');
+  }
+  // Front-loaded so a normally-styled page is corrected before the visitor can
+  // read the banner, with a tail long enough for a late webfont sheet.
+  assert.deepEqual(delays, [500, 1500, 4000]);
+  for (let i = 1; i < delays.length; i++) {
+    assert.ok(delays[i] > delays[i - 1], 'the ladder must strictly increase');
+  }
+});
+
+test('nextProbeDelay rejects anything that is not a probe number', () => {
+  for (const bad of [0, -1, NaN, Infinity, null, undefined, '1', {}]) {
+    assert.equal(C.nextProbeDelay(bad), null, `${String(bad)} is not an attempt`);
+  }
+  // Attempts past the ladder stop it rather than repeating the last rung.
+  assert.equal(C.nextProbeDelay(4), null);
+  assert.equal(C.nextProbeDelay(99), null);
+});
+
+test('shouldReprobe applies the first family the page states', () => {
+  // The Tilda case exactly: mount found nothing, a later look found the face.
+  assert.equal(C.shouldReprobe(null, '"Google Sans", sans-serif'), true);
+  assert.equal(C.shouldReprobe('', 'Trebuchet MS'), true);
+});
+
+test('shouldReprobe never trades a resolved family back for nothing', () => {
+  // A later null means the probe got LESS information, not that the page
+  // changed its mind — re-applying `inherit` would put the banner back in Times.
+  assert.equal(C.shouldReprobe('Inter', null), false);
+  assert.equal(C.shouldReprobe('Inter', ''), false);
+  assert.equal(C.shouldReprobe(null, null), false);
+});
+
+test('shouldReprobe compares families as CSS, so a stable page settles', () => {
+  // Same face, different quoting/spacing: not a change, so the ladder can stop.
+  assert.equal(C.shouldReprobe('"Google Sans"', 'google sans'), false);
+  assert.equal(C.shouldReprobe('Inter, sans-serif', 'Inter,sans-serif'), false);
+  // A genuinely different face must still re-apply.
+  assert.equal(C.shouldReprobe('Inter', 'Georgia'), true);
+});
+
 /* ----------------------------------------------------- generated stylesheet */
 
 test('every button token is emitted for both palettes', () => {

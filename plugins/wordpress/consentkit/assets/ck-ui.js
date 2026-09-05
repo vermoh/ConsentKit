@@ -702,6 +702,40 @@
     return null;
   }
 
+  /* One probe at mount is not enough. On a page whose stylesheets are injected
+     by script (Tilda is the reported case) a CACHED reload mounts the banner
+     BEFORE those sheets apply, so every sample still computes to the UA default
+     and the probe returns null — the banner stays in Times and nothing looks
+     again. So the mount probe is only the first look: re-probes are scheduled
+     until the answer stops changing.
+
+     Both halves of that schedule are pure arithmetic, published on _contrast so
+     the behaviour is testable without timers or a DOM.
+
+     The timed ladder, in ms after mount. Deliberately front-loaded: a page that
+     styles itself quickly is corrected before a visitor can read the banner,
+     and the 4 s tail catches a slow webfont-driven sheet. `window.load` and
+     `document.fonts.ready` fire on their own and are NOT part of this ladder. */
+  var REPROBE_DELAYS = [500, 1500, 4000];
+
+  // Attempt is 1-based over the TIMED probes only; null means "no more timers".
+  function nextProbeDelay(attempt) {
+    if (typeof attempt !== 'number' || !isFinite(attempt) || attempt < 1) return null;
+    var i = Math.floor(attempt) - 1;
+    return i < REPROBE_DELAYS.length ? REPROBE_DELAYS[i] : null;
+  }
+
+  /* Should a freshly probed family replace what the banner is painting?
+     `current` is the applied value (null while the page still states nothing).
+     Only a non-null find is ever worth applying — a later null means the page
+     got LESS specific, which never happens for real and would otherwise throw
+     away a good answer. */
+  function shouldReprobe(current, found) {
+    if (typeof found !== 'string' || !found) return false;
+    if (typeof current !== 'string' || !current) return true;   // null -> found
+    return normFamily(current) !== normFamily(found);
+  }
+
   // Ordered so the first hit is the most representative body text on the page.
   var FONT_PROBES = ['main p', 'article p', '[role=main] p', 'p', 'h1', 'h2', 'a', 'button', 'li'];
 
@@ -735,6 +769,12 @@
   // after a remount) quotes the value the banner actually painted.
   var pageFont = null;
 
+  /* How many times the SCHEDULER has looked, for the debug panel's «попытка N».
+     Counted here and not inside resolvePageFont() on purpose: _resolvePageFont()
+     re-runs the whole probe on every debug-panel render, and counting there would
+     report «попытка 14» after a few renders and exhaust the cap on nothing. */
+  var fontProbeCount = 1;          // the mount probe is attempt 1
+
   function resolvePageFont() {
     if (typeof document === 'undefined') return pageFont;
     try {
@@ -764,6 +804,97 @@
       pageFont = null;
     }
     return pageFont;
+  }
+
+  /* ------------------------------------------------ page-font re-probing */
+
+  /* Live timers, so remount() can cancel a schedule that belongs to the DOM it
+     is about to throw away. Everything here is guarded and only ever RUNS after
+     mount(), so the parse-time SSR context below never reaches it. */
+  var fontTimers = [];
+  var fontStable = false;          // a non-null value survived one extra probe
+  var fontScheduled = false;
+
+  // Cap on SCHEDULED probes (the mount probe is not one of them): the three
+  // timed rungs plus window.load plus fonts.ready.
+  var MAX_REPROBES = 5;
+
+  function clearFontTimers() {
+    for (var i = 0; i < fontTimers.length; i++) {
+      try { clearTimeout(fontTimers[i]); } catch (e) { /* noop */ }
+    }
+    fontTimers = [];
+  }
+
+  /* One look. Re-applies the theme when the family changed, and reports whether
+     the answer has now held still for a whole extra probe — which is the only
+     thing that stops the ladder early. Applying and stopping are deliberately
+     separate: a first non-null find is painted IMMEDIATELY (the visitor must not
+     wait out the confirmation), the confirmation only decides about timers. */
+  function probeFontOnce() {
+    var before = pageFont;
+    var found = resolvePageFont();               // rewrites the pageFont cache
+    if (shouldReprobe(before, found)) {
+      // applyTheme() rewrites themeStyle.textContent wholesale, so the --ck-font
+      // rule is REPLACED rather than appended a second time.
+      try { applyTheme(safeConfig()); } catch (e) { /* noop */ }
+      fontStable = false;
+      return false;
+    }
+    // Unchanged. Stable only once we have an actual family in hand: a page that
+    // keeps answering null is exactly the case that has to keep looking.
+    if (found) { fontStable = true; return true; }
+    return false;
+  }
+
+  /* Run a scheduled probe. Every trigger — window.load, fonts.ready and each
+     rung of the timed ladder — funnels through here so the cap and the counter
+     are counted in one place. */
+  function runScheduledProbe() {
+    if (!mounted || fontStable) return;
+    if (fontProbeCount >= 1 + MAX_REPROBES) return;
+    fontProbeCount++;
+    if (probeFontOnce()) clearFontTimers();      // settled: drop the rest
+  }
+
+  /* Called once from the end of mount(). Not from applyTheme(): that runs again
+     on every palette-only ck:init, which would restart the whole ladder. */
+  function scheduleFontProbes(cfg) {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (fontScheduled) return;
+    // theme.font:'system' is a fixed stack — there is nothing to sample.
+    try {
+      var t = (cfg && cfg.theme) || {};
+      if (resolveFont(t) !== 'inherit') return;
+    } catch (e) { return; }
+
+    fontScheduled = true;
+    try {
+      for (var a = 1; ; a++) {
+        var d = nextProbeDelay(a);
+        if (d === null) break;
+        fontTimers.push(setTimeout(runScheduledProbe, d));
+      }
+    } catch (e) { /* noop */ }
+
+    // A cached reload's mount can precede the page's own stylesheets; `load`
+    // is the first moment every <link> in the document has definitely applied.
+    try {
+      if (document.readyState === 'complete') {
+        // Already past it — the ladder covers this case on its own.
+      } else {
+        window.addEventListener('load', function () { runScheduledProbe(); }, { once: true });
+      }
+    } catch (e) { /* noop */ }
+
+    // A webfont swapping in can change the computed family outright.
+    try {
+      if (document.fonts && typeof document.fonts.ready === 'object' &&
+          document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready.then(function () { runScheduledProbe(); },
+                                  function () { /* noop */ });
+      }
+    } catch (e) { /* noop */ }
   }
 
   /* --------------------------------------------------- button resolution */
@@ -1030,7 +1161,11 @@
     var fontCss = '';
     if (built.font === 'inherit') {
       var page = resolvePageFont();
-      if (page) fontCss = '\n:host{--ck-font:' + page + '}';
+      // Owner rule (2026-09-06): the page's font when it can be read, the
+      // system stack when it cannot — never a bare `inherit`, which on Tilda
+      // and friends resolves to <body>'s browser default (Times). A later
+      // re-probe that finds the page font swaps the system stack out again.
+      fontCss = '\n:host{--ck-font:' + (page || SYSTEM_FONT) + '}';
     } else {
       pageFont = null;                          // theme.font:'system' opts out
     }
@@ -1407,6 +1542,21 @@
 
   function openPanel(invoker) {
     if (!mounted || !nodes.panel) return;
+    /* A visitor who opens the settings long after load is the last chance to
+       get the typeface right, and by then the page is certainly styled. Only
+       when the banner is still on `inherit` — a resolved family is left alone
+       so opening the panel can never restyle a correct banner. Hooked here
+       rather than on the ck:ui:open-preferences listener because the banner's
+       own «Настроить» button calls openPanel() directly.
+
+       Gated on fontScheduled, which is only ever set for a theme that actually
+       samples the page: with theme.font:'system' applyTheme() nulls pageFont on
+       every call, so without this the condition would be permanently true and
+       every panel open would re-probe the DOM and rewrite the sheet to produce
+       byte-identical CSS, forever. */
+    if (fontScheduled && !pageFont && !fontStable) {
+      try { probeFontOnce(); } catch (e) { /* noop */ }
+    }
     lastFocus = invoker || root.activeElement || document.activeElement;
     syncSwitches(safeState());
     nodes.panelScrim.classList.remove('ck-hidden');
@@ -1482,6 +1632,12 @@
     mounted = false;
     panelOpen = false;
     lastFocus = null;
+    // The pending schedule belongs to the shadow root about to be rebuilt; the
+    // fresh mount() starts its own ladder from a clean count.
+    clearFontTimers();
+    fontScheduled = false;
+    fontStable = false;
+    fontProbeCount = 1;
     mount(cfg);
   }
 
@@ -1526,6 +1682,10 @@
     mounted = true;
     mountedSig = signature(cfg);
     syncFromState();
+
+    // Only now: scheduleFontProbes() re-applies the theme from a timer, and
+    // applyTheme() is a no-op until there is a host and a themeStyle to write.
+    scheduleFontProbes(cfg);
   }
 
   /* ---------------------------------------------------------------- events */
@@ -1553,6 +1713,8 @@
       resolveRadius: resolveRadius,
       resolveFont: resolveFont,
       pickPageFont: pickPageFont,
+      nextProbeDelay: nextProbeDelay,
+      shouldReprobe: shouldReprobe,
       resolveDetails: resolveDetails,
       buildThemeCss: buildThemeCss
     };
@@ -1563,6 +1725,10 @@
     ck._resolvePageFont = function () {
       return (typeof document === 'undefined' || !root) ? pageFont : resolvePageFont();
     };
+    // How many times the SCHEDULER has looked (1 = the mount probe alone). The
+    // debug panel prints it: on a Tilda-style page the interesting fact is that
+    // the family arrived on the third look, not on the first.
+    ck._pageFontAttempt = function () { return fontProbeCount; };
   })();
 
   // SSR-safe: with no DOM there is nothing to render or listen to, so importing

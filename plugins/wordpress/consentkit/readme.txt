@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.2
+Stable tag: 0.5.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,10 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.3 =
+* Шрифт баннера повторно определяется после полной загрузки страницы (на Tilda при перезагрузке из кэша баннер оставался в Times)
+* Если шрифт страницы определить не удалось, баннер берёт системный шрифт, а не наследует шрифт body.
 
 = 0.5.2 =
 * Шрифт баннера берётся у реального текста страницы, а не у body (сайты, где шрифт задан на блоках, получали Times)
