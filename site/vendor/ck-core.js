@@ -123,7 +123,27 @@
     'jivosite.com': 'functional',
     'jivo.chat': 'functional',
     'tidio.co': 'functional',
-    'tidiochat.com': 'functional'
+    'tidiochat.com': 'functional',
+    // Searchanise — site search for e-commerce. The widget IS the search box,
+    // so a shop whose visitor declines functional loses the feature and nothing
+    // else; it is not measurement. The numbered API hosts are enumerated
+    // because matching here is plain suffix matching (see hostMatches) with no
+    // pattern form: searchserverapi1.com is not a subdomain of anything.
+    'searchanise.com': 'functional',
+    'searchserverapi.com': 'functional',
+    'searchserverapi1.com': 'functional',
+    'searchserverapi2.com': 'functional',
+    'searchserverapi3.com': 'functional',
+    // iuteCredit — a Moldovan consumer-credit calculator embedded on shop
+    // product pages. A third party the owner chose, offering a feature.
+    'iutecredit.md': 'functional',
+
+    // --- necessary -----------------------------------------------------
+    // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
+    // where google.com is unreachable. Unlike the two path-scoped Google hosts
+    // in PATH_DB, this domain hosts NOTHING but the captcha, so the whole host
+    // is the right scope.
+    'recaptcha.net': 'necessary'
   };
 
   // Runtime overrides fed in by ConsentKit._extendHostDb(map) — the SaaS
@@ -149,8 +169,20 @@
   //   tags never get the chance to see consent at all.
   //   gtag.js is the opposite case — a direct GA4/Ads install with no container
   //   in front of it — so it stays blocked by path.
+  //
+  // reCAPTCHA is the other reason this table exists. www.google.com and
+  // www.gstatic.com host it, and neither can be given a category as a WHOLE
+  // host — that would rule on every Google property at once. Path-scoping names
+  // the widget and nothing else. The category is 'necessary': a form gated
+  // behind a captcha is unusable without it, and allowed() lets 'necessary'
+  // through unconditionally, so this classifies the request for the report
+  // without ever blocking it. (Strict mode already passed these through via
+  // BASE_ALLOW_PATH; what this adds is a NAME, so the audit stops filing the
+  // captcha under «сторонние подключения без категории».)
   var PATH_DB = {
     '/gtag/js': 'analytics',            // googletagmanager.com/gtag/js?id=G-XXXX
+    'www.google.com/recaptcha/': 'necessary',
+    'www.gstatic.com/recaptcha/': 'necessary',
     '/trackers/ga.js': 'analytics',
     '/trackers/pixel.js': 'marketing',
     '/trackers/chat.js': 'functional'
@@ -284,8 +316,24 @@
     'cdnjs.cloudflare.com',
     'code.jquery.com',
     'ajax.googleapis.com',
+    'ajax.aspnetcdn.com',                  // Microsoft Ajax CDN (jQuery, MVC)
+    'aspnetcdn.com',
+    'kxcdn.com',                           // KeyCDN tenants, e.g. *-ef84.kxcdn.com
+    'cloudfront.net',                      // AWS CloudFront distributions
+    'akamaihd.net',                        // Akamai
+    'fastly.net',
+    'b-cdn.net',                           // bunny.net
     // --- fonts ----------------------------------------------------------
     'fonts.googleapis.com',
+    // gstatic.com whole: Google's static-asset domain. Its subdomains serve
+    // fonts (fonts.gstatic.com), the reCAPTCHA widget's own code
+    // (www.gstatic.com/recaptcha/) and ordinary images — assets a page is
+    // broken without, none of which measure a visitor. Nothing on it is a
+    // tracker: the Google properties that DO measure live on their own hosts
+    // (google-analytics.com, googletagmanager.com, doubleclick.net) and are
+    // classified there. fonts.gstatic.com is kept below it, redundant under
+    // suffix matching but named because §8 and the fixtures both refer to it.
+    'gstatic.com',
     'fonts.gstatic.com',
     // --- captcha ---------------------------------------------------------
     // A page whose form is gated behind a captcha is unusable without it. The
@@ -1413,7 +1461,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.0',
+    version: '0.5.1',
     config: config,
 
     init: function (userConfig) {

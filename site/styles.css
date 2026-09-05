@@ -281,6 +281,14 @@ a { color: var(--accent-ink); }
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 30px;
 }
+/* Four steps do not fit the 260px track: 4×260 + 3×30 = 1130 > the 1072px of
+   content inside a 1120px .wrap, so auto-fit would drop to three columns and
+   orphan the fourth on a row of its own. Narrower track and gap, same trick as
+   .cards--4. Still stacks to two columns on a tablet and one on a phone. */
+.steps--4 {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 24px;
+}
 .steps li { margin: 0; }
 .step-n {
   display: inline-grid;

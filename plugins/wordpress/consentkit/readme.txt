@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,9 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.1 =
+* База сторонних сервисов: CDN (gstatic.com, aspnetcdn.com, kxcdn.com, jsdelivr, cdnjs, unpkg, cloudfront и др.) — инфраструктура, не трекеры; Google reCAPTCHA — необходимые; Searchanise (поиск по сайту) и iuteCredit — функциональные.
 
 = 0.5.0 =
 * Клиент 0.5.0: оформление баннера. `theme.font` — баннер по умолчанию берёт шрифт сайта (`inherit`), прежний системный стек остаётся как `font: 'system'`. `theme.radius: { card, button }` в пикселях (0–32, по умолчанию 16 и 8). `theme.buttons` — вид, фон, текст, обводка и её толщина отдельно для «Принять всё», «Отклонить всё» и «Настроить»; «Принять» и «Отклонить» всегда одинаковы по размеру, весу и виду. Контраст проверяется автоматически: текст, который не набирает 4.5:1 к своему фону, заменяется на белый или тёмный, а обводка доводится до 3:1 к фону карточки — задать нечитаемую пару кнопок через настройки нельзя.

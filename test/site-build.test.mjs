@@ -347,6 +347,58 @@ test('assets are referenced absolutely, so /ru and /ro resolve them', () => {
   }
 });
 
+/* ------------------------------------------------ «How it works» steps */
+
+/* SPEC V1.7 §2: the section is four steps, in the order the dashboard walks
+   through — banner line, «Verify», scan, publish — and the same order in all
+   three languages. Counting <li> alone would pass a page whose numbers read
+   1-2-3-3, so assert the visible numbering too, and that every step actually
+   carries its own dictionary strings rather than the template's Russian
+   fallback. */
+test('«How it works» renders four numbered steps in every language', () => {
+  const template = readTemplate();
+
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    const section = html.match(/<ol class="steps[^"]*">([\s\S]*?)<\/ol>/);
+    assert.ok(section, `the ${code} page has no <ol class="steps"> list`);
+    const list = section[1];
+
+    const items = [...list.matchAll(/<li>[\s\S]*?<\/li>/g)];
+    assert.equal(items.length, 4,
+      `the ${code} page renders ${items.length} steps, not 4`);
+
+    assert.deepEqual(
+      [...list.matchAll(/class="step-n"[^>]*>(\d+)</g)].map((m) => m[1]),
+      ['1', '2', '3', '4'],
+      `the ${code} page's steps are not numbered 1-2-3-4`);
+
+    const dict = readDict(code);
+    for (let n = 1; n <= 4; n++) {
+      for (const key of [`how${n}Title`, `how${n}Text`]) {
+        assert.ok(dict[key] && dict[key].trim(),
+          `site/src/i18n/${code}.json has no "${key}"`);
+        assert.ok(list.includes(dict[key].replace(/</g, '&lt;').replace(/>/g, '&gt;')) ||
+                  list.includes(dict[key]),
+          `the ${code} page's step ${n} does not carry "${key}" from ${code}.json`);
+      }
+    }
+  }
+});
+
+/* The vocabulary at the top of SPEC V1.7: everything the visitor is asked to
+   paste is «строка баннера», never «сниппет» — the dashboard, the onboarding
+   mail and this page have to say the same word or the instructions stop
+   matching the screen. The rendered page is the right thing to grep: it covers
+   both the markup and the dictionary inlined into it (jsonForScript escapes
+   angle brackets only, so Cyrillic passes through as-is). */
+test('the Russian page never says «сниппет»', () => {
+  const html = renderPage(readTemplate(), 'ru');
+  assert.doesNotMatch(html, /сниппет/i,
+    'the RU page still says «сниппет» — the agreed word is «строка баннера» ' +
+    '(and for a vendor\'s own code, «код установки»)');
+});
+
 /* ------------------------------------------------------- inline dictionary */
 
 test('the inlined dictionary cannot break out of its script block', () => {

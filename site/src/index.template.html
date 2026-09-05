@@ -136,21 +136,29 @@
   <section id="how">
     <div class="wrap">
       <h2 data-i18n="howTitle">Как это работает</h2>
-      <ol class="steps">
+      <!-- Four steps, in the order the dashboard walks through: line → verify →
+           scan → publish. `steps--4` narrows the track so all four fit on one
+           desktop row instead of orphaning the fourth onto a second row. -->
+      <ol class="steps steps--4">
         <li>
           <span class="step-n" aria-hidden="true">1</span>
-          <h3 data-i18n="how1Title">Вставьте строку</h3>
-          <p data-i18n="how1Text">Одна строка в &lt;head&gt; — на Tilda, WordPress, через Google Tag Manager или в обычный HTML. Сборки нет, зависимостей нет.</p>
+          <h3 data-i18n="how1Title">Вставьте строку баннера</h3>
+          <p data-i18n="how1Text">Одна строка в &lt;head&gt; — на Tilda, WordPress, через Google Tag Manager или в обычный HTML. Без сборки и зависимостей.</p>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">2</span>
-          <h3 data-i18n="how2Title">Подтвердите домен</h3>
-          <p data-i18n="how2Text">Сначала подтверждение владения доменом — meta-тегом или записью DNS. После этого проверка установки показывает, стоит ли баннер на сайте и какие теги остались без разметки.</p>
+          <h3 data-i18n="how2Title">Нажмите «Проверить»</h3>
+          <p data-i18n="how2Text">Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки. Если строка ставится через Google Tag Manager, подтвердите домен meta-тегом или DNS-записью.</p>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">3</span>
-          <h3 data-i18n="how3Title">Скан и таблица cookie</h3>
-          <p data-i18n="how3Text">Сканер обходит сайт, находит трекеры и cookie и заполняет таблицу, которую посетитель видит в настройках баннера.</p>
+          <h3 data-i18n="how3Title">Запустите скан</h3>
+          <p data-i18n="how3Text">Сканер обойдёт сайт, найдёт сторонние сервисы и cookie и предложит готовую таблицу для баннера.</p>
+        </li>
+        <li>
+          <span class="step-n" aria-hidden="true">4</span>
+          <h3 data-i18n="how4Title">Опубликуйте баннер</h3>
+          <p data-i18n="how4Text">Таблица заполняется из скана, предпросмотр показывает результат, одна кнопка публикует.</p>
         </li>
       </ol>
     </div>
@@ -163,7 +171,7 @@
       <div class="cards">
         <article class="card">
           <h3 data-i18n="feat1Title">Блокировка до согласия</h3>
-          <p data-i18n="feat1Text">Скрипты, добавленные динамически (официальные сниппеты GTM, Метрики, Meta, TikTok, Hotjar), и теги с разметкой type="text/plain" не отправляют запрос вовсе. Обычный тег &lt;script src&gt;, написанный прямо в HTML, мы не даём выполниться и поставить cookie, но его сетевой запрос может уже уйти — такие теги нужно разметить вручную. Кабинет показывает, какие именно.</p>
+          <p data-i18n="feat1Text">Скрипты, добавленные динамически (официальные коды установки GTM, Метрики, Meta, TikTok, Hotjar), и теги с разметкой type="text/plain" не отправляют запрос вовсе. Обычный тег &lt;script src&gt;, написанный прямо в HTML, мы не даём выполниться и поставить cookie, но его сетевой запрос может уже уйти — такие теги нужно разметить вручную. Кабинет показывает, какие именно.</p>
         </article>
         <article class="card">
           <h3 data-i18n="feat2Title">Сканер cookie</h3>
