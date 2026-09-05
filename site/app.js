@@ -290,7 +290,10 @@
 
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-  var FEATURED = 'business';
+  /* Starter, not Business: the critique noted the highlighted column was the
+     one almost nobody enters on. Starter is the first paid step for the owner
+     of a single site, which is who this page is written for. */
+  var FEATURED = 'starter';
 
   /* The CTA that used to sit at the foot of each card. Same three cases, and
      the agency one is still the only link that leaves for mailto:. */
@@ -497,19 +500,18 @@
     tr: 'Türkçe', uk: 'Українська'
   };
 
-  // resolveLayout() in ck-ui.js accepts only these; anything else silently
-  // falls back, so the option list is driven off the layout rather than being
-  // a free-form four-way.
-  var POSITIONS = {
-    bar: [['bottom', 'posBottom'], ['top', 'posTop']],
-    box: [['bottom-right', 'posBottomRight'], ['bottom-left', 'posBottomLeft']],
-    modal: []
+  // resolveLayout() in ck-ui.js accepts only these. V1.9 dropped the
+  // «Положение» and «Тема» selects from the demo — four controls read as a
+  // configuration form, not a demonstration — so this is no longer an option
+  // list but the position each layout is shown at: the conventional one.
+  var POSITION_FOR = {
+    bar: 'bottom',
+    box: 'bottom-right',
+    modal: ''
   };
 
   var demo = {
     layout: 'bar',
-    position: 'bottom',
-    theme: 'auto',
     bannerLang: 'auto'
   };
 
@@ -537,8 +539,8 @@
     var effective = (l === 'auto') ? lang : l;
     return {
       language: effective,
-      layout: { type: demo.layout, position: demo.position },
-      theme: { mode: demo.theme, accent: '#2B50D8', radius: '10px' },
+      layout: { type: demo.layout, position: POSITION_FOR[demo.layout] || '' },
+      theme: { mode: 'auto', accent: '#2B50D8', radius: '10px' },
       branding: brandingFor(effective),
       // Off, so the demo emits no further Consent Mode updates or GTM events as
       // you click around. Note the core still writes ONE all-denied Consent Mode
@@ -616,28 +618,6 @@
     out.textContent = t('statusDecided').replace('{cats}', on.length ? on.join(', ') : t('statusNone'));
   }
 
-  function fillPositionSelect() {
-    var sel = $('#d-position');
-    var field = $('#d-position-field');
-    if (!sel || !field) return;
-
-    var opts = POSITIONS[demo.layout] || [];
-    // A centred modal has no position; hiding the control is honest, and
-    // [hidden] keeps it out of the accessibility tree too.
-    field.hidden = opts.length === 0;
-    sel.textContent = '';
-    opts.forEach(function (o) {
-      var n = el('option', null, t(o[1]));
-      n.value = o[0];
-      sel.appendChild(n);
-    });
-    if (opts.length) {
-      var valid = opts.some(function (o) { return o[0] === demo.position; });
-      if (!valid) demo.position = opts[0][0];
-      sel.value = demo.position;
-    }
-  }
-
   function fillLanguageSelect() {
     var sel = $('#d-lang');
     if (!sel) return;
@@ -658,16 +638,12 @@
   }
 
   function wireDemo() {
-    var layout = $('#d-layout'), pos = $('#d-position'),
-        theme = $('#d-theme'), dlang = $('#d-lang'), again = $('#d-again');
+    var layout = $('#d-layout'), dlang = $('#d-lang'), again = $('#d-again');
 
     if (layout) layout.addEventListener('change', function () {
       demo.layout = layout.value;
-      fillPositionSelect();
       applyDemo();
     });
-    if (pos) pos.addEventListener('change', function () { demo.position = pos.value; applyDemo(); });
-    if (theme) theme.addEventListener('change', function () { demo.theme = theme.value; applyDemo(); });
     if (dlang) dlang.addEventListener('change', function () { demo.bannerLang = dlang.value; applyDemo(); });
 
     if (again) again.addEventListener('click', function () {
@@ -702,7 +678,6 @@
   function renderPage() {
     renderPricing();
     renderFaq();
-    fillPositionSelect();
     fillLanguageSelect();
     // The demo's cookie table and branding line follow the page language.
     applyDemo();

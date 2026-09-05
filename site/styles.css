@@ -206,11 +206,109 @@ a { color: var(--accent-ink); }
   text-transform: uppercase;
   margin-bottom: 1em;
 }
+/* ~70 characters is the readable maximum the audit asked for; 56ch was already
+   inside it, and 62ch is the ceiling every other body paragraph now shares. */
 .lede { font-size: 1.09rem; color: var(--ink-soft); max-width: 56ch; }
+.hero-note { max-width: 62ch; }
 .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin: 28px 0 14px; }
 .hero-note { font-size: .9rem; color: var(--ink-soft); margin: 0; }
 
-.hero-code {
+/* ── hero mockup ────────────────────────────────────────────────────── */
+
+/* A framed browser page with a static replica of the default box banner. The
+   real client is position:fixed inside one shadow root on <body> and can only
+   mount once per page, so the interactive instance stays in «Живое демо» and
+   this is a faithful copy of it: the banner's own default strings, its 20/700
+   heading, 14px body and three equal 44px buttons, in the same #2b50d8.
+
+   The frame keeps its own light palette in both colour schemes on purpose —
+   it depicts a visitor's website, not this page, and a mockup that follows
+   the reader's own dark mode stops reading as a screenshot of somewhere else. */
+.hero-shot {
+  background: #eef1f7;
+  border: 1px solid #d7dce7;
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.shot-frame {
+  position: relative;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 300px;
+}
+.shot-bar {
+  display: flex;
+  gap: 6px;
+  padding: 11px 13px;
+  background: #f3f5fa;
+  border-bottom: 1px solid #e4e8f1;
+}
+.shot-bar span { width: 9px; height: 9px; border-radius: 50%; background: #ccd3e0; }
+
+/* Grey placeholder lines, the same device the dashboard preview uses. */
+.shot-page { padding: 22px 22px 130px; display: grid; gap: 11px; }
+.shot-line { display: block; height: 9px; border-radius: 5px; background: #e7eaf1; }
+.shot-line--title { height: 15px; width: 58%; background: #d8dde8; margin-bottom: 5px; }
+.shot-line--short { width: 64%; }
+
+/* The banner itself: anchored to the bottom of the frame the way the box
+   layout anchors to the corner of a viewport. */
+.shot-banner {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  background: #ffffff;
+  border: 1px solid #dbe0ea;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 6px 24px rgba(16, 20, 30, .1);
+}
+.shot-banner__title {
+  margin: 0 0 8px;
+  color: #14181f;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.shot-banner__text {
+  margin: 0 0 16px;
+  color: #4a5262;
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* auto-fit rather than three equal 1fr columns: the three labels differ in
+   length in every dictionary, and equal columns made the longest one ("Отклонить
+   всё", "Personalizează") wrap to two lines while the shortest kept slack. */
+.shot-banner__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.shot-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+.shot-btn--accept { background: #2b50d8; color: #ffffff; }
+/* Same as the real default banner (SPEC V1.6): accept and reject filled and
+   identical, settings outlined in the accent. */
+.shot-btn--reject { background: #2b50d8; color: #ffffff; }
+.shot-btn--settings { background: transparent; border-color: #2b50d8; color: #1e3aa8; font-weight: 600; }
+
+/* ── code block ─────────────────────────────────────────────────────── */
+
+/* Was .hero-code until V1.9 moved the snippet out of the first screen and
+   into «Для разработчиков». Same styling, honest name. */
+.code-block {
   background: var(--code-bg);
   border-radius: var(--radius);
   padding: 16px 18px 20px;
@@ -221,12 +319,24 @@ a { color: var(--accent-ink); }
   width: 11px; height: 11px; border-radius: 50%;
   background: #3a4353;
 }
-.hero-code pre { margin: 0; }
-.hero-code code {
+.code-block pre { margin: 0; }
+.code-block code {
   color: var(--code-ink);
   font: 400 13.5px/1.75 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   white-space: pre;
 }
+
+.dev-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 44px;
+  align-items: center;
+}
+.dev-grid h2 { margin-bottom: .5em; }
+.dev-grid .section-lede { margin-bottom: 1em; }
+.dev-facts { color: var(--ink-soft); font-size: .95rem; max-width: 62ch; }
+.dev-links { display: flex; gap: 20px; flex-wrap: wrap; margin: 0; }
+.dev-links a { font-size: .95rem; font-weight: 600; }
 
 /* ── demo panel ─────────────────────────────────────────────────────── */
 
@@ -317,7 +427,10 @@ a { color: var(--accent-ink); }
   border-radius: var(--radius);
   padding: 22px;
 }
-.card p { color: var(--ink-soft); font-size: .95rem; margin: 0; }
+/* .95rem = 15.2px, comfortably over the 14px floor the audit set for card body
+   text, and capped at ~70 characters like every other paragraph. */
+.card p { color: var(--ink-soft); font-size: .95rem; margin: 0; max-width: 62ch; }
+.steps p { max-width: 62ch; }
 
 /* ── pricing ────────────────────────────────────────────────────────── */
 
@@ -538,6 +651,10 @@ a { color: var(--accent-ink); }
   .head-actions { margin-left: auto; }
 }
 
+@media (max-width: 900px) {
+  .dev-grid { grid-template-columns: 1fr; gap: 28px; }
+}
+
 @media (max-width: 560px) {
   section { padding: 52px 0; }
   .wrap { padding: 0 18px; }
@@ -545,4 +662,25 @@ a { color: var(--accent-ink); }
   .btn { width: 100%; text-align: center; }
   .btn--sm { width: auto; }
   .hero-cta .btn { width: 100%; }
+
+  /* The audit measured the EN/RU/RO switch at 28px — below the 40px touch
+     target. Widening the row would push the header past 375px, so the height
+     comes from the header row itself and the width from padding that still
+     leaves the brand and the CTA their space. */
+  .lang-btn { min-height: 40px; min-width: 40px; display: inline-grid; place-items: center; padding: 0 8px; }
+  .head-actions { gap: 8px; }
+  .head-actions .btn--sm { padding: 8px 11px; font-size: .84rem; }
+
+  /* The mockup is the first screen's illustration, not its content: capped so
+     the headline and both buttons stay above the fold on a phone. */
+  .hero-shot { padding: 8px; }
+  .shot-frame { min-height: 0; height: min(58vh, 420px); }
+  .shot-page { padding: 18px 18px 0; }
+  .shot-banner { left: 10px; right: 10px; bottom: 10px; padding: 15px; }
+  /* Three buttons in one 375px row leave ~84px each, and the longest label in
+     the three dictionaries ("Personalizează") does not fit on one line there.
+     The real banner wraps its own buttons to a column under 560px, so the
+     replica does the same rather than clipping the third one. */
+  .shot-banner__actions { flex-wrap: wrap; gap: 7px; }
+  .shot-btn { flex: 1 1 100%; font-size: 13px; min-height: 38px; padding: 8px 10px; }
 }

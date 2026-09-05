@@ -43,9 +43,10 @@
     <nav class="head-nav" aria-label="Secțiuni" data-i18n-aria-label="navSections">
       <a href="#demo" data-i18n="navDemo">Demo</a>
       <a href="#how" data-i18n="navHow">Cum funcționează</a>
-      <a href="#features" data-i18n="navFeatures">Ce poate face</a>
       <a href="#pricing" data-i18n="navPricing">Tarife</a>
+      <a href="#features" data-i18n="navFeatures">Ce poate face</a>
       <a href="#faq" data-i18n="navFaq">Întrebări</a>
+      <a href="#dev" data-i18n="navDev">Pentru dezvoltatori</a>
     </nav>
 
     <div class="head-actions">
@@ -66,9 +67,8 @@
     <div class="wrap hero-grid">
       <div>
         <p class="eyebrow" data-i18n="heroEyebrow">Sursă deschisă · MIT · plan gratuit</p>
-        <h1 data-i18n="heroTitle">Bannerul de consimțământ pentru cookie-uri care se instalează în zece minute</h1>
-        <p class="lede" data-i18n="heroLine1">Majoritatea bannerelor doar desenează butoane. Pe acele site-uri contoarele pornesc imediat, orice ar apăsa vizitatorul. Regulile UE cer altceva.</p>
-        <p class="lede" data-i18n="heroLine2">ConsentKit întreabă mai întâi vizitatorul și abia apoi pornește contoarele și reclamele. Vorbește singur 34 de limbi și înregistrează fiecare răspuns, ca să aveți ce arăta la un control.</p>
+        <h1 data-i18n="heroTitle">Banner de consimțământ pentru cookie-uri, instalat în zece minute</h1>
+        <p class="lede" data-i18n="heroLine1">Vizitatorul răspunde mai întâi și abia apoi pornesc contoarele și reclamele. Exact asta cer regulile UE.</p>
         <p class="hero-cta">
           <a class="btn btn--primary" href="https://app.ecomconsult.net" data-i18n="ctaCabinet">Deschide panoul de control</a>
           <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">Vezi demonstrația</a>
@@ -76,17 +76,35 @@
         <p class="hero-note" data-i18n="heroNote">Gratuit pentru totdeauna: un site, toate cele 34 de limbi, o scanare manuală pe zi.</p>
       </div>
 
-      <div class="hero-code" aria-hidden="true">
-        <div class="code-head"><span></span><span></span><span></span></div>
-<pre><code>&lt;script src="ck-core.js"&gt;&lt;/script&gt;
-&lt;script src="ck-locales.js"&gt;&lt;/script&gt;
-&lt;script src="ck-ui.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-  ConsentKit.init({
-    language: 'auto',
-    layout: { type: 'bar' }
-  });
-&lt;/script&gt;</code></pre>
+      <!-- Hero mockup: a framed page with a STATIC replica of the default box
+           banner. The real client cannot live here — ck-ui.js mounts one
+           position:fixed shadow root on <body> and can exist only once per
+           page, so the interactive instance stays in «Живое демо» below. The
+           replica copies that banner's own default strings, its 20/700
+           heading, 14px body and three equal 44px buttons, in the same accent.
+           Inert by construction: aria-hidden, and every control is a <span>,
+           so a screen reader hears one banner and the tab order gains nothing. -->
+      <div class="hero-shot" aria-hidden="true">
+        <div class="shot-frame">
+          <div class="shot-bar"><span></span><span></span><span></span></div>
+          <div class="shot-page">
+            <span class="shot-line shot-line--title"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+          </div>
+          <div class="shot-banner">
+            <p class="shot-banner__title" data-i18n="mockTitle">Cookie-uri pe acest site</p>
+            <p class="shot-banner__text" data-i18n="mockText">Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră.</p>
+            <div class="shot-banner__actions">
+              <span class="shot-btn shot-btn--accept" data-i18n="mockAccept">Acceptă tot</span>
+              <span class="shot-btn shot-btn--reject" data-i18n="mockReject">Respinge tot</span>
+              <span class="shot-btn shot-btn--settings" data-i18n="mockSettings">Personalizează</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -95,7 +113,7 @@
   <section id="demo" class="band">
     <div class="wrap">
       <h2 data-i18n="demoTitle">Demonstrație live</h2>
-      <p class="section-lede" data-i18n="demoLede">Acesta este un banner real, nu o captură de ecran. Schimbați forma, tema și limba și apăsați butoanele.</p>
+      <p class="section-lede" data-i18n="demoLede">Acesta este un banner real, nu o captură de ecran. Schimbați forma și limba și apăsați butoanele.</p>
 
       <div class="panel">
         <div class="panel-grid">
@@ -105,20 +123,6 @@
               <option value="bar" data-i18n="layoutBar">Bară</option>
               <option value="box" data-i18n="layoutBox">Casetă în colț</option>
               <option value="modal" data-i18n="layoutModal">Fereastră centrată</option>
-            </select>
-          </p>
-
-          <p class="field" id="d-position-field">
-            <label for="d-position" data-i18n="fieldPosition">Poziție</label>
-            <select id="d-position"></select>
-          </p>
-
-          <p class="field">
-            <label for="d-theme" data-i18n="fieldTheme">Temă</label>
-            <select id="d-theme">
-              <option value="auto" data-i18n="themeAuto">Ca în sistem</option>
-              <option value="light" data-i18n="themeLight">Deschisă</option>
-              <option value="dark" data-i18n="themeDark">Închisă</option>
             </select>
           </p>
 
@@ -132,8 +136,6 @@
           <button type="button" class="btn btn--primary btn--sm" id="d-again" data-i18n="btnShowAgain">Arată din nou</button>
           <span class="panel-hint" data-i18n="demoHint">Șterge consimțământul salvat și afișează bannerul din nou.</span>
         </p>
-
-        <p class="panel-hint" data-i18n="demoDebug">Vreți să vedeți ce anume a oprit bannerul? Deschideți această pagină cu ?ck_debug=1 și în dreapta jos apare un panou cu detalii. Îl vedeți numai dumneavoastră, iar ?ck_debug=0 îl închide.</p>
 
         <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
       </div>
@@ -174,46 +176,51 @@
     </div>
   </section>
 
-  <!-- ── features ──────────────────────────────────────────────────── -->
-  <section id="features" class="band">
-    <div class="wrap">
-      <h2 data-i18n="featTitle">Ce poate face</h2>
-      <div class="cards">
-        <article class="card">
-          <h3 data-i18n="feat1Title">Contoarele tac până la răspuns</h3>
-          <p data-i18n="feat1Text">Aproape toate contoarele și reclamele nu pornesc până când vizitatorul nu apasă un buton. Exact acest lucru îl cer regulile și exact acest lucru nu îl fac bannerele de decor. Excepțiile rare sunt găsite chiar de panoul de control, care vă arată ce aveți de corectat.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat2Title">Scaner de cookie-uri</h3>
-          <p data-i18n="feat2Text">Nu trebuie să vă amintiți singur ce este pus pe site. Parcurgem paginile, găsim toate contoarele și cookie-urile și întocmim lista pentru banner.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat3Title">Registru de consimțăminte</h3>
-          <p data-i18n="feat3Text">Dacă un control întreabă cum dovediți consimțământul, răspunsul este deja salvat. Se rețin ora și alegerea vizitatorului, iar pe planurile plătite registrul se descarcă într-un fișier.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat4Title">34 de limbi</h3>
-          <p data-i18n="feat4Text">Vizitatorul vede bannerul în limba lui, iar dumneavoastră nu traduceți nimic. Îl puteți lăsa așa sau puteți scrie propriile texte.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat5Title">Reclamele continuă să funcționeze</h3>
-          <p data-i18n="feat5Text">Un refuz nu vă oprește complet publicitatea: Google primește un semnal corect și numără în continuare, doar fără date personale. Nu aveți nimic de configurat.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat6Title">WordPress, GTM, Tilda</h3>
-          <p data-i18n="feat6Text">Se instalează pe orice ar fi făcut site-ul dumneavoastră. Pentru WordPress există un plugin, iar pentru restul o singură linie, pe care o puteți pune chiar și pe Tilda gratuită.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
   <!-- ── pricing ───────────────────────────────────────────────────── -->
-  <section id="pricing">
+  <!-- Moved above «Что умеет» and «Для кого»: the critique measured nine
+       screens of scrolling before a visitor reached a price on a phone. -->
+  <section id="pricing" class="band">
     <div class="wrap">
       <h2 data-i18n="priceTitle">Tarife</h2>
       <p class="section-lede" data-i18n="priceLede">Planul se aplică organizației, nu unui singur site. Dacă treceți la un plan mai ieftin, site-ul continuă să funcționeze: bannerul rămâne, scanările automate se opresc, iar jos reapare linia despre dezvoltator.</p>
       <div class="plans" id="plans"></div>
       <p class="price-note" data-i18n="priceFoot">Prețuri în euro, fără TVA. Persoană juridică: E-COM CONSULT PLUS, Lituania.</p>
+    </div>
+  </section>
+
+  <!-- ── features ──────────────────────────────────────────────────── -->
+  <!-- Six benefits, one line each. The mechanics they used to spell out
+       (type="text/plain", dataLayer, Consent Mode signal names) now live in
+       the FAQ blocking answer and in «Для разработчиков» below. -->
+  <section id="features">
+    <div class="wrap">
+      <h2 data-i18n="featTitle">Ce poate face</h2>
+      <div class="cards">
+        <article class="card">
+          <h3 data-i18n="feat1Title">Contoarele tac până la răspuns</h3>
+          <p data-i18n="feat1Text">Analiza și reclamele nu pornesc până când vizitatorul nu apasă un buton.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat2Title">Scanerul găsește singur cookie-urile</h3>
+          <p data-i18n="feat2Text">Parcurgem paginile site-ului și pregătim lista pentru banner.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat3Title">Consimțământul poate fi dovedit</h3>
+          <p data-i18n="feat3Text">Fiecare răspuns al vizitatorului este păstrat pentru un eventual control.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat4Title">Bannerul știe 34 de limbi</h3>
+          <p data-i18n="feat4Text">Vizitatorul vede limba lui, iar dumneavoastră nu traduceți nimic.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat5Title">Reclamele continuă să funcționeze</h3>
+          <p data-i18n="feat5Text">Refuzul nu oprește Google complet: numără fără date personale.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat6Title">Se instalează pe orice site</h3>
+          <p data-i18n="feat6Text">WordPress, Tilda, Google Tag Manager sau HTML obișnuit.</p>
+        </article>
+      </div>
     </div>
   </section>
 
@@ -250,6 +257,38 @@
     </div>
   </section>
 
+  <!-- ── for developers ────────────────────────────────────────────── -->
+  <!-- Where the hero's code block went. Last section on purpose: an owner of
+       a small site never needs it, and a developer scrolls to the bottom or
+       clicks the nav item that now points here. -->
+  <section id="dev" class="band">
+    <div class="wrap dev-grid">
+      <div>
+        <h2 data-i18n="devTitle">Pentru dezvoltatori</h2>
+        <p class="section-lede" data-i18n="devLede">Trei tag-uri pentru client și un singur apel pentru configurare — fără build și fără cabinet.</p>
+        <p class="dev-facts" data-i18n="devFacts">Cod deschis sub licența MIT, zero dependențe, 34 de limbi, Google Consent Mode v2.</p>
+        <p class="dev-links">
+          <a href="https://github.com/vermoh/ConsentKit" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@ecomconsult/consentkit" rel="noopener">npm</a>
+          <a href="https://github.com/vermoh/ConsentKit/blob/main/INSTALL.ru.md" rel="noopener" data-i18n="devDocs">Ghid de instalare</a>
+        </p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-head" aria-hidden="true"><span></span><span></span><span></span></div>
+<pre><code>&lt;script src="ck-core.js"&gt;&lt;/script&gt;
+&lt;script src="ck-locales.js"&gt;&lt;/script&gt;
+&lt;script src="ck-ui.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  ConsentKit.init({
+    language: 'auto',
+    layout: { type: 'bar' }
+  });
+&lt;/script&gt;</code></pre>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer class="site-foot">
@@ -274,7 +313,7 @@
 <script src="/vendor/ck-ui.js"></script>
 <!-- Debug panel: inert unless the page is opened with ?ck_debug=1 -->
 <script src="/vendor/ck-debug.js"></script>
-<script>window.__CK_SITE_I18N={"htmlLang":"ro","docTitle":"ConsentKit — banner de consimțământ pentru cookie-uri","docDesc":"Un banner de consimțământ pentru cookie-uri care se instalează în zece minute. Întreabă vizitatorii înainte să pornească vreun contor. 34 de limbi, Google Consent Mode v2, scaner de cookie-uri și registru de consimțăminte. Sursă deschisă, MIT.","skip":"Sari la conținutul principal","navSections":"Secțiuni","pageLanguage":"Limba paginii","navDemo":"Demo","navHow":"Cum funcționează","navFeatures":"Ce poate face","navPricing":"Tarife","navFaq":"Întrebări","ctaCabinet":"Deschide panoul de control","ctaDemo":"Vezi demonstrația","heroEyebrow":"Sursă deschisă · MIT · plan gratuit","heroTitle":"Bannerul de consimțământ pentru cookie-uri care se instalează în zece minute","heroLine1":"Majoritatea bannerelor doar desenează butoane. Pe acele site-uri contoarele pornesc imediat, orice ar apăsa vizitatorul. Regulile UE cer altceva.","heroLine2":"ConsentKit întreabă mai întâi vizitatorul și abia apoi pornește contoarele și reclamele. Vorbește singur 34 de limbi și înregistrează fiecare răspuns, ca să aveți ce arăta la un control.","heroNote":"Gratuit pentru totdeauna: un site, toate cele 34 de limbi, o scanare manuală pe zi.","demoTitle":"Demonstrație live","demoLede":"Acesta este un banner real, nu o captură de ecran. Schimbați forma, tema și limba și apăsați butoanele.","fieldLayout":"Formă","layoutBar":"Bară","layoutBox":"Casetă în colț","layoutModal":"Fereastră centrată","fieldPosition":"Poziție","posTop":"Sus","posBottom":"Jos","posBottomLeft":"Jos în stânga","posBottomRight":"Jos în dreapta","fieldTheme":"Temă","themeAuto":"Ca în sistem","themeLight":"Deschisă","themeDark":"Închisă","fieldBannerLang":"Limba bannerului","langAuto":"Ca limba paginii","btnShowAgain":"Arată din nou","demoHint":"Șterge consimțământul salvat și afișează bannerul din nou.","demoDebug":"Vreți să vedeți ce anume a oprit bannerul? Deschideți această pagină cu ?ck_debug=1 și în dreapta jos apare un panou cu detalii. Îl vedeți numai dumneavoastră, iar ?ck_debug=0 îl închide.","statusUndecided":"Încă niciun consimțământ — bannerul este afișat.","statusDecided":"Alegere salvată. Permise: {cats}.","statusNone":"nimic în afară de cele necesare","statusBroken":"Demonstrația nu s-a încărcat: clientul nu este disponibil.","howTitle":"Cum funcționează","how1Title":"Inserați linia bannerului","how1Text":"Copiați o singură linie din panoul de control și puneți-o la începutul site-ului. Merge pe Tilda, pe WordPress și pe orice alt site.","how2Title":"Apăsați „Verificați”","how2Text":"Panoul de control intră singur pe site și verifică dacă linia este la locul ei. Astfel confirmați totodată că site-ul este al dumneavoastră.","how3Title":"Porniți o scanare","how3Text":"Parcurgem paginile și găsim toate contoarele și cookie-urile care funcționează la dumneavoastră. Primiți înapoi o listă gata făcută pentru banner.","how4Title":"Ajustați bannerul","how4Text":"Bannerul funcționează deja, iar prima listă de cookie-uri se publică singură. Apoi puteți schimba culorile și textele după site-ul dumneavoastră.","featTitle":"Ce poate face","feat1Title":"Contoarele tac până la răspuns","feat1Text":"Aproape toate contoarele și reclamele nu pornesc până când vizitatorul nu apasă un buton. Exact acest lucru îl cer regulile și exact acest lucru nu îl fac bannerele de decor. Excepțiile rare sunt găsite chiar de panoul de control, care vă arată ce aveți de corectat.","feat2Title":"Scaner de cookie-uri","feat2Text":"Nu trebuie să vă amintiți singur ce este pus pe site. Parcurgem paginile, găsim toate contoarele și cookie-urile și întocmim lista pentru banner.","feat3Title":"Registru de consimțăminte","feat3Text":"Dacă un control întreabă cum dovediți consimțământul, răspunsul este deja salvat. Se rețin ora și alegerea vizitatorului, iar pe planurile plătite registrul se descarcă într-un fișier.","feat4Title":"34 de limbi","feat4Text":"Vizitatorul vede bannerul în limba lui, iar dumneavoastră nu traduceți nimic. Îl puteți lăsa așa sau puteți scrie propriile texte.","feat5Title":"Reclamele continuă să funcționeze","feat5Text":"Un refuz nu vă oprește complet publicitatea: Google primește un semnal corect și numără în continuare, doar fără date personale. Nu aveți nimic de configurat.","feat6Title":"WordPress, GTM, Tilda","feat6Text":"Se instalează pe orice ar fi făcut site-ul dumneavoastră. Pentru WordPress există un plugin, iar pentru restul o singură linie, pe care o puteți pune chiar și pe Tilda gratuită.","priceTitle":"Tarife","priceLede":"Planul se aplică organizației, nu unui singur site. Dacă treceți la un plan mai ieftin, site-ul continuă să funcționeze: bannerul rămâne, scanările automate se opresc, iar jos reapare linia despre dezvoltator.","priceFoot":"Prețuri în euro, fără TVA. Persoană juridică: E-COM CONSULT PLUS, Lituania.","perMonth":"/ lună","perSitePerMonth":"per site / lună","byAgreement":"prin acord","planFree":"Gratuit","planStarter":"Starter","planBusiness":"Business","planAgency":"Agenție","planFreeNote":"Pentru totdeauna","planStarterNote":"Câte un abonament pentru fiecare site","planBusinessNote":"Până la 10 site-uri per organizație","planAgencyNote":"Fără limită de site-uri","planCtaFree":"Începeți gratuit","planCtaPaid":"Deschide panoul de control","planCtaAgency":"Scrieți-ne","recommended":"Cel mai ales","priceTableCaption":"Compararea planurilor ConsentKit: preț, site-uri, scanări, registru de consimțăminte, alerte, limbi și asistență pentru fiecare plan.","priceScrollHint":"Derulați tabelul lateral pentru a vedea toate planurile.","rowPlan":"Plan","rowPrice":"Preț","rowCta":"Abonare","rowSites":"Site-uri","rowBranding":"Linia „Made by E-COM Consult”","rowScans":"Scanări","rowLog":"Registru de consimțăminte","rowAlerts":"E-mail când apare un contor nou","rowLangs":"Limbile bannerului","rowSupport":"Asistență","sitesOne":"1","sitesOneEach":"1 (fiecare facturat separat)","sitesUpTo":"până la {n}","sitesUnlimited":"nelimitat","brandingRequired":"obligatorie","brandingOptional":"poate fi dezactivată","scansScheduled":"automat săptămânal + {n} pe zi la cerere","scansManualOnly":"{n} pe zi la cerere","unitScanOne":"{n} scanare manuală","unitScanFew":"{n} scanări manuale","unitScanMany":"{n} de scanări manuale","logDays":"{n}, fără descărcare","logDaysCsv":"{n}, cu descărcare în fișier","logMonths":"{n}, fără descărcare","logMonthsCsv":"{n}, cu descărcare în fișier","unitDayOne":"{n} zi","unitDayFew":"{n} zile","unitDayMany":"{n} de zile","unitMonthOne":"{n} lună","unitMonthFew":"{n} luni","unitMonthMany":"{n} de luni","yes":"da","no":"nu","langsAll":"toate cele 34","supportFree":"documentație","supportStarter":"e-mail","supportBusiness":"e-mail, 1 zi lucrătoare","supportAgency":"manager dedicat","whoTitle":"Pentru cine","who1Title":"Site-uri pe Tilda","who1Text":"Pe Tilda nu se pot încărca fișiere, așa că vă dăm blocul întreg. Puneți-l în câmpul „Cod HTML pentru HEAD” și totul funcționează.","who2Title":"WordPress și WooCommerce","who2Text":"Se instalează ca orice plugin obișnuit și se configurează în panoul de administrare. Pluginurile de accelerare nu îl încurcă.","who3Title":"Magazine online","who3Text":"Un refuz nu vă șterge statistica și reclamele. Google continuă să numere comenzile, doar fără date personale.","who4Title":"Agenții","who4Text":"Toate site-urile clienților se văd într-un singur panou. Scanările merg singure, iar despre un contor nou pe oricare site aflați prin e-mail.","faqTitle":"Întrebări frecvente","faq":[["Ce este consimțământul pentru cookie-uri și de ce este nevoie de el?","Un cookie este o mică însemnare pe care site-ul o lasă în browserul vizitatorului. Conform regulilor UE, tot ce nu este necesar pentru funcționarea site-ului pornește doar după acordul vizitatorului, iar acordul trebuie să poată fi dovedit. ConsentKit întreabă, așteaptă răspunsul și salvează decizia în locul dumneavoastră."],["Chiar blochează ConsentKit totul înainte de consimțământ?","Aproape tot și imediat: codurile oficiale Google Analytics, Metrica, Meta, TikTok și Hotjar sunt oprite automat, iar Google primește semnalele Consent Mode v2 înainte de încărcarea etichetelor. Mai rar apar contoare scrise de mână direct în pagină, pe care browserul apucă să le încarce, așa că acele locuri trebuie marcate o singură dată. Panoul de control vă arată exact care sunt și ce aveți de făcut."],["Unde sunt păstrate datele?","Pe servere din Lituania, adică în Uniunea Europeană. Și compania este europeană: E-COM CONSULT PLUS. Păstrăm faptul consimțământului și ce anume a ales persoana, nu informații despre vizitator."],["Se poate folosi fără panoul de control?","Da, și gratuit. Programul este deschis sub licența MIT: descărcați fișierele, puneți-le pe site și configurați-le manual, fără înregistrare. Panoul de control este pentru cei cărora le este mai comod să apese butoane decât să editeze fișiere."],["Cum opresc linia „Made by E-COM Consult”?","Pe planurile plătite linia se oprește dintr-un comutator în setările site-ului, iar pe cel gratuit rămâne. Dacă ați pus bannerul singur, fără panoul de control, linia se poate scoate din setările copiei dumneavoastră. Luăm bani pentru panou, scanări și păstrarea registrului, nu pentru ascunderea unei linii."],["Cum stau lucrurile cu scanarea site-urilor străine?","Puteți scana doar site-urile proprii sau site-urile clienților care v-au încredințat asta. De aceea site-ul trebuie confirmat în panoul de control înainte de prima scanare. Scanerul umblă cu grijă și nu încarcă site-ul."]],"footLegal":"Lituania, UE. ConsentKit este software cu sursă deschisă, sub licența MIT.","footLinksLabel":"Legături","footDocs":"Ghid de instalare","footCabinet":"Panou de control"};</script>
+<script>window.__CK_SITE_I18N={"htmlLang":"ro","docTitle":"ConsentKit — banner de consimțământ pentru cookie-uri","docDesc":"Un banner de consimțământ pentru cookie-uri care se instalează în zece minute. Întreabă vizitatorii înainte să pornească vreun contor. 34 de limbi, Google Consent Mode v2, scaner de cookie-uri și registru de consimțăminte. Sursă deschisă, MIT.","skip":"Sari la conținutul principal","navSections":"Secțiuni","pageLanguage":"Limba paginii","navDemo":"Demo","navHow":"Cum funcționează","navFeatures":"Ce poate face","navPricing":"Tarife","navFaq":"Întrebări","navDev":"Pentru dezvoltatori","ctaCabinet":"Deschide panoul de control","ctaDemo":"Vezi demonstrația","heroEyebrow":"Sursă deschisă · MIT · plan gratuit","heroTitle":"Banner de consimțământ pentru cookie-uri, instalat în zece minute","heroLine1":"Vizitatorul răspunde mai întâi și abia apoi pornesc contoarele și reclamele. Exact asta cer regulile UE.","mockTitle":"Cookie-uri pe acest site","mockText":"Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră.","mockAccept":"Acceptă tot","mockReject":"Respinge tot","mockSettings":"Personalizează","heroNote":"Gratuit pentru totdeauna: un site, toate cele 34 de limbi, o scanare manuală pe zi.","demoTitle":"Demonstrație live","demoLede":"Acesta este un banner real, nu o captură de ecran. Schimbați forma și limba și apăsați butoanele.","fieldLayout":"Formă","layoutBar":"Bară","layoutBox":"Casetă în colț","layoutModal":"Fereastră centrată","fieldBannerLang":"Limba bannerului","langAuto":"Ca limba paginii","btnShowAgain":"Arată din nou","demoHint":"Șterge consimțământul salvat și afișează bannerul din nou.","statusUndecided":"Încă niciun consimțământ — bannerul este afișat.","statusDecided":"Alegere salvată. Permise: {cats}.","statusNone":"nimic în afară de cele necesare","statusBroken":"Demonstrația nu s-a încărcat: clientul nu este disponibil.","howTitle":"Cum funcționează","how1Title":"Inserați linia bannerului","how1Text":"Copiați o singură linie din panoul de control și puneți-o la începutul site-ului. Merge pe Tilda, pe WordPress și pe orice alt site.","how2Title":"Apăsați „Verificați”","how2Text":"Panoul de control intră singur pe site și verifică dacă linia este la locul ei. Astfel confirmați totodată că site-ul este al dumneavoastră.","how3Title":"Porniți o scanare","how3Text":"Parcurgem paginile și găsim toate contoarele și cookie-urile care funcționează la dumneavoastră. Primiți înapoi o listă gata făcută pentru banner.","how4Title":"Ajustați bannerul","how4Text":"Bannerul funcționează deja, iar prima listă de cookie-uri se publică singură. Apoi puteți schimba culorile și textele după site-ul dumneavoastră.","featTitle":"Ce poate face","feat1Title":"Contoarele tac până la răspuns","feat1Text":"Analiza și reclamele nu pornesc până când vizitatorul nu apasă un buton.","feat2Title":"Scanerul găsește singur cookie-urile","feat2Text":"Parcurgem paginile site-ului și pregătim lista pentru banner.","feat3Title":"Consimțământul poate fi dovedit","feat3Text":"Fiecare răspuns al vizitatorului este păstrat pentru un eventual control.","feat4Title":"Bannerul știe 34 de limbi","feat4Text":"Vizitatorul vede limba lui, iar dumneavoastră nu traduceți nimic.","feat5Title":"Reclamele continuă să funcționeze","feat5Text":"Refuzul nu oprește Google complet: numără fără date personale.","feat6Title":"Se instalează pe orice site","feat6Text":"WordPress, Tilda, Google Tag Manager sau HTML obișnuit.","priceTitle":"Tarife","priceLede":"Planul se aplică organizației, nu unui singur site. Dacă treceți la un plan mai ieftin, site-ul continuă să funcționeze: bannerul rămâne, scanările automate se opresc, iar jos reapare linia despre dezvoltator.","priceFoot":"Prețuri în euro, fără TVA. Persoană juridică: E-COM CONSULT PLUS, Lituania.","perMonth":"/ lună","perSitePerMonth":"per site / lună","byAgreement":"prin acord","planFree":"Gratuit","planStarter":"Starter","planBusiness":"Business","planAgency":"Agenție","planFreeNote":"Pentru totdeauna","planStarterNote":"Pentru un singur site","planBusinessNote":"Pentru agenții și rețele de site-uri","planAgencyNote":"Fără limită de site-uri","planCtaFree":"Începeți gratuit","planCtaPaid":"Deschide panoul de control","planCtaAgency":"Scrieți-ne","recommended":"Cel mai ales","priceTableCaption":"Compararea planurilor ConsentKit: preț, site-uri, scanări, registru de consimțăminte, alerte, limbi și asistență pentru fiecare plan.","priceScrollHint":"Derulați tabelul lateral pentru a vedea toate planurile.","rowPlan":"Plan","rowPrice":"Preț","rowCta":"Abonare","rowSites":"Site-uri","rowBranding":"Linia „Made by E-COM Consult”","rowScans":"Scanări","rowLog":"Registru de consimțăminte","rowAlerts":"E-mail când apare un contor nou","rowLangs":"Limbile bannerului","rowSupport":"Asistență","sitesOne":"1","sitesOneEach":"1 (fiecare facturat separat)","sitesUpTo":"până la {n}","sitesUnlimited":"nelimitat","brandingRequired":"obligatorie","brandingOptional":"poate fi dezactivată","scansScheduled":"automat săptămânal + {n} pe zi la cerere","scansManualOnly":"{n} pe zi la cerere","unitScanOne":"{n} scanare manuală","unitScanFew":"{n} scanări manuale","unitScanMany":"{n} de scanări manuale","logDays":"{n}, fără descărcare","logDaysCsv":"{n}, cu descărcare în fișier","logMonths":"{n}, fără descărcare","logMonthsCsv":"{n}, cu descărcare în fișier","unitDayOne":"{n} zi","unitDayFew":"{n} zile","unitDayMany":"{n} de zile","unitMonthOne":"{n} lună","unitMonthFew":"{n} luni","unitMonthMany":"{n} de luni","yes":"da","no":"nu","langsAll":"toate cele 34","supportFree":"documentație","supportStarter":"e-mail","supportBusiness":"e-mail, 1 zi lucrătoare","supportAgency":"manager dedicat","whoTitle":"Pentru cine","who1Title":"Site-uri pe Tilda","who1Text":"Pe Tilda nu se pot încărca fișiere, așa că vă dăm blocul întreg. Puneți-l în câmpul „Cod HTML pentru HEAD” și totul funcționează.","who2Title":"WordPress și WooCommerce","who2Text":"Se instalează ca orice plugin obișnuit și se configurează în panoul de administrare. Pluginurile de accelerare nu îl încurcă.","who3Title":"Magazine online","who3Text":"Un refuz nu vă șterge statistica și reclamele. Google continuă să numere comenzile, doar fără date personale.","who4Title":"Agenții","who4Text":"Toate site-urile clienților se văd într-un singur panou. Scanările merg singure, iar despre un contor nou pe oricare site aflați prin e-mail.","faqTitle":"Întrebări frecvente","faq":[["Ce este consimțământul pentru cookie-uri și de ce este nevoie de el?","Un cookie este o mică însemnare pe care site-ul o lasă în browserul vizitatorului. Conform regulilor UE, tot ce nu este necesar pentru funcționarea site-ului pornește doar după acordul vizitatorului, iar acordul trebuie să poată fi dovedit. ConsentKit întreabă, așteaptă răspunsul și salvează decizia în locul dumneavoastră."],["Chiar blochează ConsentKit totul înainte de consimțământ?","Aproape totul, imediat: codurile oficiale Google Analytics, Yandex Metrica, Meta, TikTok și Hotjar sunt oprite automat, iar Google primește semnalele Consent Mode v2 înainte de încărcarea tag-urilor. Mai rar apar contoare scrise manual în pagină cu un tag \u003cscript src\u003e obișnuit: browserul apucă să le încarce, așa că un asemenea tag trebuie marcat o dată cu atributul type=\"text/plain\". Cabinetul arată singur care anume și explică ce este de făcut."],["Unde sunt păstrate datele?","Pe servere din Lituania, adică în Uniunea Europeană. Și compania este europeană: E-COM CONSULT PLUS. Păstrăm faptul consimțământului și ce anume a ales persoana, nu informații despre vizitator."],["Se poate folosi fără panoul de control?","Da, și gratuit. Programul este deschis sub licența MIT: descărcați fișierele, puneți-le pe site și configurați-le manual, fără înregistrare. Panoul de control este pentru cei cărora le este mai comod să apese butoane decât să editeze fișiere."],["Cum opresc linia „Made by E-COM Consult”?","Pe planurile plătite linia se oprește dintr-un comutator în setările site-ului, iar pe cel gratuit rămâne. Dacă ați pus bannerul singur, fără panoul de control, linia se poate scoate din setările copiei dumneavoastră. Luăm bani pentru panou, scanări și păstrarea registrului, nu pentru ascunderea unei linii."],["Cum stau lucrurile cu scanarea site-urilor străine?","Puteți scana doar site-urile proprii sau site-urile clienților care v-au încredințat asta. De aceea site-ul trebuie confirmat în panoul de control înainte de prima scanare. Scanerul umblă cu grijă și nu încarcă site-ul."]],"footLegal":"Lituania, UE. ConsentKit este software cu sursă deschisă, sub licența MIT.","footLinksLabel":"Legături","footDocs":"Ghid de instalare","footCabinet":"Panou de control","devTitle":"Pentru dezvoltatori","devLede":"Trei tag-uri pentru client și un singur apel pentru configurare — fără build și fără cabinet.","devFacts":"Cod deschis sub licența MIT, zero dependențe, 34 de limbi, Google Consent Mode v2.","devDocs":"Ghid de instalare"};</script>
 <script src="/app.js"></script>
 </body>
 </html>

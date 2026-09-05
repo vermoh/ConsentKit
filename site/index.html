@@ -43,9 +43,10 @@
     <nav class="head-nav" aria-label="Sections" data-i18n-aria-label="navSections">
       <a href="#demo" data-i18n="navDemo">Demo</a>
       <a href="#how" data-i18n="navHow">How it works</a>
-      <a href="#features" data-i18n="navFeatures">Features</a>
       <a href="#pricing" data-i18n="navPricing">Pricing</a>
+      <a href="#features" data-i18n="navFeatures">Features</a>
       <a href="#faq" data-i18n="navFaq">FAQ</a>
+      <a href="#dev" data-i18n="navDev">For developers</a>
     </nav>
 
     <div class="head-actions">
@@ -67,8 +68,7 @@
       <div>
         <p class="eyebrow" data-i18n="heroEyebrow">Open source · MIT · free plan</p>
         <h1 data-i18n="heroTitle">A cookie consent banner you can install in ten minutes</h1>
-        <p class="lede" data-i18n="heroLine1">Most banners only draw the buttons. On those sites the trackers start straight away, whatever the visitor presses. EU rules require otherwise.</p>
-        <p class="lede" data-i18n="heroLine2">ConsentKit asks your visitor first and starts the trackers and ads only afterwards. It speaks 34 languages on its own and records every answer, so you have something to show if you are ever asked.</p>
+        <p class="lede" data-i18n="heroLine1">Your visitor answers first, and only then do the trackers and ads start. That is what EU rules require.</p>
         <p class="hero-cta">
           <a class="btn btn--primary" href="https://app.ecomconsult.net" data-i18n="ctaCabinet">Open the dashboard</a>
           <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">See the demo</a>
@@ -76,17 +76,35 @@
         <p class="hero-note" data-i18n="heroNote">Free forever: one site, all 34 languages, one manual scan per day.</p>
       </div>
 
-      <div class="hero-code" aria-hidden="true">
-        <div class="code-head"><span></span><span></span><span></span></div>
-<pre><code>&lt;script src="ck-core.js"&gt;&lt;/script&gt;
-&lt;script src="ck-locales.js"&gt;&lt;/script&gt;
-&lt;script src="ck-ui.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-  ConsentKit.init({
-    language: 'auto',
-    layout: { type: 'bar' }
-  });
-&lt;/script&gt;</code></pre>
+      <!-- Hero mockup: a framed page with a STATIC replica of the default box
+           banner. The real client cannot live here — ck-ui.js mounts one
+           position:fixed shadow root on <body> and can exist only once per
+           page, so the interactive instance stays in «Живое демо» below. The
+           replica copies that banner's own default strings, its 20/700
+           heading, 14px body and three equal 44px buttons, in the same accent.
+           Inert by construction: aria-hidden, and every control is a <span>,
+           so a screen reader hears one banner and the tab order gains nothing. -->
+      <div class="hero-shot" aria-hidden="true">
+        <div class="shot-frame">
+          <div class="shot-bar"><span></span><span></span><span></span></div>
+          <div class="shot-page">
+            <span class="shot-line shot-line--title"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+          </div>
+          <div class="shot-banner">
+            <p class="shot-banner__title" data-i18n="mockTitle">Cookies on this site</p>
+            <p class="shot-banner__text" data-i18n="mockText">Necessary cookies keep the site working. The rest are used only if you allow them.</p>
+            <div class="shot-banner__actions">
+              <span class="shot-btn shot-btn--accept" data-i18n="mockAccept">Accept all</span>
+              <span class="shot-btn shot-btn--reject" data-i18n="mockReject">Reject all</span>
+              <span class="shot-btn shot-btn--settings" data-i18n="mockSettings">Customize</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -95,7 +113,7 @@
   <section id="demo" class="band">
     <div class="wrap">
       <h2 data-i18n="demoTitle">Live demo</h2>
-      <p class="section-lede" data-i18n="demoLede">This is a real banner, not a screenshot. Change the layout, theme and language, and press the buttons.</p>
+      <p class="section-lede" data-i18n="demoLede">This is a real banner, not a screenshot. Change the layout and language, and press the buttons.</p>
 
       <div class="panel">
         <div class="panel-grid">
@@ -105,20 +123,6 @@
               <option value="bar" data-i18n="layoutBar">Bar</option>
               <option value="box" data-i18n="layoutBox">Corner box</option>
               <option value="modal" data-i18n="layoutModal">Centred dialog</option>
-            </select>
-          </p>
-
-          <p class="field" id="d-position-field">
-            <label for="d-position" data-i18n="fieldPosition">Position</label>
-            <select id="d-position"></select>
-          </p>
-
-          <p class="field">
-            <label for="d-theme" data-i18n="fieldTheme">Theme</label>
-            <select id="d-theme">
-              <option value="auto" data-i18n="themeAuto">Follow the system</option>
-              <option value="light" data-i18n="themeLight">Light</option>
-              <option value="dark" data-i18n="themeDark">Dark</option>
             </select>
           </p>
 
@@ -132,8 +136,6 @@
           <button type="button" class="btn btn--primary btn--sm" id="d-again" data-i18n="btnShowAgain">Show again</button>
           <span class="panel-hint" data-i18n="demoHint">Clears the stored consent and brings the banner back.</span>
         </p>
-
-        <p class="panel-hint" data-i18n="demoDebug">Want to see what the banner stopped? Open this page with ?ck_debug=1 and a panel with the details appears in the bottom right. Only you can see it, and ?ck_debug=0 turns it off.</p>
 
         <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
       </div>
@@ -174,46 +176,51 @@
     </div>
   </section>
 
-  <!-- ── features ──────────────────────────────────────────────────── -->
-  <section id="features" class="band">
-    <div class="wrap">
-      <h2 data-i18n="featTitle">Features</h2>
-      <div class="cards">
-        <article class="card">
-          <h3 data-i18n="feat1Title">Trackers stay quiet until the answer</h3>
-          <p data-i18n="feat1Text">Almost every tracker and ad stays off until your visitor presses a button. That is exactly what the rules require, and exactly what decorative banners never do. The rare exceptions are found for you, with instructions on what to fix.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat2Title">Cookie scanner</h3>
-          <p data-i18n="feat2Text">You do not have to remember what is running on your site. We walk the pages, find every tracker and cookie, and write the list for the banner.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat3Title">Consent log</h3>
-          <p data-i18n="feat3Text">If anyone asks how you can prove consent, the answer is already saved. We record the time and what the visitor chose, and on paid plans you can download the whole log as a file.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat4Title">34 languages</h3>
-          <p data-i18n="feat4Text">Visitors see the banner in their own language and you translate nothing. Leave it as it is, or write your own wording.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat5Title">Your ads keep working</h3>
-          <p data-i18n="feat5Text">A refusal does not switch your advertising off completely: Google still gets a proper signal and keeps counting, just without personal data. There is nothing for you to set up.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat6Title">WordPress, GTM, Tilda</h3>
-          <p data-i18n="feat6Text">It installs on whatever your site is built with. WordPress has a plugin, and everything else takes one line you can paste even on free Tilda.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
   <!-- ── pricing ───────────────────────────────────────────────────── -->
-  <section id="pricing">
+  <!-- Moved above «Что умеет» and «Для кого»: the critique measured nine
+       screens of scrolling before a visitor reached a price on a phone. -->
+  <section id="pricing" class="band">
     <div class="wrap">
       <h2 data-i18n="priceTitle">Pricing</h2>
       <p class="section-lede" data-i18n="priceLede">A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.</p>
       <div class="plans" id="plans"></div>
       <p class="price-note" data-i18n="priceFoot">Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Lithuania.</p>
+    </div>
+  </section>
+
+  <!-- ── features ──────────────────────────────────────────────────── -->
+  <!-- Six benefits, one line each. The mechanics they used to spell out
+       (type="text/plain", dataLayer, Consent Mode signal names) now live in
+       the FAQ blocking answer and in «Для разработчиков» below. -->
+  <section id="features">
+    <div class="wrap">
+      <h2 data-i18n="featTitle">Features</h2>
+      <div class="cards">
+        <article class="card">
+          <h3 data-i18n="feat1Title">Trackers stay silent until asked</h3>
+          <p data-i18n="feat1Text">Analytics and ads do not start until your visitor presses a button.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat2Title">The scanner finds your cookies</h3>
+          <p data-i18n="feat2Text">We walk your pages and build the cookie list for the banner.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat3Title">Consent you can prove</h3>
+          <p data-i18n="feat3Text">Every visitor answer is stored in case you are ever asked.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat4Title">The banner speaks 34 languages</h3>
+          <p data-i18n="feat4Text">Visitors see their own language and you translate nothing.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat5Title">Your ads keep working</h3>
+          <p data-i18n="feat5Text">A refusal does not switch Google off: it counts without personal data.</p>
+        </article>
+        <article class="card">
+          <h3 data-i18n="feat6Title">Fits any site</h3>
+          <p data-i18n="feat6Text">WordPress, Tilda, Google Tag Manager or plain HTML.</p>
+        </article>
+      </div>
     </div>
   </section>
 
@@ -250,6 +257,38 @@
     </div>
   </section>
 
+  <!-- ── for developers ────────────────────────────────────────────── -->
+  <!-- Where the hero's code block went. Last section on purpose: an owner of
+       a small site never needs it, and a developer scrolls to the bottom or
+       clicks the nav item that now points here. -->
+  <section id="dev" class="band">
+    <div class="wrap dev-grid">
+      <div>
+        <h2 data-i18n="devTitle">For developers</h2>
+        <p class="section-lede" data-i18n="devLede">Three tags to load the client and one call to configure it — no build step and no dashboard.</p>
+        <p class="dev-facts" data-i18n="devFacts">Open source under MIT, zero dependencies, 34 languages, Google Consent Mode v2.</p>
+        <p class="dev-links">
+          <a href="https://github.com/vermoh/ConsentKit" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/@ecomconsult/consentkit" rel="noopener">npm</a>
+          <a href="https://github.com/vermoh/ConsentKit/blob/main/INSTALL.ru.md" rel="noopener" data-i18n="devDocs">Installation guide</a>
+        </p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-head" aria-hidden="true"><span></span><span></span><span></span></div>
+<pre><code>&lt;script src="ck-core.js"&gt;&lt;/script&gt;
+&lt;script src="ck-locales.js"&gt;&lt;/script&gt;
+&lt;script src="ck-ui.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  ConsentKit.init({
+    language: 'auto',
+    layout: { type: 'bar' }
+  });
+&lt;/script&gt;</code></pre>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer class="site-foot">
@@ -274,7 +313,7 @@
 <script src="/vendor/ck-ui.js"></script>
 <!-- Debug panel: inert unless the page is opened with ?ck_debug=1 -->
 <script src="/vendor/ck-debug.js"></script>
-<script>window.__CK_SITE_I18N={"htmlLang":"en","docTitle":"ConsentKit — cookie consent banner for your site","docDesc":"A cookie consent banner you can install in ten minutes. It asks your visitors before any tracker starts. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.","skip":"Skip to main content","navSections":"Sections","pageLanguage":"Page language","navDemo":"Demo","navHow":"How it works","navFeatures":"Features","navPricing":"Pricing","navFaq":"FAQ","ctaCabinet":"Open the dashboard","ctaDemo":"See the demo","heroEyebrow":"Open source · MIT · free plan","heroTitle":"A cookie consent banner you can install in ten minutes","heroLine1":"Most banners only draw the buttons. On those sites the trackers start straight away, whatever the visitor presses. EU rules require otherwise.","heroLine2":"ConsentKit asks your visitor first and starts the trackers and ads only afterwards. It speaks 34 languages on its own and records every answer, so you have something to show if you are ever asked.","heroNote":"Free forever: one site, all 34 languages, one manual scan per day.","demoTitle":"Live demo","demoLede":"This is a real banner, not a screenshot. Change the layout, theme and language, and press the buttons.","fieldLayout":"Layout","layoutBar":"Bar","layoutBox":"Corner box","layoutModal":"Centred dialog","fieldPosition":"Position","posTop":"Top","posBottom":"Bottom","posBottomLeft":"Bottom left","posBottomRight":"Bottom right","fieldTheme":"Theme","themeAuto":"Follow the system","themeLight":"Light","themeDark":"Dark","fieldBannerLang":"Banner language","langAuto":"Follow the page","btnShowAgain":"Show again","demoHint":"Clears the stored consent and brings the banner back.","demoDebug":"Want to see what the banner stopped? Open this page with ?ck_debug=1 and a panel with the details appears in the bottom right. Only you can see it, and ?ck_debug=0 turns it off.","statusUndecided":"No consent yet — the banner is showing.","statusDecided":"Choice saved. Allowed: {cats}.","statusNone":"nothing beyond necessary","statusBroken":"The demo did not load: the client is unavailable.","howTitle":"How it works","how1Title":"Add the banner line","how1Text":"Copy one line from the dashboard and paste it at the top of your site. It works on Tilda, WordPress and any other site.","how2Title":"Click Verify","how2Text":"The dashboard visits your site and checks the line is there. That also proves the site is yours.","how3Title":"Run a scan","how3Text":"We walk your pages and find every tracker and cookie you are running. You get back a ready-made list for the banner.","how4Title":"Adjust the banner","how4Text":"The banner already works and the first cookie list publishes itself. After that you can change the colours and wording to match your site.","featTitle":"Features","feat1Title":"Trackers stay quiet until the answer","feat1Text":"Almost every tracker and ad stays off until your visitor presses a button. That is exactly what the rules require, and exactly what decorative banners never do. The rare exceptions are found for you, with instructions on what to fix.","feat2Title":"Cookie scanner","feat2Text":"You do not have to remember what is running on your site. We walk the pages, find every tracker and cookie, and write the list for the banner.","feat3Title":"Consent log","feat3Text":"If anyone asks how you can prove consent, the answer is already saved. We record the time and what the visitor chose, and on paid plans you can download the whole log as a file.","feat4Title":"34 languages","feat4Text":"Visitors see the banner in their own language and you translate nothing. Leave it as it is, or write your own wording.","feat5Title":"Your ads keep working","feat5Text":"A refusal does not switch your advertising off completely: Google still gets a proper signal and keeps counting, just without personal data. There is nothing for you to set up.","feat6Title":"WordPress, GTM, Tilda","feat6Text":"It installs on whatever your site is built with. WordPress has a plugin, and everything else takes one line you can paste even on free Tilda.","priceTitle":"Pricing","priceLede":"A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.","priceFoot":"Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Lithuania.","perMonth":"/ mo","perSitePerMonth":"per site / mo","byAgreement":"by agreement","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Free forever","planStarterNote":"One subscription per site","planBusinessNote":"Up to 10 sites per organisation","planAgencyNote":"No site limit","planCtaFree":"Start free","planCtaPaid":"Open the dashboard","planCtaAgency":"Get in touch","recommended":"Most popular","priceTableCaption":"ConsentKit plans compared: price, sites, scans, consent log, alerts, languages and support for every plan.","priceScrollHint":"Scroll the table sideways to see every plan.","rowPlan":"Plan","rowPrice":"Price","rowCta":"Getting started","rowSites":"Sites","rowBranding":"“Made by E-COM Consult” line","rowScans":"Scans","rowLog":"Consent log","rowAlerts":"Email when a new tracker appears","rowLangs":"Banner languages","rowSupport":"Support","sitesOne":"1","sitesOneEach":"1 (each billed separately)","sitesUpTo":"up to {n}","sitesUnlimited":"unlimited","brandingRequired":"required","brandingOptional":"can be turned off","scansScheduled":"automatic weekly + {n} a day on demand","scansManualOnly":"{n} a day on demand","unitScanOne":"{n} manual scan","unitScanFew":"{n} manual scans","unitScanMany":"{n} manual scans","logDays":"{n}, no download","logDaysCsv":"{n}, downloadable file","logMonths":"{n}, no download","logMonthsCsv":"{n}, downloadable file","unitDayOne":"{n} day","unitDayFew":"{n} days","unitDayMany":"{n} days","unitMonthOne":"{n} month","unitMonthFew":"{n} months","unitMonthMany":"{n} months","yes":"yes","no":"no","langsAll":"all 34","supportFree":"documentation","supportStarter":"e-mail","supportBusiness":"e-mail, 1 business day","supportAgency":"dedicated manager","whoTitle":"Who it is for","who1Title":"Tilda sites","who1Text":"Tilda gives you nowhere to upload files, so we hand you the whole block instead. Paste it into “HTML code for HEAD” and it works.","who2Title":"WordPress and WooCommerce","who2Text":"It installs like any other plugin and is configured in the admin. Site speed-up plugins do not get in its way.","who3Title":"Online shops","who3Text":"A refusal does not wipe out your statistics and advertising. Google keeps counting your orders, just without personal data.","who4Title":"Agencies","who4Text":"Every client site sits in one dashboard. Scans run by themselves, and you get an email when a new tracker shows up on any of them.","faqTitle":"Frequently asked questions","faq":[["What is cookie consent and why is it needed?","A cookie is a small note a site leaves in your visitor’s browser. Under EU rules anything not needed to run the site itself may only start after the visitor agrees, and you have to be able to prove they did. ConsentKit asks, waits for the answer and saves the decision for you."],["Does ConsentKit really block everything before consent?","Almost everything, straight away: the official Google Analytics, Metrica, Meta, TikTok and Hotjar codes are stopped automatically, and Google receives Consent Mode v2 signals before any tag loads. Less common are trackers written into the page by hand, which the browser starts fetching first, so those spots need marking once. The dashboard shows you exactly which ones and what to do."],["Where is the data stored?","On servers in Lithuania, that is, in the European Union. The company is European too: E-COM CONSULT PLUS. We store the fact of consent and what the person chose, not information about the visitor."],["Can I use it without the dashboard?","Yes, and free of charge. The software is open under the MIT licence: download the files, put them on your site and set it up by hand, with no sign-up. The dashboard is for people who would rather press buttons than edit files."],["How do I turn off the “Made by E-COM Consult” line?","On paid plans a switch in the site settings turns it off; on the free plan it stays. If you installed the banner yourself, without the dashboard, you can remove the line in your own copy’s settings. We charge for the dashboard, the scans and keeping the log, not for hiding a line."],["What about scanning sites that are not mine?","You may only scan your own sites, or client sites you have been asked to look after. That is why a site has to be verified in the dashboard before the first scan. The scanner treads lightly and does not put load on your site."]],"footLegal":"Lithuania, EU. ConsentKit is open source under the MIT licence.","footLinksLabel":"Links","footDocs":"Installation guide","footCabinet":"Dashboard"};</script>
+<script>window.__CK_SITE_I18N={"htmlLang":"en","docTitle":"ConsentKit — cookie consent banner for your site","docDesc":"A cookie consent banner you can install in ten minutes. It asks your visitors before any tracker starts. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.","skip":"Skip to main content","navSections":"Sections","pageLanguage":"Page language","navDemo":"Demo","navHow":"How it works","navFeatures":"Features","navPricing":"Pricing","navFaq":"FAQ","navDev":"For developers","ctaCabinet":"Open the dashboard","ctaDemo":"See the demo","heroEyebrow":"Open source · MIT · free plan","heroTitle":"A cookie consent banner you can install in ten minutes","heroLine1":"Your visitor answers first, and only then do the trackers and ads start. That is what EU rules require.","mockTitle":"Cookies on this site","mockText":"Necessary cookies keep the site working. The rest are used only if you allow them.","mockAccept":"Accept all","mockReject":"Reject all","mockSettings":"Customize","heroNote":"Free forever: one site, all 34 languages, one manual scan per day.","demoTitle":"Live demo","demoLede":"This is a real banner, not a screenshot. Change the layout and language, and press the buttons.","fieldLayout":"Layout","layoutBar":"Bar","layoutBox":"Corner box","layoutModal":"Centred dialog","fieldBannerLang":"Banner language","langAuto":"Follow the page","btnShowAgain":"Show again","demoHint":"Clears the stored consent and brings the banner back.","statusUndecided":"No consent yet — the banner is showing.","statusDecided":"Choice saved. Allowed: {cats}.","statusNone":"nothing beyond necessary","statusBroken":"The demo did not load: the client is unavailable.","howTitle":"How it works","how1Title":"Add the banner line","how1Text":"Copy one line from the dashboard and paste it at the top of your site. It works on Tilda, WordPress and any other site.","how2Title":"Click Verify","how2Text":"The dashboard visits your site and checks the line is there. That also proves the site is yours.","how3Title":"Run a scan","how3Text":"We walk your pages and find every tracker and cookie you are running. You get back a ready-made list for the banner.","how4Title":"Adjust the banner","how4Text":"The banner already works and the first cookie list publishes itself. After that you can change the colours and wording to match your site.","featTitle":"Features","feat1Title":"Trackers stay silent until asked","feat1Text":"Analytics and ads do not start until your visitor presses a button.","feat2Title":"The scanner finds your cookies","feat2Text":"We walk your pages and build the cookie list for the banner.","feat3Title":"Consent you can prove","feat3Text":"Every visitor answer is stored in case you are ever asked.","feat4Title":"The banner speaks 34 languages","feat4Text":"Visitors see their own language and you translate nothing.","feat5Title":"Your ads keep working","feat5Text":"A refusal does not switch Google off: it counts without personal data.","feat6Title":"Fits any site","feat6Text":"WordPress, Tilda, Google Tag Manager or plain HTML.","priceTitle":"Pricing","priceLede":"A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.","priceFoot":"Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Lithuania.","perMonth":"/ mo","perSitePerMonth":"per site / mo","byAgreement":"by agreement","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Free forever","planStarterNote":"For a single site","planBusinessNote":"For agencies and site networks","planAgencyNote":"No site limit","planCtaFree":"Start free","planCtaPaid":"Open the dashboard","planCtaAgency":"Get in touch","recommended":"Most popular","priceTableCaption":"ConsentKit plans compared: price, sites, scans, consent log, alerts, languages and support for every plan.","priceScrollHint":"Scroll the table sideways to see every plan.","rowPlan":"Plan","rowPrice":"Price","rowCta":"Getting started","rowSites":"Sites","rowBranding":"“Made by E-COM Consult” line","rowScans":"Scans","rowLog":"Consent log","rowAlerts":"Email when a new tracker appears","rowLangs":"Banner languages","rowSupport":"Support","sitesOne":"1","sitesOneEach":"1 (each billed separately)","sitesUpTo":"up to {n}","sitesUnlimited":"unlimited","brandingRequired":"required","brandingOptional":"can be turned off","scansScheduled":"automatic weekly + {n} a day on demand","scansManualOnly":"{n} a day on demand","unitScanOne":"{n} manual scan","unitScanFew":"{n} manual scans","unitScanMany":"{n} manual scans","logDays":"{n}, no download","logDaysCsv":"{n}, downloadable file","logMonths":"{n}, no download","logMonthsCsv":"{n}, downloadable file","unitDayOne":"{n} day","unitDayFew":"{n} days","unitDayMany":"{n} days","unitMonthOne":"{n} month","unitMonthFew":"{n} months","unitMonthMany":"{n} months","yes":"yes","no":"no","langsAll":"all 34","supportFree":"documentation","supportStarter":"e-mail","supportBusiness":"e-mail, 1 business day","supportAgency":"dedicated manager","whoTitle":"Who it is for","who1Title":"Tilda sites","who1Text":"Tilda gives you nowhere to upload files, so we hand you the whole block instead. Paste it into “HTML code for HEAD” and it works.","who2Title":"WordPress and WooCommerce","who2Text":"It installs like any other plugin and is configured in the admin. Site speed-up plugins do not get in its way.","who3Title":"Online shops","who3Text":"A refusal does not wipe out your statistics and advertising. Google keeps counting your orders, just without personal data.","who4Title":"Agencies","who4Text":"Every client site sits in one dashboard. Scans run by themselves, and you get an email when a new tracker shows up on any of them.","faqTitle":"Frequently asked questions","faq":[["What is cookie consent and why is it needed?","A cookie is a small note a site leaves in your visitor’s browser. Under EU rules anything not needed to run the site itself may only start after the visitor agrees, and you have to be able to prove they did. ConsentKit asks, waits for the answer and saves the decision for you."],["Does ConsentKit really block everything before consent?","Almost everything, right away: the official Google Analytics, Yandex Metrica, Meta, TikTok and Hotjar snippets are stopped automatically, and Google receives Consent Mode v2 signals before any tag loads. Rarer are trackers written into the page by hand as a plain \u003cscript src\u003e tag: the browser starts fetching those, so each one has to be marked once with type=\"text/plain\". The dashboard shows you exactly which ones and explains what to do."],["Where is the data stored?","On servers in Lithuania, that is, in the European Union. The company is European too: E-COM CONSULT PLUS. We store the fact of consent and what the person chose, not information about the visitor."],["Can I use it without the dashboard?","Yes, and free of charge. The software is open under the MIT licence: download the files, put them on your site and set it up by hand, with no sign-up. The dashboard is for people who would rather press buttons than edit files."],["How do I turn off the “Made by E-COM Consult” line?","On paid plans a switch in the site settings turns it off; on the free plan it stays. If you installed the banner yourself, without the dashboard, you can remove the line in your own copy’s settings. We charge for the dashboard, the scans and keeping the log, not for hiding a line."],["What about scanning sites that are not mine?","You may only scan your own sites, or client sites you have been asked to look after. That is why a site has to be verified in the dashboard before the first scan. The scanner treads lightly and does not put load on your site."]],"footLegal":"Lithuania, EU. ConsentKit is open source under the MIT licence.","footLinksLabel":"Links","footDocs":"Installation guide","footCabinet":"Dashboard","devTitle":"For developers","devLede":"Three tags to load the client and one call to configure it — no build step and no dashboard.","devFacts":"Open source under MIT, zero dependencies, 34 languages, Google Consent Mode v2.","devDocs":"Installation guide"};</script>
 <script src="/app.js"></script>
 </body>
 </html>
