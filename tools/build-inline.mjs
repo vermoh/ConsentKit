@@ -356,7 +356,10 @@ function build(flags) {
     // A fixed code must be one that actually shipped in this build.
     language,
     layout: { type: layout, position },
-    theme: { accent, radius: '10px', mode },
+    // 0.5.0: no radius here. The client's own defaults are the SPEC V1.6
+    // reference geometry (card 16 / button 8); writing a value out would pin
+    // every generated block to it forever and defeat the point.
+    theme: { accent, mode },
     cookieTable
   };
   if (!noBranding) config.branding = branding;

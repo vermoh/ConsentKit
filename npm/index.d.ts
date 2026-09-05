@@ -59,15 +59,85 @@ export interface CkDarkTheme {
   accent?: string;
 }
 
+/** v0.5.0 (SPEC V1.6 §1). Corner radii in px, clamped to 0–32. */
+export interface CkRadiusConfig {
+  /** Banner, panel and table corners. Default `16`. */
+  card?: number;
+  /** Button corners. Default `8`. */
+  button?: number;
+}
+
+/**
+ * v0.5.0 (SPEC V1.6 §1). One button's appearance.
+ *
+ * Contrast is enforced automatically and cannot be switched off: `fg` is kept
+ * only when it clears 4.5:1 against the fill it sits on, otherwise it becomes
+ * white or `#161616`, whichever wins. An `outline` `border` is darkened or
+ * lightened in steps until it clears 3:1 against the card, and that resolved
+ * border colour is then the text colour, subject to the same 4.5:1 rule.
+ * `ConsentKit._contrast` exposes the arithmetic.
+ */
+export interface CkButtonStyle {
+  variant?: 'filled' | 'outline';
+  /** Fill. `filled` defaults to the accent; `outline` is transparent. */
+  bg?: string;
+  /** Text. Computed from the contrast rules when omitted. */
+  fg?: string;
+  /** Border. Defaults to the accent. */
+  border?: string;
+  /** `1` (default) or `2`. */
+  borderWidth?: 1 | 2;
+}
+
+/**
+ * v0.5.0 (SPEC V1.6 §1). Per-button appearance.
+ *
+ * `accept` and `reject` are held to the equal-buttons invariant: they always
+ * render at the same size and weight, and they always share one variant. If
+ * the two disagree, `accept.variant` is used for both.
+ */
+export interface CkButtonsConfig {
+  /** Default `{ variant: 'filled' }` with the accent as the fill. */
+  accept?: CkButtonStyle;
+  /** Default `{ variant: 'filled' }`; always follows `accept.variant`. */
+  reject?: CkButtonStyle;
+  /** Default `{ variant: 'outline' }` with the accent as the border. */
+  settings?: CkButtonStyle;
+}
+
 export interface CkThemeConfig {
   /** Accent colour, exposed as `--ck-accent`. Default `'#2B50D8'`. */
   accent?: string;
-  /** Corner radius, exposed as `--ck-radius`. Default `'10px'`. */
-  radius?: string;
+  /**
+   * v0.5.0. `{ card, button }` in px, 0–32. Default `{ card: 16, button: 8 }`.
+   *
+   * A bare string or number is the pre-0.5.0 form and still works: it sets the
+   * card radius and leaves the button radius at its default.
+   */
+  radius?: CkRadiusConfig | string | number;
+  /**
+   * v0.5.0. `'inherit'` (default) takes the host page's font family — sizes
+   * stay fixed either way. `'system'` restores the pre-0.5.0 system stack.
+   */
+  font?: 'inherit' | 'system';
+  /** v0.5.0. Per-button appearance; contrast is enforced automatically. */
+  buttons?: CkButtonsConfig;
   /** v0.2. Default `'auto'` — follows `prefers-color-scheme`. */
   mode?: 'auto' | 'light' | 'dark';
   /** v0.2. Overrides the built-in dark palette. */
   dark?: CkDarkTheme;
+}
+
+/** v0.5.0 (SPEC V1.6 §2). Copy and the «Learn more» control. */
+export interface CkTextsConfig {
+  /** Cookie policy address. `http(s)` only; anything else is ignored. */
+  policyUrl?: string;
+  /**
+   * What «Learn more» does. Defaults to `'policy'` when `policyUrl` is set and
+   * `'settings'` when it is not. `'policy'` without a usable URL falls back to
+   * `'settings'` rather than rendering a dead link. `'hide'` renders nothing.
+   */
+  detailsAction?: 'policy' | 'settings' | 'hide';
 }
 
 /** Whether a category is offered in the preferences panel at all. */
@@ -119,6 +189,8 @@ export interface CkConfig {
   language?: string;
   layout?: CkLayoutConfig;
   theme?: CkThemeConfig;
+  /** v0.5.0. */
+  texts?: CkTextsConfig;
   categories?: CkCategoriesConfig;
   /** Lifetime of the stored decision, in days. Default `365`. */
   consentTtlDays?: number;
@@ -206,6 +278,74 @@ export interface ConsentKitApi {
 
   /** What is currently held back, host+path only — never a query string. */
   _blocked(): CkBlockedEntry[];
+
+  /**
+   * v0.5.0 (SPEC V1.6 §1). The contrast and theme arithmetic the banner
+   * actually paints with, as pure functions — so a theme editor quotes the
+   * same numbers rather than reimplementing them and drifting.
+   *
+   * Present only when `src/ck-ui.js` is loaded (the core alone does not draw).
+   * Colour arguments are hex; anything unmeasurable (a colour name, an `rgb()`
+   * string) yields `null` from the ratio functions and is returned untouched,
+   * with `adjusted: false`, by the rest.
+   */
+  readonly _contrast?: CkContrastApi;
+}
+
+/** One resolved button, as `ConsentKit._contrast.resolveButtonStyles()` returns it. */
+export interface CkResolvedButton {
+  variant: 'filled' | 'outline';
+  bg: string;
+  fg: string;
+  border: string;
+  borderWidth: 1 | 2;
+  /** Text contrast against `against`. `null` when it could not be measured. */
+  ratio: number | null;
+  /** `true` when the contrast rules overrode what the config asked for. */
+  adjusted: boolean;
+  /** Border contrast against the card (`outline` only). */
+  borderRatio?: number | null;
+  borderAdjusted?: boolean;
+  /** What `ratio` was measured against: the button's own fill, or the card. */
+  against: string;
+}
+
+export interface CkResolvedButtons {
+  mode: 'light' | 'dark';
+  cardBg: string;
+  accent: string;
+  buttons: { accept: CkResolvedButton; reject: CkResolvedButton; settings: CkResolvedButton };
+}
+
+/** v0.5.0. `ConsentKit._contrast` — pure, DOM-free, safe to call in Node. */
+export interface CkContrastApi {
+  /** WCAG 2.1 relative luminance, 0–1. `null` for an unmeasurable colour. */
+  relativeLuminance(hex: string): number | null;
+  /** WCAG 2.1 contrast ratio, 1–21. `null` when either side is unmeasurable. */
+  contrastRatio(a: string, b: string): number | null;
+  /** Keeps `fg` when it clears `min`, else white or `#161616` — whichever wins. */
+  ensureContrast(fg: string, bg: string, min?: number):
+    { color: string; adjusted: boolean; ratio: number | null };
+  /** Darkens or lightens `color` in steps until it clears `min` against `bg`. */
+  stepToContrast(color: string, bg: string, min?: number):
+    { color: string; adjusted: boolean; ratio: number | null };
+  /** The three buttons resolved for one palette, contrast already applied. */
+  resolveButtonStyles(theme: CkThemeConfig, mode: 'light' | 'dark',
+    palette?: Record<string, string>): CkResolvedButtons;
+  resolveRadius(theme: CkThemeConfig): { card: number; button: number };
+  resolveFont(theme: CkThemeConfig): string;
+  /** Takes the whole config, not just `texts`. */
+  resolveDetails(config: CkConfig):
+    { kind: 'policy' | 'settings' | 'hide'; href: string | null };
+  /** Takes the whole config. Returns the generated stylesheet and both palettes. */
+  buildThemeCss(config: CkConfig): {
+    css: string;
+    mode: 'auto' | 'light' | 'dark';
+    radius: { card: number; button: number };
+    font: string;
+    light: CkResolvedButtons;
+    dark: CkResolvedButtons;
+  };
 }
 
 /** One entry of `ConsentKit._blocked()`. */

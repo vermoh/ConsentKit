@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.4.1
+ * Версия ConsentKit: 0.5.0
  * Дата сборки:      2026-09-05
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -235,7 +235,16 @@
     policyVersion: '1',
     language: 'auto',
     layout: { type: 'bar', position: 'bottom' },
-    theme: { accent: '#2B50D8', radius: '10px' },
+    // 0.5.0: radius/font/buttons are resolved in ck-ui.js, not defaulted here.
+    // A concrete default in this object would be merged into every config and
+    // would then shadow the UI's own defaults — which is exactly what happened
+    // to `radius: '10px'` before 0.5.0: it pinned the pre-reference geometry on
+    // every site whether or not the owner had ever set it.
+    theme: { accent: '#2B50D8' },
+    // 0.5.0 (SPEC V1.6 §2). `detailsAction` is deliberately absent rather than
+    // set: its default depends on whether policyUrl is present, and a merged
+    // concrete value here would make that URL-sensitive default unreachable.
+    texts: {},
     categories: {
       functional: { enabled: true },
       analytics: { enabled: true },
@@ -1420,7 +1429,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.4.1',
+    version: '0.5.0',
     config: config,
 
     init: function (userConfig) {
@@ -2330,21 +2339,35 @@
     /* Palette tokens live in a second, generated stylesheet (see buildThemeCss).
        They must NOT be inline host styles: an inline value outbeats every :host
        rule, which would make the dark media query and the forced-mode class dead. */
+    /* font-FAMILY only, never the `font` shorthand: theme.font:'inherit' must
+       take the host page's typeface without also taking its size, weight and
+       line-height, which are what hold the fixed geometry together. */
     ':host{',
-    'font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;',
+    'font-family:var(--ck-font);',
     'font-size:15px;line-height:1.5;color:var(--ck-ink);',
     '-webkit-font-smoothing:antialiased}',
 
     '.ck-hidden{display:none !important}',
 
     'button{font:inherit;color:inherit;margin:0;cursor:pointer}',
-    'a{color:var(--ck-accent)}',
+    /* --ck-link, not --ck-accent: every accent-coloured TEXT on the card goes
+       through the same >= 4.5:1 rule the filled buttons' labels do. A brand
+       accent picked to be legible as a BUTTON FILL (white text on it) can be
+       far too pale to read as text ON the card — a yellow accent gives a
+       perfectly good button and an invisible «Подробнее». --ck-accent stays
+       the raw brand colour and is still what paints backgrounds (the switch)
+       and the focus ring, which are non-text and answer to 3:1, not 4.5. */
+    'a{color:var(--ck-link)}',
+    /* «Подробнее» as a settings-opening button must read as the link it
+       replaces, not as a third action button. */
+    '.ck-linkbtn{background:none;border:0;padding:0;font:inherit;font-size:inherit;',
+    'color:var(--ck-link);text-decoration:underline;cursor:pointer}',
     ':focus-visible{outline:2px solid var(--ck-accent);outline-offset:2px;border-radius:4px}',
 
     /* ---- banner ---- */
     '.ck-scrim{position:fixed;inset:0;background:rgba(16,20,30,.28);z-index:2147483000;pointer-events:none}',
     '.ck-banner{position:fixed;z-index:2147483001;background:var(--ck-bg);color:var(--ck-ink);',
-    'border:1px solid var(--ck-line);border-radius:var(--ck-radius);pointer-events:auto}',
+    'border:1px solid var(--ck-line);border-radius:var(--ck-radius-card);pointer-events:auto}',
     '.ck-banner--bar{left:16px;right:16px;padding:18px 20px;',
     'display:flex;gap:20px;align-items:center;flex-wrap:wrap}',
     '.ck-banner--bar.ck-pos-bottom{bottom:16px}',
@@ -2352,22 +2375,29 @@
     '.ck-banner--modal{top:50%;left:50%;transform:translate(-50%,-50%);',
     'width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:24px}',
 
-    /* box: compact card, corner-anchored, no scrim */
-    '.ck-banner--box{width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 32px);',
-    'overflow:auto;padding:20px;display:block}',
+    /* box: the SPEC V1.6 reference card — max 540 wide, 24px padding, corner
+       anchored, no scrim. */
+    '.ck-banner--box{width:min(540px,calc(100vw - 32px));max-height:calc(100vh - 32px);',
+    'overflow:auto;padding:24px;display:block}',
     '.ck-banner--box.ck-pos-bottom-right{bottom:16px;right:16px}',
     '.ck-banner--box.ck-pos-bottom-left{bottom:16px;left:16px}',
     /* Vertical layouts: the copy ends with the "learn more" link, so the gap
        below it has to clear a text baseline, not just a block edge — 16px
        reads as attached to the buttons. */
     '.ck-banner.ck-banner--box p,.ck-banner.ck-banner--modal p{margin-bottom:22px}',
-    /* both filled buttons share one equal row; outline spans the width below */
-    '.ck-banner--box .ck-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
-    '.ck-banner--box .ck-btn{min-width:0;width:100%}',
-    '.ck-banner--box .ck-btn--outline{grid-column:1 / -1}',
+    /* Reference row: three equal buttons, 8px gap, wrapping to a column under
+       560px (the media query below). Keyed off the ROLE classes, never the
+       variant ones — since 0.5.0 `settings` may itself be filled. */
+    '.ck-banner--box .ck-actions{display:flex;gap:8px;flex-wrap:wrap}',
+    '.ck-banner--box .ck-btn{min-width:0;flex:1 1 0}',
     '.ck-banner__body{flex:1 1 320px;min-width:0}',
     '.ck-banner h2{margin:0 0 6px;font-size:17px;font-weight:600;letter-spacing:-.01em}',
     '.ck-banner p{margin:0;color:var(--ck-muted);font-size:14px}',
+    /* Box overrides sit AFTER the generic .ck-banner rules on purpose: the two
+       selectors have equal specificity, so source order is what decides, and
+       placing these with the rest of the box block silently lost. The SPEC
+       V1.6 reference calls for a 20/700 heading here. */
+    '.ck-banner--box h2{font-size:20px;font-weight:700;margin:0 0 8px}',
     '.ck-banner--modal p{margin-bottom:20px}',
     '.ck-banner__more{white-space:nowrap}',
 
@@ -2376,9 +2406,27 @@
     '.ck-banner--modal .ck-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}',
     '.ck-btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;',
     'min-width:150px;min-height:44px;padding:11px 18px;font-size:14px;font-weight:600;line-height:1.2;',
-    'border-radius:var(--ck-radius);border:1px solid transparent;background:transparent;flex:1 1 auto}',
+    'border-radius:var(--ck-radius-btn);border:1px solid transparent;background:transparent;flex:1 1 auto}',
+    /* Role classes read their own resolved tokens, so filled/outline is a VALUE
+       change, not a class swap — a theme.buttons edit restyles in place and
+       needs no remount. box-sizing:border-box is global, so borderWidth:2 does
+       not change the outer size: the equal-buttons invariant survives it. */
+    '.ck-btn--accept{background:var(--ck-accept-bg);color:var(--ck-accept-fg);',
+    'border-color:var(--ck-accept-bd);border-width:var(--ck-accept-bw)}',
+    '.ck-btn--reject{background:var(--ck-reject-bg);color:var(--ck-reject-fg);',
+    'border-color:var(--ck-reject-bd);border-width:var(--ck-reject-bw)}',
+    '.ck-btn--settings{background:var(--ck-settings-bg);color:var(--ck-settings-fg);',
+    'border-color:var(--ck-settings-bd);border-width:var(--ck-settings-bw)}',
+    /* Kept for the preferences panel's own footer, which is not themable. */
     '.ck-btn--filled{background:var(--ck-accent);border-color:var(--ck-accent);color:var(--ck-on-accent)}',
-    '.ck-btn--outline{background:transparent;border-color:var(--ck-accent);color:var(--ck-accent)}',
+    /* Live, not a fallback: these paint the preferences panel's own Accept
+       all / Reject all. Transparent fill means the LABEL sits on the card, so
+       it takes --ck-link like every other accent-coloured text; the BORDER is
+       non-text and answers to 3:1, so it keeps the raw accent. The footer's
+       background is --ck-soft rather than --ck-bg, but soft is a 5% ink mix of
+       the card — the ratio difference is well inside the noise, and a second
+       link token per background would break «один код — одни числа». */
+    '.ck-btn--outline{background:transparent;border-color:var(--ck-accent);color:var(--ck-link)}',
     '.ck-btn--ghost{min-width:0;border-color:var(--ck-line);color:var(--ck-ink);font-weight:500}',
 
     /* ---- panel ---- */
@@ -2386,12 +2434,12 @@
     '.ck-panel{position:fixed;z-index:2147483003;top:50%;left:50%;transform:translate(-50%,-50%);',
     'width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 48px);',
     'display:flex;flex-direction:column;background:var(--ck-bg);color:var(--ck-ink);',
-    'border:1px solid var(--ck-line);border-radius:var(--ck-radius);overflow:hidden}',
+    'border:1px solid var(--ck-line);border-radius:var(--ck-radius-card);overflow:hidden}',
     '.ck-panel__head{display:flex;align-items:flex-start;gap:16px;padding:22px 24px 14px;',
     'border-bottom:1px solid var(--ck-line)}',
     '.ck-panel__head h2{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-.01em}',
     '.ck-panel__head p{margin:0;font-size:14px;color:var(--ck-muted)}',
-    '.ck-x{flex:none;width:36px;height:36px;border-radius:var(--ck-radius);border:1px solid var(--ck-line);',
+    '.ck-x{flex:none;width:36px;height:36px;border-radius:var(--ck-radius-btn);border:1px solid var(--ck-line);',
     'background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--ck-muted)}',
     '.ck-panel__body{overflow:auto;padding:6px 24px 10px;-webkit-overflow-scrolling:touch}',
     '.ck-panel__foot{display:flex;gap:10px;flex-wrap:wrap;padding:16px 24px;',
@@ -2419,13 +2467,13 @@
 
     /* ---- cookie table ---- */
     '.ck-det{margin-top:12px}',
-    '.ck-det>summary{cursor:pointer;font-size:13px;color:var(--ck-accent);',
+    '.ck-det>summary{cursor:pointer;font-size:13px;color:var(--ck-link);',
     'list-style:none;display:inline-flex;align-items:center;gap:6px;padding:2px 0}',
     '.ck-det>summary::-webkit-details-marker{display:none}',
     '.ck-det>summary::before{content:"";width:0;height:0;border:4px solid transparent;',
     'border-left-color:currentColor;border-right:0}',
     '.ck-det[open]>summary::before{transform:rotate(90deg)}',
-    '.ck-tablewrap{margin-top:8px;overflow-x:auto;border:1px solid var(--ck-line);border-radius:var(--ck-radius)}',
+    '.ck-tablewrap{margin-top:8px;overflow-x:auto;border:1px solid var(--ck-line);border-radius:var(--ck-radius-card)}',
     'table{border-collapse:collapse;width:100%;font-size:13px;min-width:420px}',
     'th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--ck-line);vertical-align:top}',
     'thead th{background:var(--ck-soft);font-weight:600;font-size:12px;color:var(--ck-muted);white-space:nowrap}',
@@ -2435,7 +2483,7 @@
 
     /* ---- floating button ---- */
     '.ck-fab{position:fixed;left:16px;bottom:16px;z-index:2147482999;width:48px;height:48px;',
-    'border-radius:50%;border:1px solid var(--ck-line);background:var(--ck-bg);color:var(--ck-accent);',
+    'border-radius:50%;border:1px solid var(--ck-line);background:var(--ck-bg);color:var(--ck-link);',
     'display:inline-flex;align-items:center;justify-content:center;padding:0}',
     '.ck-fab svg{width:24px;height:24px;display:block}',
 
@@ -2446,7 +2494,10 @@
     '.ck-banner--bar{flex-direction:column;align-items:stretch}',
     '.ck-banner--bar .ck-banner__body{display:contents}',
     '.ck-banner--bar .ck-banner__body>*{order:1}',
-    '.ck-banner--bar .ck-actions{order:2}}',
+    '.ck-banner--bar .ck-actions{order:2}',
+    /* Reference: the box's button row becomes a column under 560px. */
+    '.ck-banner--box .ck-actions{flex-direction:column}',
+    '.ck-banner--box .ck-btn{flex:1 1 auto;width:100%}}',
 
     '@media (prefers-reduced-motion: no-preference){',
     '.ck-btn,.ck-x,.ck-fab,.ck-switch,.ck-switch::after{transition:background-color .16s ease,border-color .16s ease,color .16s ease,left .16s ease,right .16s ease}}'
@@ -2580,19 +2631,137 @@
   /* ----------------------------------------------------------------- theme */
 
   // Built-in palettes. Dark values are picked for >= 4.5:1 text contrast.
-  var LIGHT_RADIUS = '10px';
+  // Card backgrounds follow SPEC V1.6 §1: light #ffffff, dark #1c1c1e. The dark
+  // card is a NEUTRAL grey, so line/soft/muted below are neutral too — the old
+  // blue-tinted #333C4F/#232B3A were derived from the old blue-tinted #1A202D
+  // and would read as a colour cast against #1c1c1e.
+  var DEFAULT_RADIUS = { card: 16, button: 8 };
+  var RADIUS_MIN = 0, RADIUS_MAX = 32;
+  var SYSTEM_FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+
   var LIGHT = {
-    bg: '#fff', ink: '#1B2437', accent: '#2B50D8', onAccent: '#fff',
+    bg: '#ffffff', ink: '#1B2437', accent: '#2B50D8', onAccent: '#ffffff',
     muted: '#5b6478', line: '#dfe3ea', soft: '#f4f6f9'
   };
   var DARK = {
-    bg: '#1A202D', ink: '#E6EAF4', accent: '#7B96F0', onAccent: '#12182A',
-    muted: '#A6B0C6', line: '#333C4F', soft: '#232B3A'
+    bg: '#1c1c1e', ink: '#E9E9EB', accent: '#7B96F0', onAccent: '#12182A',
+    muted: '#A0A0A8', line: '#3A3A3C', soft: '#2C2C2E'
   };
 
   function str(v) {
     return (typeof v === 'string' && v.trim()) ? v.trim() : null;
   }
+
+  /* ------------------------------------------------------------- contrast */
+
+  /* WCAG 2.1 relative luminance and contrast ratio. Pure, hex-only: everything
+     that reaches them has already passed sanitizeCssValue(), and a value that
+     is not a hex triple (a colour name, an rgb() string, a color-mix()) simply
+     cannot be measured here — those return null and every caller then leaves
+     the colour exactly as the author wrote it rather than guessing. Silently
+     "fixing" a colour we cannot read would be worse than not fixing it. */
+
+  // '#abc' | '#aabbcc' | '#aabbccdd' -> [r,g,b] 0..255, or null.
+  function parseHex(hex) {
+    var s = str(hex);
+    if (!s || s.charAt(0) !== '#') return null;
+    s = s.slice(1);
+    if (s.length === 3 || s.length === 4) {
+      s = s.charAt(0) + s.charAt(0) + s.charAt(1) + s.charAt(1) + s.charAt(2) + s.charAt(2);
+    } else if (s.length === 6 || s.length === 8) {
+      s = s.slice(0, 6);
+    } else {
+      return null;
+    }
+    if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+    return [
+      parseInt(s.slice(0, 2), 16),
+      parseInt(s.slice(2, 4), 16),
+      parseInt(s.slice(4, 6), 16)
+    ];
+  }
+
+  function toHex(rgb) {
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var v = Math.round(rgb[i]);
+      if (v < 0) v = 0; else if (v > 255) v = 255;
+      out += (v + 0x100).toString(16).slice(1);
+    }
+    return out;
+  }
+
+  // WCAG 2.1: L = 0.2126R + 0.7152G + 0.0722B over linearised channels.
+  function relativeLuminance(hex) {
+    var rgb = parseHex(hex);
+    if (!rgb) return null;
+    var lin = [];
+    for (var i = 0; i < 3; i++) {
+      var c = rgb[i] / 255;
+      lin.push(c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    }
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  }
+
+  // (L1 + 0.05) / (L2 + 0.05), lighter first. null when either side is unreadable.
+  function contrastRatio(a, b) {
+    var la = relativeLuminance(a);
+    var lb = relativeLuminance(b);
+    if (la === null || lb === null) return null;
+    var hi = la > lb ? la : lb;
+    var lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  var WHITE = '#ffffff';
+  var NEAR_BLACK = '#161616';   // SPEC §1: white or #161616, whichever contrasts more
+
+  /* SPEC §1, the TEXT rule: keep the author's fg when it clears `min` against
+     bg; otherwise swap to white or #161616 — whichever wins. Unreadable input
+     (a colour name, rgb(), a missing value) is returned untouched with
+     adjusted:false: the author sees their own colour, not a silent rewrite. */
+  function ensureContrast(fg, bg, min) {
+    var floor = typeof min === 'number' && min > 0 ? min : 4.5;
+    var have = contrastRatio(fg, bg);
+    if (have === null) return { color: fg, adjusted: false, ratio: have };
+    if (have >= floor) return { color: fg, adjusted: false, ratio: have };
+    var rw = contrastRatio(WHITE, bg);
+    var rb = contrastRatio(NEAR_BLACK, bg);
+    var pick = (rw !== null && rb !== null && rw >= rb) ? WHITE : NEAR_BLACK;
+    return { color: pick, adjusted: true, ratio: contrastRatio(pick, bg) };
+  }
+
+  /* SPEC §1, the BORDER rule: an outline button's border must clear >= 3:1
+     against the CARD background, so the button is visible as a button at all.
+     Stepwise rather than a jump to black/white: a brand colour that is only
+     slightly too pale should stay recognisably the brand colour. Direction is
+     chosen by which way there is room to move — away from the card. */
+  function stepToContrast(color, bg, min) {
+    var floor = typeof min === 'number' && min > 0 ? min : 3;
+    var have = contrastRatio(color, bg);
+    if (have === null) return { color: color, adjusted: false, ratio: have };
+    if (have >= floor) return { color: color, adjusted: false, ratio: have };
+
+    var rgb = parseHex(color);
+    var bgLum = relativeLuminance(bg);
+    // Light card -> darken the border; dark card -> lighten it.
+    var darken = bgLum > 0.5;
+    var cur = [rgb[0], rgb[1], rgb[2]];
+    // 5% steps of the remaining range; 40 steps always reaches pure black/white.
+    for (var i = 0; i < 40; i++) {
+      for (var c = 0; c < 3; c++) {
+        cur[c] = darken ? cur[c] - (cur[c] * 0.06) - 2 : cur[c] + ((255 - cur[c]) * 0.06) + 2;
+        if (cur[c] < 0) cur[c] = 0; else if (cur[c] > 255) cur[c] = 255;
+      }
+      var next = toHex(cur);
+      var r = contrastRatio(next, bg);
+      if (r !== null && r >= floor) return { color: next, adjusted: true, ratio: r };
+    }
+    var last = toHex(cur);
+    return { color: last, adjusted: true, ratio: contrastRatio(last, bg) };
+  }
+
+  /* ------------------------------------------------------- config grammar */
 
   /* Config values are interpolated into the TEXT of a generated stylesheet, so
      an unvalidated value can close the declaration and open rules of its own
@@ -2604,10 +2773,11 @@
      fit — a broken colour is a cosmetic bug, an injected rule is a defacement
      and can strip the reject button, which is a consent-validity problem.
 
-     Sanitising happens at the entry points in buildThemeCss (the eight
-     config reads), not in tokenBlock(): by the time values reach derive() and
-     color-mix() they are already clean, and the built-in constants and
-     generated color-mix() strings must not be re-validated by this grammar. */
+     Sanitising happens at the entry points (the config reads in
+     resolveButtonStyles and buildThemeCss), not in tokenBlock(): by the time
+     values reach derive() and color-mix() they are already clean, and the
+     built-in constants and generated color-mix()/hex strings must not be
+     re-validated by this grammar. */
   var RE_CSS = {
     // #RGB / #RRGGBB / #RRGGBBAA (and #RGBA), rgb()/rgba()/hsl()/hsla() with
     // numbers, commas, spaces, %, decimals and slashes, or a bare colour name.
@@ -2626,8 +2796,179 @@
     return v;
   }
 
+  // theme.radius: {card,button} in px, clamped 0..32. A bare string or number
+  // is the pre-0.5.0 form and still works: it sets the CARD radius, the button
+  // keeps its own default. Anything unreadable falls back to the default.
+  function clampRadius(v, fallback) {
+    var n;
+    if (typeof v === 'number') n = v;
+    else if (typeof v === 'string' && /^\d+(\.\d+)?(px)?$/.test(v.trim())) n = parseFloat(v);
+    else return fallback;
+    if (!isFinite(n)) return fallback;
+    if (n < RADIUS_MIN) n = RADIUS_MIN;
+    if (n > RADIUS_MAX) n = RADIUS_MAX;
+    return Math.round(n);
+  }
+
+  function resolveRadius(theme) {
+    var r = theme && theme.radius;
+    if (r && typeof r === 'object') {
+      return {
+        card: clampRadius(r.card, DEFAULT_RADIUS.card),
+        button: clampRadius(r.button, DEFAULT_RADIUS.button)
+      };
+    }
+    // Legacy scalar ('10px'): card only.
+    if (typeof r === 'string' || typeof r === 'number') {
+      return { card: clampRadius(r, DEFAULT_RADIUS.card), button: DEFAULT_RADIUS.button };
+    }
+    return { card: DEFAULT_RADIUS.card, button: DEFAULT_RADIUS.button };
+  }
+
+  // theme.font: 'system' keeps the pre-0.5.0 stack; anything else (including the
+  // default) inherits the host page's family. Sizes stay explicit either way —
+  // this is font-FAMILY, deliberately not the `font` shorthand, which would drag
+  // in the page's size, weight and line-height and break the fixed geometry.
+  function resolveFont(theme) {
+    return (theme && theme.font === 'system') ? SYSTEM_FONT : 'inherit';
+  }
+
+  /* --------------------------------------------------- button resolution */
+
+  var BTN_ROLES = ['accept', 'reject', 'settings'];
+  var DEFAULT_VARIANT = { accept: 'filled', reject: 'filled', settings: 'outline' };
+
+  var warnedVariant = false;
+  // Debug-only, once per page: a config error worth surfacing to whoever is
+  // looking, but never console noise on a visitor's production page. Checked
+  // lazily because ck-debug.js loads AFTER this file and flips `active` later.
+  function warnVariantMismatch() {
+    if (warnedVariant) return;
+    var dbg = (typeof window !== 'undefined') && window.__ckDebug;
+    if (!dbg || dbg.active !== true) return;
+    warnedVariant = true;
+    try {
+      console.warn('[ConsentKit] theme.buttons.accept.variant and .reject.variant differ. ' +
+        'Accept and reject must look identical (equal-buttons invariant, SPEC §1) — ' +
+        'accept\'s variant is used for both.');
+    } catch (e) { /* noop */ }
+  }
+
+  /* Resolve the three buttons for ONE mode into concrete, contrast-checked
+     colours. Pure: takes the theme object and 'light'|'dark', returns plain
+     data. This is the single source of truth the generated stylesheet, the
+     debug panel and (per SPEC §3) the cabinet all read — "один код — одни
+     числа": nothing recomputes these numbers a second time.
+
+     `palette` is optional and lets buildThemeCss pass the ALREADY-RESOLVED
+     accent/card colours for the mode, so a theme.dark.accent is honoured. */
+  function resolveButtonStyles(theme, mode, palette) {
+    var t = (theme && typeof theme === 'object') ? theme : {};
+    var base = mode === 'dark' ? DARK : LIGHT;
+    var pal = (palette && typeof palette === 'object') ? palette : {};
+
+    var cardBg = sanitizeCssValue('color', pal.bg, base.bg);
+    var accent = sanitizeCssValue('color', pal.accent, base.accent);
+    // theme.dark.onAccent stays meaningful: it is the GIVEN fg for filled
+    // buttons in that mode. The >= 4.5 rule may still override it.
+    var onAccent = sanitizeCssValue('color', pal.onAccent, base.onAccent);
+
+    var cfg = (t.buttons && typeof t.buttons === 'object') ? t.buttons : {};
+
+    // Equal-buttons invariant (SPEC §1): accept and reject share size and
+    // weight, so they must share the variant too. When they disagree, accept
+    // wins — silently for a visitor, loudly in debug mode.
+    function variantOf(role) {
+      var c = cfg[role];
+      var v = c && c.variant;
+      return (v === 'filled' || v === 'outline') ? v : DEFAULT_VARIANT[role];
+    }
+    var acceptVariant = variantOf('accept');
+    var rejectVariant = variantOf('reject');
+    if (acceptVariant !== rejectVariant) warnVariantMismatch();
+
+    var variants = {
+      accept: acceptVariant,
+      reject: acceptVariant,          // invariant: always accept's
+      settings: variantOf('settings')
+    };
+
+    /* The accent as TEXT on the card. Same >= 4.5 rule, same function, one
+       number: links, «Подробнее», the cookie-table summary and the floating
+       button's icon all read the token this produces, so none of them can
+       drift from what the debug panel and the cabinet quote. Note the
+       measurement is against cardBg — an accent that is fine inside a filled
+       button can still be unreadable on the card behind it. */
+    var linkRes = ensureContrast(accent, cardBg, 4.5);
+
+    var out = {
+      mode: mode,
+      cardBg: cardBg,
+      accent: accent,
+      link: {
+        color: linkRes.color,
+        ratio: linkRes.ratio,
+        adjusted: linkRes.adjusted,
+        against: cardBg
+      },
+      buttons: {}
+    };
+
+    for (var i = 0; i < BTN_ROLES.length; i++) {
+      var role = BTN_ROLES[i];
+      var c = (cfg[role] && typeof cfg[role] === 'object') ? cfg[role] : {};
+      var variant = variants[role];
+
+      var bw = (c.borderWidth === 2 || c.borderWidth === '2') ? 2 : 1;
+      var rec;
+
+      if (variant === 'filled') {
+        // bg: author's, else the accent. fg: author's, else onAccent for the
+        // default accent fill, then checked against the resolved bg.
+        var bg = sanitizeCssValue('color', c.bg, accent);
+        var wantFg = sanitizeCssValue('color', c.fg, onAccent);
+        var fgRes = ensureContrast(wantFg, bg, 4.5);
+        var bd = sanitizeCssValue('color', c.border, bg);
+        rec = {
+          variant: 'filled',
+          bg: bg,
+          fg: fgRes.color,
+          border: bd,
+          borderWidth: bw,
+          ratio: fgRes.ratio,
+          adjusted: fgRes.adjusted,
+          against: bg
+        };
+      } else {
+        // outline: transparent fill, so everything is measured against the CARD.
+        // border >= 3:1 with the card (stepped), text = the border colour with
+        // the >= 4.5 rule against the card.
+        var wantBd = sanitizeCssValue('color', c.border, accent);
+        var bdRes = stepToContrast(wantBd, cardBg, 3);
+        var wantTx = str(c.fg) ? sanitizeCssValue('color', c.fg, bdRes.color) : bdRes.color;
+        var txRes = ensureContrast(wantTx, cardBg, 4.5);
+        rec = {
+          variant: 'outline',
+          bg: sanitizeCssValue('color', c.bg, 'transparent'),
+          fg: txRes.color,
+          border: bdRes.color,
+          borderWidth: bw,
+          ratio: txRes.ratio,
+          adjusted: txRes.adjusted || bdRes.adjusted,
+          borderRatio: bdRes.ratio,
+          borderAdjusted: bdRes.adjusted,
+          against: cardBg
+        };
+      }
+      out.buttons[role] = rec;
+    }
+    return out;
+  }
+
+  /* ------------------------------------------------------------- stylesheet */
+
   // One :host{} block of custom properties for a resolved palette.
-  function tokenBlock(sel, p, radius) {
+  function tokenBlock(sel, p, extra) {
     var d = [
       '--ck-bg:' + p.bg,
       '--ck-ink:' + p.ink,
@@ -2637,7 +2978,28 @@
       '--ck-line:' + p.line,
       '--ck-soft:' + p.soft
     ];
-    if (radius) d.push('--ck-radius:' + radius);
+    // Per-button tokens: the ROLE classes in the static sheet read these, so a
+    // filled/outline change is a value change and never a class swap. That is
+    // what keeps a theme.buttons edit on the applyTheme()-only path — no
+    // remount, and signature() need not know about buttons at all.
+    // Resolved by resolveButtonStyles alongside the buttons, threaded in the
+    // same way as __buttons: one pass per mode, so the light and dark blocks
+    // each carry their own contrast-checked link colour.
+    if (p.__link) d.push('--ck-link:' + p.__link.color);
+    var btns = p.__buttons;
+    if (btns) {
+      for (var i = 0; i < BTN_ROLES.length; i++) {
+        var role = BTN_ROLES[i];
+        var b = btns[role];
+        d.push('--ck-' + role + '-bg:' + b.bg);
+        d.push('--ck-' + role + '-fg:' + b.fg);
+        d.push('--ck-' + role + '-bd:' + b.border);
+        d.push('--ck-' + role + '-bw:' + b.borderWidth + 'px');
+      }
+    }
+    if (extra) {
+      for (var k = 0; k < extra.length; k++) d.push(extra[k]);
+    }
     return sel + '{' + d.join(';') + '}';
   }
 
@@ -2659,11 +3021,9 @@
   function buildThemeCss(cfg) {
     var theme = (cfg && cfg.theme) || {};
     var dk = (theme.dark && typeof theme.dark === 'object') ? theme.dark : {};
-    // Every value below is interpolated into stylesheet text — see
-    // sanitizeCssValue(). A rejected value falls back to the token default, so
-    // derive()'s "bg !== base.bg" check collapses to exactly the built-in
-    // palette rather than a half-substituted one.
-    var radius = sanitizeCssValue('length', theme.radius, LIGHT_RADIUS);
+
+    var radius = resolveRadius(theme);
+    var font = resolveFont(theme);
 
     // Light: config overrides on top of the built-in light palette.
     var light = derive(LIGHT,
@@ -2673,17 +3033,37 @@
 
     // Dark: theme.dark overrides on top of the built-in dark palette.
     // A light-only theme.accent deliberately does NOT carry into dark — the
-    // default #2B50D8 on #1A202D is ~2.5:1 and would fail AA.
+    // default #2B50D8 on #1c1c1e is ~2.4:1 and would fail AA.
     var dark = derive(DARK,
       sanitizeCssValue('color', dk.bg, DARK.bg),
       sanitizeCssValue('color', dk.ink, DARK.ink));
     if (str(dk.accent)) dark.accent = sanitizeCssValue('color', dk.accent, DARK.accent);
     if (str(dk.onAccent)) dark.onAccent = sanitizeCssValue('color', dk.onAccent, DARK.onAccent);
 
+    // Buttons are resolved per mode against that mode's real card colour, so a
+    // custom dark card changes the outline border the same way a custom light
+    // one does.
+    var lightBtn = resolveButtonStyles(theme, 'light', light);
+    var darkBtn = resolveButtonStyles(theme, 'dark', dark);
+    light.__buttons = lightBtn.buttons;
+    dark.__buttons = darkBtn.buttons;
+    light.__link = lightBtn.link;
+    dark.__link = darkBtn.link;
+
     var mode = theme.mode;
     if (mode !== 'light' && mode !== 'dark') mode = 'auto';
 
-    var out = [tokenBlock(':host', light, radius)];
+    // Geometry and family are mode-independent, so they ride on the base block.
+    var rootExtra = [
+      '--ck-radius-card:' + radius.card + 'px',
+      '--ck-radius-btn:' + radius.button + 'px',
+      // Kept as an alias so any integrator CSS (and older builds' rules) that
+      // reads --ck-radius still lands on the card radius.
+      '--ck-radius:' + radius.card + 'px',
+      '--ck-font:' + font
+    ];
+
+    var out = [tokenBlock(':host', light, rootExtra)];
     if (mode === 'auto') {
       // forced-light class must still beat a dark system preference
       out.push('@media (prefers-color-scheme: dark){' +
@@ -2702,7 +3082,8 @@
       ':host(.ck-mode-dark){--ck-muted:' + DARK.muted + ';--ck-line:' + DARK.line +
       ';--ck-soft:' + DARK.soft + '}}');
 
-    return { css: out.join('\n'), mode: mode };
+    return { css: out.join('\n'), mode: mode, radius: radius, font: font,
+             light: lightBtn, dark: darkBtn };
   }
 
   function applyTheme(cfg) {
@@ -2803,6 +3184,33 @@
     return wrap;
   }
 
+  /* SPEC V1.6 §2 — what «Подробнее» does.
+
+     Before 0.5.0 the link was rendered with href="#" and NO click handler: it
+     did nothing but jump to the top of the page. There are now three honest
+     outcomes, and the default depends on whether a policy address exists —
+     'settings' without one, 'policy' with one, so an integrator who only
+     supplies a URL gets the link they obviously meant. This is why
+     detailsAction must NOT carry a default in the core's DEFAULT_CONFIG: a
+     merged concrete value would make the URL-sensitive default unreachable.
+
+     'policy' with no usable URL degrades to 'settings' rather than rendering a
+     dead link. Only http(s) is accepted — javascript: and data: URLs in a
+     link the visitor is invited to click are an XSS vector, and a relative
+     path cannot be validated here without a base. */
+  function resolveDetails(cfg) {
+    var texts = (cfg && cfg.texts && typeof cfg.texts === 'object') ? cfg.texts : {};
+    var url = str(texts.policyUrl);
+    if (url && !/^https?:\/\//i.test(url)) url = null;
+
+    var action = texts.detailsAction;
+    if (action !== 'policy' && action !== 'settings' && action !== 'hide') {
+      action = url ? 'policy' : 'settings';
+    }
+    if (action === 'policy' && !url) action = 'settings';
+    return { kind: action, href: action === 'policy' ? url : null };
+  }
+
   // Unknown type -> bar/bottom. Known type with an unrecognized position ->
   // that type's own default (bar: bottom, box: bottom-left — the side away
   // from the chat widgets and scroll-to-top buttons most sites put on the right).
@@ -2837,10 +3245,26 @@
     body.appendChild(h);
 
     var p = el('p');
-    p.appendChild(document.createTextNode(T.bannerText + ' '));
-    var link = el('a', 'ck-banner__more', T.more);
-    link.href = '#';
-    p.appendChild(link);
+    var det = resolveDetails(cfg);
+    if (det.kind === 'hide') {
+      p.appendChild(document.createTextNode(T.bannerText));
+    } else {
+      p.appendChild(document.createTextNode(T.bannerText + ' '));
+      if (det.kind === 'policy') {
+        var link = el('a', 'ck-banner__more', T.more);
+        link.href = det.href;
+        link.target = '_blank';
+        link.rel = 'noopener';          // never hand the policy page window.opener
+        p.appendChild(link);
+      } else {
+        // A control that changes what is on screen is a button, not a link:
+        // screen readers announce it correctly and it needs no href to fake.
+        var more = el('button', 'ck-banner__more ck-linkbtn', T.more);
+        more.type = 'button';
+        more.addEventListener('click', function () { openPanel(more); });
+        p.appendChild(more);
+      }
+    }
     body.appendChild(p);
 
     var pb = buildPoweredBy(cfg);
@@ -2862,11 +3286,11 @@
     b.appendChild(body);
 
     var actions = el('div', 'ck-actions');
-    var accept = el('button', 'ck-btn ck-btn--filled', T.acceptAll);
+    var accept = el('button', 'ck-btn ck-btn--accept', T.acceptAll);
     accept.type = 'button';
-    var reject = el('button', 'ck-btn ck-btn--filled', T.rejectAll);
+    var reject = el('button', 'ck-btn ck-btn--reject', T.rejectAll);
     reject.type = 'button';
-    var custom = el('button', 'ck-btn ck-btn--outline', T.customize);
+    var custom = el('button', 'ck-btn ck-btn--settings', T.customize);
     custom.type = 'button';
 
     accept.addEventListener('click', function () { doAcceptAll(); });
@@ -3101,6 +3525,10 @@
       String(c.language || 'auto'),
       lay.type, String(lay.position),
       Array.isArray(table) ? table.length : 0,
+      // Structural: link / button / nothing are three different DOM shapes,
+      // and mount() is one-shot. Buttons and colours are deliberately NOT
+      // here — they are token values and restyle in place.
+      resolveDetails(c).kind,
       brandSignature(c)
     ].join('|');
   }
@@ -3156,6 +3584,33 @@
   }
 
   /* ---------------------------------------------------------------- events */
+
+  /* ------------------------------------------------------- pure exports */
+
+  /* SPEC V1.6 §1: the cabinet's theme editor must show the same numbers the
+     banner actually paints — «один код — одни числа». Published BEFORE the
+     SSR guard below on purpose: these are pure functions with no DOM in them,
+     so they are reachable (and testable in node) on a page or in a process
+     that never renders anything.
+
+     Not a stable public API — the underscore says so — but the theme editor
+     and the debug panel are both expected to read it rather than reimplement
+     the arithmetic and drift. */
+  (function () {
+    var ck = api();
+    if (!ck) return;
+    ck._contrast = {
+      relativeLuminance: relativeLuminance,
+      contrastRatio: contrastRatio,
+      ensureContrast: ensureContrast,
+      stepToContrast: stepToContrast,
+      resolveButtonStyles: resolveButtonStyles,
+      resolveRadius: resolveRadius,
+      resolveFont: resolveFont,
+      resolveDetails: resolveDetails,
+      buildThemeCss: buildThemeCss
+    };
+  })();
 
   // SSR-safe: with no DOM there is nothing to render or listen to, so importing
   // this file in Node is a no-op rather than a throw (mirrors the core).
@@ -3356,7 +3811,6 @@
     },
     "theme": {
       "accent": "#2B50D8",
-      "radius": "10px",
       "mode": "auto"
     },
     "cookieTable": [],

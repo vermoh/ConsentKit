@@ -219,7 +219,16 @@
     policyVersion: '1',
     language: 'auto',
     layout: { type: 'bar', position: 'bottom' },
-    theme: { accent: '#2B50D8', radius: '10px' },
+    // 0.5.0: radius/font/buttons are resolved in ck-ui.js, not defaulted here.
+    // A concrete default in this object would be merged into every config and
+    // would then shadow the UI's own defaults — which is exactly what happened
+    // to `radius: '10px'` before 0.5.0: it pinned the pre-reference geometry on
+    // every site whether or not the owner had ever set it.
+    theme: { accent: '#2B50D8' },
+    // 0.5.0 (SPEC V1.6 §2). `detailsAction` is deliberately absent rather than
+    // set: its default depends on whether policyUrl is present, and a merged
+    // concrete value here would make that URL-sensitive default unreachable.
+    texts: {},
     categories: {
       functional: { enabled: true },
       analytics: { enabled: true },
@@ -1404,7 +1413,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.4.1',
+    version: '0.5.0',
     config: config,
 
     init: function (userConfig) {

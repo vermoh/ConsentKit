@@ -199,6 +199,28 @@
       note: NOTE_RU,
       secConsentMode: 'Consent Mode / dataLayer',
       noEvents: 'событий не было',
+      secTheme: 'Оформление',
+      themeMode: 'тема',
+      themeModeLight: 'светлая',
+      themeModeDark: 'тёмная',
+      themeFont: 'шрифт',
+      themeFontInherit: 'как на сайте',
+      themeFontSystem: 'системный',
+      themeRadius: 'скругления',
+      themeCard: 'карточка',
+      themeBtn: 'кнопки',
+      themeLink: 'Ссылки',
+      btnAccept: 'Принять всё',
+      btnReject: 'Отклонить всё',
+      btnSettings: 'Настроить',
+      btnFilled: 'залитая',
+      btnOutline: 'обводка',
+      btnText: 'текст',
+      btnBorder: 'обводка',
+      btnOn: 'на',
+      btnAdjusted: 'исправлено автоматически',
+      btnOk: 'AA',
+      btnFail: 'ниже AA',
       secActions: 'Действия',
       reset: 'Сбросить согласие',
       showPrefs: 'Показать настройки',
@@ -236,6 +258,28 @@
       note: NOTE_EN,
       secConsentMode: 'Consent Mode / dataLayer',
       noEvents: 'no events',
+      secTheme: 'Appearance',
+      themeMode: 'theme',
+      themeModeLight: 'light',
+      themeModeDark: 'dark',
+      themeFont: 'font',
+      themeFontInherit: 'site font',
+      themeFontSystem: 'system',
+      themeRadius: 'radii',
+      themeCard: 'card',
+      themeBtn: 'buttons',
+      themeLink: 'Links',
+      btnAccept: 'Accept all',
+      btnReject: 'Reject all',
+      btnSettings: 'Customize',
+      btnFilled: 'filled',
+      btnOutline: 'outline',
+      btnText: 'text',
+      btnBorder: 'border',
+      btnOn: 'on',
+      btnAdjusted: 'adjusted automatically',
+      btnOk: 'AA',
+      btnFail: 'below AA',
       secActions: 'Actions',
       reset: 'Reset consent',
       showPrefs: 'Show preferences',
@@ -547,6 +591,13 @@
 
   function tag(text, cls) { return el('span', { class: 't' + (cls ? ' ' + cls : '') }, text); }
 
+  // A contrast ratio the way WCAG tools quote it. null when the colour could
+  // not be measured (a colour name, an rgb() string) — shown as "?" rather
+  // than a made-up number.
+  function fmtRatio(r) {
+    return typeof r === 'number' && isFinite(r) ? (Math.round(r * 100) / 100) + ':1' : '?';
+  }
+
   // Resolved lazily, not at parse time: this file runs before ConsentKit.init()
   // has merged the site's config, so asking for the language now would always
   // read the built-in default. Re-resolved on every render so a page that
@@ -663,7 +714,75 @@
     }
     body.appendChild(s5);
 
-    // 6. Buttons
+    // 6. Appearance (SPEC V1.6 §1) — the three buttons' RESOLVED colours and
+    // their contrast ratios, read straight off ConsentKit._contrast rather than
+    // recomputed here: the banner, this panel and the cabinet's theme editor
+    // must all quote the same numbers. The mode is named explicitly because
+    // light and dark resolve differently and only one of them is on screen.
+    var contrast = CK && CK._contrast;
+    if (contrast && typeof contrast.buildThemeCss === 'function') {
+      var sT = section(T.secTheme);
+      try {
+        var built = contrast.buildThemeCss((CK && CK.config) || {});
+        // Which palette the visitor is actually looking at right now.
+        var dark = built.mode === 'dark';
+        if (built.mode === 'auto') {
+          try {
+            dark = !!(global.matchMedia && global.matchMedia('(prefers-color-scheme: dark)').matches);
+          } catch (e) { dark = false; }
+        }
+        var resolved = dark ? built.dark : built.light;
+
+        // Fourth row: --ck-link, the accent as TEXT on the card. It is a
+        // separate number from every button's, because it is measured against
+        // the card rather than against a button fill — a brand accent can pass
+        // as a filled button's background and still be unreadable as a link.
+        var lk = resolved.link;
+        var lkTxt = '—';
+        if (lk) {
+          lkTxt = lk.color + ' ' + T.btnOn + ' ' + lk.against +
+            ' · ' + fmtRatio(lk.ratio) +
+            ' ' + ((typeof lk.ratio === 'number' && lk.ratio >= 4.5) ? T.btnOk : T.btnFail) +
+            (lk.adjusted ? ' · ' + T.btnAdjusted : '');
+        }
+
+        sT.appendChild(defs([
+          [T.themeMode, (dark ? T.themeModeDark : T.themeModeLight) +
+            (built.mode === 'auto' ? ' (auto)' : '')],
+          [T.themeFont, built.font === 'inherit' ? T.themeFontInherit : T.themeFontSystem],
+          [T.themeRadius, T.themeCard + ' ' + built.radius.card + 'px · ' +
+            T.themeBtn + ' ' + built.radius.button + 'px'],
+          [T.themeLink, lkTxt]
+        ]));
+
+        var labels = { accept: T.btnAccept, reject: T.btnReject, settings: T.btnSettings };
+        var uT = doc.createElement('ul');
+        ['accept', 'reject', 'settings'].forEach(function (role) {
+          var b = resolved.buttons[role];
+          if (!b) { return; }
+          var li = doc.createElement('li');
+          li.appendChild(tag(b.variant === 'filled' ? T.btnFilled : T.btnOutline));
+          var ok = typeof b.ratio === 'number' && b.ratio >= 4.5;
+          li.appendChild(tag(fmtRatio(b.ratio) + ' ' + (ok ? T.btnOk : T.btnFail),
+            ok ? 'on' : 'off'));
+          li.appendChild(doc.createTextNode(labels[role] + ' — ' +
+            T.btnText + ' ' + b.fg + ' ' + T.btnOn + ' ' + b.against +
+            (b.variant === 'outline'
+              ? ' · ' + T.btnBorder + ' ' + b.border + ' (' + fmtRatio(b.borderRatio) + ')'
+              : '')));
+          if (b.adjusted) {
+            li.appendChild(el('span', { class: 'mut' }, ' · ' + T.btnAdjusted));
+          }
+          uT.appendChild(li);
+        });
+        sT.appendChild(uT);
+      } catch (e) {
+        sT.appendChild(el('div', { class: 'mut' }, '—'));
+      }
+      body.appendChild(sT);
+    }
+
+    // 7. Buttons
     var s6 = section(T.secActions);
     var row = el('div', { class: 'row' });
     var bReset = el('button', { type: 'button' }, T.reset);

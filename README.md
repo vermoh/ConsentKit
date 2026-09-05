@@ -179,12 +179,16 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 |---|---|---|---|
 | `policyVersion` | `string \| number` | `"1"` | Bump to invalidate stored consent and re-show the banner |
 | `language` | `string` | `"auto"` | `"auto"` reads `navigator.language`. Falls back `pt-BR` → `pt` → `en` |
-| `layout.type` | `"bar" \| "modal" \| "box"` | `"bar"` | `box` is a compact ~360px card |
+| `layout.type` | `"bar" \| "modal" \| "box"` | `"bar"` | `box` is a corner card, up to 540px wide |
 | `layout.position` | `string` | per type | `bar`: `bottom` (default) / `top`. `box`: `bottom-left` (default) / `bottom-right`. `modal` is always centred. A position that does not belong to the chosen type falls back to that type's default; the type itself is unaffected |
 | `theme.accent` | `string` | `"#2B50D8"` | Exposed as `--ck-accent` |
-| `theme.radius` | `string` | `"10px"` | Exposed as `--ck-radius` |
+| `theme.font` | `"inherit" \| "system"` | `"inherit"` | v0.5.0. `inherit` takes the host page's font family; `system` restores the pre-0.5.0 system stack. Font *sizes* are fixed either way |
+| `theme.radius` | `{ card, button }` | `{ card: 16, button: 8 }` | v0.5.0. px, clamped 0–32. A bare string or number is the pre-0.5.0 form and still sets the card radius |
+| `theme.buttons` | `{ accept, reject, settings }` | see below | v0.5.0. Per-button appearance. **Contrast is enforced automatically** — see [Button appearance](#button-appearance) |
 | `theme.mode` | `"auto" \| "light" \| "dark"` | `"auto"` | `auto` follows `prefers-color-scheme` |
-| `theme.dark` | `{ bg, ink, accent }` | built-in | Overrides the dark palette |
+| `theme.dark` | `{ bg, ink, accent, onAccent }` | built-in | Overrides the dark palette |
+| `texts.policyUrl` | `string` | — | v0.5.0. Cookie policy address. `http(s)` only; anything else is ignored |
+| `texts.detailsAction` | `"policy" \| "settings" \| "hide"` | see notes | v0.5.0. What «Learn more» does. Defaults to `policy` when `policyUrl` is set, `settings` when it is not. `policy` without a usable URL falls back to `settings` rather than rendering a dead link |
 | `categories.*.enabled` | `boolean` | `true` | Per category: `functional`, `analytics`, `marketing`. Hides the toggle when `false` |
 | `consentTtlDays` | `number` | `365` | Lifetime of the stored decision |
 | `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2 signals |
@@ -199,6 +203,77 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 ```js
 { name: '_ga', category: 'analytics', vendor: 'Google', purpose: 'Visit statistics', expiry: '2 years' }
 ```
+
+### Button appearance
+
+Each of the three banner buttons can be styled independently:
+
+```js
+theme: {
+  accent: '#2B50D8',
+  font: 'inherit',
+  radius: { card: 16, button: 8 },
+  buttons: {
+    accept:   { variant: 'filled' },                        // accent fill
+    reject:   { variant: 'filled' },                        // always matches accept
+    settings: { variant: 'outline', borderWidth: 1 }        // accent border
+  }
+}
+```
+
+Each entry takes `variant` (`"filled"` or `"outline"`), and optionally `bg`,
+`fg`, `border` and `borderWidth` (`1` or `2`). Omitted colours come from
+`theme.accent`.
+
+**Accept and reject are always equal.** They render at the same size and weight,
+and they always share one variant — if the two disagree in the config,
+`accept.variant` is used for both. A reject button that looks weaker than
+accept is a dark pattern, and consent collected through one is not freely
+given, so the config simply cannot express it. `settings` is independent and
+may itself be filled.
+
+**Contrast is enforced automatically and cannot be switched off.** A colour
+combination that would be unreadable is corrected before it reaches the
+stylesheet:
+
+- button text keeps the colour you set only when it clears **4.5:1** against
+  the fill it sits on; otherwise it becomes white or `#161616`, whichever
+  contrasts more;
+- an `outline` border is darkened (light card) or lightened (dark card) in
+  small steps until it clears **3:1** against the card, so it stays
+  recognisably your colour rather than jumping to black or white;
+- that resolved border colour is then the outline button's text colour,
+  subject to the same 4.5:1 rule.
+
+The card is `#ffffff` in light mode and `#1c1c1e` in dark. A colour the
+arithmetic cannot read — a CSS colour name, an `rgb()` string — is left exactly
+as you wrote it rather than being silently replaced.
+
+The same arithmetic is exposed as pure functions on `ConsentKit._contrast`
+(`relativeLuminance`, `contrastRatio`, `ensureContrast`, `stepToContrast`,
+`resolveButtonStyles`, `resolveRadius`, `resolveFont`, `resolveDetails`,
+`buildThemeCss`) so a theme editor can show the same numbers the banner paints
+instead of reimplementing them. It is present whenever `src/ck-ui.js` is loaded,
+and it is safe to call in Node — nothing in it touches the DOM. The debug
+panel's **Appearance** section reads it directly and reports each button's
+resolved colours, its contrast ratio, and whether the value was adjusted.
+
+### The «Learn more» link
+
+`texts.detailsAction` decides what the link at the end of the banner copy does:
+
+| Value | Renders |
+|---|---|
+| `"policy"` | A link to `texts.policyUrl`, opened with `target="_blank" rel="noopener"` |
+| `"settings"` | A button that opens the preferences panel |
+| `"hide"` | Nothing at all |
+
+The default follows `policyUrl`: `policy` when one is set, `settings` when it
+is not — so supplying only a URL does the obvious thing.
+
+> Before 0.5.0 this control was rendered as `<a href="#">` with no handler at
+> all: clicking it jumped to the top of the page and nothing else. Any site
+> running 0.4.x or earlier has a dead «Learn more» link.
 
 ### Infrastructure
 
@@ -501,24 +576,26 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.4.0, rebuilt 2026-09-05, uncompressed — gzip on the server cuts
+ConsentKit 0.5.0, rebuilt 2026-09-05, uncompressed — gzip on the server cuts
 this roughly three- to fourfold. Every block includes the branding extension
 and the attribution line; `--no-branding` drops both the code and the config
 and takes **~24 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 141,405 | 42,718 | 117,343 |
-| `ready/ru-bar.txt` | ru, ro, en | 143,026 | 43,471 | 118,944 |
-| `ready/ru-box.txt` | ru, ro, en | 143,041 | 43,476 | 118,959 |
-| `ready/ru-box-right.txt` | ru, ro, en | 143,050 | 43,481 | 118,962 |
-| `ready/ru-modal.txt` | ru, ro, en | 143,034 | 43,474 | 118,950 |
-| `ready/eu-bar.txt` | 34 languages | 191,680 | 61,864 | 167,618 |
+| `ready/en-bar.txt` | en | 160,388 | 48,950 | 136,326 |
+| `ready/ru-bar.txt` | ru, ro, en | 162,009 | 49,711 | 137,927 |
+| `ready/ru-box.txt` | ru, ro, en | 162,024 | 49,718 | 137,942 |
+| `ready/ru-box-right.txt` | ru, ro, en | 162,033 | 49,718 | 137,945 |
+| `ready/ru-modal.txt` | ru, ro, en | 162,017 | 49,713 | 137,933 |
+| `ready/eu-bar.txt` | 34 languages | 210,663 | 68,094 | 186,601 |
 
-0.4.1 adds roughly 6.3 KB over 0.4.0: the infrastructure list and the comments
-explaining what belongs in it. 0.4.0 had added roughly 16.1 KB over 0.3.6:
-iframe interception, strict mode (same-site detection, the allowlists, the
-public-suffix table) and the extensible tracker database.
+0.5.0 adds roughly 18.5 KB over 0.4.1 (about 6.1 KB gzipped): the contrast
+engine, the per-button token resolution, the new stylesheet rules and the
+comments explaining the rules the arithmetic implements. 0.4.1 had added
+roughly 6.3 KB over 0.4.0 (the infrastructure list), and 0.4.0 roughly 16.1 KB
+over 0.3.6: iframe interception, strict mode (same-site detection, the
+allowlists, the public-suffix table) and the extensible tracker database.
 
 Size is driven almost entirely by the bundled languages: `en` and `ru` are
 built into the UI and cost nothing extra, while layout, position, theme and
