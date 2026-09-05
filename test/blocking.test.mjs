@@ -332,6 +332,116 @@ test('_baseAllow is exported and matches what the engine allows', () => {
     '_baseAllow handed out its live array — a caller could widen the allowlist');
 });
 
+/* ------------------------------------------------- infrastructure (§8) */
+
+test('_infra is exported, suffix-matched and inert', () => {
+  const { CK } = load();
+  const infra = CK._infra();
+  assert.ok(Array.isArray(infra) && infra.length > 0, '_infra() returned no list');
+  for (const h of ['tildacdn.com', 'tildacdn.net', 'tilda.ws', 'static.wixstatic.com',
+    'parastorage.com', 'cdn.shopify.com', 'squarespace-cdn.com', 'assets.website-files.com',
+    'cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com', 'code.jquery.com',
+    'ajax.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'hcaptcha.com',
+    'consent.ecomconsult.net']) {
+    assert.ok(infra.includes(h), `${h} is missing from _infra()`);
+  }
+
+  // A copy, for the same reason _baseAllow is one: the scanner and the strict
+  // engine both read this list, and a caller must not be able to widen it.
+  infra.push('evil.example');
+  assert.ok(!CK._infra().includes('evil.example'), '_infra() handed out its live array');
+
+  // §8's whole list is inside the strict allowlist, so what a site owner reads
+  // in _baseAllow really is everything strict lets through.
+  for (const h of CK._infra()) {
+    assert.ok(CK._baseAllow.includes(h), `${h} is in _infra() but not in _baseAllow`);
+  }
+});
+
+test('_isInfra accepts a URL or a bare host and matches subdomains', () => {
+  const { CK } = load();
+  assert.ok(CK._isInfra('https://static.tildacdn.com/js/tilda-blocks-2.4.js'));
+  assert.ok(CK._isInfra('https://ws.tildacdn.com/'), '§8 names ws.tildacdn.com specifically');
+  assert.ok(CK._isInfra('tildacdn.com'), 'a bare host must work — the scanner passes hosts');
+  assert.ok(CK._isInfra('static.wixstatic.com'));
+  assert.ok(CK._isInfra('https://fonts.gstatic.com/s/x.woff2'));
+
+  assert.ok(!CK._isInfra('https://widget.unknown-vendor.com/w.js'));
+  assert.ok(!CK._isInfra('nottildacdn.com'), 'suffix matching must respect the label boundary');
+  assert.ok(!CK._isInfra(''));
+  assert.ok(!CK._isInfra(null));
+  assert.ok(!CK._isInfra(42));
+});
+
+test('strict never intercepts infrastructure', () => {
+  const env = load({ href: 'https://flufi.pet/page' });
+  env.CK.init({ policyVersion: '1', blocking: { mode: 'strict' } });
+  // The flufi.pet observation from §8: a Tilda site whose only pre-consent
+  // third parties are the platform's own CDN and Google Fonts. Strict mode
+  // blocking these would break the page and report nothing a visitor cares
+  // about.
+  for (const url of [
+    'https://static.tildacdn.com/js/tilda-blocks-2.4.js',
+    'https://ws.tildacdn.com/socket',
+    'https://static.tildacdn.net/img/x.png',
+    'https://static.wixstatic.com/x.js',
+    'https://static.parastorage.com/services/x.bundle.js',
+    'https://cdn.shopify.com/s/files/x.js',
+    'https://static1.squarespace-cdn.com/x.js',
+    'https://assets.website-files.com/x/x.js',
+    'https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js',
+    'https://fonts.googleapis.com/css2?family=Inter',
+    'https://fonts.gstatic.com/s/inter/x.woff2',
+    'https://consent.ecomconsult.net/client/ck-saas.js'
+  ]) {
+    assert.ok(!isBlocked(insert(env, 'script', url)), `strict intercepted infrastructure: ${url}`);
+  }
+});
+
+test('infrastructure hosts are never classified as trackers', () => {
+  // §8's contract with the scanner: an infra host has no consent category, so
+  // it can never reach findings.trackers or a summary count. If an entry ever
+  // gained a category, categoryForUrl would win over the allowlist and the two
+  // sides would disagree about the same host — this is the guard against that.
+  const { CK } = load();
+  for (const host of CK._infra()) {
+    assert.equal(CK._categoryForUrl('https://' + host + '/x.js'), null,
+      `${host} is in _infra() but the database also gives it a category`);
+    assert.equal(CK._categoryForUrl('https://sub.' + host + '/x.js'), null,
+      `sub.${host} is under an _infra() entry but the database gives it a category`);
+  }
+});
+
+test('Cloudflare Web Analytics is analytics, not infrastructure (§8)', () => {
+  const env = load();
+  // §8 calls this one out by name: the rest of Cloudflare's edge is
+  // infrastructure, but this beacon measures visitors, so it is blocked as
+  // analytics and must NOT be waved through by the infra allowlist.
+  const { CK } = env;
+  assert.equal(CK._categoryForUrl('https://static.cloudflareinsights.com/beacon.min.js'), 'analytics');
+  assert.ok(!CK._isInfra('static.cloudflareinsights.com'));
+  assert.ok(!CK._infra().includes('cloudflare.com'),
+    'a bare cloudflare.com entry would wave the analytics beacon through');
+
+  env.CK.init({ policyVersion: '1', blocking: { mode: 'strict' } });
+  assert.ok(isBlocked(insert(env, 'script', 'https://static.cloudflareinsights.com/beacon.min.js')),
+    'the Cloudflare analytics beacon must still be blocked before consent');
+  // …while the CDN half of Cloudflare stays allowed.
+  assert.ok(!isBlocked(insert(env, 'script', 'https://cdnjs.cloudflare.com/ajax/libs/x/x.js')));
+});
+
+test('a page-supplied ConsentKitDebugUrl host counts as infrastructure', () => {
+  // §8 lists ConsentKitDebugUrl alongside our own service. It is a runtime
+  // global rather than a shipped entry, so it is resolved at call time.
+  const env = load();
+  env.g.ConsentKitDebugUrl = 'https://debug.mirror.example/ck-debug.js';
+  env.CK.init({ policyVersion: '1', blocking: { mode: 'strict' } });
+  assert.ok(!isBlocked(insert(env, 'script', 'https://debug.mirror.example/ck-debug.js')),
+    'strict blocked the debug panel the page itself pointed at');
+  // Not a blanket allowance: only that exact host.
+  assert.ok(isBlocked(insert(env, 'script', 'https://other.mirror.example/x.js')));
+});
+
 test('strict honours the site allowlist from config', () => {
   const env = load();
   env.CK.init({ policyVersion: '1', blocking: { mode: 'strict', allow: ['partner.example', '.Widgets.NET'] } });

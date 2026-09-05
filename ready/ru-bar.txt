@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.4.0
- * Дата сборки:      2026-09-04
+ * Версия ConsentKit: 0.4.1
+ * Дата сборки:      2026-09-05
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
@@ -93,6 +93,10 @@
     'nr-data.net': 'analytics',               // New Relic beacon
     'datadoghq.com': 'analytics',             // RUM
     'datadoghq-browser-agent.com': 'analytics',
+    // Cloudflare Web Analytics. Subdomain only, and deliberately NOT in
+    // INFRA_DB: the rest of Cloudflare's edge is infrastructure, but this one
+    // beacon is a measurement product (§8 names it by hand for that reason).
+    'static.cloudflareinsights.com': 'analytics',
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
@@ -247,22 +251,66 @@
     cookieTable: []
   };
 
-  // Hosts strict mode never intercepts, even though they are third-party and
-  // unknown to HOST_DB. Two kinds only: asset CDNs that serve the site's own
-  // code, and things a page is broken or unusable without (payment, captcha).
-  // Deliberately short — everything else is the site owner's `blocking.allow`.
-  // Matched with the same suffix semantics as HOST_DB; the recaptcha entries
-  // are hosts because www.google.com/recaptcha and www.gstatic.com/recaptcha
-  // cannot be expressed host-wise without also allowing the whole of google.com,
-  // so they are handled by BASE_ALLOW_PATH below instead.
-  var BASE_ALLOW = [
+  // Infrastructure (§8) — NOT a consent category, a CLASS of host.
+  //
+  // These are the CDNs, static hosts and font services that site builders and
+  // hosting platforms serve a site's OWN markup, styles and scripts from. A
+  // Tilda page loads its own layout from tildacdn.com; a Wix page loads its own
+  // from parastorage.com. Reporting those to the site owner as «сторонние
+  // подключения без категории» is noise about something they cannot decide:
+  // there is no consent question to answer and no switch to flip. §8 exists to
+  // stop the audit spending the owner's attention on them.
+  //
+  // Two consequences, both of them the point:
+  //   - strict mode NEVER intercepts these (a builder's dynamic modules break
+  //     without their own CDN, and blocking them breaks the site, not a tracker);
+  //   - the scanner flags them `infra: true`, keeps them out of the summary and
+  //     never writes them to tracker_observations.
+  //
+  // Suffix-matched, exactly like HOST_DB. Membership here is not a claim that a
+  // host is harmless in general — it is a claim that it serves the site's own
+  // assets. Anything that MEASURES belongs in HOST_DB with a real category
+  // instead: static.cloudflareinsights.com is the worked example (§8 calls it
+  // out by name), and it sits above as `analytics` for that reason. Because
+  // categoryForUrl is consulted before the strict allowlist, a host in both
+  // places is classified, not waved through — so a bare `cloudflare.com` here
+  // would be a bug.
+  var INFRA_DB = [
+    // --- site builders and hosting platforms ---------------------------
+    'tildacdn.com',
+    'tildacdn.net',
+    'tilda.ws',
+    'static.wixstatic.com',
+    'parastorage.com',                     // Wix static assets
+    'cdn.shopify.com',
+    'squarespace-cdn.com',
+    'assets.website-files.com',            // Webflow
+    // --- general asset CDNs --------------------------------------------
     'cdn.jsdelivr.net',
     'unpkg.com',
     'cdnjs.cloudflare.com',
     'code.jquery.com',
+    'ajax.googleapis.com',
+    // --- fonts ----------------------------------------------------------
     'fonts.googleapis.com',
     'fonts.gstatic.com',
+    // --- captcha ---------------------------------------------------------
+    // A page whose form is gated behind a captcha is unusable without it. The
+    // Google-hosted halves are path-scoped in BASE_ALLOW_PATH below, since
+    // www.google.com and www.gstatic.com cannot be waved through wholesale.
     'hcaptcha.com',
+    // --- our own service -------------------------------------------------
+    // The consent tool must not report itself as an unnamed third party.
+    'consent.ecomconsult.net'
+  ];
+
+  // Hosts strict mode never intercepts that are NOT infrastructure: things a
+  // page is broken or unusable without, but which are somebody's product
+  // rather than the site's own asset delivery. Kept separate from INFRA_DB so
+  // that «инфраструктура» in a report means what §8 says it means — a payment
+  // form is a third party the owner chose, and calling it infrastructure would
+  // hide a real decision. Both lists feed strict mode identically.
+  var BASE_ALLOW = [
     'js.stripe.com',
     'pay.google.com',
     'checkout.creem.io'
@@ -270,6 +318,12 @@
 
   // Path-scoped members of the base allowlist: allowed only on this exact path
   // prefix, because the host at large is not something to wave through.
+  //
+  // §8 lists these two under infrastructure, and they are — but they cannot
+  // live in INFRA_DB, which is a flat list of suffix-matched HOSTS. Allowing
+  // `www.google.com` as a host would wave through every Google property, and
+  // `_isInfra(host)` has no path to test. So they stay here: strict mode treats
+  // them exactly as it treats INFRA_DB, and `_infra()` reports hosts only.
   var BASE_ALLOW_PATH = [
     { host: 'www.google.com', path: '/recaptcha' },
     { host: 'www.gstatic.com', path: '/recaptcha' }
@@ -776,7 +830,32 @@
     return !!r && r === pr;
   }
 
+  // Is this host infrastructure (§8)? Suffix-matched, like everything else.
+  //
+  // `ConsentKitDebugUrl` is resolved HERE rather than being baked into
+  // INFRA_DB, because it is a runtime window global a site sets to point the
+  // debug panel at its own mirror. Reading it at call time is the only way it
+  // can be covered at all; a snapshot taken when this file was evaluated would
+  // miss every page that sets it after the core loads.
+  function isInfraHost(host) {
+    if (!host) { return false; }
+    for (var i = 0; i < INFRA_DB.length; i++) {
+      if (hostMatches(host, INFRA_DB[i])) { return true; }
+    }
+    try {
+      var dbg = global.ConsentKitDebugUrl;
+      if (typeof dbg === 'string' && dbg) {
+        var dh = urlParts(dbg).host;
+        if (dh && dh === host) { return true; }
+      }
+    } catch (e) { /* noop */ }
+    return false;
+  }
+
   function baseAllowed(host, url) {
+    // §8: infrastructure is never intercepted by strict mode. Checked first —
+    // it is the larger list and the commoner case on a builder-hosted site.
+    if (isInfraHost(host)) { return true; }
     for (var i = 0; i < BASE_ALLOW.length; i++) {
       if (hostMatches(host, BASE_ALLOW[i])) { return true; }
     }
@@ -1341,7 +1420,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.4.0',
+    version: '0.4.1',
     config: config,
 
     init: function (userConfig) {
@@ -1416,7 +1495,11 @@
     },
 
     // The built-in strict-mode allowlist, exported for docs and tests so the
-    // list a site owner reads is the list the engine actually uses.
+    // list a site owner reads is the list the engine actually uses. Since 0.4.1
+    // that is INFRA_DB (§8) plus the payment/captcha set plus the path-scoped
+    // entries — everything baseAllowed() consults, in one list, because what a
+    // site owner needs to know is «what does strict mode let through», not how
+    // the engine files it internally.
     //
     // A GETTER, not a plain array: a plain property is evaluated once, and the
     // single array it produced would be handed to every caller — one
@@ -1424,7 +1507,48 @@
     // widen what strict mode lets through for the rest of the page load.
     // Each read returns a fresh copy, so the list is readable and inert.
     get _baseAllow() {
-      return BASE_ALLOW.slice().concat(BASE_ALLOW_PATH.map(function (e) { return e.host + e.path; }));
+      return INFRA_DB.slice()
+        .concat(BASE_ALLOW)
+        .concat(BASE_ALLOW_PATH.map(function (e) { return e.host + e.path; }));
+    },
+
+    // The infrastructure list (§8): CDNs and static hosts of site builders and
+    // hosting platforms, general asset CDNs, fonts and captcha. A CLASS of
+    // host, not a consent category — nothing here is a decision the site owner
+    // gets to make, which is exactly why the audit stops reporting them.
+    //
+    // Shared with the SaaS scanner, which loads this core and reads this list
+    // to set `thirdParty[].infra`, keep infrastructure out of the summary and
+    // out of tracker_observations. Hosts only: the two path-scoped recaptcha
+    // entries are infrastructure too, but cannot be expressed as bare hosts —
+    // see BASE_ALLOW_PATH. A fresh copy per read, for the same reason as
+    // _baseAllow.
+    _infra: function () {
+      return INFRA_DB.slice();
+    },
+
+    // Is this URL infrastructure? Takes a URL, like every other public
+    // predicate here, so a caller never has to reimplement host extraction.
+    //
+    // A BARE HOST is accepted too ('tildacdn.com'), because the scanner works
+    // in hosts and would otherwise have to glue a fake scheme on every call.
+    // It needs its own branch: urlParts resolves a relative string against the
+    // page, so a bare host arrives as a PATH on the first-party origin and
+    // would answer false. The test is deliberately narrow — a string with no
+    // scheme, no slash, no query and at least one dot is a hostname and cannot
+    // be anything else.
+    _isInfra: function (url) {
+      try {
+        if (!url || typeof url !== 'string') { return false; }
+        var s = url.trim();
+        if (!s) { return false; }
+        if (/^[a-z0-9.\-]+\.[a-z0-9\-]+$/i.test(s)) {
+          return isInfraHost(s.toLowerCase().replace(/^\.+|\.+$/g, ''));
+        }
+        var host = urlParts(s).host;
+        if (!host) { return false; }
+        return isInfraHost(host);
+      } catch (e) { return false; }
     },
 
     // What is being held back until consent: everything the engine intercepted

@@ -180,8 +180,26 @@ export interface ConsentKitApi {
   /**
    * v0.4.0 (§2). The built-in strict-mode allowlist, as hosts plus a few
    * `host/path` entries (reCAPTCHA). A copy: mutating it changes nothing.
+   *
+   * Since v0.4.1 this includes the whole of `_infra()`.
    */
   readonly _baseAllow: string[];
+
+  /**
+   * v0.4.1 (§8). The infrastructure list: CDNs and static hosts of site
+   * builders and hosting platforms, general asset CDNs, fonts and captcha.
+   *
+   * A CLASS of host, not a consent category — these serve the site's own
+   * assets, so there is no consent decision to make about them. Strict mode
+   * never intercepts them, and the SaaS scanner keeps them out of the report.
+   * A copy: mutating it changes nothing.
+   */
+  _infra(): string[];
+
+  /**
+   * v0.4.1 (§8). Whether a URL — or a bare hostname — is infrastructure.
+   */
+  _isInfra(url: string): boolean;
 
   /** The category the engine would assign to a URL, or `null` if unknown. */
   _categoryForUrl(url: string): CkCategory | null;

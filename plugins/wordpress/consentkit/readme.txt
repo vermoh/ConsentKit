@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,9 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.4.1 =
+* Клиент 0.4.1: список инфраструктуры (`ConsentKit._infra()`) — CDN и статика конструкторов сайтов (Tilda, Wix, Shopify, Squarespace, Webflow), шрифты Google и капча. Строгий режим их никогда не задерживает, поэтому динамические модули конструкторов не ломаются. `static.cloudflareinsights.com` в список не входит: это аналитика Cloudflare, и она блокируется как аналитика.
 
 = 0.4.0 =
 * Клиент 0.4.0: строгий режим блокировки (`blocking.mode: 'strict'`) — до согласия задерживается любой сторонний скрипт и iframe, кроме same-site, разрешённых хостов и встроенного списка; перехваченное относится к категории «маркетинг». В панели отладки такие строки помечены `strict`.

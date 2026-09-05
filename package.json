@@ -1,6 +1,6 @@
 {
   "name": "@ecomconsult/consentkit",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "GDPR cookie consent core with blocking engine, Shadow DOM UI and Google Consent Mode v2. Zero dependencies, no build step.",
   "repository": {
     "type": "git",

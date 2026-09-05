@@ -200,6 +200,27 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 { name: '_ga', category: 'analytics', vendor: 'Google', purpose: 'Visit statistics', expiry: '2 years' }
 ```
 
+### Infrastructure
+
+Some third-party hosts are not a consent decision at all: they are where a site
+builder or hosting platform serves the site's **own** markup, styles and
+scripts from. A Tilda page loads its layout from `tildacdn.com`, a Wix page
+loads its from `parastorage.com`, and a page using Google Fonts loads its
+typefaces from `fonts.gstatic.com`. ConsentKit ships these as a separate class
+of host — readable as `ConsentKit._infra()`, tested per URL or hostname with
+`ConsentKit._isInfra(url)` — covering the CDNs of Tilda, Wix, Shopify,
+Squarespace and Webflow, the general asset CDNs (`cdn.jsdelivr.net`,
+`unpkg.com`, `cdnjs.cloudflare.com`, `code.jquery.com`, `ajax.googleapis.com`),
+Google Fonts and hCaptcha. Strict mode never intercepts them, because blocking a
+builder's own CDN breaks the page without protecting anyone; the hosted service
+also leaves them out of scan reports, since there is nothing for a site owner to
+decide. Membership is a claim that a host delivers the site's own assets, not
+that it is harmless in general — anything that *measures* keeps a real consent
+category instead, which is why `static.cloudflareinsights.com` (Cloudflare Web
+Analytics) is classified as `analytics` and blocked before consent even though
+the rest of Cloudflare's CDN is infrastructure. Both lists are matched by suffix
+and returned as copies, so reading them cannot widen what strict mode allows.
+
 ## API
 
 All methods are safe to call at any time and never throw.
@@ -360,11 +381,10 @@ Four things are never intercepted:
    the answer is unclear it says same-site, because wrongly blocking a
    first-party asset breaks the site.
 2. **`blocking.allow`** — your own list, matched by suffix.
-3. **The built-in allowlist**, readable as `ConsentKit._baseAllow`: asset CDNs
-   (`cdn.jsdelivr.net`, `unpkg.com`, `cdnjs.cloudflare.com`, `code.jquery.com`,
-   `fonts.googleapis.com`, `fonts.gstatic.com`) and things a page is unusable
-   without (`js.stripe.com`, `pay.google.com`, `checkout.creem.io`,
-   `hcaptcha.com`, and reCAPTCHA — scoped to `www.google.com/recaptcha` and
+3. **The built-in allowlist**, readable as `ConsentKit._baseAllow`. Two parts:
+   **infrastructure** (`ConsentKit._infra()`, see below) and things a page is
+   unusable without (`js.stripe.com`, `pay.google.com`, `checkout.creem.io`,
+   and reCAPTCHA — scoped to `www.google.com/recaptcha` and
    `www.gstatic.com/recaptcha`, not to those hosts at large).
 4. **Known `necessary` / `functional` hosts** already granted, which keep their
    real category rather than being swept up as marketing.
@@ -488,16 +508,17 @@ and takes **~24 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 134,969 | 40,519 | 110,907 |
-| `ready/ru-bar.txt` | ru, ro, en | 136,590 | 41,315 | 112,508 |
-| `ready/ru-box.txt` | ru, ro, en | 136,605 | 41,320 | 112,523 |
-| `ready/ru-box-right.txt` | ru, ro, en | 136,614 | 41,326 | 112,526 |
-| `ready/ru-modal.txt` | ru, ro, en | 136,598 | 41,318 | 112,514 |
-| `ready/eu-bar.txt` | 34 languages | 185,244 | 59,665 | 161,182 |
+| `ready/en-bar.txt` | en | 141,405 | 42,718 | 117,343 |
+| `ready/ru-bar.txt` | ru, ro, en | 143,026 | 43,471 | 118,944 |
+| `ready/ru-box.txt` | ru, ro, en | 143,041 | 43,476 | 118,959 |
+| `ready/ru-box-right.txt` | ru, ro, en | 143,050 | 43,481 | 118,962 |
+| `ready/ru-modal.txt` | ru, ro, en | 143,034 | 43,474 | 118,950 |
+| `ready/eu-bar.txt` | 34 languages | 191,680 | 61,864 | 167,618 |
 
-0.4.0 adds roughly 16.1 KB over 0.3.6: iframe interception, strict mode
-(same-site detection, the allowlists, the public-suffix table) and the
-extensible tracker database.
+0.4.1 adds roughly 6.3 KB over 0.4.0: the infrastructure list and the comments
+explaining what belongs in it. 0.4.0 had added roughly 16.1 KB over 0.3.6:
+iframe interception, strict mode (same-site detection, the allowlists, the
+public-suffix table) and the extensible tracker database.
 
 Size is driven almost entirely by the bundled languages: `en` and `ru` are
 built into the UI and cost nothing extra, while layout, position, theme and

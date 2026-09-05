@@ -28,7 +28,7 @@ export function undecidedState() {
  */
 export function createStub() {
   const stub = {
-    version: '0.4.0',
+    version: '0.4.1',
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },
@@ -44,6 +44,11 @@ export function createStub() {
     _extendHostDb: function () { return 0; },
     _baseAllow: [],
     _categoryForUrl: function () { return null; },
+    // v0.4.1 (§8): the infrastructure list. Empty here for the same reason
+    // _baseAllow is — a stub means the engine never attached, so it is not
+    // letting anything through and must not claim a list it does not enforce.
+    _infra: function () { return []; },
+    _isInfra: function () { return false; },
     _blocked: function () { return []; },
     _isStub: true
   };
