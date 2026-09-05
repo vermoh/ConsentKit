@@ -430,6 +430,116 @@ test('Cloudflare Web Analytics is analytics, not infrastructure (§8)', () => {
   assert.ok(!isBlocked(insert(env, 'script', 'https://cdnjs.cloudflare.com/ajax/libs/x/x.js')));
 });
 
+/* --------------------------------------------- 0.5.4 database additions */
+
+test('Google Maps is functional, on its own hosts and by path', () => {
+  const { CK } = load();
+  // Dedicated Maps API hosts: the whole host is the right scope.
+  assert.equal(CK._categoryForUrl('https://maps.googleapis.com/maps/api/js?key=x'), 'functional');
+  assert.equal(CK._categoryForUrl('https://places.googleapis.com/v1/places:search'), 'functional');
+  // www.google.com cannot be given a category as a whole, so the embed is
+  // path-scoped — both the /maps/ page form and the /maps/embed iframe.
+  assert.equal(CK._categoryForUrl('https://www.google.com/maps/place/Chisinau'), 'functional');
+  assert.equal(CK._categoryForUrl('https://www.google.com/maps/embed?pb=!1m18'), 'functional');
+  assert.equal(CK._categoryForUrl('https://www.google.com/maps/embed/v1/place?key=x'), 'functional');
+});
+
+test('the Maps path rules do not catch a first-party /maps/ route', () => {
+  /* PATH_DB fragments are matched against the WHOLE resolved URL, so a key must
+     carry enough host to be unambiguous. A site with its own page at /maps/embed
+     must not be classified — hence 'google.com/maps/embed' rather than a bare
+     '/maps/embed'. (The bare form is right for '/gtag/js', where a self-hosted
+     copy really is the analytics tag; it is wrong for a generic route name.) */
+  const { CK } = load();
+  assert.equal(CK._categoryForUrl('https://flufi.pet/maps/embed/widget.js'), null,
+    'a first-party /maps/embed route must not be classified as a Google embed');
+  assert.equal(CK._categoryForUrl('https://flufi.pet/maps/place/x'), null);
+  // …while the real embed still is, including from maps.google.com.
+  assert.equal(CK._categoryForUrl('https://maps.google.com/maps/embed?pb=x'), 'functional');
+});
+
+test('maps.gstatic.com is functional while the rest of gstatic stays infrastructure', () => {
+  /* The pair that documents the split. gstatic.com sits in INFRA_DB as a whole,
+     because it serves fonts and ordinary images; maps.gstatic.com serves the
+     tiles of an embed the owner chose. categoryForUrl runs BEFORE the strict
+     allowlist, so the named subdomain is classified and held while its parent
+     is waved through. If someone ever "fixes" one half, this fails. */
+  const { CK } = load();
+  assert.equal(CK._categoryForUrl('https://maps.gstatic.com/mapfiles/api-3/x.png'), 'functional');
+  assert.equal(CK._categoryForUrl('https://fonts.gstatic.com/s/inter/x.woff2'), null);
+  assert.ok(CK._isInfra('fonts.gstatic.com'));
+  // The leg that matters: a host with a category must NOT also answer true to
+  // _isInfra. The scanner reads _infra() to keep infrastructure out of the
+  // report, so a host that is both would be held by the engine and yet never
+  // named in the audit — blocking and reporting disagreeing about one host.
+  assert.ok(!CK._isInfra('maps.gstatic.com'),
+    'maps.gstatic.com carries a category, so it cannot also be infrastructure');
+  assert.ok(CK._isInfra('www.gstatic.com'),
+    'the rest of gstatic.com must stay infrastructure');
+  // reCAPTCHA keeps its own path scoping — the new /maps rules must not shadow it.
+  assert.equal(CK._categoryForUrl('https://www.google.com/recaptcha/api.js'), 'necessary');
+  assert.equal(CK._categoryForUrl('https://www.gstatic.com/recaptcha/releases/x/recaptcha.js'), 'necessary');
+});
+
+test('cookieless Google Ads pings are marketing on any google ccTLD', () => {
+  /* These beacons report a visit to the ad platform without setting a cookie of
+     their own. On doubleclick.net HOST_DB already files them as marketing, so
+     testing that form would pass vacuously — what these path rules earn is the
+     www.google.<tld> form, which no host entry can cover without ruling on all
+     of Google at once. Hence www.google.com AND a ccTLD. */
+  const { CK } = load();
+  for (const host of ['www.google.com', 'www.google.lt', 'www.google.ro']) {
+    assert.equal(CK._categoryForUrl('https://' + host + '/pagead/1p-user-list/1072'), 'marketing');
+    assert.equal(CK._categoryForUrl('https://' + host + '/pagead/1p-conversion/1072'), 'marketing');
+    assert.equal(CK._categoryForUrl('https://' + host + '/ads/ga-audiences?v=1&t=sr'), 'marketing');
+  }
+});
+
+test('Tilda platform hosts are infrastructure but stat.tildaapi.one is analytics', () => {
+  /* tildaapi.one is split down the middle: the platform APIs serve the page,
+     stat. measures the visitor. There is deliberately NO bare `tildaapi.one` in
+     either table — lookupHostMap returns the FIRST matching key rather than the
+     longest, so a bare entry could shadow the stat subdomain depending on
+     insertion order. The final assertion is the guard against someone adding
+     one later. */
+  const { CK } = load();
+  for (const host of ['feeds.tildaapi.one', 'geo.tildaapi.one', 'members.tildaapi.one',
+    'forms.tildaapi.one', 'tildacdn.one', 'static.tildacdn.one', 'fonts.google.com']) {
+    assert.ok(CK._isInfra(host), `${host} should be infrastructure`);
+    assert.equal(CK._categoryForUrl('https://' + host + '/x.js'), null,
+      `${host} is infrastructure and must carry no consent category`);
+  }
+  assert.equal(CK._categoryForUrl('https://stat.tildaapi.one/event?t=1'), 'analytics');
+  assert.ok(!CK._isInfra('stat.tildaapi.one'),
+    'the Tilda stats endpoint must not be waved through as infrastructure');
+  assert.ok(!CK._infra().includes('tildaapi.one'),
+    'a bare tildaapi.one entry would wave the stats endpoint through');
+});
+
+test('the new functional hosts are held before consent and released after', () => {
+  const env = load({ href: 'https://flufi.pet/page' });
+  env.CK.init({
+    policyVersion: '1',
+    blocking: { mode: 'strict' },
+    categories: { functional: { enabled: true } }
+  });
+  const map = insert(env, 'script', 'https://maps.googleapis.com/maps/api/js?key=x');
+  assert.ok(isBlocked(map), 'the Maps API loaded before functional consent');
+  assert.equal(map.getAttribute('data-ck'), 'functional',
+    'Maps must be held as functional, not as a strict-mode marketing interception');
+  // Tilda's platform hosts are never intercepted, consent or no consent.
+  assert.ok(!isBlocked(insert(env, 'script', 'https://feeds.tildaapi.one/feed/x')));
+  assert.ok(!isBlocked(insert(env, 'script', 'https://static.tildacdn.one/js/tilda-blocks.js')));
+  // …but the stats endpoint on the same registrable domain is.
+  assert.ok(isBlocked(insert(env, 'script', 'https://stat.tildaapi.one/event')));
+
+  env.CK.accept({ functional: true, analytics: false, marketing: false });
+  assert.ok(!isBlocked(insert(env, 'script', 'https://maps.googleapis.com/maps/api/js?key=x')),
+    'granted functional must release the map');
+  assert.ok(isBlocked(insert(env, 'script', 'https://stat.tildaapi.one/event')),
+    'functional consent must not release an analytics host');
+});
+
 test('a page-supplied ConsentKitDebugUrl host counts as infrastructure', () => {
   // §8 lists ConsentKitDebugUrl alongside our own service. It is a runtime
   // global rather than a shipped entry, so it is resolved at call time.

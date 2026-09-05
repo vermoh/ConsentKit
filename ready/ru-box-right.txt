@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.3
+ * Версия ConsentKit: 0.5.4
  * Дата сборки:      2026-09-05
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -97,6 +97,13 @@
     // INFRA_DB: the rest of Cloudflare's edge is infrastructure, but this one
     // beacon is a measurement product (§8 names it by hand for that reason).
     'static.cloudflareinsights.com': 'analytics',
+    // Tilda's stats endpoint. The REST of tildaapi.one is platform plumbing and
+    // sits in INFRA_DB host by host; this one subdomain measures visitors, so it
+    // is classified here instead. There is deliberately NO bare `tildaapi.one`
+    // in either table: lookupHostMap returns the FIRST matching key, not the
+    // longest, so a bare entry could shadow this one depending on insertion
+    // order. Every Tilda API host is therefore named in full.
+    'stat.tildaapi.one': 'analytics',
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
@@ -153,6 +160,22 @@
     // iuteCredit — a Moldovan consumer-credit calculator embedded on shop
     // product pages. A third party the owner chose, offering a feature.
     'iutecredit.md': 'functional',
+    // Google Maps — a map or a store locator the owner embedded. It is a
+    // FEATURE, not measurement: a visitor who declines functional loses the map
+    // and nothing else. The two API hosts are dedicated to Maps, so the whole
+    // host is the right scope; the www.google.com/maps halves cannot be, and
+    // are path-scoped in PATH_DB below.
+    //
+    // maps.gstatic.com is the deliberate exception to `gstatic.com` sitting in
+    // INFRA_DB: the parent serves fonts and ordinary images a page is broken
+    // without, but this subdomain serves the map tiles and marker sprites of an
+    // embed the owner chose. categoryForUrl runs BEFORE the strict allowlist, so
+    // naming it here classifies (and holds) it while fonts.gstatic.com stays
+    // waved through — which is the split the pair of tests in blocking.test.mjs
+    // pins down.
+    'maps.googleapis.com': 'functional',
+    'places.googleapis.com': 'functional',
+    'maps.gstatic.com': 'functional',
 
     // --- necessary -----------------------------------------------------
     // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
@@ -199,6 +222,34 @@
     '/gtag/js': 'analytics',            // googletagmanager.com/gtag/js?id=G-XXXX
     'www.google.com/recaptcha/': 'necessary',
     'www.gstatic.com/recaptcha/': 'necessary',
+    // Google Maps on www.google.<tld>. Like reCAPTCHA above, the host cannot be
+    // given a category as a whole, so the map is named by path. Functional: it
+    // is a map the owner put on the page, and allowed() holds it until the
+    // visitor accepts functional.
+    //
+    // The host half is kept IN the key rather than matching a bare '/maps/'.
+    // Every fragment here is tested against the WHOLE resolved URL, so a bare
+    // key would also classify a site's OWN page at /maps/… . For '/gtag/js'
+    // that is intended (a self-hosted gtag really is analytics); a first-party
+    // route called /maps/embed is just a route.
+    //
+    // Google serves the iframe embed from google.com/maps/embed regardless of
+    // the visitor's country, so google.com covers the embed case; the ccTLD
+    // hosts appear for /maps/ links, which the first key covers on www.google
+    // .com and which are ordinary navigation elsewhere.
+    'www.google.com/maps/': 'functional',
+    'google.com/maps/embed': 'functional',   // also maps.google.com
+    // Google Ads pings that carry no cookie of their own but still report a
+    // visit to the ad platform — the remarketing/conversion beacons a gtag or
+    // Ads tag fires against www.google.<tld>. They reach doubleclick.net too,
+    // where HOST_DB already files them as marketing; these keys are what catches
+    // the www.google.com and www.google.lt (and every other ccTLD) form, which
+    // no host entry can cover without ruling on all of Google at once. Matching
+    // is a substring test against the WHOLE resolved URL, so a leading path
+    // fragment matches every host.
+    '/pagead/1p-user-list/': 'marketing',
+    '/pagead/1p-conversion/': 'marketing',
+    '/ads/ga-audiences': 'marketing',
     '/trackers/ga.js': 'analytics',
     '/trackers/pixel.js': 'marketing',
     '/trackers/chat.js': 'functional'
@@ -320,7 +371,21 @@
     // --- site builders and hosting platforms ---------------------------
     'tildacdn.com',
     'tildacdn.net',
+    'tildacdn.one',
+    'static.tildacdn.one',                 // redundant under the line above, named
+                                           // for symmetry with the tildacdn.com
+                                           // fixtures, which use the same subdomain
     'tilda.ws',
+    // Tilda's own platform APIs: block feeds, geo lookup, the members area and
+    // form delivery. A Tilda page is broken without them and none of them is a
+    // decision the site owner made — they are the builder serving its own site.
+    // Enumerated one by one rather than as a bare `tildaapi.one`, because
+    // stat.tildaapi.one IS measurement and sits in HOST_DB as analytics; a bare
+    // suffix here would be a claim about that host too.
+    'feeds.tildaapi.one',
+    'geo.tildaapi.one',
+    'members.tildaapi.one',
+    'forms.tildaapi.one',
     'static.wixstatic.com',
     'parastorage.com',                     // Wix static assets
     'cdn.shopify.com',
@@ -341,6 +406,8 @@
     'b-cdn.net',                           // bunny.net
     // --- fonts ----------------------------------------------------------
     'fonts.googleapis.com',
+    'fonts.google.com',                    // the catalogue host; some embeds and
+                                           // builders link stylesheets through it
     // gstatic.com whole: Google's static-asset domain. Its subdomains serve
     // fonts (fonts.gstatic.com), the reCAPTCHA widget's own code
     // (www.gstatic.com/recaptcha/) and ordinary images — assets a page is
@@ -896,6 +963,15 @@
   // miss every page that sets it after the core loads.
   function isInfraHost(host) {
     if (!host) { return false; }
+    // A host the database gives a CATEGORY to is never infrastructure, even when
+    // it sits under an INFRA_DB suffix. Without this, maps.gstatic.com (named as
+    // `functional` in HOST_DB, under a bare `gstatic.com` here) would be held
+    // back by the engine until functional consent while the scanner — which
+    // reads _infra() to set thirdParty[].infra — filed it as infrastructure and
+    // kept it out of the report entirely. Blocking and reporting would then
+    // disagree about one host, which is exactly what §8 exists to prevent.
+    // Every other INFRA_DB entry is uncategorised, so this changes nothing else.
+    if (lookupHostMap(EXTRA_DB, host) || lookupHostMap(HOST_DB, host)) { return false; }
     for (var i = 0; i < INFRA_DB.length; i++) {
       if (hostMatches(host, INFRA_DB[i])) { return true; }
     }
@@ -1477,7 +1553,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.3',
+    version: '0.5.4',
     config: config,
 
     init: function (userConfig) {
@@ -3379,7 +3455,11 @@
     var fontCss = '';
     if (built.font === 'inherit') {
       var page = resolvePageFont();
-      if (page) fontCss = '\n:host{--ck-font:' + page + '}';
+      // Owner rule (2026-09-06): the page's font when it can be read, the
+      // system stack when it cannot — never a bare `inherit`, which on Tilda
+      // and friends resolves to <body>'s browser default (Times). A later
+      // re-probe that finds the page font swaps the system stack out again.
+      fontCss = '\n:host{--ck-font:' + (page || SYSTEM_FONT) + '}';
     } else {
       pageFont = null;                          // theme.font:'system' opts out
     }
