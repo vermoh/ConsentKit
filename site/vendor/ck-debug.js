@@ -203,9 +203,10 @@
       themeMode: 'тема',
       themeModeLight: 'светлая',
       themeModeDark: 'тёмная',
-      themeFont: 'шрифт',
-      themeFontInherit: 'как на сайте',
+      themeFont: 'Шрифт',
+      themeFontInherit: 'наследуется',
       themeFontSystem: 'системный',
+      themeFontPage: 'со страницы',
       themeRadius: 'скругления',
       themeCard: 'карточка',
       themeBtn: 'кнопки',
@@ -262,9 +263,10 @@
       themeMode: 'theme',
       themeModeLight: 'light',
       themeModeDark: 'dark',
-      themeFont: 'font',
-      themeFontInherit: 'site font',
+      themeFont: 'Font',
+      themeFontInherit: 'inherited',
       themeFontSystem: 'system',
+      themeFontPage: 'from the page',
       themeRadius: 'radii',
       themeCard: 'card',
       themeBtn: 'buttons',
@@ -598,6 +600,21 @@
     return typeof r === 'number' && isFinite(r) ? (Math.round(r * 100) / 100) + ':1' : '?';
   }
 
+  /* «Шрифт: <значение> (со страницы | системный | наследуется)».
+     theme.font:'system' is a fixed stack; otherwise the UI samples real page
+     text and only falls back to CSS `inherit` when the page states no family of
+     its own — the three cases have to be told apart, because «наследуется» on a
+     site whose body is unstyled is exactly the Times bug being diagnosed. */
+  function fontRow(built, T) {
+    if (built.font !== 'inherit') return built.font + ' (' + T.themeFontSystem + ')';
+    var page = null;
+    try {
+      if (CK && typeof CK._resolvePageFont === 'function') page = CK._resolvePageFont();
+    } catch (e) { page = null; }
+    return page ? page + ' (' + T.themeFontPage + ')'
+                : 'inherit (' + T.themeFontInherit + ')';
+  }
+
   // Resolved lazily, not at parse time: this file runs before ConsentKit.init()
   // has merged the site's config, so asking for the language now would always
   // read the built-in default. Re-resolved on every render so a page that
@@ -749,7 +766,7 @@
         sT.appendChild(defs([
           [T.themeMode, (dark ? T.themeModeDark : T.themeModeLight) +
             (built.mode === 'auto' ? ' (auto)' : '')],
-          [T.themeFont, built.font === 'inherit' ? T.themeFontInherit : T.themeFontSystem],
+          [T.themeFont, fontRow(built, T)],
           [T.themeRadius, T.themeCard + ' ' + built.radius.card + 'px · ' +
             T.themeBtn + ' ' + built.radius.button + 'px'],
           [T.themeLink, lkTxt]

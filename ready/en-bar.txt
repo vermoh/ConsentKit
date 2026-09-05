@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.1
+ * Версия ConsentKit: 0.5.2
  * Дата сборки:      2026-09-05
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
@@ -1477,7 +1477,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.1',
+    version: '0.5.2',
     config: config,
 
     init: function (userConfig) {
@@ -2878,6 +2878,109 @@
     return (theme && theme.font === 'system') ? SYSTEM_FONT : 'inherit';
   }
 
+  /* CSS `inherit` on the shadow root takes the family of the HOST <div>, which
+     hangs off <body>. On a site that sets its typeface on inner blocks and not
+     on body/html, body's computed family IS the browser default (Times), so the
+     banner came out in Times on a page that is entirely sans-serif. Reading the
+     family off real page TEXT instead is what «как на сайте» was always meant
+     to mean.
+
+     Split in two: pickPageFont is pure arithmetic over already-collected
+     samples (unit-testable in node, published on _contrast), resolvePageFont
+     does the DOM reading. */
+
+  // Families are compared as CSS grammar, not as strings: '"Google Sans"' and
+  // 'google sans' name the same face, and only the UA default must be rejected.
+  function normFamily(v) {
+    if (typeof v !== 'string') return '';
+    return v.replace(/["']/g, '').replace(/\s*,\s*/g, ',').trim().toLowerCase();
+  }
+
+  /* First sample whose family differs from the UA default wins; null when the
+     page never states a family of its own (the caller then keeps `inherit`).
+     `samples` is [{ family }] in priority order. */
+  function pickPageFont(samples, uaDefault) {
+    if (!samples || typeof samples.length !== 'number') return null;
+    var ua = normFamily(uaDefault);
+    for (var i = 0; i < samples.length; i++) {
+      var s = samples[i];
+      var fam = s && typeof s.family === 'string' ? s.family.trim() : '';
+      if (!fam) continue;                       // unstyled / detached element
+      var norm = normFamily(fam);
+      if (!norm) continue;
+      if (ua && norm === ua) continue;          // still the browser default
+      // The value lands in a generated stylesheet. getComputedStyle normalises,
+      // but a family that could close the declaration is never worth the risk.
+      if (/[;{}]|\/\*/.test(fam)) continue;
+      return fam;
+    }
+    return null;
+  }
+
+  // Ordered so the first hit is the most representative body text on the page.
+  var FONT_PROBES = ['main p', 'article p', '[role=main] p', 'p', 'h1', 'h2', 'a', 'button', 'li'];
+
+  function visibleOutsideHost(el) {
+    if (!el) return false;
+    if (host && (el === host || (host.contains && host.contains(el)))) return false;
+    try {
+      if (el.offsetParent !== null) return true;
+      return !!(el.getClientRects && el.getClientRects().length > 0);
+    } catch (e) { return false; }
+  }
+
+  // The UA default is whatever an element states no opinion about, measured
+  // INSIDE the shadow root so `:host{all:initial}` is already in force.
+  function uaDefaultFamily() {
+    if (!root || typeof document === 'undefined') return '';
+    var probe = null;
+    try {
+      probe = document.createElement('span');
+      probe.style.setProperty('font-family', 'initial');
+      root.appendChild(probe);
+      return window.getComputedStyle(probe).fontFamily || '';
+    } catch (e) {
+      return '';
+    } finally {
+      try { if (probe && probe.parentNode) probe.parentNode.removeChild(probe); } catch (e2) { /* noop */ }
+    }
+  }
+
+  // Cached at applyTheme time so the debug panel (which may open long before or
+  // after a remount) quotes the value the banner actually painted.
+  var pageFont = null;
+
+  function resolvePageFont() {
+    if (typeof document === 'undefined') return pageFont;
+    try {
+      var ua = uaDefaultFamily();
+      var samples = [];
+      var body = document.body;
+      if (body) {
+        try { samples.push({ family: window.getComputedStyle(body).fontFamily }); } catch (e) { /* noop */ }
+      }
+      for (var i = 0; i < FONT_PROBES.length; i++) {
+        // First VISIBLE match, not the first match if it happens to be visible:
+        // the leading <p> on a real page is often hidden a11y text, a template
+        // or an inert modal, and skipping straight to the next selector would
+        // throw away the page's body copy. Capped so a long article does not
+        // cost a layout read per node.
+        var el = null, list = null;
+        try { list = document.querySelectorAll(FONT_PROBES[i]); } catch (e) { list = null; }
+        if (!list) continue;
+        for (var j = 0; j < list.length && j < 5; j++) {
+          if (visibleOutsideHost(list[j])) { el = list[j]; break; }
+        }
+        if (!el) continue;
+        try { samples.push({ family: window.getComputedStyle(el).fontFamily }); } catch (e) { /* noop */ }
+      }
+      pageFont = pickPageFont(samples, ua);
+    } catch (e) {
+      pageFont = null;
+    }
+    return pageFont;
+  }
+
   /* --------------------------------------------------- button resolution */
 
   var BTN_ROLES = ['accept', 'reject', 'settings'];
@@ -3134,9 +3237,21 @@
   function applyTheme(cfg) {
     if (!host || !nodes.themeStyle) return;
     var built = buildThemeCss(cfg);
+    // `inherit` would take the family of the host <div> — i.e. of <body>, which
+    // on many sites still carries the browser default. Overwrite the token with
+    // the family real page text is set in. Appended AFTER built.css so the two
+    // equal-specificity :host rules resolve in source order; buildThemeCss stays
+    // pure and DOM-free (the theme editor and the debug panel both call it).
+    var fontCss = '';
+    if (built.font === 'inherit') {
+      var page = resolvePageFont();
+      if (page) fontCss = '\n:host{--ck-font:' + page + '}';
+    } else {
+      pageFont = null;                          // theme.font:'system' opts out
+    }
     // Brand rules ride along in the same sheet: the dark/light logo swap depends
     // on theme.mode, so it must be rebuilt whenever the palette is.
-    nodes.themeStyle.textContent = built.css + '\n' + buildBrandCss(cfg);  // replace, never append
+    nodes.themeStyle.textContent = built.css + fontCss + '\n' + buildBrandCss(cfg);  // replace, never append
     host.classList.remove('ck-mode-dark', 'ck-mode-light');
     if (built.mode === 'dark') host.classList.add('ck-mode-dark');
     else if (built.mode === 'light') host.classList.add('ck-mode-light');
@@ -3652,8 +3767,16 @@
       resolveButtonStyles: resolveButtonStyles,
       resolveRadius: resolveRadius,
       resolveFont: resolveFont,
+      pickPageFont: pickPageFont,
       resolveDetails: resolveDetails,
       buildThemeCss: buildThemeCss
+    };
+    // The page-font probe reads the DOM, so it is not part of the pure block —
+    // but the debug panel must be able to quote the family the banner painted
+    // rather than guess at it. Safe to call before mount: with no shadow root
+    // to measure the UA default against it simply returns the cache (null).
+    ck._resolvePageFont = function () {
+      return (typeof document === 'undefined' || !root) ? pageFont : resolvePageFont();
     };
   })();
 

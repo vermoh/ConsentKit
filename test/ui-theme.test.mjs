@@ -396,6 +396,62 @@ test('font: system restores the pre-0.5.0 stack', () => {
   assert.match(C.buildThemeCss({ theme: { font: 'system' } }).css, /--ck-font:system-ui/);
 });
 
+/* ------------------------------------------------------- page font pick */
+
+/* CSS `inherit` takes the family of the host <div>, i.e. of <body>. A site that
+   sets its typeface on inner blocks and not on body/html leaves body computing
+   to the BROWSER DEFAULT, so the banner rendered in Times on a page that is
+   entirely sans-serif (seen live on flufi.pet, 0.5.1). The UI therefore samples
+   real page text; pickPageFont is the choice, split out of the DOM reading so
+   the rule can be asserted without a browser. */
+
+test('pickPageFont takes the first family that is not the browser default', () => {
+  const picked = C.pickPageFont([
+    { family: 'Times' },                       // body, still the UA default
+    { family: '"Google Sans", sans-serif' },   // the first real page font
+    { family: 'Georgia' }
+  ], 'Times');
+  assert.equal(picked, '"Google Sans", sans-serif',
+    'the first differing sample should win, verbatim');
+});
+
+test('pickPageFont returns null when the page states no family of its own', () => {
+  // Every candidate is the UA default: there is nothing to inherit FROM, so the
+  // caller must keep plain `inherit` rather than pin the banner to Times.
+  assert.equal(C.pickPageFont([{ family: 'Times' }, { family: 'Times' }], 'Times'), null);
+  assert.equal(C.pickPageFont([], 'Times'), null);
+  assert.equal(C.pickPageFont(null, 'Times'), null);
+});
+
+test('pickPageFont ignores empty and unreadable samples', () => {
+  assert.equal(C.pickPageFont([
+    { family: '' }, { family: '   ' }, { family: null }, {}, null,
+    { family: 'Inter' }
+  ], 'Times'), 'Inter', 'an empty sample must be skipped, not treated as a family');
+});
+
+test('pickPageFont compares families as CSS, not as strings', () => {
+  // Quoting and case are grammar, not identity: a body computing to
+  // '"Google Sans"' is the same face as a probe reporting 'google sans', and
+  // neither is a reason to pin the banner.
+  assert.equal(C.pickPageFont([{ family: '"Google Sans"' }], 'google sans'), null);
+  assert.equal(C.pickPageFont([{ family: 'TIMES' }], 'Times'), null);
+  // Spacing after a comma is normalised the same way.
+  assert.equal(C.pickPageFont([{ family: 'Inter,sans-serif' }], 'Inter, sans-serif'), null);
+  // But a genuinely different family still wins, and is returned unnormalised.
+  assert.equal(C.pickPageFont([{ family: '"Google Sans"' }], 'Times'), '"Google Sans"');
+});
+
+test('pickPageFont refuses a family that could break out of the declaration', () => {
+  // The value is injected into a generated stylesheet. getComputedStyle
+  // normalises, so this is belt-and-braces — but a family carrying ; { } or a
+  // comment opener is never worth emitting.
+  for (const bad of ['Inter;color:red', 'Inter{}', 'Inter/*x*/']) {
+    assert.equal(C.pickPageFont([{ family: bad }, { family: 'Georgia' }], 'Times'), 'Georgia',
+      `${bad} should have been skipped`);
+  }
+});
+
 /* ----------------------------------------------------- generated stylesheet */
 
 test('every button token is emitted for both palettes', () => {
