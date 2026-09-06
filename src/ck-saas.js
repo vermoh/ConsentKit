@@ -298,7 +298,40 @@
     if (lang) { body.lang = lang; }
     var layout = resolvedLayout();
     if (layout) { body.layout = layout; }
+
+    /* SPEC V1.12 §3 — the optional `services` field: the ids the visitor
+       switched off, «только при method: 'custom'».
+
+       Three guards, all of them load-bearing against a 400 from a closed
+       schema: only on a 'custom' decision (an accept_all or reject_all has no
+       per-service refusals to report and a withdraw is not a choice about
+       services at all), only when the list is non-empty (an empty array is a
+       field the server did not need to receive), and capped at 50 ids of at
+       most 64 characters each — the same bounds §2 puts on the config. */
+    if (body.method === 'custom') {
+      var denied = deniedServices();
+      if (denied.length) { body.services = denied; }
+    }
     return body;
+  }
+
+  // Read from the core, which normalised and bounded the ids already; re-checked
+  // here anyway, because this is the last place before the wire.
+  function deniedServices() {
+    var out = [];
+    try {
+      var ck = global.ConsentKit;
+      if (!ck || typeof ck._deniedServices !== 'function') { return out; }
+      var list = ck._deniedServices();
+      if (!list || typeof list.length !== 'number') { return out; }
+      for (var i = 0; i < list.length && out.length < 50; i++) {
+        var id = list[i];
+        if (typeof id === 'string' && id && id.length <= 64 && out.indexOf(id) === -1) {
+          out.push(id);
+        }
+      }
+    } catch (e) { /* noop */ }
+    return out;
   }
 
   function drop(payload) {

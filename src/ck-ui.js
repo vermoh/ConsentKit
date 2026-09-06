@@ -32,6 +32,18 @@
       colExpiry: 'Expires',
       floating: 'Cookie settings',
       poweredBy: 'Powered by ConsentKit',
+      // SPEC V1.12 §3 — services inside a category group.
+      //
+      // `svcCount`/`ckCount` are PLURAL FORMS, not plain strings: «1 сервис»,
+      // «2 сервиса», «5 сервисов». Each is an array read by plural() below, and
+      // each language supplies as many forms as its own grammar needs — one for
+      // English, three for Russian. {n} is the number.
+      svcCount: ['{n} service', '{n} services'],
+      ckCount: ['{n} cookie', '{n} cookies'],
+      svcPolicy: 'Privacy policy',
+      // The service's own cookies, listed under it rather than in the group's
+      // «Which cookies» table.
+      svcCookies: 'Cookies it sets',
       // SPEC V1.10 §2 — the blocked-embed placeholder. {host} is the vendor
       // label when the database knows one and the bare host otherwise; {cat} is
       // the localized category title, taken from cat.<name>.title below, so the
@@ -80,6 +92,11 @@
       colExpiry: 'Срок',
       floating: 'Настройки cookie',
       poweredBy: 'Работает на ConsentKit',
+      // SPEC V1.12 §3. Три формы: 1 сервис, 2 сервиса, 5 сервисов.
+      svcCount: ['{n} сервис', '{n} сервиса', '{n} сервисов'],
+      ckCount: ['{n} cookie', '{n} cookie', '{n} cookie'],
+      svcPolicy: 'Политика',
+      svcCookies: 'Какие cookie ставит',
       phText: 'Здесь содержимое от {host}. Оно загрузится после согласия на «{cat}».',
       phAllow: 'Разрешить и показать',
       phSettings: 'Настроить cookie',
@@ -119,8 +136,17 @@
     // SPEC V1.10 §2. Present in ck-locales.js for ro only; every other external
     // locale falls back to DICT.en through buildStrings(), which is what §2
     // asks for («остальные языки — en»).
-    'phText', 'phAllow', 'phSettings', 'phLabel'
+    'phText', 'phAllow', 'phSettings', 'phLabel',
+    // SPEC V1.12 §3. svcPolicy/svcCookies are plain strings and belong here;
+    // svcCount/ckCount are ARRAYS of plural forms and are filled by their own
+    // branch in buildStrings() — listing them here would be a bug, because this
+    // loop only copies values that are `typeof === 'string'` and would leave
+    // every external locale on the English plurals.
+    'svcPolicy', 'svcCookies'
   ];
+
+  // Plural-form keys, filled separately from STR_KEYS (see above).
+  var PLURAL_KEYS = ['svcCount', 'ckCount'];
 
   // builtin(en,ru) <- window.__ckLocales, read at render time so the locales
   // file may load in any order relative to this one.
@@ -153,6 +179,60 @@
     return 'en';
   }
 
+  /* SPEC V1.12 §3 — plural forms.
+
+     Validated as a WHOLE: an array of at least one non-empty string, or null.
+     A locale that supplies `['{n} сервис']` alone is honest — it says «this
+     language has one form» — and plural() below simply always picks it. */
+  function pluralForms(v) {
+    if (!v || !Array.isArray(v) || !v.length) return null;
+    var out = [];
+    for (var i = 0; i < v.length && i < 3; i++) {
+      if (typeof v[i] !== 'string' || !v[i]) return null;
+      out.push(v[i]);
+    }
+    return out;
+  }
+
+  /* Picks the form for `n` and substitutes it in.
+
+     Three families, chosen by the language code rather than by
+     Intl.PluralRules: Intl is present in every browser this client supports,
+     but its category NAMES ('one'|'few'|'many'|'other') vary per language, and
+     mapping them onto a positional array is more code and more failure modes
+     than the two rules that actually matter here.
+
+       ru/uk/sr/hr/…  1, 21, 31 -> [0];  2-4, 22-24 -> [1];  0, 5-20 -> [2]
+       ro             1 -> [0];  0 and 2-19 -> [1];  20+ -> [2] («20 de servicii»)
+       everything else  1 -> [0];  otherwise -> [1]
+
+     A locale with fewer forms than the rule asks for clamps to its last one, so
+     a single-form array can never index past its end. */
+  var SLAVIC_PLURAL = { ru: 1, uk: 1, sr: 1, hr: 1, cs: 1, sk: 1, pl: 1, be: 1, bs: 1 };
+
+  function pluralIndex(lang, n) {
+    var code = String(lang || 'en').slice(0, 2).toLowerCase();
+    var mod10 = n % 10, mod100 = n % 100;
+    if (SLAVIC_PLURAL[code]) {
+      if (mod10 === 1 && mod100 !== 11) return 0;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 1;
+      return 2;
+    }
+    if (code === 'ro' || code === 'mo') {
+      if (n === 1) return 0;
+      if (n === 0 || (mod100 >= 1 && mod100 <= 19)) return 1;
+      return 2;
+    }
+    return n === 1 ? 0 : 1;
+  }
+
+  function plural(forms, n, lang) {
+    var list = pluralForms(forms) || ['{n}'];
+    var idx = pluralIndex(lang, n);
+    if (idx >= list.length) idx = list.length - 1;
+    return list[idx].replace('{n}', String(n));
+  }
+
   // Deep two-level fill from en: a partial locale must never yield undefined,
   // which would render the literal string "undefined".
   function buildStrings(lang, table) {
@@ -164,6 +244,15 @@
       var k = STR_KEYS[i];
       out[k] = (typeof src[k] === 'string' && src[k]) ? src[k] : base[k];
     }
+    /* SPEC V1.12 §3 — plural forms. An array of 1..3 strings, taken from the
+       locale only when it is a non-empty array of strings; anything else falls
+       back to English wholesale rather than per-slot, because a half-filled
+       plural table produces «2 services» inside a Russian sentence. */
+    for (i = 0; i < PLURAL_KEYS.length; i++) {
+      var pk = PLURAL_KEYS[i];
+      out[pk] = pluralForms(src[pk]) || base[pk].slice();
+    }
+
     out.cat = {};
     var sc = (src.cat && typeof src.cat === 'object') ? src.cat : {};
     for (i = 0; i < ALL_CATS.length; i++) {
@@ -193,14 +282,41 @@
      uses, so «Маркетинг» in the placeholder is «Маркетинг» on the switch. An
      unknown language falls back to en, an unknown category to marketing — the
      category a strict-mode interception is filed under. */
-  function placeholderText(host, category, lang) {
+  /* SPEC V1.12 §3 — «заглушки iframe — по сервису».
+
+     `subject` names what the visitor has to agree to for this frame to appear.
+     Left out, it is the category, exactly as in 0.5.7. Passed, it is the
+     SERVICE name — which is the only honest sentence in the state this wave
+     introduces: analytics granted, one service refused, the frame still held.
+     Naming the category there would read «загрузится после согласия на
+     "Аналитика"» to a visitor who has already agreed to analytics. */
+  function placeholderText(host, category, lang, subject) {
     var table = localeTable();
     var T2 = buildStrings(resolveLang(lang, table), table);
     var cat = (category && T2.cat[category]) ? category : 'marketing';
     var name = String(host || '').trim();
+    var label = (typeof subject === 'string' && subject.trim())
+      ? subject.trim() : T2.cat[cat].title;
     return T2.phText
       .replace('{host}', name || T2.phLabel)
-      .replace('{cat}', T2.cat[cat].title);
+      .replace('{cat}', label);
+  }
+
+  /* Which service, if any, is what is actually holding this frame back? Null
+     when the frame is held by its category alone — the ordinary 0.5.7 case. */
+  function holdingService(src) {
+    var ck = api();
+    if (!ck || typeof ck._serviceForUrl !== 'function') return null;
+    try {
+      var svc = ck._serviceForUrl(src);
+      if (!svc) return null;
+      // Only when the SERVICE is the reason: with the category still denied the
+      // category is the honest thing to name, because granting the service
+      // alone would not bring the frame back.
+      if (typeof ck.allowed === 'function' && !ck.allowed(svc.category)) return null;
+      if (typeof ck.allowedService !== 'function') return null;
+      return ck.allowedService(svc.id) ? null : svc;
+    } catch (e) { return null; }
   }
 
   /* Hostname of a blocked frame's real address, for the sentence above. The
@@ -342,6 +458,28 @@
     '.ck-cat__badge{font-size:12px;font-weight:500;color:var(--ck-muted);',
     'border:1px solid var(--ck-line);border-radius:999px;padding:1px 8px}',
     '.ck-cat__desc{margin:4px 0 0;font-size:13.5px;color:var(--ck-muted)}',
+    /* SPEC V1.12 §3 — «N сервисов · M cookie». --ck-muted, like every other
+       secondary label on the card, and it is measured for AA against the card
+       background by the same rule the description above answers to. */
+    '.ck-cat__count{font-size:12px;font-weight:500;color:var(--ck-muted)}',
+
+    /* ---- services inside a group (SPEC V1.12 §3) ---- */
+    /* Indented and rule-separated so the nesting reads without colour: a
+       service belongs to the group above it, and its own cookie table belongs
+       to it. The left border is the only decoration; everything else is
+       spacing, which survives forced-colours mode intact. */
+    '.ck-svcs{margin:12px 0 0;padding-left:12px;border-left:2px solid var(--ck-line)}',
+    '.ck-svc{padding:10px 0;border-bottom:1px solid var(--ck-line)}',
+    '.ck-svc:first-child{padding-top:2px}',
+    '.ck-svc:last-child{border-bottom:0;padding-bottom:2px}',
+    '.ck-svc__top{display:flex;gap:12px;align-items:flex-start}',
+    '.ck-svc__txt{flex:1 1 auto;min-width:0}',
+    '.ck-svc__name{font-size:14px;font-weight:600}',
+    '.ck-svc__vendor{margin:2px 0 0;font-size:12.5px;color:var(--ck-muted)}',
+    '.ck-svc__desc{margin:4px 0 0;font-size:13px;color:var(--ck-muted)}',
+    /* --ck-link, not --ck-accent: accent-coloured TEXT goes through the same
+       >= 4.5:1 rule as «Подробнее» — see the note on the `a{}` rule above. */
+    '.ck-svc__policy{display:inline-block;margin-top:4px;font-size:12.5px;color:var(--ck-link)}',
 
     /* ---- switch ---- */
     '.ck-switch{flex:none;width:46px;height:27px;padding:0;border-radius:999px;',
@@ -351,6 +489,11 @@
     '.ck-switch[aria-checked="true"]{background:var(--ck-accent);border-color:var(--ck-accent)}',
     '.ck-switch[aria-checked="true"]::after{left:auto;right:2px;border-color:transparent}',
     '.ck-switch[disabled]{cursor:not-allowed;opacity:.55}',
+    /* The service switch: the same control, smaller. Still 27px of vertical
+       hit area at the row level and a real <button role="switch">, so the
+       keyboard and screen-reader behaviour is identical to the group's. */
+    '.ck-switch--sm{width:38px;height:22px}',
+    '.ck-switch--sm::after{width:16px;height:16px}',
 
     /* ---- cookie table ---- */
     '.ck-det{margin-top:12px}',
@@ -491,6 +634,7 @@
   var LANG = 'en';             // the code T was built from, reassigned per mount
   var nodes = {};              // banner/panel/fab refs
   var switches = {};           // category -> button
+  var serviceSwitches = {};    // category -> [button], SPEC V1.12 §3
   var panelOpen = false;
   var lastFocus = null;
 
@@ -516,6 +660,92 @@
     for (var i = 0; i < list.length; i++) {
       var row = list[i];
       if (row && typeof row === 'object' && String(row.category || '') === cat) out.push(row);
+    }
+    return out;
+  }
+
+  /* ------------------------------------------------------- services (§3) */
+
+  /* The services of one category, as the CORE normalised them.
+
+     Read through ConsentKit._services() rather than off config.services
+     directly: the core drops rows with `enabled: false`, a malformed id or an
+     unknown category, and the panel must list exactly the set the engine
+     blocks by. A config the core has not seen (no init(), or a core too old to
+     know about services) yields nothing, and the panel renders as it did in
+     0.5.7 — which is what «старый конфиг рендерится как раньше» asks for. */
+  function servicesFor(cat) {
+    var ck = api();
+    var list = null;
+    try {
+      if (ck && typeof ck._services === 'function') list = ck._services();
+    } catch (e) { list = null; }
+    if (!list || !Array.isArray(list)) return [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].category === cat) out.push(list[i]);
+    }
+    return out;
+  }
+
+  /* The service's one-line purpose, in the banner's language.
+
+     §3 asks for «одна строка purpose на языке баннера» and §2 ships
+     `purpose: { ru?, ro?, en? }`. Falls back to en, then to nothing at all —
+     an empty purpose renders no paragraph rather than the string "undefined"
+     or a stray language. LANG is the resolved banner code, so a `pt-BR`
+     banner asks for `pt` and lands on en, which is the honest answer. */
+  function servicePurpose(svc, lang) {
+    var p = (svc && svc.purpose) || {};
+    var code = String(lang == null ? LANG : lang || 'en').slice(0, 2).toLowerCase();
+    var v = p[code] || p.en;
+    return (typeof v === 'string' && v.trim()) ? v.trim() : '';
+  }
+
+  /* The cookieTable rows this service claims, by name.
+
+     §3: «под сервисом его cookie (имя · срок · назначение)» drawn «from
+     cookieTable rows whose name is in service.cookies». A name the service
+     declares but the table does not describe is NOT invented here: the panel
+     shows what the owner wrote down, and the declaration page is where the
+     full list lives. */
+  function cookieRowsForService(rows, svc) {
+    var names = (svc && svc.cookies) || [];
+    if (!names.length) return [];
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var n = rows[i] && rows[i].name;
+      if (typeof n === 'string' && names.indexOf(n) > -1) out.push(rows[i]);
+    }
+    return out;
+  }
+
+  /* SPEC V1.12 §3 — «N сервисов · M cookie» on the group header. Pure, so the
+     wording in each of the three languages is testable without a DOM.
+
+     The cookie half counts the WHOLE group, services and loose rows alike: the
+     line answers «сколько cookie в этой группе», which is the question a
+     visitor scanning the header is actually asking. */
+  function groupCountLabel(serviceCount, cookieCount, strings, lang) {
+    return plural(strings.svcCount, serviceCount, lang) + ' · ' +
+           plural(strings.ckCount, cookieCount, lang);
+  }
+
+  /* Rows left over once every service has taken its own — «Cookie в этой
+     группе (N)» keeps meaning «the rest», exactly as it did before services
+     existed. With no services at all this returns the whole list unchanged. */
+  function looseCookies(rows, svcs) {
+    if (!svcs.length) return rows;
+    var claimed = {};
+    for (var i = 0; i < svcs.length; i++) {
+      var names = svcs[i].cookies || [];
+      for (var j = 0; j < names.length; j++) claimed[names[j]] = true;
+    }
+    var out = [];
+    for (var k = 0; k < rows.length; k++) {
+      var n = rows[k] && rows[k].name;
+      if (typeof n === 'string' && claimed[n]) continue;
+      out.push(rows[k]);
     }
     return out;
   }
@@ -1252,9 +1482,153 @@
       b.addEventListener('click', function () {
         var on = b.getAttribute('aria-checked') === 'true';
         b.setAttribute('aria-checked', on ? 'false' : 'true');
+        /* SPEC V1.12 §3 — the group switch is the master:
+             off -> every service of the group goes off and is blocked;
+             on  -> the services come back, EXCEPT the ones turned off by hand.
+           The hand-set state is kept on the service switch itself (dataset.man)
+           rather than being read back off the group, which is what lets a
+           manual refusal survive the group being toggled off and on again. */
+        syncGroup(cat);
       });
     }
     return b;
+  }
+
+  /* SPEC V1.12 §3 — one service, with its own switch, its purpose, its policy
+     link and the cookies it sets. */
+  function makeServiceSwitch(svc, cat) {
+    var b = el('button', 'ck-switch ck-switch--sm');
+    b.type = 'button';
+    b.setAttribute('role', 'switch');
+    b.setAttribute('aria-checked', 'false');
+    b.dataset.svc = svc.id;
+    b.dataset.cat = cat;
+    // '1' once the visitor has switched this service off by hand. Read by
+    // syncGroup() when the group comes back on, and cleared when they switch it
+    // on again — a service the visitor re-enables is no longer «отключён вручную».
+    b.dataset.man = '';
+    /* A service switch is only ever clickable while its group is ON: syncGroup()
+       disables it otherwise, and a disabled <button> fires no click. So this
+       handler always runs with the group on, and there is no "turn the group
+       back on too" case to handle — the visitor reaches a refused group through
+       the group's own switch. */
+    b.addEventListener('click', function () {
+      var on = b.getAttribute('aria-checked') === 'true';
+      b.setAttribute('aria-checked', on ? 'false' : 'true');
+      // '1' = «switched off by hand». Cleared when it is switched back on, so a
+      // re-enabled service is no longer «отключён вручную» and follows its group.
+      b.dataset.man = on ? '1' : '';
+    });
+    return b;
+  }
+
+  /* Pushes the group switch's state down onto its services. Called when the
+     group is clicked and when the panel is synced from the stored state. */
+  function syncGroup(cat) {
+    var on = !!(switches[cat] && switches[cat].getAttribute('aria-checked') === 'true');
+    var list = serviceSwitches[cat] || [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      // Group off: everything off. Group on: everything on except what the
+      // visitor turned off by hand.
+      var want = on && b.dataset.man !== '1';
+      b.setAttribute('aria-checked', want ? 'true' : 'false');
+      // A service cannot be granted while its group is refused, and a switch
+      // that looks operable but changes nothing is worse than a disabled one.
+      b.disabled = !on;
+      if (!on) b.setAttribute('aria-disabled', 'true');
+      else b.removeAttribute('aria-disabled');
+    }
+  }
+
+  function buildService(svc, cat, rows) {
+    var wrap = el('div', 'ck-svc');
+    var top = el('div', 'ck-svc__top');
+    var txt = el('div', 'ck-svc__txt');
+
+    var nameId = 'ck-svc-' + svc.id;
+    var name = el('div', 'ck-svc__name');
+    var nameSpan = el('span', null, svc.name);
+    nameSpan.id = nameId;
+    name.appendChild(nameSpan);
+    txt.appendChild(name);
+
+    if (svc.vendor) txt.appendChild(el('p', 'ck-svc__vendor', svc.vendor));
+
+    var descId = null;
+    var purpose = servicePurpose(svc);
+    if (purpose) {
+      descId = nameId + '-desc';
+      var p = el('p', 'ck-svc__desc', purpose);
+      p.id = descId;
+      txt.appendChild(p);
+    }
+
+    /* «Политика» — target=_blank rel=noopener, per §3. The URL is already
+       http(s)-validated by the core's normalizeService(), which is where a
+       javascript: address is dropped; nothing unvalidated reaches an href. */
+    if (svc.privacyUrl) {
+      var a = el('a', 'ck-svc__policy', T.svcPolicy);
+      a.href = svc.privacyUrl;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      // The link text is the same word on every row, so a screen reader needs
+      // the service name to tell them apart.
+      a.setAttribute('aria-label', T.svcPolicy + ' — ' + svc.name);
+      txt.appendChild(a);
+    }
+
+    var sw = makeServiceSwitch(svc, cat);
+    sw.setAttribute('aria-labelledby', nameId);
+    if (descId) sw.setAttribute('aria-describedby', descId);
+    if (!serviceSwitches[cat]) serviceSwitches[cat] = [];
+    serviceSwitches[cat].push(sw);
+
+    top.appendChild(txt);
+    top.appendChild(sw);
+    wrap.appendChild(top);
+
+    var own = cookieRowsForService(rows, svc);
+    if (own.length) wrap.appendChild(cookieTable(own, T.svcCookies + ' (' + own.length + ')'));
+
+    return wrap;
+  }
+
+  /* The <details> block a group and a service both use for their cookies:
+     same columns, same markup, one summary line apart. */
+  function cookieTable(rows, summaryText) {
+    var det = el('details', 'ck-det');
+    var sum = el('summary');
+    sum.appendChild(document.createTextNode(summaryText));
+    det.appendChild(sum);
+
+    var tw = el('div', 'ck-tablewrap');
+    var table = el('table');
+    var thead = el('thead');
+    var htr = el('tr');
+    var heads = [T.colName, T.colVendor, T.colPurpose, T.colExpiry];
+    for (var h = 0; h < heads.length; h++) {
+      var th = el('th', null, heads[h]);
+      th.setAttribute('scope', 'col');
+      htr.appendChild(th);
+    }
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    var tbody = el('tbody');
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r];
+      var tr = el('tr');
+      tr.appendChild(el('td', 'ck-mono', String(row.name == null ? '—' : row.name)));
+      tr.appendChild(el('td', null, String(row.vendor == null ? '—' : row.vendor)));
+      tr.appendChild(el('td', null, String(row.purpose == null ? '—' : row.purpose)));
+      tr.appendChild(el('td', null, String(row.expiry == null ? '—' : row.expiry)));
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    tw.appendChild(table);
+    det.appendChild(tw);
+    return det;
   }
 
   function buildCategory(cfg, cat) {
@@ -1278,6 +1652,21 @@
     desc.id = descId;
     txt.appendChild(desc);
 
+    var rows = cookiesFor(cfg, cat);
+    var svcs = servicesFor(cat);
+
+    /* SPEC V1.12 §3 — «N сервисов · M cookie» on the group header.
+
+       Rendered ONLY when the group actually has services. A site whose config
+       predates 0.5.8 has none, and must look exactly as it did in 0.5.7 — not
+       «0 сервисов · 3 cookie». The cookie half counts the whole group, services
+       and loose rows alike: it answers «сколько cookie в этой группе», which is
+       the question the line is there to answer. */
+    if (svcs.length) {
+      name.appendChild(el('span', 'ck-cat__count',
+        groupCountLabel(svcs.length, rows.length, T, LANG)));
+    }
+
     var sw = makeSwitch(cat, locked);
     sw.setAttribute('aria-labelledby', nameId);
     sw.setAttribute('aria-describedby', descId);
@@ -1287,40 +1676,24 @@
     top.appendChild(sw);
     wrap.appendChild(top);
 
-    var rows = cookiesFor(cfg, cat);
-    if (rows.length) {
-      var det = el('details', 'ck-det');
-      var sum = el('summary');
-      sum.appendChild(document.createTextNode(T.cookiesIn + ' (' + rows.length + ')'));
-      det.appendChild(sum);
-
-      var tw = el('div', 'ck-tablewrap');
-      var table = el('table');
-      var thead = el('thead');
-      var htr = el('tr');
-      var heads = [T.colName, T.colVendor, T.colPurpose, T.colExpiry];
-      for (var h = 0; h < heads.length; h++) {
-        var th = el('th', null, heads[h]);
-        th.setAttribute('scope', 'col');
-        htr.appendChild(th);
+    if (svcs.length) {
+      var list = el('div', 'ck-svcs');
+      // A list, so a screen reader announces «3 items» before reading them.
+      list.setAttribute('role', 'list');
+      for (var s = 0; s < svcs.length; s++) {
+        var item = buildService(svcs[s], cat, rows);
+        item.setAttribute('role', 'listitem');
+        list.appendChild(item);
       }
-      thead.appendChild(htr);
-      table.appendChild(thead);
+      wrap.appendChild(list);
+    }
 
-      var tbody = el('tbody');
-      for (var r = 0; r < rows.length; r++) {
-        var row = rows[r];
-        var tr = el('tr');
-        tr.appendChild(el('td', 'ck-mono', String(row.name == null ? '—' : row.name)));
-        tr.appendChild(el('td', null, String(row.vendor == null ? '—' : row.vendor)));
-        tr.appendChild(el('td', null, String(row.purpose == null ? '—' : row.purpose)));
-        tr.appendChild(el('td', null, String(row.expiry == null ? '—' : row.expiry)));
-        tbody.appendChild(tr);
-      }
-      table.appendChild(tbody);
-      tw.appendChild(table);
-      det.appendChild(tw);
-      wrap.appendChild(det);
+    // «Cookie в этой группе (N)» keeps its old meaning: what is left once each
+    // service has claimed its own. With no services that is the whole table and
+    // the summary line is byte-for-byte what 0.5.7 rendered.
+    var loose = looseCookies(rows, svcs);
+    if (loose.length) {
+      wrap.appendChild(cookieTable(loose, T.cookiesIn + ' (' + loose.length + ')'));
     }
 
     return wrap;
@@ -1596,6 +1969,32 @@
       var sw = switches[k];
       out[k] = !!(sw && sw.getAttribute('aria-checked') === 'true');
     }
+    /* SPEC V1.12 §3 — «хранение: только отказы».
+
+       Read from `dataset.man`, NOT from `aria-checked`. The two answer different
+       questions and only one of them is the visitor's decision:
+
+         aria-checked — what the switch currently SHOWS. syncGroup() forces every
+                        service of a refused group to `false`, so reading this
+                        would record «I refused all six of these» the moment the
+                        group went off.
+         dataset.man  — «the visitor switched this one off by hand». Set on click,
+                        restored from the stored record, and deliberately left
+                        alone by syncGroup().
+
+       Getting this backwards loses a denial: refuse Hotjar, later switch
+       analytics off and save, and the refusal would be erased — so when
+       analytics came back on, Hotjar would run again without ever having been
+       re-consented to. */
+    var svcs = {};
+    for (var c = 0; c < OPT_IN.length; c++) {
+      var list = serviceSwitches[OPT_IN[c]] || [];
+      for (var j = 0; j < list.length; j++) {
+        var b = list[j];
+        if (b.dataset.man === '1') svcs[b.dataset.svc] = false;
+      }
+    }
+    out.services = svcs;
     return out;
   }
 
@@ -1674,6 +2073,23 @@
       sw.setAttribute('aria-checked', on ? 'true' : 'false');
     }
     if (switches.necessary) switches.necessary.setAttribute('aria-checked', 'true');
+
+    /* SPEC V1.12 §3 — restore the per-service switches from the stored denials.
+
+       `dataset.man` is set from the record FIRST, then syncGroup() derives what
+       each switch shows from it. That ordering is the whole point: a visitor who
+       denied Hotjar and left analytics off must still see Hotjar's own switch
+       off when they turn analytics back on, and the group→service push is what
+       would otherwise light it up again. */
+    var denials = (state && state.services) || {};
+    for (var c = 0; c < OPT_IN.length; c++) {
+      var cat = OPT_IN[c];
+      var list = serviceSwitches[cat] || [];
+      for (var j = 0; j < list.length; j++) {
+        list[j].dataset.man = denials[list[j].dataset.svc] === false ? '1' : '';
+      }
+      syncGroup(cat);
+    }
   }
 
   // Idempotent: safe to call from ck:init, ck:change and right after our own API calls.
@@ -1852,8 +2268,13 @@
     icon.innerHTML = PLAY_ICON;
     card.appendChild(icon);
 
-    var label = hostOf(frame.getAttribute('data-src'));
-    card.appendChild(el('p', null, placeholderText(label, cat, LANG)));
+    var frameSrcAttr = frame.getAttribute('data-src') || '';
+    var label = hostOf(frameSrcAttr);
+    // §3: when a refused SERVICE is what is holding this frame, the sentence
+    // must name that service — its category is already granted.
+    var held = holdingService(frameSrcAttr);
+    card.appendChild(el('p', null,
+      placeholderText(label, cat, LANG, held ? held.name : null)));
 
     var row = el('div', 'ck-ph__row');
     /* Only offer the grant when it can actually take effect: the core's
@@ -1863,7 +2284,10 @@
     if (categoryEnabled(cfg, cat)) {
       var allow = el('button', 'ck-ph__btn', T.phAllow);
       allow.type = 'button';
-      allow.addEventListener('click', function () { grantCategory(cat); });
+      // SPEC V1.12 §3: «кнопка "Разрешить и показать" включает категорию и
+      // снимает отказ по этому сервису». The frame's own address decides which
+      // service that is — the visitor pressed the button on THIS embed.
+      allow.addEventListener('click', function () { grantCategory(cat, frameSrcAttr); });
       row.appendChild(allow);
     }
     var settings = el('button', 'ck-ph__link', T.phSettings);
@@ -1888,18 +2312,53 @@
      the core dispatches — so there is no logging code here. The core's
      applyConsentToDom() restores the frame; sweepPlaceholders() then removes
      this card, driven by the ck:change that same commit dispatches. */
-  function grantCategory(cat) {
+  function grantCategory(cat, src) {
     var ck = api();
     if (!ck || typeof ck.accept !== 'function') return;
-    var cur = safeState().categories || {};
+    var st = safeState();
+    var cur = st.categories || {};
     var next = {
       functional: cur.functional === true,
       analytics: cur.analytics === true,
       marketing: cur.marketing === true
     };
     if (cat === 'functional' || cat === 'analytics' || cat === 'marketing') next[cat] = true;
+
+    /* SPEC V1.12 §3 — clear the refusal on THIS frame's service, in the SAME
+       accept() call as the category grant.
+
+       One call, not two: the core revives blocked frames inside commit(), so a
+       denial still standing at that moment leaves this frame dead until some
+       later consent change happens to run applyConsentToDom() again. The whole
+       map is passed because accept() replaces it wholesale — every OTHER
+       refusal the visitor made is copied across untouched. */
+    var denials = denialsWithout(st.services, src);
+    if (denials) next.services = denials;
+
     try { ck.accept(next); } catch (e) { /* noop */ }
     syncFromState();
+  }
+
+  /* The stored denial map minus the service that owns `src`, or null when
+     nothing would change (no denials, no service for that URL, or that service
+     was not refused in the first place). */
+  function denialsWithout(stored, src) {
+    var ck = api();
+    if (!ck || typeof ck._serviceForUrl !== 'function') return null;
+    var map = {};
+    var any = false;
+    try {
+      Object.keys(stored || {}).forEach(function (k) {
+        if (stored[k] === false) { map[k] = false; any = true; }
+      });
+    } catch (e) { return null; }
+    if (!any) return null;
+
+    var svc = null;
+    try { svc = src ? ck._serviceForUrl(src) : null; } catch (e2) { svc = null; }
+    if (!svc || map[svc.id] !== false) return null;
+    delete map[svc.id];
+    return map;
   }
 
   function hideFrame(frame) {
@@ -1992,8 +2451,36 @@
       // and mount() is one-shot. Buttons and colours are deliberately NOT
       // here — they are token values and restyle in place.
       resolveDetails(c).kind,
+      /* SPEC V1.12 §3 — services are STRUCTURAL: each one adds a row with its
+         own switch to the panel, and mount() is one-shot. Without this a SaaS
+         config that arrives after the first mount (the second, idempotent
+         init()) would re-run buildServices() in the core — so the engine would
+         block per service — while the panel kept showing the service-less
+         render, and the visitor would have no way to see or change any of it.
+
+         The COUNT and the ids, not the whole rows: what needs a rebuild is a
+         service appearing, disappearing or changing identity. A reworded
+         `purpose` is text inside an existing row and does not justify tearing
+         the panel down. */
+      serviceSignature(c),
       brandSignature(c)
     ].join('|');
+  }
+
+  function serviceSignature(cfg) {
+    var list = cfg && cfg.services;
+    if (!list || !Array.isArray(list) || !list.length) return '0';
+    var ids = [];
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (!s || typeof s !== 'object' || s.enabled === false) continue;
+      ids.push(String(s.id || '') + ':' + String(s.category || ''));
+    }
+    // '0' for «no services», however that came about: an absent key, an empty
+    // array, or a list every row of which the core would drop. All three render
+    // the same panel, so none of them may differ in the signature.
+    if (!ids.length) return '0';
+    return ids.length + ',' + ids.join(',');
   }
 
   function remount(cfg) {
@@ -2041,6 +2528,7 @@
     root.appendChild(style);
 
     switches = {};
+    serviceSwitches = {};
     nodes = {};
 
     // Palette sheet comes after the base sheet so its :host tokens win.
@@ -2142,7 +2630,22 @@
       // SPEC V1.10 §2: which sentence a blocked embed shows. Pure, so the
       // wording is testable (and quotable by the cabinet) without a DOM.
       placeholderText: placeholderText,
-      placeholdersEnabled: placeholdersEnabled
+      placeholdersEnabled: placeholdersEnabled,
+      /* SPEC V1.12 §3 — the pure halves of the services panel, so the wording
+         and the arithmetic are testable (and quotable by the cabinet) without a
+         DOM: which plural form a count takes in each language, how a group
+         header reads, and which cookieTable rows sit under which service. */
+      plural: plural,
+      pluralIndex: pluralIndex,
+      buildStrings: buildStrings,
+      localeTable: localeTable,
+      resolveLang: resolveLang,
+      cookieRowsForService: cookieRowsForService,
+      looseCookies: looseCookies,
+      servicePurpose: servicePurpose,
+      groupCountLabel: groupCountLabel,
+      serviceSignature: serviceSignature,
+      signature: signature
     };
     // The page-font probe reads the DOM, so it is not part of the pure block —
     // but the debug panel must be able to quote the family the banner painted

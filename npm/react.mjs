@@ -113,6 +113,7 @@ function sameState(a, b) {
  * @returns {{
  *   state: object,
  *   allowed: (cat: string) => boolean,
+ *   allowedService: (id: string) => boolean,
  *   accept: (choice?: any) => object,
  *   rejectAll: () => object,
  *   withdraw: () => object,
@@ -125,6 +126,14 @@ export function useConsent() {
   const allowed = useCallback(function (cat) {
     if (!hasDom()) return cat === 'necessary';
     try { return api().allowed(cat); } catch (e) { return false; }
+  }, []);
+
+  /* v0.5.8 (SPEC V1.12 §3). On the server there is no stored decision and no
+     service registry, so nothing is being withheld — `true`, matching what the
+     core answers for an id it does not know. */
+  const allowedService = useCallback(function (id) {
+    if (!hasDom()) return true;
+    try { return api().allowedService(id); } catch (e) { return true; }
   }, []);
 
   const accept = useCallback(function (choice) {
@@ -147,7 +156,7 @@ export function useConsent() {
     api().show();
   }, []);
 
-  return { state, allowed, accept, rejectAll, withdraw, show };
+  return { state, allowed, allowedService, accept, rejectAll, withdraw, show };
 }
 
 export default useConsent;

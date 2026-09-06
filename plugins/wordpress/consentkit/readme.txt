@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.7
+Stable tag: 0.5.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,11 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.8 =
+* Сервисы в окне настроек: внутри каждой группы список сервисов (название, поставщик, назначение, ссылка на политику) со своим переключателем и своими cookie; заголовок группы показывает «N сервисов · M cookie»
+* Посетитель может отключить один сервис, оставив категорию включённой: его запросы задерживаются, его cookie удаляются
+* Панель отладки не прыгает вверх при обновлении и объясняет словами каждую строку «до согласия»
 
 = 0.5.7 =
 * Заглушки вместо заблокированных видео и карт с кнопкой «Разрешить и показать»; ссылка `#ck-settings` открывает настройки; «Подробнее» может вести на декларацию cookie

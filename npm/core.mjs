@@ -23,6 +23,10 @@ export default ConsentKit;
 export const {
   init,
   allowed,
+  // v0.5.8 (SPEC V1.12 §3): «may this ONE declared service run?» — the category
+  // check plus the visitor's per-service refusal, which getState() alone cannot
+  // reconstruct. Part of the public surface, so it is a named import too.
+  allowedService,
   getState,
   accept,
   rejectAll,

@@ -578,6 +578,12 @@
     phAllow: 'Permite și arată',
     phSettings: 'Setări cookie-uri',
     phLabel: 'Conținut blocat',
+    // SPEC V1.12 §3 — servicii în grupul categoriei. Româna are trei forme:
+    // 1 serviciu, 2 servicii, 20 de servicii (peste 19 cere «de»).
+    svcCount: ['{n} serviciu', '{n} servicii', '{n} de servicii'],
+    ckCount: ['{n} cookie', '{n} cookie-uri', '{n} de cookie-uri'],
+    svcPolicy: 'Politica',
+    svcCookies: 'Ce cookie-uri pune',
     cat: {
       necessary: { title: 'Necesare', desc: 'Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate.' },
       functional: { title: 'Funcționale', desc: 'Rețin alegerile dumneavoastră: limba, coșul, chatul.' },

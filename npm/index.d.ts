@@ -34,11 +34,26 @@ export interface CkState {
   /** Policy version the decision was recorded against. */
   policyVersion: string;
   categories: CkCategories;
+  /**
+   * v0.5.8 (SPEC V1.12 §3). Per-service refusals, and ONLY refusals:
+   * `{ 'hotjar': false }`. An id absent from the map is allowed, subject to its
+   * category. A denial survives its category being switched off and back on.
+   */
+  services: Record<string, false>;
   method: CkMethod;
 }
 
 /** Argument to `accept()`: `'all'`, or an explicit per-category selection. */
-export type CkAcceptArg = 'all' | Partial<Record<CkOptInCategory, boolean>>;
+export type CkAcceptArg =
+  | 'all'
+  | (Partial<Record<CkOptInCategory, boolean>> & {
+      /**
+       * v0.5.8 (SPEC V1.12 §3). The FULL per-service refusal map for this
+       * decision — it replaces the stored one wholesale. Omit it to leave
+       * the existing refusals untouched.
+       */
+      services?: Record<string, false>;
+    });
 
 /** Banner placement. `bar` uses bottom/top; `box` uses the corner positions. */
 export type CkLayoutType = 'bar' | 'modal' | 'box';
@@ -196,6 +211,31 @@ export interface CkCookieTableEntry {
   expiry?: string;
 }
 
+/**
+ * v0.5.8 (SPEC V1.12 §2). One declared third-party service.
+ *
+ * `hosts` are suffix-matched (a bare domain also covers its subdomains) and
+ * `paths` are matched as case-insensitive substrings of the resolved URL —
+ * the same two rules the built-in tracker database uses.
+ */
+export interface CkService {
+  /** Stable kebab-case id, `^[a-z0-9-]{1,64}$`. */
+  id: string;
+  name: string;
+  vendor: string;
+  category: CkCategory;
+  hosts: string[];
+  paths?: string[];
+  /** Cookie names, matched against `cookieTable` to list them under the service. */
+  cookies: string[];
+  /** `http(s)` only; anything else is dropped rather than rendered as a link. */
+  privacyUrl?: string;
+  /** One line for the visitor, per language. Falls back to `en`. */
+  purpose?: { ru?: string; ro?: string; en?: string };
+  /** Default `true`. `false` hides the row and stops blocking it separately. */
+  enabled?: boolean;
+}
+
 /** Configuration accepted by `init()`. Every field is optional. */
 export interface CkConfig {
   /** Bump to invalidate stored decisions and re-show the banner. Default `'1'`. */
@@ -220,6 +260,17 @@ export interface CkConfig {
    */
   hostdb?: Record<string, CkCategory>;
   cookieTable?: CkCookieTableEntry[];
+  /**
+   * v0.5.8 (SPEC V1.12 §2/§3). The third-party services this site declares.
+   * Each row gets its own switch inside its category group in the preferences
+   * panel, and the engine can hold back that one service while the rest of the
+   * category runs. At most 50 rows; a row with `enabled: false` is neither
+   * shown nor blocked separately.
+   *
+   * `hosts` need not be in the built-in tracker database — `init()` folds them
+   * into the block map under the row's own category.
+   */
+  services?: CkService[];
 }
 
 /** Detail payload of `ck:init`. */
@@ -241,6 +292,13 @@ export interface ConsentKitApi {
   /** Idempotent. Restores stored state, then dispatches `ck:init`. */
   init(config?: CkConfig): CkState;
   allowed(category: CkCategory | string): boolean;
+  /**
+   * v0.5.8 (SPEC V1.12 §3). May this one declared service run? True when its
+   * category is granted AND the visitor has not switched it off individually —
+   * a combination `getState().categories` alone cannot reconstruct. An id the
+   * config does not declare answers `true`.
+   */
+  allowedService(id: string): boolean;
   getState(): CkState;
   /** `accept('all')` grants everything; an object records `method: 'custom'`. */
   accept(choice?: CkAcceptArg): CkState;
@@ -396,6 +454,8 @@ export { ConsentKit };
 
 export declare function init(config?: CkConfig): CkState;
 export declare function allowed(category: CkCategory | string): boolean;
+/** v0.5.8 (SPEC V1.12 §3). */
+export declare function allowedService(id: string): boolean;
 export declare function getState(): CkState;
 export declare function accept(choice?: CkAcceptArg): CkState;
 export declare function rejectAll(): CkState;
@@ -427,6 +487,8 @@ declare module '@ecomconsult/consentkit' {
   export { ConsentKit };
   export function init(config?: CkConfig): CkState;
   export function allowed(category: CkCategory | string): boolean;
+  /** v0.5.8 (SPEC V1.12 §3). */
+  export function allowedService(id: string): boolean;
   export function getState(): CkState;
   export function accept(choice?: CkAcceptArg): CkState;
   export function rejectAll(): CkState;
@@ -442,6 +504,8 @@ declare module '@ecomconsult/consentkit/core' {
   export { ConsentKit };
   export function init(config?: CkConfig): CkState;
   export function allowed(category: CkCategory | string): boolean;
+  /** v0.5.8 (SPEC V1.12 §3). */
+  export function allowedService(id: string): boolean;
   export function getState(): CkState;
   export function accept(choice?: CkAcceptArg): CkState;
   export function rejectAll(): CkState;
@@ -456,6 +520,8 @@ export interface UseConsentResult {
   /** Current state. On the server, an undecided snapshot. */
   state: CkState;
   allowed(category: CkCategory | string): boolean;
+  /** v0.5.8 (SPEC V1.12 §3). May this one declared service run? */
+  allowedService(id: string): boolean;
   /** Defaults to `'all'` when called with no argument. */
   accept(choice?: CkAcceptArg): CkState;
   rejectAll(): CkState;

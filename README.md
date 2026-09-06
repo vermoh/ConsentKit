@@ -199,12 +199,52 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `blocking.placeholders` | `boolean` | `true` | v0.5.7. Draw a card in place of an embed held back before consent — see [Placeholders for blocked embeds](#placeholders-for-blocked-embeds). `false` restores the pre-0.5.7 behaviour: the frame is still blocked, just invisible |
 | `hostdb` | `Record<string, Category>` | — | Extra `host: category` pairs merged into the tracker database, applied before the initial scan. SaaS mode fills this from the service; `ConsentKit._extendHostDb()` does the same at any later point |
 | `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel |
+| `services` | `CkService[]` | `[]` | v0.5.8. Third-party services the site declares. Each gets its own toggle inside its category group in the panel, and can be refused individually — see [Services](#services). At most 50 |
 
 `cookieTable` entries:
 
 ```js
 { name: '_ga', category: 'analytics', vendor: 'Google', purpose: 'Visit statistics', expiry: '2 years' }
 ```
+
+### Services
+
+**v0.5.8.** A `services` row names one third party: where its resources come
+from, which cookies it sets and what it is for. The preferences panel lists it
+inside its category group with **its own toggle**, so a visitor can accept
+analytics in general and still refuse one particular service.
+
+```js
+services: [{
+  id: 'hotjar',                                   // stable, ^[a-z0-9-]{1,64}$
+  name: 'Hotjar',
+  vendor: 'Hotjar Ltd',
+  category: 'analytics',
+  hosts: ['hotjar.com'],                          // suffix-matched, like the tracker database
+  paths: ['/hotjar-'],                            // optional, substring-matched
+  cookies: ['_hjSession', '_hjSessionUser'],      // names; matched against cookieTable
+  privacyUrl: 'https://www.hotjar.com/privacy/',  // http(s) only
+  purpose: { ru: '…', ro: '…', en: 'Records how visitors move around the page.' },
+  enabled: true                                   // false: not shown, not blocked separately
+}]
+```
+
+What the toggle does:
+
+- **Group off** — every service of that group is off and blocked, as before.
+- **Group on** — the services come back, *except* the ones the visitor switched
+  off by hand. A refusal survives the group being switched off and on again.
+- A refused service's resources are held back exactly as if its category had no
+  consent, and its cookies are deleted exactly as on a category withdrawal.
+- The «Allow and show» button on a blocked embed's placeholder grants the
+  category **and** clears the refusal on that frame's service.
+
+`hosts` need not already be in the tracker database: `init()` folds them into
+the block map under the row's own category, so a service host ConsentKit has
+never heard of is still held back.
+
+Refusals are stored in `ck_consent` as `services: { '<id>': false }` — denials
+only. An id absent from the map is allowed, subject to its category.
 
 ### Button appearance
 
@@ -361,9 +401,10 @@ All methods are safe to call at any time and never throw.
 |---|---|---|
 | `init(config?)` | `CkState` | Idempotent. Restores stored consent, then dispatches `ck:init`. Calling again merges config only |
 | `allowed(category)` | `boolean` | `necessary` is always `true` |
+| `allowedService(id)` | `boolean` | v0.5.8. May this one declared service run? True when its category is granted **and** the visitor has not refused it individually. An id the config does not declare is `true` |
 | `getState()` | `CkState` | A fresh object on every call |
 | `accept('all')` | `CkState` | Grants everything. `method: 'accept_all'` |
-| `accept({ ... })` | `CkState` | Per-category choice. `method: 'custom'`. Omitted categories stay denied |
+| `accept({ ... })` | `CkState` | Per-category choice. `method: 'custom'`. Omitted categories stay denied. v0.5.8: an optional `services: { '<id>': false }` replaces the stored refusals wholesale; omit it to leave them untouched |
 | `rejectAll()` | `CkState` | Denies every opt-in category. `method: 'reject_all'` |
 | `withdraw()` | `CkState` | Clears storage and known cookies, sends GCM `denied`, resets to `decided: false` |
 | `show()` | `void` | Opens the preferences panel |
@@ -381,6 +422,7 @@ All methods are safe to call at any time and never throw.
   ts: null,                // ISO timestamp
   policyVersion: '1',
   categories: { necessary: true, functional: false, analytics: false, marketing: false },
+  services: {},            // v0.5.8. Per-service refusals ONLY: { hotjar: false }
   method: null             // 'accept_all' | 'reject_all' | 'custom'
 }
 ```

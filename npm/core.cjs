@@ -25,6 +25,9 @@ function createStub() {
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },
+    // v0.5.8 (SPEC V1.12 §3). `true`: a stub means the engine never attached
+    // and withholds nothing, so it must not claim a refusal it cannot enforce.
+    allowedService: function () { return true; },
     getState: undecidedState,
     accept: function () { return undecidedState(); },
     rejectAll: function () { return undecidedState(); },

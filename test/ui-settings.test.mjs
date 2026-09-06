@@ -309,7 +309,12 @@ test('the grant merges into the existing decision instead of replacing it', () =
      first. */
   const grant = UI_SRC.slice(UI_SRC.indexOf('function grantCategory'));
   const body = grant.slice(0, grant.indexOf('\n  function hideFrame'));
-  assert.match(body, /safeState\(\)\.categories/,
+  // 0.5.8 reads the state once into `st` (it needs `st.services` too, per SPEC
+  // V1.12 §3) instead of calling safeState() inline — the requirement is that
+  // the CURRENT categories are read at all, not how many statements it takes.
+  assert.match(body, /safeState\(\)/,
+    'grantCategory must read the state already stored');
+  assert.match(body, /cur = st\.categories|safeState\(\)\.categories/,
     'grantCategory must read the categories already granted');
   assert.match(body, /functional: cur\.functional === true/,
     'the other categories must be carried over, not dropped');

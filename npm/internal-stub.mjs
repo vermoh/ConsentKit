@@ -28,10 +28,15 @@ export function undecidedState() {
  */
 export function createStub() {
   const stub = {
-    version: '0.5.7',
+    version: '0.5.8',
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },
+    // v0.5.8 (SPEC V1.12 §3): may this one declared service run? `true` here
+    // for the same reason the real core answers `true` for an unknown id — a
+    // stub means the engine never attached and is withholding nothing, so
+    // claiming a refusal it does not enforce would be a lie consumer code acts on.
+    allowedService: function () { return true; },
     getState: undecidedState,
     accept: function () { return undecidedState(); },
     rejectAll: function () { return undecidedState(); },
@@ -51,6 +56,11 @@ export function createStub() {
     _infra: function () { return []; },
     _isInfra: function () { return false; },
     _blocked: function () { return []; },
+    // v0.5.8 (SPEC V1.12 §3): the service registry. Empty for the same reason
+    // _baseAllow and _infra are — nothing was normalised, nothing is blocked.
+    _serviceForUrl: function () { return null; },
+    _services: function () { return []; },
+    _deniedServices: function () { return []; },
     _isStub: true
   };
   return stub;

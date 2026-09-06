@@ -324,7 +324,16 @@
     // 'strict' — additionally hold back EVERY third-party script/iframe that is
     //            not same-site, not in `allow` and not in BASE_ALLOW.
     blocking: { mode: 'known', allow: [] },
-    cookieTable: []
+    cookieTable: [],
+    // SPEC V1.12 §2/§3 — the services the site declares. Each row names one
+    // third party (Google Analytics, Hotjar, Tilda Forms), the hosts and paths
+    // its resources come from and the cookies it sets, so the panel can list it
+    // under its category with its own switch and the engine can hold back that
+    // ONE service while the rest of the category runs.
+    //
+    // Empty by default: a config that predates 0.5.8 has no `services` key at
+    // all and must render and block exactly as it did before.
+    services: []
   };
 
   // Infrastructure (§8) — NOT a consent category, a CLASS of host.
@@ -690,8 +699,28 @@
       ts: rec.ts,
       policyVersion: String(rec.policyVersion),
       categories: cats,
+      // SPEC V1.12 §3 — the denial map. Only `false` entries are stored and only
+      // `false` entries are read back: a record written by 0.5.7 has no
+      // `services` key at all and yields «ничего не отклонено», which is what a
+      // visitor who was never shown a service list actually agreed to.
+      services: readServices(rec.services),
       method: rec.method || 'custom'
     };
+  }
+
+  // { id: false } only. Anything else in the stored map — a `true`, a number, a
+  // key that is not a service id — is dropped rather than trusted: this record
+  // is attacker-writable (it lives in a cookie and in localStorage), and a
+  // malformed entry must not be able to widen or narrow what gets blocked.
+  function readServices(raw) {
+    var out = {};
+    if (!isPlainObject(raw)) { return out; }
+    var keys = Object.keys(raw);
+    for (var i = 0; i < keys.length && i < SERVICE_MAX; i++) {
+      var k = keys[i];
+      if (raw[k] === false && SERVICE_ID_RE.test(k)) { out[k] = false; }
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------------------
@@ -705,6 +734,9 @@
     ts: null,
     policyVersion: String(config.policyVersion),
     categories: emptyCategories(),
+    // SPEC V1.12 §3 — denials only: { '<serviceId>': false }. An id that is not
+    // here is allowed (subject to its category).
+    services: {},
     method: null
   };
 
@@ -720,8 +752,29 @@
         analytics: !!state.categories.analytics,
         marketing: !!state.categories.marketing
       },
+      // A COPY: publicState() is handed to page code and to ck-saas.js, and a
+      // live reference would let either of them rewrite what the engine blocks.
+      services: cloneDenials(state.services),
       method: state.method
     };
+  }
+
+  function hasDenials(map) {
+    try {
+      var keys = Object.keys(map || {});
+      for (var i = 0; i < keys.length; i++) { if (map[keys[i]] === false) { return true; } }
+    } catch (e) { /* noop */ }
+    return false;
+  }
+
+  function cloneDenials(map) {
+    var out = {};
+    try {
+      Object.keys(map || {}).forEach(function (k) {
+        if (map[k] === false) { out[k] = false; }
+      });
+    } catch (e) { /* noop */ }
+    return out;
   }
 
   function dispatch(name, detail) {
@@ -907,6 +960,217 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Services (SPEC V1.12 §2/§3)
+  // ---------------------------------------------------------------------------
+  // The normalised view of config.services, rebuilt by init() once the server's
+  // config has been merged. Kept as a separate array rather than read out of
+  // `config` on every call: _serviceForUrl runs inside the blocking hot path
+  // (every script and iframe the page inserts), and re-validating 50 raw rows
+  // per resource would be paid on every insertion.
+  var SERVICES = [];
+  var SERVICE_BY_ID = {};
+
+  var SERVICE_ID_RE = /^[a-z0-9-]{1,64}$/;
+  var SERVICE_MAX = 50;
+
+  // §2's row shape, validated defensively: this arrives over the network in the
+  // SaaS path exactly like `hostdb` does, so nothing here is trusted. A row that
+  // fails any check is DROPPED rather than repaired — a half-understood service
+  // would block resources under a category nobody agreed to.
+  //
+  // `enabled: false` means «не показывать и не блокировать отдельно»: the row is
+  // dropped here, so the panel never lists it and _serviceForUrl never names it.
+  function normalizeService(raw) {
+    if (!isPlainObject(raw)) { return null; }
+    if (raw.enabled === false) { return null; }
+
+    var id = typeof raw.id === 'string' ? raw.id.trim().toLowerCase() : '';
+    if (!SERVICE_ID_RE.test(id)) { return null; }
+
+    var cat = typeof raw.category === 'string' ? raw.category : '';
+    if (CATEGORIES.indexOf(cat) === -1) { return null; }
+
+    var hosts = [];
+    if (raw.hosts && typeof raw.hosts.length === 'number') {
+      for (var i = 0; i < raw.hosts.length && hosts.length < 20; i++) {
+        var h = raw.hosts[i];
+        if (typeof h !== 'string') { continue; }
+        h = h.trim().toLowerCase().replace(/:\d+$/, '').replace(/^\.+|\.+$/g, '');
+        if (!h || h.length > 253 || h.indexOf('.') === -1 || /[^a-z0-9.\-]/.test(h)) { continue; }
+        if (hosts.indexOf(h) === -1) { hosts.push(h); }
+      }
+    }
+
+    // Path fragments, matched exactly the way PATH_DB entries are: a
+    // case-insensitive substring of the resolved URL.
+    var paths = [];
+    if (raw.paths && typeof raw.paths.length === 'number') {
+      for (var j = 0; j < raw.paths.length && paths.length < 20; j++) {
+        var p = raw.paths[j];
+        if (typeof p !== 'string') { continue; }
+        p = p.trim().toLowerCase();
+        if (p && p.length <= 253 && paths.indexOf(p) === -1) { paths.push(p); }
+      }
+    }
+
+    var cookies = [];
+    if (raw.cookies && typeof raw.cookies.length === 'number') {
+      for (var k = 0; k < raw.cookies.length; k++) {
+        var c = raw.cookies[k];
+        if (typeof c !== 'string') { continue; }
+        c = c.trim();
+        if (c && cookies.indexOf(c) === -1) { cookies.push(c); }
+      }
+    }
+
+    var purpose = {};
+    if (isPlainObject(raw.purpose)) {
+      ['ru', 'ro', 'en'].forEach(function (lang) {
+        var v = raw.purpose[lang];
+        if (typeof v === 'string' && v.trim()) { purpose[lang] = v.trim().slice(0, 400); }
+      });
+    }
+
+    // http(s) only, for the same reason resolveDetails() in ck-ui.js insists on
+    // it: this becomes a link the visitor is invited to click, and a
+    // javascript: URL there is an XSS vector.
+    var privacyUrl = null;
+    if (typeof raw.privacyUrl === 'string' && /^https?:\/\//i.test(raw.privacyUrl.trim())) {
+      privacyUrl = raw.privacyUrl.trim();
+    }
+
+    return {
+      id: id,
+      name: (typeof raw.name === 'string' && raw.name.trim()) ? raw.name.trim() : id,
+      vendor: (typeof raw.vendor === 'string' && raw.vendor.trim()) ? raw.vendor.trim() : '',
+      category: cat,
+      hosts: hosts,
+      paths: paths,
+      cookies: cookies,
+      purpose: purpose,
+      privacyUrl: privacyUrl
+    };
+  }
+
+  // Rebuilds SERVICES/SERVICE_BY_ID from the merged config and extends the
+  // block map with every service host, so a host HOST_DB has never heard of is
+  // still held back under its service's category (§2: «hosts не обязаны быть в
+  // HOST_DB»). Returns the normalised list.
+  function buildServices(cfg) {
+    SERVICES = [];
+    SERVICE_BY_ID = {};
+    var extra = {};
+    try {
+      var list = cfg && cfg.services;
+      if (!list || typeof list.length !== 'number') { return SERVICES; }
+      for (var i = 0; i < list.length && SERVICES.length < SERVICE_MAX; i++) {
+        var s = normalizeService(list[i]);
+        if (!s) { continue; }
+        if (SERVICE_BY_ID[s.id]) { continue; }        // first row of an id wins
+        SERVICE_BY_ID[s.id] = s;
+        SERVICES.push(s);
+        for (var j = 0; j < s.hosts.length; j++) { extra[s.hosts[j]] = s.category; }
+      }
+      // Reuses the existing override map, so a service host is classified by the
+      // one lookup categoryForUrl already does — no second code path, and an
+      // explicit `hostdb` override from the server still wins because
+      // extendHostDb skips a host already sitting at the same category and
+      // init() applies hostdb FIRST.
+      extendHostDb(extra);
+    } catch (e) { /* noop */ }
+    return SERVICES;
+  }
+
+  // Which service does this URL belong to? Host suffixes are matched like
+  // HOST_DB, path fragments like PATH_DB. Returns the normalised row or null.
+  //
+  // Hosts before paths, and in declaration order: a config that lists the same
+  // host under two services is the owner's mistake, and answering with the
+  // first row is at least stable.
+  function serviceForUrl(src) {
+    if (!SERVICES.length) { return null; }
+    if (!src || typeof src !== 'string') { return null; }
+    var parts = urlParts(src);
+    var host = parts.host;
+    var i, j, s;
+    if (host) {
+      for (i = 0; i < SERVICES.length; i++) {
+        s = SERVICES[i];
+        for (j = 0; j < s.hosts.length; j++) {
+          if (hostMatches(host, s.hosts[j])) { return s; }
+        }
+      }
+    }
+    var low = String(parts.url).toLowerCase();
+    for (i = 0; i < SERVICES.length; i++) {
+      s = SERVICES[i];
+      for (j = 0; j < s.paths.length; j++) {
+        if (low.indexOf(s.paths[j]) > -1) { return s; }
+      }
+    }
+    return null;
+  }
+
+  // §3: «хранение — только отказы». An id absent from the map is allowed, so a
+  // visitor who never opened the settings panel, and every config that gains a
+  // service after the visitor decided, default to «разрешено» rather than to a
+  // silent block of something the visitor was never asked about.
+  function serviceDenied(id) {
+    if (!id || typeof id !== 'string') { return false; }
+    return state.services[id] === false;
+  }
+
+  // The public predicate. A service is allowed when its category is granted AND
+  // the visitor has not denied it individually — the two are deliberately NOT
+  // collapsed into one flag: §3 requires a denial to SURVIVE the group switch
+  // going off and back on («включён → сервисы включены, кроме отключённых
+  // вручную»).
+  function allowedService(id) {
+    var s = SERVICE_BY_ID[id];
+    if (!s) { return true; }                  // unknown id: nothing to withhold
+    if (!allowed(s.category)) { return false; }
+    return !serviceDenied(id);
+  }
+
+  // Does this URL belong to a service the visitor turned off? The one question
+  // both the blocking patches and applyConsentToDom() ask; kept as its own
+  // function so the two can never drift apart.
+  function deniedForSrc(src) {
+    var s = serviceForUrl(src);
+    return !!(s && serviceDenied(s.id));
+  }
+
+  // Denied ids, in config order — the beacon field and the debug report both
+  // want a stable, deduplicated list rather than object key order.
+  function deniedServiceIds() {
+    var out = [];
+    for (var i = 0; i < SERVICES.length; i++) {
+      if (state.services[SERVICES[i].id] === false) { out.push(SERVICES[i].id); }
+    }
+    return out;
+  }
+
+  // Removes the cookies of the given services, exactly as a category withdrawal
+  // removes a category's (§3). Only names the service declared: the engine has
+  // no business guessing at cookies nobody wrote down.
+  function purgeServiceCookies(ids) {
+    var names = [];
+    for (var i = 0; i < ids.length; i++) {
+      var s = SERVICE_BY_ID[ids[i]];
+      if (!s) { continue; }
+      for (var j = 0; j < s.cookies.length; j++) {
+        if (s.cookies[j] !== STORAGE_KEY && names.indexOf(s.cookies[j]) === -1) {
+          names.push(s.cookies[j]);
+        }
+      }
+    }
+    // Deleted whether or not document.cookie can see them: purgeCookies() does
+    // the same for its masks, because a cookie set with a path or domain this
+    // page cannot read is still worth the (harmless) delete attempt.
+    for (var k = 0; k < names.length; k++) { deleteCookie(names[k]); }
+  }
+
+  // ---------------------------------------------------------------------------
   // Blocking engine — strict mode (§2)
   // ---------------------------------------------------------------------------
   // Everything strict intercepts is filed under the strictest category, so it
@@ -1032,24 +1296,37 @@
   }
 
   // True when the URL must be held back: a known tracker whose category is not
-  // yet granted, or — in strict mode — an unknown third party.
+  // yet granted, a resource of a service the visitor turned off, or — in strict
+  // mode — an unknown third party.
+  //
+  // SPEC V1.12 §3: «ресурс сервиса, отклонённого посетителем, задерживается как
+  // при отсутствии согласия на категорию». The service test comes FIRST, so a
+  // denied Hotjar is held back even though analytics as a whole is granted;
+  // without it the categoryForUrl branch below would return early and let it in.
   function shouldBlock(src) {
     if (bypass) { return false; }
+    var svc = serviceForUrl(src);
+    if (svc && serviceDenied(svc.id)) { return true; }
     var cat = categoryForUrl(src);
     if (cat) { return !allowed(cat); }
     return strictBlocks(src);
   }
 
-  // The category an interception is filed under. Known hosts keep their own;
-  // a strict interception is marketing.
+  // The category an interception is filed under. Known hosts keep their own; a
+  // service's own category covers a host (or path) the tracker database has
+  // never heard of; a strict interception is marketing.
   function blockCategory(src) {
-    return categoryForUrl(src) || STRICT_CATEGORY;
+    var cat = categoryForUrl(src);
+    if (cat) { return cat; }
+    var svc = serviceForUrl(src);
+    return (svc && svc.category) || STRICT_CATEGORY;
   }
 
   // Was this particular interception a strict-mode one (i.e. the URL is not in
   // the tracker database at all)? Drives the «strict» label in the debug panel.
+  // A service match is not a strict hit: the config named that resource.
   function isStrictHit(src) {
-    return !categoryForUrl(src) && strictMode();
+    return !categoryForUrl(src) && !serviceForUrl(src) && strictMode();
   }
 
   // Registry of everything the engine intercepted, for the debug panel (§8.1
@@ -1403,9 +1680,14 @@
     scripts.forEach(function (el) {
       try {
         if (el.getAttribute('data-ck-restored')) { return; }
+        var src = el.getAttribute('data-src') || el.getAttribute('data-ck-src') || '';
         var cat = el.getAttribute('data-ck');
-        if (!cat) { cat = categoryForUrl(el.getAttribute('data-src') || el.getAttribute('data-ck-src') || ''); }
+        if (!cat) { cat = categoryForUrl(src); }
         if (!allowed(cat)) { return; }
+        // SPEC V1.12 §3 — a denied service stays held even once its category is
+        // granted. Without this the category grant would revive the very
+        // resource the visitor singled out to refuse.
+        if (deniedForSrc(src)) { return; }
         reviveScript(el);
       } catch (e) { /* noop */ }
     });
@@ -1418,6 +1700,7 @@
         if (el.getAttribute('src')) { return; }
         var src = el.getAttribute('data-src');
         if (!src) { return; }
+        if (deniedForSrc(src)) { return; }
         var prev = bypass;
         bypass = true;
         try { nativeSetAttribute.call(el, 'src', src); } finally { bypass = prev; }
@@ -1435,8 +1718,14 @@
   // ---------------------------------------------------------------------------
   // Decisions
   // ---------------------------------------------------------------------------
-  function commit(categories, method) {
+  // `services` is the FULL denial map for the new decision, or undefined to
+  // keep the one already in state. Undefined is what accept('all'),
+  // rejectAll() and every pre-0.5.8 caller pass, and §3 wants denials to
+  // survive a category being switched off and back on — so «not mentioned»
+  // must mean «unchanged», never «cleared».
+  function commit(categories, method, services) {
     var wasDecided = state.decided;
+    if (services !== undefined) { state.services = readServices(services); }
     state.categories = {
       necessary: true,
       functional: categories.functional === true,
@@ -1459,6 +1748,10 @@
         analytics: state.categories.analytics,
         marketing: state.categories.marketing
       },
+      // Written only when something is actually denied, so a site with no
+      // services (and a visitor who denied none) stores the exact same record
+      // 0.5.7 stored — the stored shape does not change until it has to.
+      services: hasDenials(state.services) ? cloneDenials(state.services) : undefined,
       method: state.method
     });
 
@@ -1469,6 +1762,14 @@
     // the catch-all demo_* prefix too.
     var denied = OPT_IN.filter(function (c) { return !state.categories[c]; });
     if (denied.length) { purgeCookies(denied, denied.length === OPT_IN.length); }
+
+    // SPEC V1.12 §3: «cookie отклонённого сервиса удаляются как при отзыве
+    // категории». Every service that is denied NOW is swept, not only the ones
+    // denied by this particular click: a visitor who denies Hotjar and then
+    // grants analytics has just handed the category the chance to write the
+    // cookies of a service they said no to, and the sweep is what closes it.
+    var deniedSvc = deniedServiceIds();
+    if (deniedSvc.length) { purgeServiceCookies(deniedSvc); }
 
     applyConsentToDom();
 
@@ -1489,25 +1790,38 @@
 
   function accept(arg) {
     try {
-      var cats, method;
+      var cats, method, svcs;
       if (arg === 'all' || arg === undefined || arg === null) {
         cats = { functional: true, analytics: true, marketing: true };
         method = 'accept_all';
+        // «Принять всё» means all of it: an accept_all that silently kept an
+        // earlier per-service refusal would be a decision the visitor did not
+        // make. The panel's own Save goes through the object branch below and
+        // carries its switches, so this clears nothing a visitor just chose.
+        svcs = {};
       } else if (isPlainObject(arg)) {
         cats = { functional: arg.functional === true, analytics: arg.analytics === true, marketing: arg.marketing === true };
         method = 'custom';
+        // SPEC V1.12 §3 — accept({ ..., services: { hotjar: false } }). Absent
+        // means «leave the denials as they are», which is what every 0.5.7
+        // caller (and the placeholder's grantCategory) relies on.
+        svcs = isPlainObject(arg.services) ? arg.services : undefined;
       } else {
         cats = { functional: true, analytics: true, marketing: true };
         method = 'accept_all';
+        svcs = {};
       }
-      commit(filterByConfig(cats), method);
+      commit(filterByConfig(cats), method, svcs);
     } catch (e) { /* noop */ }
     return publicState();
   }
 
   function rejectAll() {
     try {
-      commit({ functional: false, analytics: false, marketing: false }, 'reject_all');
+      // Denials are cleared, not accumulated: every opt-in category is off, so
+      // every service is blocked by its category anyway, and keeping the map
+      // would leave a refusal standing that outlives the next «Принять всё».
+      commit({ functional: false, analytics: false, marketing: false }, 'reject_all', {});
     } catch (e) { /* noop */ }
     return publicState();
   }
@@ -1519,10 +1833,16 @@
       state.ts = null;
       state.method = null;
       state.categories = emptyCategories();
+      // Back to «ничего не решено»: a withdrawal erases the record, so the
+      // per-service refusals it carried go with it rather than surviving as
+      // invisible state the visitor can no longer see or change.
+      var lastDenied = deniedServiceIds();
+      state.services = {};
       state.policyVersion = String(config.policyVersion);
 
       clearRecord();
       purgeKnownCookies();
+      if (lastDenied.length) { purgeServiceCookies(lastDenied); }
       // 'update' with everything denied, not a second 'default': Consent Mode
       // accepts only one default, set before tags load. State was reset above,
       // so gcmUpdate() emits all-denied and honours integrations.gcm.
@@ -1537,7 +1857,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.7',
+    version: '0.5.8',
     config: config,
 
     init: function (userConfig) {
@@ -1550,6 +1870,14 @@
         // mode ck-saas.js has usually applied these already; extendHostDb is
         // idempotent, so doing it twice costs nothing.
         if (userConfig && isPlainObject(userConfig.hostdb)) { extendHostDb(userConfig.hostdb); }
+
+        // SPEC V1.12 §2/§3 — normalise the service rows and fold their hosts
+        // into the block map. AFTER hostdb, so an explicit server override of a
+        // host wins over the category the service row would file it under; and
+        // before initialScan() below, so the scripts already in the markup are
+        // classified against the extended map. Re-run on an idempotent init()
+        // too, because that call is how a SaaS config arrives late.
+        buildServices(config);
 
         if (initialized) {
           // Idempotent: merge config, no re-restore, no duplicate ck:init.
@@ -1564,6 +1892,7 @@
           state.ts = rec.ts;
           state.policyVersion = rec.policyVersion;
           state.categories = rec.categories;
+          state.services = rec.services || {};
           state.method = rec.method;
           gcmUpdate();
           // Return visit: GTM triggers must fire for the restored categories.
@@ -1582,6 +1911,21 @@
 
     allowed: function (cat) {
       try { return allowed(cat); } catch (e) { return false; }
+    },
+
+    /* SPEC V1.12 §3 — may this ONE service run?
+
+       True when its category is granted and the visitor has not switched it off
+       individually. An id the config does not declare answers `true`: the
+       engine withholds nothing it was never told about, and a site that asks
+       about a service it removed from the config should not have its own code
+       silently disabled by the leftover question.
+
+       Deliberately not derived from `allowed(category)` alone by the caller:
+       a denial outlives the category being switched off and back on, which is
+       exactly the state a caller cannot reconstruct from getState().categories. */
+    allowedService: function (id) {
+      try { return allowedService(id); } catch (e) { return true; }
     },
 
     getState: function () {
@@ -1622,6 +1966,34 @@
     // Introspection helpers for the demo status panel (read-only).
     _categoryForUrl: categoryForUrl,
     _categories: CATEGORIES.slice(),
+
+    /* SPEC V1.12 §3 — which declared service does this URL belong to?
+       Hosts are suffix-matched like HOST_DB, paths substring-matched like
+       PATH_DB. Returns a COPY of the normalised row (id, name, vendor,
+       category, hosts, paths, cookies, purpose, privacyUrl) or null.
+
+       A copy, for the reason `_baseAllow` is a getter: the row this returns is
+       the one the blocking hot path reads, and handing out a live reference
+       would let page code rewrite what gets held back. */
+    _serviceForUrl: function (url) {
+      try {
+        var s = serviceForUrl(url);
+        return s ? clone(s) : null;
+      } catch (e) { return null; }
+    },
+
+    // The normalised service list the panel renders and the engine blocks by —
+    // rows the config declared with `enabled: false`, a bad id or an unknown
+    // category are already gone. Fresh copies, like every other list here.
+    _services: function () {
+      try { return SERVICES.map(function (s) { return clone(s); }); } catch (e) { return []; }
+    },
+
+    // Ids the visitor switched off, in config order. Read by ck-saas.js for the
+    // beacon's optional `services` field and by the debug panel.
+    _deniedServices: function () {
+      try { return deniedServiceIds(); } catch (e) { return []; }
+    },
 
     // Merges { host: category } into the runtime tracker database (§1.3).
     // Works before AND after init(): after init nothing already inserted is

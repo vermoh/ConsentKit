@@ -108,6 +108,92 @@
     return out;
   }
 
+  // report `why` -> STRINGS key. A map rather than a switch so the report stays
+  // language-neutral: the JSON carries 'early', the panel renders the sentence.
+  var WHY_KEY = {
+    early: 'whyEarly',
+    gcm: 'whyGcm',
+    held: 'whyHeld',
+    dead: 'whyDead'
+  };
+
+  /* SPEC V1.12 §3 — «каждая строка "до согласия" получает пометку словами».
+
+     A request that left before the decision is not automatically a problem, and
+     the four cases the owner needs told apart are:
+
+       'held'  — the engine caught it: this is the banner working. The host
+                 appears in `blocked`, so the request the browser recorded is
+                 the interception, not a leak.
+       'dead'  — caught, the category was later granted, and it still never came
+                 back: the tag is almost always missing type="text/plain".
+       'gcm'   — Consent Mode was already denied when it fired, so the vendor
+                 was told not to write cookies. Google's own tags do this.
+       'early' — none of the above: the tag ran BEFORE the banner line in the
+                 markup, so nothing could have held it. This is the one that
+                 needs a fix on the site, and it is the one this note exists for.
+
+     Additive: every existing field of a request row is untouched, so a caller
+     reading the JSON report keeps working and `why` is simply new. Rows AFTER
+     consent get no note — there is nothing to explain about a request the
+     visitor agreed to. */
+  function explainRequests(requests, blocked, consentMode) {
+    // Consent Mode was told 'denied' at page load: our own gcmDefault() pushes
+    // exactly that before any tag can run.
+    var gcmDenied = false;
+    try {
+      for (var m = 0; m < consentMode.length; m++) {
+        var c = consentMode[m];
+        // noteDataLayer() records the gtag call verbatim: 'gtag consent default'.
+        if (!c || String(c.type || '').indexOf('consent default') === -1 || !c.signals) { continue; }
+        var sig = c.signals;
+        gcmDenied = sig.analytics_storage === 'denied' || sig.ad_storage === 'denied';
+        break;
+      }
+    } catch (e) { gcmDenied = false; }
+
+    // host -> the interception record, so a request can be matched to what the
+    // engine did with that host.
+    var held = {};
+    try {
+      for (var b = 0; b < blocked.length; b++) {
+        var rec = blocked[b];
+        if (!rec || !rec.host) { continue; }
+        // A host held more than once keeps its WORST outcome: one dead tag on a
+        // host is the fact worth surfacing.
+        if (held[rec.host] && held[rec.host].revived === false) { continue; }
+        held[rec.host] = rec;
+      }
+    } catch (e2) { /* noop */ }
+
+    var out = [];
+    for (var i = 0; i < requests.length; i++) {
+      var q = requests[i];
+      if (q.when !== 'before') { out.push(q); continue; }
+      /* A `necessary` host is never held — allowed('necessary') is always true —
+         so it appears in no `blocked` record, and every note below would be a
+         lie about it: «раньше строки баннера» (we never wanted to hold it) or
+         «Consent Mode: без cookie» (it is not a Consent Mode decision). §4 files
+         necessary under `ok`, and §3's four notes have no slot for it, so it
+         gets what an after-consent row gets: nothing. Sending the owner off to
+         chase __cf_bm is exactly the noise §3 exists to remove. */
+      if (q.category === 'necessary') { out.push(q); continue; }
+      var h = held[q.host];
+      var why;
+      if (h && h.revived === false) { why = 'dead'; }
+      else if (h) { why = 'held'; }
+      else if (gcmDenied) { why = 'gcm'; }
+      else { why = 'early'; }
+      var copy = {};
+      for (var k in q) {
+        if (Object.prototype.hasOwnProperty.call(q, k)) { copy[k] = q[k]; }
+      }
+      copy.why = why;
+      out.push(copy);
+    }
+    return out;
+  }
+
   function buildReport(input) {
     var d = input || {};
     var st = d.state || {};
@@ -148,7 +234,11 @@
           revived: b.revived !== false
         };
       }),
-      requests: buildRequests(d.entries, d.consentAtMs, d.classify),
+      requests: explainRequests(
+        buildRequests(d.entries, d.consentAtMs, d.classify),
+        d.blocked || [],
+        d.consentMode || []
+      ),
       consentMode: (d.consentMode || []).slice(),
       // Names only — a consent debug panel must never leak cookie contents.
       cookieNames: (d.cookieNames || []).slice(),
@@ -161,6 +251,8 @@
     'такие теги размечают вручную.';
   var NOTE_EN = 'Requests that left before ConsentKit loaded (a plain <script src> ' +
     'written into the HTML) show up here but cannot be blocked — mark such tags up manually.';
+  var NOTE_RO = 'Cererile plecate înainte de încărcarea ConsentKit (un <script src> ' +
+    'obișnuit scris în HTML) apar aici, dar nu pot fi blocate — astfel de etichete se marchează manual.';
 
   // ---------------------------------------------------------------------------
   // Panel language (pure; the JSON report stays language-neutral either way)
@@ -191,6 +283,13 @@
       markup: ' (разметка)',
       strict: 'strict',
       notRevived: ' — не ожил после согласия',
+      // SPEC V1.12 §3 — пометка словами на каждой строке «до согласия»:
+      // что именно случилось и можно ли было это остановить.
+      whyEarly: 'раньше строки баннера — задержать не можем',
+      whyGcm: 'Consent Mode: без cookie',
+      whyHeld: 'задержан баннером',
+      whyDead: 'не ожил после согласия — проверьте, что тег помечен type="text/plain"',
+      cabinet: 'Что с этим делать — в кабинете',
       secRequests: 'Запросы к трекерам',
       noRequests: 'запросов к известным трекерам не было',
       after: 'после согласия',
@@ -252,6 +351,11 @@
       markup: ' (markup)',
       strict: 'strict',
       notRevived: ' — did not come back after consent',
+      whyEarly: 'loaded before the banner line — we cannot hold it',
+      whyGcm: 'Consent Mode: no cookies',
+      whyHeld: 'held back by the banner',
+      whyDead: 'did not come back after consent — check the tag is marked type="text/plain"',
+      cabinet: 'What to do about it — in your account',
       secRequests: 'Tracker requests',
       noRequests: 'no requests to known trackers',
       after: 'after consent',
@@ -291,6 +395,77 @@
       copied: 'Copied',
       copyFailed: 'Failed',
       footer: 'This panel is visible in this browser only. To turn it off, add ?ck_debug=0 to the URL.'
+    },
+    /* SPEC V1.12 §3 asks for the «до согласия» notes in ru/ro/en, so ro joins
+       the panel here. It was deliberately absent before — the comment above
+       still holds for every OTHER language: this is an internal diagnostic
+       surface and a half-translated one is worse than an English one. ro is
+       whole. */
+    ro: {
+      regionLabel: 'ConsentKit — mod de depanare',
+      collapse: 'Restrânge',
+      expand: 'Extinde',
+      closeLabel: 'Închide și oprește modul de depanare',
+      secClient: 'Client',
+      version: 'versiune',
+      source: 'sursă',
+      srcSaas: 'SaaS',
+      srcInline: 'inline',
+      secConsent: 'Consimțământ',
+      decidedAt: 'decizie',
+      method: 'mod',
+      ttl: 'durata cookie-ului',
+      days: ' zile',
+      status: { none: 'fără decizie', accepted: 'acceptat', rejected: 'respins', partial: 'parțial' },
+      secBlocked: 'Blocat până la consimțământ',
+      noBlocked: 'nimic interceptat',
+      markup: ' (marcaj)',
+      strict: 'strict',
+      notRevived: ' — nu a repornit după consimțământ',
+      whyEarly: 'încărcat înaintea liniei bannerului — nu îl putem opri',
+      whyGcm: 'Consent Mode: fără cookie-uri',
+      whyHeld: 'reținut de banner',
+      whyDead: 'nu a repornit după consimțământ — verificați că eticheta are type="text/plain"',
+      cabinet: 'Ce este de făcut — în contul dumneavoastră',
+      secRequests: 'Cereri către urmăritori',
+      noRequests: 'nu au fost cereri către urmăritori cunoscuți',
+      after: 'după consimțământ',
+      before: 'înainte de consimțământ',
+      ms: ' ms',
+      note: NOTE_RO,
+      secConsentMode: 'Consent Mode / dataLayer',
+      noEvents: 'niciun eveniment',
+      secTheme: 'Aspect',
+      themeMode: 'temă',
+      themeModeLight: 'deschisă',
+      themeModeDark: 'închisă',
+      themeFont: 'Font',
+      themeFontInherit: 'moștenit',
+      themeFontSystem: 'de sistem',
+      themeFontPage: 'din pagină',
+      themeFontTry: 'încercarea',
+      themeRadius: 'colțuri',
+      themeCard: 'card',
+      themeBtn: 'butoane',
+      themeLink: 'Linkuri',
+      btnAccept: 'Acceptă tot',
+      btnReject: 'Respinge tot',
+      btnSettings: 'Personalizează',
+      btnFilled: 'plin',
+      btnOutline: 'contur',
+      btnText: 'text',
+      btnBorder: 'contur',
+      btnOn: 'pe',
+      btnAdjusted: 'corectat automat',
+      btnOk: 'AA',
+      btnFail: 'sub AA',
+      secActions: 'Acțiuni',
+      reset: 'Resetează consimțământul',
+      showPrefs: 'Arată setările',
+      copy: 'Copiază raportul',
+      copied: 'Copiat',
+      copyFailed: 'Nu a mers',
+      footer: 'Acest panou este vizibil doar în acest browser. Pentru a-l opri, adăugați ?ck_debug=0 la adresă.'
     }
   };
 
@@ -299,7 +474,11 @@
   function pickLang(cfgLang, navLang) {
     var raw = String(cfgLang || '').toLowerCase();
     if (!raw || raw === 'auto') { raw = String(navLang || '').toLowerCase(); }
-    return raw.slice(0, 2) === 'ru' ? 'ru' : 'en';
+    var two = raw.slice(0, 2);
+    if (two === 'ru') { return 'ru'; }
+    // 'mo' is the legacy Moldovan tag some browsers still send for Romanian.
+    if (two === 'ro' || two === 'mo') { return 'ro'; }
+    return 'en';
   }
 
   // Testable surface. Published before the activation check so the inactive
@@ -311,6 +490,17 @@
     stripUrl: stripUrl,
     pickLang: pickLang,
     strings: STRINGS,
+    // SPEC V1.12 §3 — the per-row «почему» rule, pure and testable: given the
+    // requests, what the engine intercepted and the Consent Mode signals, which
+    // of the four notes does each «до согласия» row get?
+    explainRequests: explainRequests,
+    whyKeys: WHY_KEY,
+    // SPEC V1.12 §3 — the key render() compares to decide whether the DOM
+    // needs rebuilding at all. Exported so the rule is testable: two reports
+    // that differ only in `generatedAt` must produce the SAME key (that field
+    // is a fresh timestamp on every tick and would otherwise defeat the check
+    // entirely), and any real change must produce a different one.
+    reportKey: reportKey,
     active: false
   };
   try {
@@ -505,6 +695,21 @@
     return out;
   }
 
+  /* Where the owner's account lives, when this build knows.
+
+     `texts.cabinetUrl` is server-owned and injected by the SaaS config, exactly
+     like `declarationUrl` in ck-ui.js — the client only reads it and never
+     invents one. http(s) only, because it becomes an href. An inline build has
+     none and gets the plain sentence instead. */
+  function cabinetUrl() {
+    try {
+      var t = CK && CK.config && CK.config.texts;
+      var u = t && t.cabinetUrl;
+      if (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) { return u.trim(); }
+    } catch (e) { /* noop */ }
+    return null;
+  }
+
   function reportInput() {
     var s = saasInfo();
     var cfg = (CK && CK.config) || {};
@@ -560,6 +765,11 @@
     '.t.off{background:#3a1a1d;color:#ff9aa2}',
     '.mut{color:#8d96ab}',
     '.note{margin:6px 0 0;color:#8d96ab;font-size:11px;line-height:1.4}',
+    /* SPEC V1.12 §3 — the plain-words note under a «до согласия» row. Indented
+       to the width of the two tags above it, so it reads as belonging to that
+       row rather than as a new entry. */
+    '.why{margin:2px 0 0;color:#c2b078;font-size:11px;line-height:1.4}',
+    'a.note{display:inline-block;color:#7aa2ff}',
     '.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}',
     '@media (prefers-reduced-motion:no-preference){button{transition:background-color .12s ease}}'
   ].join('');
@@ -638,10 +848,49 @@
     return T;
   }
 
-  function render() {
+  /* SPEC V1.12 §3 — the two render() fixes.
+
+     THE JUMP: render() empties `body` and rebuilds it, which resets
+     `body.scrollTop` to 0. On a page that keeps producing requests the 3s
+     scheduler then yanks the panel back to the top every three seconds, and
+     reading anything past the fold is impossible. Saved before the clear,
+     restored after the rebuild.
+
+     THE REDRAW: with the report unchanged, rebuilding the DOM is pure churn —
+     it kills text selection, closes nothing the user opened, and is what makes
+     the jump above happen at all. `renderKey` is the serialised report with
+     `generatedAt` dropped: that field is a fresh `new Date().toISOString()` on
+     every tick, so comparing the report as-is would never match and would
+     suppress nothing. `null` until the first render, so the first one always
+     happens. */
+  var renderKey = null;
+
+  function reportKey(r) {
+    try {
+      var copy = {};
+      for (var k in r) {
+        if (Object.prototype.hasOwnProperty.call(r, k) && k !== 'generatedAt') { copy[k] = r[k]; }
+      }
+      return JSON.stringify(copy);
+    } catch (e) { return null; }
+  }
+
+  function render(force) {
     if (!body) { return; }
+    var langBefore = T;
     refreshLang();
     var r = buildReport(reportInput());
+
+    var key = reportKey(r);
+    // A language switch changes every string without changing the report, so it
+    // is its own reason to redraw.
+    if (!force && key !== null && key === renderKey && langBefore === T) { return; }
+    renderKey = key;
+
+    // Saved BEFORE the clear: an emptied body has no scroll height and reports 0.
+    var scrollTop = 0;
+    try { scrollTop = body.scrollTop || 0; } catch (e) { scrollTop = 0; }
+
     body.textContent = '';
 
     // 1. Client
@@ -707,11 +956,28 @@
         li.appendChild(tag(q.category));
         li.appendChild(doc.createTextNode(q.host + q.path + ' · ' + q.at + T.ms +
           (q.count > 1 ? ' ×' + q.count : '')));
+        // SPEC V1.12 §3 — the plain-words note, on its own line so it reads as a
+        // sentence rather than as another tag. Only «до согласия» rows have one.
+        if (q.why && WHY_KEY[q.why]) {
+          li.appendChild(el('div', { class: 'why' }, T[WHY_KEY[q.why]]));
+        }
         u4.appendChild(li);
       });
       s4.appendChild(u4);
     }
     s4.appendChild(el('p', { class: 'note' }, T.note));
+    /* «Что с этим делать — в кабинете» (§3). A LINK when this build knows the
+       cabinet's address and plain text otherwise — §3 says no URL is needed if
+       none is known, and a dead link would be worse than a sentence. The
+       address is server-owned, exactly like `declarationUrl`: the SaaS config
+       injects it and the client only reads it, http(s) only. */
+    var cab = cabinetUrl();
+    if (cab) {
+      var a = el('a', { href: cab, target: '_blank', rel: 'noopener noreferrer', class: 'note' }, T.cabinet);
+      s4.appendChild(a);
+    } else {
+      s4.appendChild(el('p', { class: 'note' }, T.cabinet));
+    }
     body.appendChild(s4);
 
     // 5. Consent Mode
@@ -821,6 +1087,10 @@
     s6.appendChild(row);
     s6.appendChild(el('p', { class: 'note' }, T.footer));
     body.appendChild(s6);
+
+    // Put the reader back where they were (§3). Wrapped: a body detached
+    // between the save and here has no scrollTop to write.
+    try { if (scrollTop) { body.scrollTop = scrollTop; } } catch (e) { /* noop */ }
   }
 
   function schedule() {
