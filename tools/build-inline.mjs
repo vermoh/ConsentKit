@@ -343,12 +343,31 @@ function build(flags) {
   // for --language=auto the first bundled language (ck-ui falls back to en when
   // the browser matches nothing). Keeps ru-* blocks Russian and en/eu English.
   const primaryLang = language === 'auto' ? requested[0] : language;
-  const branding = {
-    poweredBy: {
-      text: primaryLang === 'ru' ? 'Сделано в E-COM Consult' : 'Made by E-COM Consult',
-      url: 'https://ecomconsult.net'
-    }
+
+  // 0.5.6: `text` alone is only right when the language is fixed. Under
+  // --language=auto the visitor's browser decides at mount time, so a ru/ro/en
+  // block built with one line showed e.g. the English attribution on a Russian
+  // banner. `texts` ships the line for every language the block actually
+  // bundles and src/ck-ui-branding.js picks with the resolved code; `text`
+  // stays as the fallback for a language outside the set (and for an older
+  // cached ck-ui.js, which passes no language to the extension at all).
+  const ATTRIBUTION = {
+    ru: 'Сделано в E-COM Consult',
+    ro: 'Realizat de E-COM Consult',
+    en: 'Made by E-COM Consult'
   };
+  const poweredBy = {
+    text: ATTRIBUTION[primaryLang] || ATTRIBUTION.en,
+    url: 'https://ecomconsult.net'
+  };
+  // Only the bundled languages: a block that ships no Romanian has no use for
+  // the Romanian line. A single surviving entry adds nothing over `text`.
+  const texts = {};
+  for (const code of Object.keys(ATTRIBUTION)) {
+    if (requested.includes(code)) texts[code] = ATTRIBUTION[code];
+  }
+  if (Object.keys(texts).length > 1) poweredBy.texts = texts;
+  const branding = { poweredBy };
 
   const config = {
     policyVersion: policy,

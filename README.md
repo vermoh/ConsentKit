@@ -555,6 +555,11 @@ Removing it is a supported, first-class option — no obligation, no nag:
 node tools/build-inline.mjs --langs=en,ru --no-branding   # block without it
 ```
 
+The line is `branding.poweredBy.text`; with `language: 'auto'` supply
+`branding.poweredBy.texts` instead — `{ ru: '…', ro: '…', en: '…' }`, resolved
+against the language the banner actually picked (`texts[lang]` → base code →
+`texts.en` → `text`), so the attribution matches what the visitor is reading.
+
 If you write the config by hand, simply omit the `branding` object; nothing
 renders without it. Either way costs you ~200 bytes, not a licence: the client
 is MIT and the line is yours to drop.

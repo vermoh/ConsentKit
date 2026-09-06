@@ -370,8 +370,12 @@
     return (b && typeof b === 'object') ? b : null;
   }
 
+  /* LANG travels with T: an extension that renders language-dependent text of
+     its own (branding.poweredBy.texts) needs the code the banner resolved to,
+     which only this file knows — the config may say 'auto' and the answer then
+     comes from the visitor's browser at mount time. */
   function extHost() {
-    return { el: el, str: str, T: T };
+    return { el: el, str: str, T: T, lang: LANG };
   }
 
   function buildBrandLogo(cfg) {
@@ -427,6 +431,7 @@
   var mountedSig = null;
   var host = null, root = null;
   var T = DICT.en;
+  var LANG = 'en';             // the code T was built from, reassigned per mount
   var nodes = {};              // banner/panel/fab refs
   var switches = {};           // category -> button
   var panelOpen = false;
@@ -1649,7 +1654,8 @@
     }
 
     var table = localeTable();                       // read at render time
-    T = buildStrings(resolveLang(cfg && cfg.language, table), table);
+    LANG = resolveLang(cfg && cfg.language, table);
+    T = buildStrings(LANG, table);
 
     host = document.getElementById('ck-root');
     if (!host) {

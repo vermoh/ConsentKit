@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.5
- * Дата сборки:      2026-09-05
+ * Версия ConsentKit: 0.5.6
+ * Дата сборки:      2026-09-06
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
@@ -1553,7 +1553,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.5',
+    version: '0.5.6',
     config: config,
 
     init: function (userConfig) {
@@ -2126,6 +2126,34 @@
     return out.join('\n');
   }
 
+  /* Pick the attribution line for the language the banner actually resolved to.
+
+     A SaaS server renders one config per site but cannot know the visitor's
+     language: with `language: 'auto'` the code that decides is ck-ui's
+     resolveLang(), in the browser, long after the config was serialised. So a
+     single `poweredBy.text` produced "Made by E-COM Consult" under a fully
+     Russian banner. `poweredBy.texts` lets the server send every line it has
+     and leaves the choice here, where the resolved language is known.
+
+     host.lang is the code ck-ui resolved ('ru', 'pt-br', ...). It is optional
+     on purpose: a page still running an older cached ck-ui.js passes no lang,
+     and that must degrade to the English/`text` line rather than throw. */
+  function pickPoweredByText(texts, lang, str) {
+    if (!texts || typeof texts !== 'object' || Array.isArray(texts)) return null;
+    var code = (typeof lang === 'string') ? lang.toLowerCase() : '';
+    // Own keys only. ck-ui's resolveLang() can only return a real locale key or
+    // 'en', so 'constructor' never arrives through the normal path — but `host`
+    // is caller-supplied on a published extension entry point, and reading an
+    // inherited key would hand str() a function instead of a missing line.
+    // Values go through str() as well, so anything non-string falls through.
+    function own(k) {
+      return (k && Object.prototype.hasOwnProperty.call(texts, k)) ? str(texts[k]) : null;
+    }
+    var hit = own(code);
+    if (!hit && code.length > 2) hit = own(code.slice(0, 2));          // ru-RU -> ru
+    return hit || own('en');
+  }
+
   /* Powered-by line. true -> localised default; object -> caller's text/url.
      Rendered after the actions in DOM order and styled quiet on purpose. */
   function buildPoweredBy(cfg, host) {
@@ -2139,7 +2167,8 @@
     if (pb === true) {
       text = T.poweredBy;                          // en fallback guaranteed by STR_KEYS
     } else if (typeof pb === 'object' && !Array.isArray(pb)) {
-      text = str(pb.text) || T.poweredBy;
+      // texts[lang] -> texts[base] -> texts.en -> text -> T.poweredBy
+      text = pickPoweredByText(pb.texts, host.lang, str) || str(pb.text) || T.poweredBy;
       url = safeLinkUrl(pb.url);
     } else {
       return null;
@@ -2245,12 +2274,26 @@
      styling, so a config that gains a logo after the first ck:init has to
      rebuild rather than restyle. Returns '-' when there is no branding config,
      which is what keeps an unbranded page's signature stable. */
+  function textsSig(texts) {
+    if (!texts || typeof texts !== 'object' || Array.isArray(texts)) return '-';
+    var keys = [], k;
+    for (k in texts) {
+      if (Object.prototype.hasOwnProperty.call(texts, k) && str(texts[k])) keys.push(k);
+    }
+    keys.sort();
+    var out = [];
+    for (var i = 0; i < keys.length; i++) out.push(keys[i] + '=' + str(texts[keys[i]]));
+    return out.join(',');
+  }
+
   function brandSignature(cfg) {
     var b = brandingCfg(cfg);
     if (!b) return '-';
     var pb = b.poweredBy;
+    // texts is folded in with sorted keys so the signature is stable across key
+    // order — without it a server swapping only `texts` would not remount.
     var pbSig = (pb && typeof pb === 'object')
-      ? 'o:' + String(pb.text || '') + ':' + String(pb.url || '')
+      ? 'o:' + String(pb.text || '') + ':' + String(pb.url || '') + ':' + textsSig(pb.texts)
       : String(!!pb);
     // Logos are hashed by length + head so a long data: URI does not bloat the key.
     function tag(v) {
@@ -2661,8 +2704,12 @@
     return (b && typeof b === 'object') ? b : null;
   }
 
+  /* LANG travels with T: an extension that renders language-dependent text of
+     its own (branding.poweredBy.texts) needs the code the banner resolved to,
+     which only this file knows — the config may say 'auto' and the answer then
+     comes from the visitor's browser at mount time. */
   function extHost() {
-    return { el: el, str: str, T: T };
+    return { el: el, str: str, T: T, lang: LANG };
   }
 
   function buildBrandLogo(cfg) {
@@ -2718,6 +2765,7 @@
   var mountedSig = null;
   var host = null, root = null;
   var T = DICT.en;
+  var LANG = 'en';             // the code T was built from, reassigned per mount
   var nodes = {};              // banner/panel/fab refs
   var switches = {};           // category -> button
   var panelOpen = false;
@@ -3940,7 +3988,8 @@
     }
 
     var table = localeTable();                       // read at render time
-    T = buildStrings(resolveLang(cfg && cfg.language, table), table);
+    LANG = resolveLang(cfg && cfg.language, table);
+    T = buildStrings(LANG, table);
 
     host = document.getElementById('ck-root');
     if (!host) {

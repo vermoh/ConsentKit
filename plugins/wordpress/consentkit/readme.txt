@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.5
+Stable tag: 0.5.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,9 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.6 =
+* Строка «Сделано в …» на языке баннера: сервер может передать `poweredBy.texts` по языкам
 
 = 0.5.5 =
 * Тексты баннера и окна настроек переписаны простым языком (ru, ro, en)

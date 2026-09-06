@@ -127,6 +127,110 @@ test('buildPoweredBy renders a caller-supplied line', () => {
   assert.equal(node.textContent, 'Made by E-COM Consult');
 });
 
+/* ------------------------------------------- poweredBy.texts (0.5.6, per-language)
+
+   The SaaS server renders one config per site and cannot know the visitor's
+   language: with `language: 'auto'` ck-ui resolves it in the browser. A single
+   `text` therefore put "Made by E-COM Consult" under a fully Russian banner.
+   `texts` ships every line and this file picks with the resolved code.
+
+   Order under test: texts[lang] -> texts[base] -> texts.en -> text -> T.poweredBy */
+
+const TEXTS = {
+  ru: 'Сделано в E-COM Consult',
+  ro: 'Realizat de E-COM Consult',
+  en: 'Made by E-COM Consult'
+};
+
+// makeHost() deliberately has no `lang`; pass one where the language matters.
+function hostFor(lang) {
+  const h = makeHost();
+  if (lang != null) h.lang = lang;
+  return h;
+}
+
+function pbText(pb, lang) {
+  const b = loadBranding().window.ConsentKitBranding;
+  const node = b.buildPoweredBy({ branding: { poweredBy: pb } }, hostFor(lang));
+  return node && node.textContent;
+}
+
+test('poweredBy.texts picks the line for the resolved banner language', () => {
+  assert.equal(pbText({ texts: TEXTS, text: 'Made by E-COM Consult' }, 'ru'),
+    'Сделано в E-COM Consult', 'a RU banner must not read the English attribution');
+  assert.equal(pbText({ texts: TEXTS }, 'ro'), 'Realizat de E-COM Consult');
+  assert.equal(pbText({ texts: TEXTS }, 'en'), 'Made by E-COM Consult');
+});
+
+test('poweredBy.texts falls back from a regional code to its base language', () => {
+  // ck-ui resolves 'ru-RU' when the locale pack carries that exact key.
+  assert.equal(pbText({ texts: TEXTS }, 'ru-RU'), 'Сделано в E-COM Consult');
+  assert.equal(pbText({ texts: TEXTS }, 'RU'), 'Сделано в E-COM Consult',
+    'the language code must be matched case-insensitively');
+  // An exact regional key still wins over its base.
+  assert.equal(pbText({ texts: { ru: 'база', 'ru-ru': 'регион' } }, 'ru-RU'), 'регион');
+});
+
+test('a language missing from texts falls back to en, then to text', () => {
+  assert.equal(pbText({ texts: TEXTS }, 'de'), 'Made by E-COM Consult',
+    'an unlisted language must fall back to texts.en');
+  assert.equal(pbText({ texts: { ru: 'Сделано в E-COM Consult' }, text: 'Fallback line' }, 'de'),
+    'Fallback line', 'with no texts.en the flat text must win');
+  assert.equal(pbText({ texts: { ru: 'Сделано в E-COM Consult' } }, 'de'),
+    'Powered by ConsentKit', 'with neither texts.en nor text the host default must win');
+});
+
+test('poweredBy.texts is ignored when the host passes no language', () => {
+  // An older cached ck-ui.js hands over { el, str, T } and no lang: the line
+  // must degrade to en/text rather than throw.
+  assert.equal(pbText({ texts: TEXTS, text: 'Flat' }, null), 'Made by E-COM Consult');
+  assert.equal(pbText({ texts: { ru: 'Сделано в E-COM Consult' }, text: 'Flat' }, null), 'Flat');
+});
+
+test('a non-object texts is ignored and text still renders', () => {
+  for (const bad of ['ru', 42, true, null, ['ru'], () => 'ru']) {
+    assert.equal(pbText({ texts: bad, text: 'Flat line' }, 'ru'), 'Flat line',
+      `texts: ${JSON.stringify(bad)} was not ignored`);
+  }
+});
+
+test('texts values are sanitised exactly like text', () => {
+  // str(): trimmed string or nothing. A blank or non-string value falls through
+  // the chain instead of rendering "undefined" or an untrimmed line.
+  assert.equal(pbText({ texts: { ru: '  Сделано в E-COM Consult  ' } }, 'ru'),
+    'Сделано в E-COM Consult', 'a texts value was not trimmed');
+  assert.equal(pbText({ texts: { ru: '   ', en: 'Made by E-COM Consult' } }, 'ru'),
+    'Made by E-COM Consult', 'a blank texts value must fall through, not render empty');
+  assert.equal(pbText({ texts: { ru: 42, en: 'Made by E-COM Consult' } }, 'ru'),
+    'Made by E-COM Consult', 'a non-string texts value must fall through');
+  assert.equal(pbText({ texts: { ru: { toString: () => 'x' } }, text: 'Flat' }, 'ru'), 'Flat');
+});
+
+test('only own keys of texts are read', () => {
+  // ck-ui's resolveLang() only ever returns a real locale key or 'en', but the
+  // host object is caller-supplied on a published entry point: an inherited key
+  // must read as a missing line, not as Object.prototype's method.
+  for (const code of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    assert.equal(pbText({ texts: { en: 'Made by E-COM Consult' }, text: 'Flat' }, code),
+      'Made by E-COM Consult', `inherited key ${code} was read off texts`);
+  }
+  const inherited = Object.create({ ru: 'Из прототипа' });
+  inherited.en = 'Made by E-COM Consult';
+  assert.equal(pbText({ texts: inherited }, 'ru'), 'Made by E-COM Consult',
+    'a prototype-chain language leaked into the attribution line');
+});
+
+test('poweredBy.texts is part of the mount signature', () => {
+  // Structural: the banner has to remount when the server swaps the lines.
+  const b = loadBranding().window.ConsentKitBranding;
+  const sig = (texts) => b.brandSignature({ branding: { poweredBy: { text: 'T', texts } } });
+  assert.notEqual(sig(TEXTS), sig({ ru: 'Другое' }), 'a texts change did not move the signature');
+  assert.equal(sig({ ru: 'a', en: 'b' }), sig({ en: 'b', ru: 'a' }),
+    'the signature must not depend on key order');
+  assert.equal(sig(undefined), sig('not-an-object'),
+    'an ignored texts must not change the signature');
+});
+
 test('no branding config renders nothing at all', () => {
   const b = loadBranding().window.ConsentKitBranding;
   const host = makeHost();
@@ -179,6 +283,7 @@ function runHooks(extension) {
     function el(t,c,x){ return { tag: t, cls: c, txt: x }; }
     function str(v){ return (typeof v === 'string' && v.trim()) ? v.trim() : null; }
     var T = { poweredBy: 'PB' };
+    var LANG = 'ru';
   ` + UI_SRC.slice(start, end) + `
     globalThis.OUT = {
       logo: buildBrandLogo({ branding: { logo: 'x' } }),
@@ -204,7 +309,7 @@ test('ck-ui.js delegates to the extension when it is present, passing its helper
   const calls = [];
   const out = runHooks({
     buildBrandLogo: (cfg, h) => { calls.push('logo'); return { hasEl: typeof h.el === 'function', hasT: !!h.T }; },
-    buildPoweredBy: (cfg, h) => { calls.push('pb'); return { t: h.T.poweredBy }; },
+    buildPoweredBy: (cfg, h) => { calls.push('pb'); return { t: h.T.poweredBy, lang: h.lang }; },
     buildBrandCss: () => ':host{--ck-logo-h:18px}',
     brandSignature: () => 'SIG',
     css: () => '.ck-brand{}'
@@ -216,6 +321,10 @@ test('ck-ui.js delegates to the extension when it is present, passing its helper
   assert.equal(out.logo.hasEl, true, 'the extension was not handed el()');
   assert.equal(out.logo.hasT, true, 'the extension was not handed the string table');
   assert.equal(out.pb.t, 'PB', 'the extension did not read poweredBy from the host table');
+  // The resolved banner language rides along with T: the extension picks
+  // poweredBy.texts[lang] with it, and only ck-ui.js knows the answer when the
+  // config says language: 'auto'.
+  assert.equal(out.pb.lang, 'ru', 'the extension was not handed the resolved language');
   assert.equal(out.css, '\n.ck-brand{}');
   assert.equal(out.brandCss, ':host{--ck-logo-h:18px}');
   assert.equal(out.sig, 'SIG');
