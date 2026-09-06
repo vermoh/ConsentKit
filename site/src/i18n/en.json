@@ -4,6 +4,7 @@
   "docDesc": "A cookie consent banner you can install in ten minutes. It asks your visitors before any tracker starts. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.",
   "skip": "Skip to main content",
   "navSections": "Sections",
+  "navMenu": "Menu",
   "pageLanguage": "Page language",
   "navDemo": "Demo",
   "navHow": "How it works",

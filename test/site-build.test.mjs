@@ -20,7 +20,7 @@ import {
   readDict, readTemplate, renderPage, renderSitemap, buildAll, outputs,
   pageUrl, jsonForScript, runtimeDict,
   readPages, pageSiblings, lawUrl, lawPath, lawIndexUrl, lawOutputs,
-  renderLawPage, bodyWords, faqJsonLd,
+  renderLawPage, renderLawIndex, bodyWords, faqJsonLd,
   VERSION, BUILD_DATE, updatedText,
   MARQUEE_CARDS, renderMarquee, readClientLocales
 } from '../tools/build-site.mjs';
@@ -1075,10 +1075,10 @@ test('the palette is the V1.14.1 one, and on-accent text reaches AA', () => {
       `styles.css does not set ${token} to ${value}`);
   }
   // §2's own dark-theme values.
-  assert.match(css, /--bg:\s*#171412/i, 'the dark theme is not the §2 warm black');
-  assert.match(css, /--surface:\s*#221E1B/i, 'the dark surface is not §2\'s');
-  assert.match(css, /--ink:\s*#F3EBE0/i, 'the dark ink is not §2\'s');
-  assert.match(css, /--line:\s*#3A332E/i, 'the dark rule colour is not §2\'s');
+  assert.match(css, /--bg:\s*#141414/i, 'the dark theme is not the neutral black (owner, 07.09.2026)');
+  assert.match(css, /--surface:\s*#1F1F1F/i, 'the dark surface is not the neutral one');
+  assert.match(css, /--ink:\s*#F2F2F2/i, 'the dark ink is not the neutral one');
+  assert.match(css, /--line:\s*#333333/i, 'the dark rule colour is not the neutral one');
 
   const lum = (hex) => {
     const c = hex.replace('#', '');
@@ -1100,23 +1100,23 @@ test('the palette is the V1.14.1 one, and on-accent text reaches AA', () => {
   assert.ok(ratio('#FDE1B9', '#B82E2D') >= 4.5,
     'peach on --band must clear AA for normal-size body text');
   assert.ok(ratio('#1E1E1E', '#FFF2E0') >= 4.5);
-  assert.ok(ratio('#6B5A42', '#FFF2E0') >= 4.5, '--ink-soft must clear AA on the cream');
+  assert.ok(ratio('#5A5A5A', '#FFF2E0') >= 4.5, '--ink-soft must clear AA on the cream');
   // The white page and the sand trim the V1.14.1 palette leans on.
   assert.ok(ratio('#1E1E1E', '#FFFFFF') >= 4.5, '--ink must clear AA on the white page');
-  assert.ok(ratio('#6B5A42', '#FFFFFF') >= 4.5, '--ink-soft must clear AA on white');
+  assert.ok(ratio('#5A5A5A', '#FFFFFF') >= 4.5, '--ink-soft must clear AA on white');
   assert.ok(ratio('#1E1E1E', '#F5E7D3') >= 4.5, 'the sand chip needs dark text at AA');
   assert.ok(ratio('#B82E2D', '#FFFFFF') >= 4.5, 'the text red must clear AA on white');
 
   /* Dark theme. The point of the split: the FILL red is the same #D63838 in
      both themes and carries white; the TEXT red lightens, because #D63838 as
-     text on #171412 is 3.90:1 and would fail. A future edit that "simplifies"
+     text on #141414 is 3.9:1 and would fail. A future edit that "simplifies"
      the two into one token breaks one of these two assertions. */
-  assert.ok(ratio('#FF6B6B', '#171412') >= 4.5, 'the dark text red must clear AA');
+  assert.ok(ratio('#FF6B6B', '#141414') >= 4.5, 'the dark text red must clear AA');
   assert.ok(ratio('#FFFFFF', '#D63838') >= 4.5, 'the dark button keeps the light fill pair');
-  assert.ok(ratio('#D63838', '#171412') < 4.5,
+  assert.ok(ratio('#D63838', '#141414') < 4.5,
     'if the fill red ever clears AA as text on the dark ground, the split can be simplified');
-  assert.ok(ratio('#F3EBE0', '#171412') >= 4.5, 'the dark ink must clear AA');
-  assert.ok(ratio('#C6AF8D', '#171412') >= 4.5, 'the dark soft ink must clear AA');
+  assert.ok(ratio('#F2F2F2', '#141414') >= 4.5, 'the dark ink must clear AA');
+  assert.ok(ratio('#B3B3B3', '#141414') >= 4.5, 'the dark soft ink must clear AA');
   // The pills are tinted rather than filled, for exactly this reason.
   assert.ok(ratio('#9B2726', '#FBE3DE') >= 4.5, 'the «до» pill must clear AA');
   assert.ok(ratio('#14603C', '#DDF0E3') >= 4.5, 'the «после» pill must clear AA');
@@ -1375,57 +1375,216 @@ test('nothing on the page manufactures scarcity or invents a testimonial', () =>
    SPEC V1.14.1 — «много по вёрстке поехало, цвета ужасные и негармоничные»
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ------------------------------------------------- §1.1 a one-row header */
+/* ------------------------------------------- §1 the floating capsule menu */
 
-/* The header took two rows at every desktop width because it carried seven
-   nav items, a bordered language control, «Открыть кабинет» and a six-word
-   button. The measured proof that it is now one row lives in the Playwright
-   pass; what a regex suite can guard is the CONTENT budget that makes the one
-   row possible, which is the thing a future edit would quietly break by
-   adding an eighth link or restoring the long label. */
-test('the header is trimmed to the V1.14.1 budget: four nav items, short labels', () => {
+/* Owner, 07.09.2026: «меню как на user-first.studio». V1.14.1 answered a
+   two-row header by TRIMMING it to four nav items; V1.14.3 answers it by
+   moving the site map out of the row entirely. The capsule carries three
+   things — the menu button, the mark, the one red CTA — and all seven section
+   links live in the panel the button opens, so the budget that used to force
+   «Демо», «Что умеет» and «Разработчикам» into the footer is gone.
+
+   The one-row proof and the ≤80px height are MEASURED in the Playwright pass;
+   what a regex suite guards is the structure that makes them possible. */
+test('the header is one capsule of three parts: menu button, mark, one CTA', () => {
   const template = readTemplate();
 
   for (const { code } of LANGS) {
     const dict = readDict(code);
     const html = renderPage(template, code);
-    const nav = html.match(/<nav class="head-nav"[\s\S]*?<\/nav>/)[0];
-
-    const items = nav.match(/<a\b[^>]*href=/g) || [];
-    assert.equal(items.length, 4,
-      `the ${code} header nav has ${items.length} items — §1.1 asks for four`);
-
-    // The four §1.1 names them, and no more.
-    for (const key of ['navHow', 'navPricing', 'navFaq', 'navLaw']) {
-      assert.ok(nav.includes(dict[key]),
-        `the ${code} header nav lost «${dict[key]}»`);
-    }
-    for (const key of ['navDemo', 'navFeatures', 'navDev']) {
-      assert.ok(!nav.includes(dict[key]),
-        `«${dict[key]}» is back in the ${code} header — §1.1 moved it to the footer`);
-    }
-
-    /* The short labels. §1.1 keeps the full «Проверить сайт бесплатно» for the
-       hero and the end of each section, so both keys must exist AND differ —
-       pointing the header at the long one is the regression this catches. */
     const head = html.match(/<header class="site-head">[\s\S]*?<\/header>/)[0];
+    const capsule = head.match(/<div class="capsule">[\s\S]*?<\/div>\s*\n/)[0];
+
+    // 1. A real button with the two attributes a disclosure cannot do without.
+    assert.match(capsule, /<button class="capsule-menu"[^>]*type="button"/,
+      `the ${code} capsule has no real <button> for the menu`);
+    assert.match(capsule, /aria-expanded="/,
+      `the ${code} menu button does not state whether it is open`);
+    assert.match(capsule, /aria-controls="site-menu"/,
+      `the ${code} menu button does not point at the panel it opens`);
+    /* The ACCESSIBLE NAME, not merely the substring: aria-label overrides the
+       visible text, so a button reading «Меню» whose label said «Разделы»
+       would fail WCAG 2.5.3 — a voice-control user says the word they can
+       read, and below 560 (where the span is hidden) the label is the only
+       name the button has. Both must be «Меню». */
+    const btn = capsule.match(/<button class="capsule-menu"[\s\S]*?<\/button>/)[0];
+    const label = btn.match(/aria-label="([^"]*)"/);
+    assert.ok(label, `the ${code} menu button has no aria-label`);
+    assert.equal(label[1], dict.navMenu,
+      `the ${code} menu button is named «${label[1]}», but it reads «${dict.navMenu}»`);
+    const visible = btn.match(/<span[^>]*>([^<]*)<\/span>/);
+    assert.ok(visible && visible[1] === dict.navMenu,
+      `the ${code} menu button does not show «${dict.navMenu}»`);
+
+    // 2. The mark, linking back to the top.
+    assert.match(capsule, /<a class="capsule-brand" href="#main"/,
+      `the ${code} capsule has no mark linking to the top`);
+    assert.ok(capsule.includes('ConsentKit'),
+      `the ${code} capsule does not carry the name`);
+
+    // 3. The one red CTA, still pointing at #check with the SHORT label.
+    assert.match(capsule, /class="btn[^"]*btn--primary[^"]*capsule-cta"[^>]*href="#check"/,
+      `the ${code} capsule has no red check button`);
     assert.ok(dict.ctaCheckShort && dict.ctaCheckShort.trim(),
       `${code}.json has no "ctaCheckShort"`);
-    assert.ok(dict.ctaCabinetShort && dict.ctaCabinetShort.trim(),
-      `${code}.json has no "ctaCabinetShort"`);
-    assert.ok(head.includes(dict.ctaCheckShort),
-      `the ${code} header does not use the short check label`);
+    assert.ok(capsule.includes(dict.ctaCheckShort),
+      `the ${code} capsule does not use the short check label`);
     assert.ok(dict.ctaCheckShort.length < dict.ctaCheck.length,
       `${code}'s "ctaCheckShort" is not shorter than "ctaCheck"`);
 
-    // The hero keeps the full one — the short label must not leak downward.
+    // …and nothing else. The nav and the languages are NOT in the capsule —
+    // putting either back is exactly the regression that cost the header its
+    // single row twice already.
+    assert.ok(!/<nav\b/.test(capsule),
+      `the ${code} capsule has a nav in it again — the links belong in the panel`);
+    assert.ok(!/lang-switch/.test(capsule),
+      `the ${code} capsule has the language switch in it again`);
+
+    // The hero keeps the full label — the short one must not leak downward.
     const hero = html.match(/<section class="hero">[\s\S]*?<\/section>/)[0];
     assert.ok(hero.includes(dict.ctaCheck),
       `the ${code} hero lost the full «Проверить сайт бесплатно»`);
   }
+});
 
-  /* And the languages: three bare letters, not a bordered segmented control
-     whose current item was a red plate. */
+test('the panel carries all seven section links, the languages and «Кабинет»', () => {
+  const template = readTemplate();
+
+  for (const { code, dir } of LANGS) {
+    const dict = readDict(code);
+    const html = renderPage(template, code);
+    const panel = html.match(/<div class="menu-panel" id="site-menu">[\s\S]*?\n  <\/div>/)[0];
+    const nav = panel.match(/<nav class="head-nav"[\s\S]*?<\/nav>/)[0];
+
+    const items = nav.match(/<a\b[^>]*href=/g) || [];
+    assert.equal(items.length, 7,
+      `the ${code} menu has ${items.length} section links — the panel holds all seven`);
+
+    /* All seven by name, INCLUDING the three V1.14.1 had to evict. The panel
+       has room for them, which was the whole point of the capsule. */
+    for (const key of ['navHow', 'navDemo', 'navFeatures', 'navPricing',
+                       'navFaq', 'navLaw', 'navDev']) {
+      assert.ok(nav.includes(dict[key]),
+        `the ${code} menu lost «${dict[key]}»`);
+    }
+
+    // «Правила» still points at this language's own hub, not the English one.
+    const want = (dir ? '/' + dir : '') + '/law';
+    assert.ok(nav.includes(`href="${want}"`),
+      `the ${code} menu points at the wrong «Правила» hub`);
+
+    /* The language switch moved INTO the panel, and each language is still a
+       real link to its own URL — crawlable, and working without JavaScript. */
+    assert.match(panel, /<div class="lang-switch" role="group"/,
+      `the ${code} menu has no language switch`);
+    const langs = panel.match(/<a class="lang-btn"[^>]*href="[^"]+"/g) || [];
+    assert.equal(langs.length, LANGS.length,
+      `the ${code} menu offers ${langs.length} languages, not ${LANGS.length}`);
+    assert.ok(!/<button class="lang-btn"/.test(panel),
+      `the ${code} language switch is buttons again — each language is a URL`);
+
+    /* «Кабинет» as an outlined button, not the page's second PRIMARY one:
+       §2.4 allows exactly one, and the capsule's red check button is it. */
+    assert.match(panel, /class="head-link"[^>]*href="https:\/\/app\.ecomconsult\.net"/,
+      `the ${code} menu has no «Кабинет» button`);
+    assert.ok(panel.includes(dict.ctaCabinetShort),
+      `the ${code} menu's dashboard door is not labelled «${dict.ctaCabinetShort}»`);
+    assert.ok(!/class="btn[^"]*"[^>]*href="https:\/\/app\.ecomconsult\.net"/.test(panel)
+      && !/href="https:\/\/app\.ecomconsult\.net"[^>]*class="btn[^"]*"/.test(panel),
+      `the ${code} menu renders the dashboard as a .btn — §2.4 allows one primary`);
+  }
+});
+
+/* The no-JS contract. The panel is authored OPEN and closed by script before
+   the first paint, so a visitor without JavaScript sees every link sitting
+   under the capsule and can use all of them. `hidden` in the BUILT HTML would
+   mean the opposite: a menu that only opens if a script runs. */
+test('the panel is closed by JS only — no `hidden` in the built HTML', () => {
+  const template = readTemplate();
+  const pages = [];
+  for (const { code } of LANGS) {
+    pages.push([`${code} home`, renderPage(template, code)]);
+    // The law pages slice the same header, so they inherit the same contract.
+    pages.push([`${code}/law`, renderLawIndex(template, code)]);
+    pages.push([`${code}/law/<article>`, renderLawPage(template, code, readPages(code)[0])]);
+  }
+
+  for (const [where, html] of pages) {
+    const head = html.match(/<header class="site-head">[\s\S]*?<\/header>/)[0];
+    /* The `hidden` ATTRIBUTE, not the word: `aria-hidden` on the decorative
+       SVGs is correct and must not trip this. */
+    assert.ok(!/(^|[\s"'])hidden(\s|>|=|$)/.test(head),
+      `${where} ships the menu panel hidden — without JS its links would be unreachable`);
+    assert.match(head, /<div class="menu-panel" id="site-menu">/,
+      `${where} has no menu panel at all`);
+    assert.match(head, /aria-expanded="true"/,
+      `${where} authors the menu closed; without JS that is a lie about its state`);
+
+    /* And the script that closes it travels WITH the header slice, so the law
+       pages get it too and nobody sees a flash of an open menu. */
+    const afterHead = html.slice(html.indexOf('</header>'));
+    assert.match(afterHead.slice(0, 900), /\.capsule-menu[\s\S]*?hidden\s*=\s*true/,
+      `${where} has no inline script closing the panel before first paint`);
+    assert.match(afterHead.slice(0, 900), /aria-expanded['"]\s*,\s*['"]false/,
+      `${where}'s inline script does not correct aria-expanded when it closes the panel`);
+  }
+});
+
+/* The capsule is a dark pill on a light page, so its ink CANNOT come from the
+   page's --ink / --ink-soft: in the light theme those are dark brown, and dark
+   brown on #1E1E1E is unreadable. This guards the tokens that keep it legible
+   — the single most likely regression when someone next tidies the CSS. */
+test('the capsule inks itself from its own tokens, in both themes', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  const capsule = css.match(/^\.capsule \{[\s\S]*?^\}/m)[0];
+  assert.match(capsule, /background:\s*var\(--capsule-bg\)/,
+    'the capsule does not paint itself with --capsule-bg');
+  assert.match(capsule, /color:\s*var\(--capsule-ink\)/,
+    'the capsule does not ink itself with --capsule-ink');
+  assert.match(capsule, /border-radius:\s*16px/, '§1 asks the capsule to round at 16px');
+  assert.match(capsule, /flex-wrap:\s*nowrap/,
+    'the capsule may wrap onto a second row — §1 asks for one row');
+
+  // Light values, then the dark override, both present.
+  assert.match(css, /--capsule-bg:\s*#1E1E1E/, 'the light capsule is not §2\'s #1E1E1E');
+  assert.match(css, /--capsule-ink:\s*#FFF2E0/, 'the capsule text is not §2\'s cream');
+  assert.match(css, /--capsule-bg:\s*#1F1F1F/,
+    'the dark theme has no #1F1F1F capsule — it would stay light-theme black');
+
+  // Nothing inside the capsule or the panel may borrow the PAGE's ink.
+  for (const sel of ['.capsule-menu', '.capsule-brand', '.head-nav a', '.head-link']) {
+    const rule = css.match(new RegExp('^' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\{[\\s\\S]*?^\\}', 'm'));
+    assert.ok(rule, `${sel} has no rule of its own`);
+    assert.ok(!/color:\s*var\(--ink(-soft)?\)/.test(rule[0]),
+      `${sel} inks itself from the page's --ink — brown on a dark capsule`);
+  }
+
+  /* The panel drops from the capsule: same surface, same radius, 12px below. */
+  const panel = css.match(/^\.menu-panel \{[\s\S]*?^\}/m)[0];
+  assert.match(panel, /background:\s*var\(--capsule-bg\)/,
+    'the panel is not the capsule\'s surface');
+  assert.match(panel, /margin:\s*12px auto 0/, '§2 asks the panel to sit 12px below');
+
+  /* The old width rules that hid nav items are gone. Inside the panel the nav
+     wraps freely, and hiding «Демо» below 1440 (as the bar's CSS did) would
+     empty the menu of a link the capsule no longer carries either. */
+  assert.ok(!/\.head-nav\s*\{\s*display:\s*none/.test(css),
+    'the nav is hidden at some width again — in the panel it must always show');
+  assert.ok(!/\.head-nav a\[href="#demo"\]\s*\{\s*display:\s*none/.test(css),
+    '«Демо» is hidden again — that rule belonged to the old one-row bar');
+  assert.ok(!/\.head-link\s*\{\s*display:\s*none/.test(css),
+    '«Кабинет» is hidden at some width again — the panel has room for it');
+
+  /* Anchor targets clear the floating capsule, or a menu link scrolls the
+     heading it points at exactly under the pill. */
+  assert.match(css, /scroll-margin-top:\s*\d+px/,
+    'no scroll-margin-top: the capsule would cover every section heading it scrolls to');
+});
+
+/* The languages: still three bare letters, not a bordered segmented control
+   whose current item was a red plate. */
+test('the current language is stated by weight, not by a red plate', () => {
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
   const langBtn = css.match(/\.lang-btn\[aria-pressed="true"\] \{[\s\S]*?\}/)[0];
   assert.ok(!/var\(--accent\)/.test(langBtn),
@@ -1524,7 +1683,7 @@ test('§1.2: the demo window is a white page with sand chrome in both themes', (
   // site, not ours, so it stays white.
   const darkWin = css.match(/@media \(prefers-color-scheme: dark\) \{\s*\.demo-win \{[\s\S]*?\n  \}/);
   assert.ok(darkWin, 'the demo window has no dark-theme chrome');
-  assert.match(darkWin[0], /--win-chrome:\s*#2A2521/i,
+  assert.match(darkWin[0], /--win-chrome:\s*#262626/i,
     '§1.2: in the dark theme the chrome is a dark surface');
   assert.ok(!/--shot-paper/.test(darkWin[0]),
     'the depicted page must stay white in the dark theme');

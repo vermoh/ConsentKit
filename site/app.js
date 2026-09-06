@@ -1475,9 +1475,88 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
+     The capsule menu (SPEC V1.14.3 §1)
+
+     A disclosure, not a dialog: the panel drops from the capsule and the page
+     behind it stays usable, so it does not trap focus and does not lock the
+     scroll. What it does owe the visitor is the four things a disclosure
+     always owes — the button states its own state, Esc closes it, a click
+     outside closes it, and focus goes into the panel on open and comes back
+     to the button on close.
+
+     The panel is authored OPEN in the template and closed by an inline script
+     before first paint (see index.template.html): that is what keeps every
+     link reachable with JavaScript switched off. Everything here is the
+     enhancement on top, and it starts from whatever state that script left.
+     ══════════════════════════════════════════════════════════════════ */
+
+  function wireMenu() {
+    var btn = $('.capsule-menu');
+    var panel = document.getElementById('site-menu');
+    // The law pages carry the same header, so this is never absent there —
+    // but app.js is also loaded by pages under construction, and a missing
+    // panel must not throw before loadPricing() below ever runs.
+    if (!btn || !panel) return;
+
+    function isOpen() { return btn.getAttribute('aria-expanded') === 'true'; }
+
+    function open() {
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      // Into the panel, onto the first link — not onto the panel itself,
+      // which would need a tabindex and would announce nothing.
+      var first = panel.querySelector('a[href], button:not([disabled])');
+      if (first) first.focus();
+    }
+
+    function close(refocus) {
+      if (!isOpen()) return;
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      // Only when the close was the visitor's doing — after following a link
+      // the focus belongs where the link sent it, not back on the button.
+      if (refocus) btn.focus();
+    }
+
+    btn.addEventListener('click', function () {
+      if (isOpen()) close(true); else open();
+    });
+
+    // Esc from anywhere inside, and from the button itself.
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.key === 'Esc') close(true);
+    });
+
+    // Outside click. `contains` covers the capsule too, so clicking the
+    // button does not close-then-reopen through this handler.
+    document.addEventListener('click', function (e) {
+      if (!isOpen()) return;
+      if (panel.contains(e.target) || btn.contains(e.target)) return;
+      close(false);
+    });
+
+    // After choosing a link. The language links are real navigations and the
+    // page is replaced anyway; the #anchors are not, and leaving the panel
+    // open over the section it just scrolled to is the bug this closes.
+    panel.addEventListener('click', function (e) {
+      var a = e.target.closest ? e.target.closest('a[href]') : null;
+      if (a) close(false);
+    });
+
+    // Focus leaving the panel by Tab closes it: the disclosure has done its
+    // job once the visitor has tabbed past the last link.
+    document.addEventListener('focusin', function (e) {
+      if (!isOpen()) return;
+      if (panel.contains(e.target) || btn.contains(e.target)) return;
+      close(false);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
      Boot
      ══════════════════════════════════════════════════════════════════ */
 
+  wireMenu();
   wireDemo();
   wireBeforeAfter();
 
