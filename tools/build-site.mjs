@@ -453,9 +453,15 @@ export function renderLawPage(template, lang, page) {
 
   /* A nav item on the home page is an in-page #anchor; from /law/<slug> the
      same href has to travel back to the home page first, or «Тарифы» scrolls
-     the article to a section it does not have. */
-  const nav = head.replace(/href="#([a-z-]+)"/g, (m, id) =>
+     the article to a section it does not have.
+
+     SPEC V1.14.1 §1.1 moved «Демо», «Что умеет» and «Разработчикам» out of
+     the header and into the FOOTER, where they are authored as the same bare
+     anchors — so the footer needs the same rewrite the nav has always had. */
+  const homeAnchors = (html) => html.replace(/href="#([a-z-]+)"/g, (m, id) =>
     'href="' + escapeAttr(pagePath(entry.dir)) + '#' + id + '"');
+  const nav = homeAnchors(head);
+  const footNav = homeAnchors(foot);
 
   const body = renderBody(page.body, lang);
 
@@ -505,7 +511,7 @@ export function renderLawPage(template, lang, page) {
     '  </section>',
     '</main>',
     '',
-    foot,
+    footNav,
     '',
     '<script>window.__CK_SITE_I18N=' + jsonForScript(runtimeDict(dict)) + ';</script>',
     '<script src="/app.js"></script>',
@@ -539,8 +545,12 @@ export function renderLawIndex(template, lang) {
   const foot = applyDict(slice(template, 'FOOTER'), dict, lang)
     .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
-  const nav = head.replace(/href="#([a-z-]+)"/g, (m, id) =>
+  /* Same rewrite as the article pages, header and footer alike — see the
+     comment in renderLawPage. */
+  const homeAnchors = (html) => html.replace(/href="#([a-z-]+)"/g, (m, id) =>
     'href="' + escapeAttr(pagePath(entry.dir)) + '#' + id + '"');
+  const nav = homeAnchors(head);
+  const footNav = homeAnchors(foot);
 
   const cards = pages.map((p) =>
     '        <article class="card">\n' +
@@ -596,7 +606,7 @@ export function renderLawIndex(template, lang) {
     '  </section>',
     '</main>',
     '',
-    foot,
+    footNav,
     '',
     '<script>window.__CK_SITE_I18N=' + jsonForScript(runtimeDict(dict)) + ';</script>',
     '<script src="/app.js"></script>',

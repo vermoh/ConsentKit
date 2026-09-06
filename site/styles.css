@@ -17,19 +17,38 @@
        #FFFFFF on #D63838 = 4.69.
      · #B82E2D is the band, so the peach §2.6 asks for is legal at body size:
        #FDE1B9 on #B82E2D = 4.80.
-   Every pair below is annotated with its measured ratio. */
+   Every pair below is annotated with its measured ratio.
+
+   ── V1.14.1 §2: «красный редко» ─────────────────────────────────────────
+   The owner's verdict on V1.14 was that the colours were loud and out of
+   tune. The palette is unchanged; the DOSAGE is what V1.14.1 rewrites.
+     · The page background is WHITE. Cream is the hero and «Цифры», nothing
+       else, so the page reads белый → крем → белый → красная полоса →
+       белый → крем → белый rather than three warm tones in a row.
+     · Sand is no longer a background for whole sections. It is trim: rules,
+       chips, the pricing highlight column, the panels inside the demo window.
+     · Red survives in exactly three places — the primary button, the one
+       accented word in the h1, and the check band (≥768 only). Everything
+       else that used to be red is now black, dark grey or sand.
+   Because red is now scarce, the fill role and the text role must never
+   swap: --accent is a FILL that carries white text, --accent-ink is TEXT
+   that sits on a light background. In dark mode the button keeps the same
+   #D63838 fill (white on it = 4.69) while the text red lightens to #FF6B6B
+   (6.61:1 on #171412) — using #D63838 as text on the dark ground would be
+   3.9:1 and fail. */
 
 :root {
-  --bg:         #FFF2E0;  /* cream */
+  --bg:         #FFFFFF;  /* §2: the page is white */
+  --cream:      #FFF2E0;  /* hero and «Цифры» only */
   --surface:    #FFFFFF;  /* cards */
-  --surface-2:  #F5E7D3;  /* sand — second surface, «Цифры» band */
-  --bg-band:    #F5E7D3;  /* kept: existing rules paint bands with it */
-  --ink:        #1E1E1E;  /* 15.11:1 on --bg, 16.67:1 on --surface */
-  --ink-soft:   #6B5A42;  /* 6.01:1 on --bg, 5.45:1 on --surface-2 */
+  --surface-2:  #F5E7D3;  /* sand — trim, panels, the highlighted plan column */
+  --bg-band:    #FFFFFF;  /* .band is no longer a tint; see the .band rule */
+  --ink:        #1E1E1E;  /* 16.67:1 on --bg, 15.11:1 on --cream */
+  --ink-soft:   #6B5A42;  /* 6.63:1 on --bg, 6.01:1 on --cream, 5.45:1 on sand */
   --line:       #C6AF8D;  /* beige rule */
   --line-soft:  #E7D6BC;
-  --accent:     #D63838;  /* fill under normal text: #FFFFFF on it = 4.69:1 */
-  --accent-ink: #B82E2D;  /* link/hover text: 5.49:1 on --bg, 6.06:1 on white */
+  --accent:     #D63838;  /* FILL under normal text: #FFFFFF on it = 4.69:1 */
+  --accent-ink: #B82E2D;  /* TEXT red: 6.06:1 on white, 5.49:1 on cream */
   --accent-deco:#E63939;  /* §1 brand red — decoration and the banner only */
   --on-accent:  #FFFFFF;  /* 4.69:1 on --accent */
   --band:       #B82E2D;  /* «Проверьте свой сайт» full-width red */
@@ -53,20 +72,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:         #161311;  /* warm black */
-    --surface:    #1F1B18;
-    --surface-2:  #221D19;
-    --bg-band:    #1F1B18;
-    --ink:        #FFF2E0;  /* 16.76:1 on --bg, 15.49:1 on --surface */
-    --ink-soft:   #C6AF8D;  /* 8.74:1 on --bg, 8.07:1 on --surface */
-    --line:       #3A322B;
+    /* §2's own dark values. The «cream» role becomes the surface tone: a
+       cream band on a dark page would be a white slab, so the hero and
+       «Цифры» take a lifted dark surface instead and the rhythm survives as
+       a change of value rather than of hue. */
+    --bg:         #171412;  /* warm black */
+    --cream:      #201C19;  /* the hero / «Цифры» lift, dark-mode equivalent */
+    --surface:    #221E1B;
+    --surface-2:  #2A2521;  /* sand's dark stand-in: trim and panels */
+    --bg-band:    #171412;
+    --ink:        #F3EBE0;  /* 15.52:1 on --bg, 14.00:1 on --surface */
+    --ink-soft:   #C6AF8D;  /* 8.66:1 on --bg, 7.81:1 on --surface */
+    --line:       #3A332E;
     --line-soft:  #2A241F;
-    /* Light-on-dark needs a lighter red: #D63838 as TEXT on #161311 is only
-       3.95:1. #FF6B6B reaches 6.67:1 and still reads as the same red. */
-    --accent:     #FF6B6B;
-    --accent-ink: #FF8F8F;
+    /* The split matters most here. The BUTTON keeps the light theme's fill —
+       §2 asks for «#D63838 + белый», and white on it is 4.69:1 in any theme.
+       The TEXT red has to lighten: #D63838 as text on #171412 is 3.90:1,
+       #FF6B6B is 6.61:1 and still reads as the same red. */
+    --accent:     #D63838;
+    --accent-ink: #FF6B6B;
     --accent-deco:#E63939;
-    --on-accent:  #1E1E1E;  /* 6.01:1 on --accent */
+    --on-accent:  #FFFFFF;  /* 4.69:1 on --accent */
     --band:       #B82E2D;  /* the band keeps its red in both themes */
     --on-band:    #FDE1B9;  /* 4.80:1 */
     --on-band-strong: #FFFFFF;
@@ -165,6 +191,11 @@ body {
 #faq .wrap--narrow > * { max-width: 780px; margin-right: auto; }
 
 section { padding: 72px 0; }
+/* V1.14.1 §2. `.band` used to paint every marked section sand, which is how
+   five sections in a row ended up warm and the page lost its rhythm. The
+   class stays — it marks the sections that are allowed a background at all —
+   but its default is now the page's own white. The two sections that really
+   are coloured say so themselves: `.check-band` (red) and `.band--cream`. */
 .band { background: var(--bg-band); }
 
 h1, h2, h3 { line-height: 1.22; margin: 0 0 .5em; letter-spacing: -0.01em; }
@@ -173,8 +204,11 @@ h2 { font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2.05rem); margin-bottom: .6em; }
 h3 { font-size: 1.06rem; }
 p  { margin: 0 0 1em; }
 
-a { color: var(--accent-ink); }
-@media (prefers-color-scheme: dark) { a { color: var(--accent); } }
+/* §2: «Ссылки в тексте: тёмные с подчёркиванием, hover — красный.» Red was
+   doing the work of "this is a link" all over the page; underline does that
+   job without spending the accent, which is now reserved for three things. */
+a { color: var(--ink); text-decoration: underline; }
+a:hover { color: var(--accent-ink); }
 
 .section-lede {
   max-width: 62ch;
@@ -189,18 +223,37 @@ a { color: var(--accent-ink); }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  /* Cream, because the header's resting place is on top of the cream hero;
+     as the page scrolls under it the blur keeps it legible over white too.
+     §2's dark theme asks for a dark SURFACE here rather than pure black. */
+  background: color-mix(in srgb, var(--cream) 92%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-@supports not (backdrop-filter: blur(8px)) { .site-head { background: var(--bg); } }
+@supports not (backdrop-filter: blur(8px)) { .site-head { background: var(--cream); } }
+@media (prefers-color-scheme: dark) {
+  .site-head { background: color-mix(in srgb, var(--surface) 92%, transparent); }
+  @supports not (backdrop-filter: blur(8px)) { .site-head { background: var(--surface); } }
+}
 
+/* V1.14.1 §1.1: ONE row from 1024 up. The row still wraps — a phone needs it
+   to — but from 1024 the content is trimmed to fit rather than the row being
+   forced with `nowrap`, which would only trade a second row for a sideways
+   scroll. The trimming is: four nav items instead of seven, a short CTA
+   label, «Кабинет» as one word, and a language switcher of three bare
+   letters. Measured at 1024 the row is one line with room to spare. */
 .head-row {
   display: flex;
   align-items: center;
   gap: 20px;
   min-height: 62px;
   flex-wrap: wrap;
+}
+@media (min-width: 1024px) {
+  .head-row { gap: 18px; }
+  /* The nav is the one flexible item: if a translation is unexpectedly long
+     it gives up its gap before the row gives up its single line. */
+  .head-nav { gap: clamp(12px, 1.4vw, 20px); }
 }
 
 .brand {
@@ -213,7 +266,9 @@ a { color: var(--accent-ink); }
   text-decoration: none;
   letter-spacing: -0.01em;
 }
-.brand-mark { color: var(--accent); flex: none; }
+/* §3 counts the red elements in the first screen and allows three. The shield
+   was a fourth. It is the logo, not a call to action, so it goes dark. */
+.brand-mark { color: var(--ink); flex: none; }
 
 .head-nav { display: flex; gap: 20px; margin-left: auto; flex-wrap: wrap; }
 .head-nav a {
@@ -221,16 +276,22 @@ a { color: var(--accent-ink); }
   text-decoration: none;
   font-size: .93rem;
   padding: 4px 0;
+  white-space: nowrap;
 }
 .head-nav a:hover { color: var(--ink); text-decoration: underline; }
 
 .head-actions { display: flex; align-items: center; gap: 12px; }
 
+/* §1.1: «языки компактно … три буквы без рамок». The bordered segmented
+   control was ~112px of chrome for three two-letter words, and the current
+   language inside it was a red plate — a fifth red in the first screen. What
+   is left is three letters, the current one simply dark and bold. The links
+   stay real links (each language is its own URL), so this is a change of
+   dress only: crawlable and working without JavaScript, as before. */
 .lang-switch {
   display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
+  align-items: center;
+  gap: 2px;
 }
 .lang-btn {
   appearance: none;
@@ -240,11 +301,22 @@ a { color: var(--accent-ink); }
   font: inherit;
   font-size: .82rem;
   font-weight: 600;
-  padding: 6px 11px;
+  padding: 6px 6px;
+  border-radius: 6px;
+  text-decoration: none;
   cursor: pointer;
 }
-.lang-btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-.lang-btn:not([aria-pressed="true"]):hover { color: var(--ink); }
+/* The current language is stated by weight and ink, not by a filled plate. */
+.lang-btn[aria-pressed="true"] {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lang-btn:not([aria-pressed="true"]):hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
 
 /* ── buttons ────────────────────────────────────────────────────────── */
 
@@ -266,17 +338,27 @@ a { color: var(--accent-ink); }
 .btn:active { transform: translateY(1px); }
 .btn--sm { padding: 8px 15px; font-size: .9rem; }
 
+/* The one red fill on the page, and the reason every other control below is
+   monochrome: if two things are red, neither is the call to action. */
 .btn--primary { background: var(--accent); color: var(--on-accent); }
-.btn--primary:hover { background: var(--accent-ink); }
-@media (prefers-color-scheme: dark) { .btn--primary:hover { background: var(--accent-ink); } }
+.btn--primary:hover { background: #B82E2D; }
 
-.btn--ghost { background: transparent; color: var(--ink); border-color: var(--line); }
-.btn--ghost:hover { border-color: var(--accent); color: var(--accent-ink); }
-@media (prefers-color-scheme: dark) { .btn--ghost:hover { color: var(--accent); } }
+/* §2: «Вторичные кнопки: белая заливка, обводка #1E1E1E 1px, тёмный текст;
+   hover — песочная заливка.» The old ghost went red on hover, which put a
+   second red beside the primary button in the hero the moment a mouse moved
+   across it. */
+.btn--ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.btn--ghost:hover { background: var(--surface-2); color: var(--ink); border-color: var(--ink); }
 
 /* ── hero ───────────────────────────────────────────────────────────── */
 
-.hero { padding: 76px 0 68px; }
+/* §2's rhythm starts here: the hero is one of exactly two cream sections on
+   the page (the other is «Цифры»). Everything between them is white. */
+.hero { padding: 76px 0 68px; background: var(--cream); }
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
@@ -566,6 +648,12 @@ a { color: var(--accent-ink); }
   background: var(--bg-band);
   border: 1px solid var(--line-soft);
 }
+/* The four step illustrations keep their red. They DEPICT the product — a
+   banner with its accent button, a dashboard toggle — in the same sense the
+   hero replica and the marquee cards do, and §2's ration governs this page's
+   own chrome rather than pictures of the thing being sold. They also sit in
+   «Как это работает», four screens below the fold, so they are outside the
+   first-screen count §3 actually specifies. */
 .art-card    { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
 .art-field,
 .art-preview { fill: var(--bg-band); stroke: var(--line); stroke-width: 1.5; }
@@ -692,8 +780,9 @@ a { color: var(--accent-ink); }
   margin: 0 0 8px;
   padding: 2px 10px;
   border-radius: 99px;
-  background: var(--accent);
-  color: var(--on-accent);
+  /* §2: «бейдж "Чаще всего берут" — чёрный с белым текстом». */
+  background: var(--ink);
+  color: var(--bg);
   font-size: .74rem;
   font-weight: 700;
   letter-spacing: .02em;
@@ -722,17 +811,19 @@ a { color: var(--accent-ink); }
 
 /* Painted on the cells rather than a <col>: a colgroup renders a background
    but drops borders, and the highlight has to read as one bounded column. */
+/* §2: «выделенная колонка — песочный фон и тёмная рамка 1px». Sand now
+   means something, because it is no longer the background of half the page. */
 .plan-table .is-featured {
-  background: var(--bg-band);
-  border-left: 2px solid var(--accent);
-  border-right: 2px solid var(--accent);
+  background: var(--surface-2);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--ink);
 }
 .plan-table thead .is-featured {
-  border-top: 2px solid var(--accent);
+  border-top: 1px solid var(--ink);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 .plan-table tfoot .is-featured {
-  border-bottom: 2px solid var(--accent);
+  border-bottom: 1px solid var(--ink);
   border-radius: 0 0 var(--radius) var(--radius);
 }
 
@@ -1071,7 +1162,7 @@ img { max-width: 100%; height: auto; }
   color: inherit;
   text-decoration: none;
 }
-.tiles a:hover { border-color: var(--accent); }
+.tiles a:hover { border-color: var(--ink); }
 .tile__title { font-weight: 650; }
 .tile__text { font-size: .9rem; color: var(--ink-soft); }
 
@@ -1099,13 +1190,58 @@ img { max-width: 100%; height: auto; }
 .demo-stage { margin: 22px 0 18px; }
 .shot-frame--lg { max-width: none; }
 
-/* The window is now the whole demo: dots, toolbar, page, state strip. Its
-   chrome stays deliberately light in both themes — the frame is a picture of
-   somebody else's browser, and a frame that follows the reader's own dark mode
-   stops reading as one. That means the controls inside it cannot use the page
-   tokens either, or a dark-mode reader gets dark selects on a white window;
-   the toolbar therefore pins its own light values below. */
-.demo-win { display: flex; flex-direction: column; }
+/* V1.14.1 §1.2. The defect: the window had no page surface of its own, so
+   the fake page's grey blocks hung directly on the section's background and
+   the whole thing stopped reading as a window at all.
+
+   The fix separates the two things the window is made of:
+     · the PAGE — always white, in both themes, because it depicts somebody
+       else's website and a page that followed the reader's dark mode would
+       stop looking like a screenshot of somewhere else;
+     · the CHROME — the toolbar above it and the status strip below it, which
+       belong to OUR interface, not to the depicted site. §1.2 puts those on
+       sand in the light theme and on a dark surface in the dark one.
+   The chrome colours therefore come from three window-scoped custom
+   properties, redeclared once for dark mode, instead of the hardcoded
+   blue-greys that used to sit here and matched neither palette. */
+.demo-win {
+  display: flex;
+  flex-direction: column;
+  /* the window's own page surface — white in both themes */
+  background: #FFFFFF;
+  /* .demo-win is a .shot-frame but was never in the `.hero-shot, .shot`
+     selector that DECLARES the --shot-* group, so .shot-frame's
+     `background: var(--shot-paper)` and .shot-bar's chrome both resolved to
+     nothing here — which is precisely why the window had no surface. The
+     group is declared for the window too; the title-bar dots take the same
+     sand chrome as the toolbar directly beneath them. */
+  --shot-paper:      #FFFFFF;
+  --shot-paper-line: #E6D9C4;
+  --shot-skeleton:   #EDE2D2;
+  --shot-skeleton-2: #DFD1BC;
+  --shot-chrome:     #F5E7D3;
+  --shot-chrome-line:#E2D2B8;
+  --win-chrome:      #F5E7D3;  /* sand toolbar / status strip */
+  --win-chrome-line: #E2D2B8;
+  --win-ink:         #1E1E1E;  /* 13.70:1 on the sand */
+  --win-ink-soft:    #6B5A42;  /* 5.45:1 on the sand */
+  --win-field:       #FFFFFF;
+  --win-field-line:  #C6AF8D;
+}
+@media (prefers-color-scheme: dark) {
+  .demo-win {
+    /* The dots strip is chrome, so it follows the theme with the toolbar;
+       the paper stays white, because the page it depicts is not ours. */
+    --shot-chrome:     #2A2521;
+    --shot-chrome-line:#3A332E;
+    --win-chrome:      #2A2521;
+    --win-chrome-line: #3A332E;
+    --win-ink:         #F3EBE0;  /* 12.63:1 on #2A2521 */
+    --win-ink-soft:    #C6AF8D;  /* 7.05:1 on #2A2521 */
+    --win-field:       #171412;
+    --win-field-line:  #4A423B;
+  }
+}
 
 /* One row of controls that wraps, not three stacked ones: the four selects
    share a flexible track, the swatches and the button ride at the end of the
@@ -1117,8 +1253,8 @@ img { max-width: 100%; height: auto; }
   align-items: end;
   gap: 12px 16px;
   padding: 14px 16px;
-  background: #f7f9fc;
-  border-bottom: 1px solid #e4e8f1;
+  background: var(--win-chrome);
+  border-bottom: 1px solid var(--win-chrome-line);
 }
 .demo-tools .panel-grid {
   flex: 1 1 520px;
@@ -1147,35 +1283,44 @@ img { max-width: 100%; height: auto; }
   .demo-tools .panel-hint { display: none; }
 }
 
-/* Light-locked control chrome, for the reason in the .demo-win comment.
-   The hint belongs in this group: it sits on the same light toolbar, so
-   leaving it on --ink-soft made it the warm beige of the DARK theme against
-   a light strip — 2.01:1. Locked to the same slate as the field labels. */
+/* The controls take the window's chrome tokens rather than the page's. They
+   sit on the toolbar, which is sand in one theme and a dark surface in the
+   other, so neither the page's --ink nor a hardcoded slate is right for both. */
 .demo-tools .field label,
 .demo-tools .field__label,
-.demo-tools .panel-hint { color: #55607a; }
+.demo-tools .panel-hint { color: var(--win-ink-soft); }
 .demo-tools .field select {
-  color: #161d2b;
-  background: #ffffff;
-  border-color: #d7dce7;
+  color: var(--win-ink);
+  background: var(--win-field);
+  border-color: var(--win-field-line);
 }
-.demo-tools .swatch__dot { border-color: #d7dce7; }
+.demo-tools .swatch__dot { border-color: var(--win-field-line); }
 .demo-tools .swatch__input:checked + .swatch__dot {
-  border-color: #ffffff;
-  box-shadow: 0 0 0 2px #161d2b;
+  border-color: var(--win-field);
+  box-shadow: 0 0 0 2px var(--win-ink);
 }
 
-/* The state strip, inside the window under the page. Same light chrome. */
+/* The status strip, inside the window under the page. Same chrome as the
+   toolbar above it — §1.2 asks for both on sand / dark surface. */
 .demo-foot {
   margin-top: auto;
   padding: 12px 16px;
-  background: #f7f9fc;
-  border-top: 1px solid #e4e8f1;
+  background: var(--win-chrome);
+  border-top: 1px solid var(--win-chrome-line);
 }
-.demo-foot .panel-status { margin: 0; color: #55607a; min-height: 0; }
-.demo-foot .panel-gcm { margin: 4px 0 0; color: #161d2b; }
+.demo-foot .panel-status { margin: 0; color: var(--win-ink-soft); min-height: 0; }
+.demo-foot .panel-gcm { margin: 4px 0 0; color: var(--win-ink); }
 
-.shot-page--lg { padding: 26px 26px 30px; gap: 13px; }
+/* The fake page is the white surface §1.2 asks for. It is given explicitly
+   rather than inherited: .demo-win is a flex column, so the page only fills
+   the space between toolbar and strip if it is told to grow, and without a
+   background of its own the grey blocks hung on the section behind. */
+.shot-page--lg {
+  padding: 26px 26px 30px;
+  gap: 13px;
+  flex: 1 1 auto;
+  background: #FFFFFF;
+}
 .shot-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1186,7 +1331,9 @@ img { max-width: 100%; height: auto; }
   display: block;
   height: 74px;
   border-radius: 9px;
-  background: #e7eaf1;
+  /* Warm neutral, not the old blue-grey: the placeholder blocks sit on the
+     window's white page and used to be the one cool colour on the page. */
+  background: #EDE6DA;
 }
 /* No dark-mode rule for .shot-card: the frame it sits in is light-locked on
    purpose (see .shot-frame), so a card that followed the reader's own theme
@@ -1355,24 +1502,34 @@ section { padding: 96px 0; }
 
 /* ── §2.3 promise chip and the accented headline word ───────────────── */
 
-/* Red plate, not a grey eyebrow. `--accent` rather than the decorative red:
-   this is small (0.85rem) text on a fill, so it needs the 4.69:1 pair. */
+/* §2: «Чип над заголовком: песочный фон #F5E7D3, тёмный текст, без
+   красного.» It was a red plate directly above a red headline word and a red
+   button — three reds stacked in 200px, which is most of what «негармоничные»
+   was about. Sand on cream reads as a label without competing with the
+   button. #1E1E1E on #F5E7D3 = 13.70:1.
+
+   §1.3: the chip wrapped to two lines on a 375 screen. The copy is shorter
+   now and `nowrap` applies only from 560 up, so a narrow screen breaks it
+   cleanly at the middot instead of being forced into an overflow. */
 .chip {
   display: inline-block;
   margin: 0 0 18px;
   padding: 7px 15px;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--surface-2);
+  color: var(--ink);
   font-size: .85rem;
   font-weight: 600;
   line-height: 1.35;
 }
+@media (min-width: 560px) {
+  .chip { white-space: nowrap; }
+}
 
-/* The one word in the headline that carries the promise. <em> for the
-   emphasis it genuinely is, but headline-italic reads as a typo here. */
+/* The one word in the headline that carries the promise — one of the three
+   places §2 still spends red. `--accent-ink` is the TEXT red and is already
+   theme-correct in both palettes, so this needs no dark-mode override. */
 .h1-accent { color: var(--accent-ink); font-style: normal; }
-@media (prefers-color-scheme: dark) { .h1-accent { color: var(--accent); } }
 
 /* ── §2.4 the dashboard as a text link ─────────────────────────────── */
 
@@ -1535,9 +1692,10 @@ section { padding: 96px 0; }
   margin-bottom: 10px;
   white-space: nowrap;
 }
-.ba__label--before { color: var(--accent-ink); }
+/* §2 spends no red on the slider. The «before» side is identified by the
+   red-tinted pills below it; its label only has to be readable. */
+.ba__label--before { color: var(--ink); }
 .ba__label--after  { color: var(--ok-ink); }
-@media (prefers-color-scheme: dark) { .ba__label--before { color: var(--accent); } }
 
 .ba__pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
 /* The «after» pane is the base layer and only its RIGHT part is ever visible
@@ -1578,7 +1736,11 @@ section { padding: 96px 0; }
   left: var(--ba-pos);
   width: 2px;
   margin-left: -1px;
-  background: var(--accent);
+  /* §2: «Слайдер: ручка чёрная, линия чёрная (красный не тратить).» Read as
+     "monochrome, not red": --ink is black in the light theme and the pale
+     warm white in the dark one, so the handle stays visible against the
+     stage it divides instead of being a black line on a black ground. */
+  background: var(--ink);
   pointer-events: none;
 }
 .ba__grip {
@@ -1589,8 +1751,8 @@ section { padding: 96px 0; }
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--ink);
+  color: var(--bg);   /* the chevrons, inverted against the grip */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1654,27 +1816,26 @@ section { padding: 96px 0; }
   border-color: var(--line);
 }
 
-/* The four «подходит любому сайту» tiles: cream on the red band. */
+/* The four «подходит любому сайту» tiles: white cards on the red band. */
 .check-band .fit__list li {
-  background: var(--bg);
+  background: var(--surface);
   color: var(--ink);
   border-color: transparent;
 }
 .check-band .fit__text { color: var(--ink-soft); }
 
 /* On the red BAND a red button would vanish, so a button sitting directly on
-   the band takes the cream fill with red text — §1's own secondary button,
-   5.49:1 the right way round.
+   the band takes a white fill with red text — 6.06:1 the right way round.
 
    But the check form is a WHITE card on that band, and inside it the cream
    button lost all its weight: a pale plate on white reads as disabled. So the
    rule is scoped to the band's own surface, and the button inside the card
    keeps the ordinary red fill it has everywhere else on the page. */
 .check-band .btn--primary {
-  background: var(--bg);
-  color: var(--accent-ink);
+  background: var(--surface);
+  color: #B82E2D;
 }
-.check-band .btn--primary:hover { background: var(--surface); }
+.check-band .btn--primary:hover { background: var(--cream); }
 
 .check-band .check .btn--primary {
   background: var(--accent);
@@ -1682,8 +1843,49 @@ section { padding: 96px 0; }
 }
 .check-band .check .btn--primary:hover { background: var(--accent-ink); }
 
-/* «Цифры» — the second band, sand. */
-.band--sand { background: var(--surface-2); }
+/* «Цифры» — the second of the page's two cream sections. V1.14 painted it
+   sand; V1.14.1 §2 fixes the rhythm as белый → крем (hero) → белый → красная
+   полоса → белый → крем (цифры) → белый, so cream is what it takes. */
+.band--cream { background: var(--cream); }
+
+/* ── §1.4 + §2: the check block on a phone ─────────────────────────────
+   The red band is a full-bleed slab of colour. On a 375 screen it stops
+   being an accent and becomes the screen, which is what §1.4 objects to:
+   «На 375 красная полоса проверки — не на весь экран». Below 768 the block
+   goes white like the rest of the page and the red survives as a small
+   caption above the heading — a red the width of two words instead of a red
+   the width of the phone. Above 768 the band is unchanged. */
+.check-caption {
+  display: none;
+  margin: 0 0 10px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+@media (max-width: 767px) {
+  .check-band { background: transparent; color: var(--ink); }
+  .check-band h2,
+  .check-band .fit__head { color: var(--ink); }
+  .check-band .section-lede { color: var(--ink-soft); }
+  .check-caption { display: block; }
+
+  /* With the band gone the form is a white card on a white page, so it needs
+     its border back to stay a card at all; the tiles need theirs for the
+     same reason. */
+  .check-band .check { border-color: var(--line); }
+  .check-band .fit__list li { border-color: var(--line); }
+
+  /* And the submit button goes back to the page's ordinary red fill: the
+     white-on-band inversion exists only because of the band. */
+  .check-band .btn--primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .check-band .btn--primary:hover { background: #B82E2D; }
+}
 
 /* ── §2.7 Starter card ─────────────────────────────────────────────── */
 
@@ -1706,9 +1908,9 @@ section { padding: 96px 0; }
   padding: 24px;
 }
 
-/* The paid step is the one the card is selling, so it carries the accent
-   border the table's featured column carries. */
-.starter__card { border-color: var(--accent); }
+/* §2: «Карточка Starter — белая с тёмной рамкой, цена чёрная, галочки
+   чёрные, кнопка красная (это одна из "главных")». */
+.starter__card { border-color: var(--ink); }
 
 .starter__name { margin: 0 0 6px; font-size: 1.15rem; }
 .starter__price { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; margin: 0 0 14px; }
@@ -1729,7 +1931,7 @@ section { padding: 96px 0; }
   top: .42em;
   width: 11px;
   height: 6px;
-  border: 2px solid var(--accent);
+  border: 2px solid var(--ink);
   border-top: 0;
   border-right: 0;
   transform: rotate(-45deg);
@@ -1744,9 +1946,8 @@ section { padding: 96px 0; }
   font-weight: 700;
   letter-spacing: -0.02em;
   min-width: 2.6ch;
-  color: var(--accent-ink);
+  color: var(--ink);
 }
-@media (prefers-color-scheme: dark) { .starter__fact-num { color: var(--accent); } }
 .starter__fact-label { color: var(--ink-soft); font-size: .92rem; }
 
 /* ── §3 mobile ─────────────────────────────────────────────────────── */

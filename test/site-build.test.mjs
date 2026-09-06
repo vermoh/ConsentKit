@@ -939,10 +939,23 @@ test('the footer carries no developer links, and #dev still does', () => {
     assert.ok(foot.includes('E-COM CONSULT PLUS'),
       `the ${code} footer has no company line`);
 
-    // Four links exactly: write to us, dashboard, and the «Правила» pair.
+    /* Seven links exactly: the three section anchors SPEC V1.14.1 §1.1 moved
+       out of the header, then write-to-us, the dashboard, and the «Правила»
+       pair. §1.1 shrinks the header on the condition that the dropped
+       destinations stay reachable «якоря внутри страницы и подвал», so the
+       three anchors are load-bearing rather than decoration — asserted by
+       name below, not just counted. */
     const links = foot.match(/<a\b[^>]*href=/g) || [];
-    assert.equal(links.length, 4,
-      `the ${code} footer has ${links.length} links, expected 4`);
+    assert.equal(links.length, 7,
+      `the ${code} footer has ${links.length} links, expected 7`);
+
+    const dict = readDict(code);
+    for (const [id, key] of [['demo', 'navDemo'], ['features', 'navFeatures'], ['dev', 'navDev']]) {
+      assert.ok(foot.includes(`#${id}"`),
+        `the ${code} footer lost the #${id} anchor the header gave up`);
+      assert.ok(foot.includes(dict[key]),
+        `the ${code} footer has no «${dict[key]}» label`);
+    }
 
     const dev = html.match(/<section id="dev"[\s\S]*?<\/section>/)[0];
     for (const url of ['github.com/vermoh/ConsentKit', 'npmjs.com', 'INSTALL.ru.md']) {
@@ -1039,12 +1052,16 @@ test('no page asks for an off-origin stylesheet, font or script', () => {
 
 /* ---------------------------------------------------------- §1 palette */
 
-test('the palette is the V1.14 one, and on-accent text reaches AA', () => {
+test('the palette is the V1.14.1 one, and on-accent text reaches AA', () => {
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
 
-  // §1's own colours, by role.
+  /* V1.14.1 §2 keeps every colour of §1 and changes only the DOSAGE, so the
+     brand hexes are still asserted here — what moved is which token holds
+     which of them. The page background is now white and the cream has its own
+     token, because cream is a two-section accent rather than the ground. */
   for (const [token, value] of [
-    ['--bg', '#FFF2E0'], ['--surface-2', '#F5E7D3'], ['--ink', '#1E1E1E'],
+    ['--bg', '#FFFFFF'], ['--cream', '#FFF2E0'], ['--surface-2', '#F5E7D3'],
+    ['--ink', '#1E1E1E'],
     ['--accent', '#D63838'], ['--on-accent', '#FFFFFF'],
     ['--band', '#B82E2D'], ['--on-band', '#FDE1B9'],
     ['--accent-deco', '#E63939']
@@ -1052,8 +1069,11 @@ test('the palette is the V1.14 one, and on-accent text reaches AA', () => {
     assert.ok(new RegExp(`${token}:\\s*${value}`, 'i').test(css),
       `styles.css does not set ${token} to ${value}`);
   }
-  // The warm-black dark theme, not the old blue-grey one.
-  assert.match(css, /--bg:\s*#161311/i, 'the dark theme is not the V1.14 warm black');
+  // §2's own dark-theme values.
+  assert.match(css, /--bg:\s*#171412/i, 'the dark theme is not the §2 warm black');
+  assert.match(css, /--surface:\s*#221E1B/i, 'the dark surface is not §2\'s');
+  assert.match(css, /--ink:\s*#F3EBE0/i, 'the dark ink is not §2\'s');
+  assert.match(css, /--line:\s*#3A332E/i, 'the dark rule colour is not §2\'s');
 
   const lum = (hex) => {
     const c = hex.replace('#', '');
@@ -1076,9 +1096,22 @@ test('the palette is the V1.14 one, and on-accent text reaches AA', () => {
     'peach on --band must clear AA for normal-size body text');
   assert.ok(ratio('#1E1E1E', '#FFF2E0') >= 4.5);
   assert.ok(ratio('#6B5A42', '#FFF2E0') >= 4.5, '--ink-soft must clear AA on the cream');
-  // Dark theme.
-  assert.ok(ratio('#FF6B6B', '#161311') >= 4.5, 'the dark accent must clear AA as text');
-  assert.ok(ratio('#1E1E1E', '#FF6B6B') >= 4.5, 'dark on-accent must clear AA');
+  // The white page and the sand trim the V1.14.1 palette leans on.
+  assert.ok(ratio('#1E1E1E', '#FFFFFF') >= 4.5, '--ink must clear AA on the white page');
+  assert.ok(ratio('#6B5A42', '#FFFFFF') >= 4.5, '--ink-soft must clear AA on white');
+  assert.ok(ratio('#1E1E1E', '#F5E7D3') >= 4.5, 'the sand chip needs dark text at AA');
+  assert.ok(ratio('#B82E2D', '#FFFFFF') >= 4.5, 'the text red must clear AA on white');
+
+  /* Dark theme. The point of the split: the FILL red is the same #D63838 in
+     both themes and carries white; the TEXT red lightens, because #D63838 as
+     text on #171412 is 3.90:1 and would fail. A future edit that "simplifies"
+     the two into one token breaks one of these two assertions. */
+  assert.ok(ratio('#FF6B6B', '#171412') >= 4.5, 'the dark text red must clear AA');
+  assert.ok(ratio('#FFFFFF', '#D63838') >= 4.5, 'the dark button keeps the light fill pair');
+  assert.ok(ratio('#D63838', '#171412') < 4.5,
+    'if the fill red ever clears AA as text on the dark ground, the split can be simplified');
+  assert.ok(ratio('#F3EBE0', '#171412') >= 4.5, 'the dark ink must clear AA');
+  assert.ok(ratio('#C6AF8D', '#171412') >= 4.5, 'the dark soft ink must clear AA');
   // The pills are tinted rather than filled, for exactly this reason.
   assert.ok(ratio('#9B2726', '#FBE3DE') >= 4.5, 'the «до» pill must clear AA');
   assert.ok(ratio('#14603C', '#DDF0E3') >= 4.5, 'the «после» pill must clear AA');
@@ -1252,21 +1285,31 @@ test('the hero leads with the promise chip and one accented word', () => {
 
 /* ----------------------------------------------------------- §2.6 bands */
 
-test('the check block is the red band and «Цифры» is the sand one', () => {
+test('the check block is the red band and «Цифры» is the cream one', () => {
   const template = readTemplate();
   const html = renderPage(template, DEFAULT_LANG);
 
   assert.match(html, /<section id="check" class="band check-band">/);
-  assert.match(html, /<section id="numbers" class="band band--sand">/);
+  assert.match(html, /<section id="numbers" class="band band--cream">/);
 
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
   assert.match(css, /\.check-band \{[\s\S]*?background:\s*var\(--band\)/);
-  assert.match(css, /\.band--sand \{\s*background:\s*var\(--surface-2\)/);
+  // V1.14.1 §2: «Цифры» is cream, not sand — the page's rhythm is
+  // белый → крем (hero) → белый → красная полоса → белый → крем → белый.
+  assert.match(css, /\.band--cream \{\s*background:\s*var\(--cream\)/);
   // On a red band the primary button cannot also be red.
-  assert.match(css, /\.check-band \.btn--primary \{[\s\S]*?color:\s*var\(--accent-ink\)/);
-  // The form stays a white card and the tiles stay cream (§2.6).
+  assert.match(css, /\.check-band \.btn--primary \{[\s\S]*?color:\s*#B82E2D/);
+  // The form and the tiles stay white cards on the band.
   assert.match(css, /\.check-band \.check \{[\s\S]*?background:\s*var\(--surface\)/);
-  assert.match(css, /\.check-band \.fit__list li \{[\s\S]*?background:\s*var\(--bg\)/);
+  assert.match(css, /\.check-band \.fit__list li \{[\s\S]*?background:\s*var\(--surface\)/);
+
+  /* §1.4: on a phone the band is not a full-width slab of red. Below 768 the
+     block goes white and a small red caption above the heading carries the
+     accent instead. The base rule above is untouched, so ≥768 is unchanged. */
+  assert.match(css, /@media \(max-width: 767px\) \{[\s\S]*?\.check-band \{\s*background:\s*transparent/,
+    'the check band is still full-width red on a phone');
+  assert.match(html, /class="check-caption"/,
+    'the mobile red caption above the check heading is missing');
 });
 
 /* --------------------------------------------------------- §2.7 Starter */
@@ -1320,5 +1363,190 @@ test('nothing on the page manufactures scarcity or invents a testimonial', () =>
     // §2.7: the second column is three facts precisely because there is no
     // testimonial to show.
     assert.doesNotMatch(html, /class="[^"]*testimonial/);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPEC V1.14.1 — «много по вёрстке поехало, цвета ужасные и негармоничные»
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ------------------------------------------------- §1.1 a one-row header */
+
+/* The header took two rows at every desktop width because it carried seven
+   nav items, a bordered language control, «Открыть кабинет» and a six-word
+   button. The measured proof that it is now one row lives in the Playwright
+   pass; what a regex suite can guard is the CONTENT budget that makes the one
+   row possible, which is the thing a future edit would quietly break by
+   adding an eighth link or restoring the long label. */
+test('the header is trimmed to the V1.14.1 budget: four nav items, short labels', () => {
+  const template = readTemplate();
+
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    const html = renderPage(template, code);
+    const nav = html.match(/<nav class="head-nav"[\s\S]*?<\/nav>/)[0];
+
+    const items = nav.match(/<a\b[^>]*href=/g) || [];
+    assert.equal(items.length, 4,
+      `the ${code} header nav has ${items.length} items — §1.1 asks for four`);
+
+    // The four §1.1 names them, and no more.
+    for (const key of ['navHow', 'navPricing', 'navFaq', 'navLaw']) {
+      assert.ok(nav.includes(dict[key]),
+        `the ${code} header nav lost «${dict[key]}»`);
+    }
+    for (const key of ['navDemo', 'navFeatures', 'navDev']) {
+      assert.ok(!nav.includes(dict[key]),
+        `«${dict[key]}» is back in the ${code} header — §1.1 moved it to the footer`);
+    }
+
+    /* The short labels. §1.1 keeps the full «Проверить сайт бесплатно» for the
+       hero and the end of each section, so both keys must exist AND differ —
+       pointing the header at the long one is the regression this catches. */
+    const head = html.match(/<header class="site-head">[\s\S]*?<\/header>/)[0];
+    assert.ok(dict.ctaCheckShort && dict.ctaCheckShort.trim(),
+      `${code}.json has no "ctaCheckShort"`);
+    assert.ok(dict.ctaCabinetShort && dict.ctaCabinetShort.trim(),
+      `${code}.json has no "ctaCabinetShort"`);
+    assert.ok(head.includes(dict.ctaCheckShort),
+      `the ${code} header does not use the short check label`);
+    assert.ok(dict.ctaCheckShort.length < dict.ctaCheck.length,
+      `${code}'s "ctaCheckShort" is not shorter than "ctaCheck"`);
+
+    // The hero keeps the full one — the short label must not leak downward.
+    const hero = html.match(/<section class="hero">[\s\S]*?<\/section>/)[0];
+    assert.ok(hero.includes(dict.ctaCheck),
+      `the ${code} hero lost the full «Проверить сайт бесплатно»`);
+  }
+
+  /* And the languages: three bare letters, not a bordered segmented control
+     whose current item was a red plate. */
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  const langBtn = css.match(/\.lang-btn\[aria-pressed="true"\] \{[\s\S]*?\}/)[0];
+  assert.ok(!/var\(--accent\)/.test(langBtn),
+    'the current language is a red plate again — §2 spends red elsewhere');
+});
+
+/* ------------------------------------------- §2 «красный редко» in the CSS */
+
+/* §3 asks for at most three red things in the first screen. The screenshot
+   count is measured in the Playwright pass; here we guard the SELECTORS that
+   put them there, because every one of these was red in V1.14 and each is
+   a one-word edit away from being red again. */
+test('§2: the elements that stopped being red have not become red again', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  const block = (sel) => {
+    const m = css.match(new RegExp(
+      sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{[^}]*\\}'));
+    assert.ok(m, `styles.css no longer has a ${sel} rule`);
+    return m[0];
+  };
+
+  /* Each of these carried var(--accent) or var(--accent-ink) in V1.14 and
+     must not now. --accent-deco is exempt everywhere: it is the depicted
+     CLIENT banner's colour, which §2 explicitly leaves alone. */
+  for (const sel of [
+    '.brand-mark',            // the logo shield — a fourth red in screen one
+    '.chip',                  // §2: sand fill, dark text
+    '.btn--ghost',            // §2: white fill, dark 1px outline
+    '.ba__grip',              // §2: «ручка чёрная»
+    '.plan-flag',             // §2: «чёрный с белым текстом»
+    '.starter__fact-num'
+  ]) {
+    const rule = block(sel);
+    assert.ok(!/var\(--accent(-ink)?\)/.test(rule),
+      `${sel} is red again — §2 allows red only on the primary button, the ` +
+      'headline word and the check band');
+  }
+
+  // The featured plan column: sand fill and a DARK 1px border, not 2px red.
+  const featured = block('.plan-table .is-featured');
+  assert.match(featured, /background:\s*var\(--surface-2\)/,
+    '§2: the highlighted plan column is sand');
+  assert.match(featured, /border-left:\s*1px solid var\(--ink\)/,
+    '§2: the highlighted plan column has a dark 1px border');
+
+  /* The three places red SURVIVES. Asserted positively so that "remove the
+     red" cannot be over-applied into a page with no accent at all. */
+  assert.match(block('.btn--primary'), /background:\s*var\(--accent\)/,
+    'the primary button must stay red — it is the page\'s one call to action');
+  assert.match(block('.h1-accent'), /color:\s*var\(--accent-ink\)/,
+    'the accented headline word must stay red');
+  assert.match(css, /\.check-band \{[\s\S]*?background:\s*var\(--band\)/,
+    'the check band must stay red above 768');
+
+  /* §2: links are dark with an underline and go red only on hover, so the
+     accent is not spent on every inline link in the prose. */
+  const linkRule = css.match(/\na \{[^}]*\}/)[0];
+  assert.match(linkRule, /color:\s*var\(--ink\)/, '§2: links in text are dark');
+  assert.match(linkRule, /text-decoration:\s*underline/, '§2: links in text are underlined');
+  assert.match(css.match(/\na:hover \{[^}]*\}/)[0], /color:\s*var\(--accent-ink\)/,
+    '§2: links go red on hover');
+
+  // The same red-on-hover pattern removed from .btn--ghost must not survive
+  // on the tiles, which sit two sections below it.
+  assert.match(css.match(/\.tiles a:hover \{[^}]*\}/)[0], /border-color:\s*var\(--ink\)/,
+    '.tiles a:hover is red again — §2 removed exactly this from .btn--ghost');
+});
+
+/* ------------------------------------------------ §1.2 the demo window */
+
+test('§1.2: the demo window is a white page with sand chrome in both themes', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  /* Anchored to the top-level rule: a later `.demo-win { height: auto; }`
+     inside the mobile media query would otherwise match first. */
+  const win = css.match(/\n\.demo-win \{[\s\S]*?\n\}/)[0];
+  /* The V1.14 defect in one line: .demo-win is a .shot-frame but was never in
+     the selector that DECLARES the --shot-* group, so .shot-frame's
+     `background: var(--shot-paper)` resolved to nothing and the fake page's
+     blocks hung on the section behind it. */
+  assert.match(win, /--shot-paper:\s*#FFFFFF/i,
+    '.demo-win does not declare the paper the frame paints itself with');
+  assert.match(win, /background:\s*#FFFFFF/i,
+    'the demo window has no white page surface of its own');
+  assert.match(win, /--win-chrome:\s*#F5E7D3/i,
+    '§1.2: the toolbar and status strip sit on sand in the light theme');
+
+  // The toolbar and the strip both take that chrome — §1.2 names both.
+  assert.match(css, /\.demo-tools \{[\s\S]*?background:\s*var\(--win-chrome\)/,
+    'the demo toolbar is not on the window chrome');
+  assert.match(css, /\.demo-foot \{[\s\S]*?background:\s*var\(--win-chrome\)/,
+    'the demo status strip is not on the window chrome');
+
+  // Dark theme: the chrome darkens, the page does NOT — it depicts a client's
+  // site, not ours, so it stays white.
+  const darkWin = css.match(/@media \(prefers-color-scheme: dark\) \{\s*\.demo-win \{[\s\S]*?\n  \}/);
+  assert.ok(darkWin, 'the demo window has no dark-theme chrome');
+  assert.match(darkWin[0], /--win-chrome:\s*#2A2521/i,
+    '§1.2: in the dark theme the chrome is a dark surface');
+  assert.ok(!/--shot-paper/.test(darkWin[0]),
+    'the depicted page must stay white in the dark theme');
+
+  // And no blue-grey anywhere: the old hardcoded #f7f9fc / #55607a / #161d2b
+  // matched neither palette and were the "grey blocks" the owner saw.
+  for (const hex of ['#f7f9fc', '#e4e8f1', '#55607a', '#161d2b', '#d7dce7', '#e7eaf1']) {
+    assert.ok(!css.toLowerCase().includes(hex),
+      `styles.css still carries the blue-grey ${hex} from the V1.14 demo window`);
+  }
+});
+
+/* ------------------------------------------------ §1.3 the chip on a phone */
+
+test('§1.3: the chip is short and only refuses to wrap from 560 up', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  const chip = css.match(/\.chip \{[\s\S]*?\n\}/)[0];
+  assert.ok(!/white-space:\s*nowrap/.test(chip),
+    'the chip refuses to wrap at every width — on 375 that is an overflow');
+  assert.match(css, /@media \(min-width: 560px\) \{\s*\.chip \{ white-space: nowrap; \}/,
+    '§1.3: nowrap applies only from 560 up');
+
+  // §1.3 also shortens the copy itself: «Баннер за» is dropped.
+  for (const { code } of LANGS) {
+    const chipText = readDict(code).heroChip;
+    assert.ok(chipText.length <= 46,
+      `the ${code} chip is ${chipText.length} chars — §1.3 asks for a shorter one`);
   }
 });

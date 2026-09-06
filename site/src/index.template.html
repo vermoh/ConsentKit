@@ -38,14 +38,18 @@
       <span>ConsentKit</span>
     </a>
 
+    <!-- SPEC V1.14.1 §1.1: four items, not seven. At 1366 the seven-item nav
+         plus the languages plus «Открыть кабинет» plus a six-word button did
+         not fit on one line, and the header took two rows on every desktop
+         width. «Демо», «Что умеет» and «Разработчикам» come out: each is
+         reachable by an in-page anchor as the visitor scrolls and each is
+         listed in the footer, so nothing became unreachable — the header
+         simply stopped trying to be a site map. -->
     <nav class="head-nav" aria-label="Разделы" data-i18n-aria-label="navSections">
-      <a href="#demo" data-i18n="navDemo">Демо</a>
       <a href="#how" data-i18n="navHow">Как это работает</a>
       <a href="#pricing" data-i18n="navPricing">Тарифы</a>
-      <a href="#features" data-i18n="navFeatures">Что умеет</a>
       <a href="#faq" data-i18n="navFaq">Вопросы</a>
       <a href="{{LAW_HOME}}" data-i18n="navLaw">Правила</a>
-      <a href="#dev" data-i18n="navDev">Для разработчиков</a>
     </nav>
 
     <!-- SPEC V1.14 §2.4: ONE primary button on the page, and it is the free
@@ -54,8 +58,12 @@
          same weight as the offer made the header ask two things at once. -->
     <div class="head-actions">
 {{LANG_SWITCH}}
-      <a class="head-link" href="https://app.ecomconsult.net" data-i18n="ctaCabinet">Открыть кабинет</a>
-      <a class="btn btn--sm btn--primary" href="#check" data-i18n="ctaCheck">Проверить сайт бесплатно</a>
+      <!-- V1.14.1 §1.1: «Кабинет» as one word, and a SHORT button label. The
+           full «Проверить сайт бесплатно» stays where it has room to persuade
+           — the hero and the end of each section; in a sticky bar it was six
+           words of chrome that cost the header its single row. -->
+      <a class="head-link" href="https://app.ecomconsult.net" data-i18n="ctaCabinetShort">Кабинет</a>
+      <a class="btn btn--sm btn--primary" href="#check" data-i18n="ctaCheckShort">Проверить сайт</a>
     </div>
   </div>
 </header>
@@ -135,6 +143,10 @@
   <section id="check" class="band check-band">
     <div class="wrap">
       <div class="check-head">
+        <!-- V1.14.1 §1.4: on a phone the red band becomes a white block and
+             this caption carries the red instead. It is hidden above 768,
+             where the band itself is the accent, so it never duplicates it. -->
+        <p class="check-caption" data-i18n="checkCaption">Бесплатная проверка</p>
         <h2 data-i18n="checkTitle">Проверьте свой сайт бесплатно</h2>
         <p class="section-lede" data-i18n="checkLede">Посмотрим, какие сервисы и cookie загружаются у вас до согласия. Только открытые страницы.</p>
       </div>
@@ -550,9 +562,10 @@
        that matters: while `sites` is under ten the counts are not shown at
        all, only the language count and «работаем с …». A young service that
        advertises "3 sites" argues against itself. -->
-  <!-- SPEC V1.14 §2.6: the second coloured band — sand, against the check
-       block's red one section up. -->
-  <section id="numbers" class="band band--sand">
+  <!-- SPEC V1.14.1 §2: the second cream section, and the last warm one on the
+       page. The rhythm is белый → крем (hero) → белый → красная полоса →
+       белый → крем (цифры) → белый. -->
+  <section id="numbers" class="band band--cream">
     <div class="wrap">
       <div class="section-head">
         <h2 class="stats__head" data-i18n="statsTitle">Цифры</h2>
@@ -741,7 +754,15 @@
          them in the footer made the utility row read as a second, worse copy
          of that section. What is left is what only the footer can offer: a
          way to reach us, and the dashboard. -->
+    <!-- The three sections V1.14.1 §1.1 took out of the header live here, as
+         that section requires: «на них ведут якоря внутри страницы и подвал».
+         Authored as bare #anchors, as the nav is: on a law page the build
+         rewrites both the header's and the footer's anchors to travel back to
+         the home page first. -->
     <nav class="foot-links" aria-label="Ссылки" data-i18n-aria-label="footLinksLabel">
+      <a href="#demo" data-i18n="navDemo">Демо</a>
+      <a href="#features" data-i18n="navFeatures">Что умеет</a>
+      <a href="#dev" data-i18n="navDev">Разработчикам</a>
       <a href="mailto:info@ecomconsult.net" data-i18n="footWrite">Написать нам</a>
       <a href="https://app.ecomconsult.net" data-i18n="footCabinet">Кабинет</a>
     </nav>

@@ -1158,7 +1158,11 @@
     return {
       language: effective,
       layout: { type: demo.layout, position: demo.position },
-      theme: { mode: demo.theme, accent: demo.accent, radius: '10px' },
+      // The same accent in dark mode: the client deliberately does not carry a
+      // light-only accent into dark (its default there is a blue), which left
+      // the site's own banner off-brand in dark theme. Derived text colours
+      // still pass the client's contrast rule.
+      theme: { mode: demo.theme, accent: demo.accent, dark: { accent: demo.accent }, radius: '10px' },
       branding: brandingFor(effective),
       // Off, so the demo emits no further Consent Mode updates or GTM events as
       // you click around. Note the core still writes ONE all-denied Consent Mode
