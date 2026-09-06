@@ -10,11 +10,12 @@
  *
  *   site/src/index.template.html   structure, with {{PLACEHOLDERS}}
  *   site/src/i18n/{en,ru,ro}.json  the copy, one file per language
+ *   src/ck-locales.js              de/fr/it/es strings for the banner marquee
  *        ->  site/index.html       (en, canonical /)
  *            site/ru/index.html    (ru, canonical /ru)
  *            site/ro/index.html    (ro, canonical /ro)
  *
- * The output is a pure function of those four inputs: building twice produces
+ * The output is a pure function of those inputs: building twice produces
  * byte-identical files (no timestamps, no ordering by hash iteration), which is
  * what lets --check compare a fresh render against what is committed.
  *
@@ -25,6 +26,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createContext, runInContext } from 'node:vm';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -609,6 +611,150 @@ export function renderLawIndex(template, lang) {
   return html;
 }
 
+/* ------------------------------------------------------- banner marquee */
+
+/* SPEC V1.14 §2.1: a horizontal strip of 8-10 STATIC replicas of the consent
+ * banner — bar / box / modal, light and dark, in several languages and several
+ * accents — so the visitor sees at a glance that the banner adapts, without a
+ * single screenshot.
+ *
+ * Rendered here rather than authored in the template for two reasons:
+ *
+ *  1. de/fr/it/es come from src/ck-locales.js, which the dictionaries know
+ *     nothing about. Reading the real client's own locale pack means the
+ *     cards say exactly what the shipped banner says in those languages —
+ *     they cannot drift into invented copy.
+ *  2. applyDict()'s data-i18n regex matches up to the first closing tag of the
+ *     SAME name, so ten nested translated <div>s would mis-slice silently.
+ *     Baking the strings in at build time keeps that machinery out of it.
+ */
+
+/* ck-locales.js is a browser IIFE that publishes window.__ckLocales and
+   no-ops under Node (`typeof window === 'undefined'` returns early). Running
+   it in a vm context with a fake `window` is a read-only import: nothing is
+   executed beyond building the dictionary object. */
+let localesCache = null;
+export function readClientLocales() {
+  if (localesCache) return localesCache;
+  const src = readFileSync(join(REPO, 'src', 'ck-locales.js'), 'utf8');
+  const win = {};
+  runInContext(src, createContext({ window: win }));
+  if (!win.__ckLocales) throw new Error('src/ck-locales.js did not publish __ckLocales');
+  localesCache = win.__ckLocales;
+  return localesCache;
+}
+
+/* The card deck. Ten cards: every layout twice, both themes, seven languages,
+   five accents. `lang` is either one of our three dictionary languages (the
+   strings come from the page's own dictionary, so a Russian visitor reads
+   Russian on the Russian cards) or a client locale code, in which case the
+   strings come from ck-locales.js verbatim.
+
+   Accents: #E63939 leads — SPEC V1.14 §1 puts the brand red first — followed
+   by the four other demo swatches, so the strip matches the colours the demo
+   below actually offers. */
+export const MARQUEE_CARDS = [
+  { layout: 'box',   theme: 'light', lang: 'self', accent: '#E63939' },
+  { layout: 'bar',   theme: 'dark',  lang: 'de',   accent: '#127C56' },
+  { layout: 'modal', theme: 'light', lang: 'fr',   accent: '#6B3FCB' },
+  { layout: 'bar',   theme: 'light', lang: 'self', accent: '#2B50D8' },
+  { layout: 'box',   theme: 'dark',  lang: 'it',   accent: '#C2570C' },
+  { layout: 'modal', theme: 'dark',  lang: 'es',   accent: '#E63939' },
+  { layout: 'bar',   theme: 'light', lang: 'ro',   accent: '#127C56' },
+  { layout: 'box',   theme: 'light', lang: 'en',   accent: '#6B3FCB' },
+  { layout: 'modal', theme: 'light', lang: 'ru',   accent: '#2B50D8' },
+  { layout: 'bar',   theme: 'dark',  lang: 'self', accent: '#E63939' }
+];
+
+/* The four strings one card needs, resolved from whichever source owns them. */
+export function cardStrings(card, dict, lang) {
+  // 'self' = the language of the page being built; otherwise a named language.
+  const code = card.lang === 'self' ? lang : card.lang;
+
+  // One of our own three: the page dictionary already carries the replica copy.
+  if (['ru', 'ro', 'en'].includes(code)) {
+    const d = code === lang ? dict : readDict(code);
+    return {
+      code,
+      title: d.mockTitle,
+      text: d.mockText,
+      accept: d.mockAccept,
+      reject: d.mockReject,
+      settings: d.mockSettings
+    };
+  }
+
+  // A client locale: the real banner's own words in that language.
+  const L = readClientLocales()[code];
+  if (!L) throw new Error(`src/ck-locales.js has no locale "${code}" (marquee)`);
+  return {
+    code,
+    title: L.bannerTitle,
+    text: L.bannerText,
+    accept: L.acceptAll,
+    reject: L.rejectAll,
+    settings: L.customize
+  };
+}
+
+/* One card. The markup mirrors the hero replica's .shot-* component exactly,
+   so both are styled by one block of CSS; the layout modifier only moves the
+   banner within the frame. Inert by construction: aria-hidden on the strip,
+   and every control is a <span>, so the tab order gains nothing and a screen
+   reader hears the section's own heading instead of ten banners. */
+export function renderMarqueeCard(card, dict, lang) {
+  const s = cardStrings(card, dict, lang);
+  const cls = ['shot', 'shot--' + card.layout, card.theme === 'dark' ? 'shot--dark' : ''].
+    filter(Boolean).join(' ');
+  // The accent is a literal from MARQUEE_CARDS above, never from the copy, but
+  // it still goes through escapeAttr so the style attribute cannot be broken.
+  const style = '--shot-accent: ' + escapeAttr(card.accent) + ';';
+
+  return [
+    '        <li class="marquee__item">',
+    '          <div class="' + cls + '" style="' + style + '" lang="' + escapeAttr(s.code) + '">',
+    '            <div class="shot-frame">',
+    '              <div class="shot-bar"><span></span><span></span><span></span></div>',
+    '              <div class="shot-page">',
+    '                <span class="shot-line shot-line--title"></span>',
+    '                <span class="shot-line"></span>',
+    '                <span class="shot-line shot-line--short"></span>',
+    '                <span class="shot-line"></span>',
+    '              </div>',
+    '              <div class="shot-banner">',
+    '                <p class="shot-banner__title">' + escapeHtml(s.title) + '</p>',
+    '                <p class="shot-banner__text">' + escapeHtml(s.text) + '</p>',
+    '                <div class="shot-banner__actions">',
+    '                  <span class="shot-btn shot-btn--accept">' + escapeHtml(s.accept) + '</span>',
+    '                  <span class="shot-btn shot-btn--reject">' + escapeHtml(s.reject) + '</span>',
+    '                  <span class="shot-btn shot-btn--settings">' + escapeHtml(s.settings) + '</span>',
+    '                </div>',
+    '              </div>',
+    '            </div>',
+    '          </div>',
+    '        </li>'
+  ].join('\n');
+}
+
+/* The whole strip. The deck is emitted TWICE inside one track: the animation
+   translates the track by -50%, so as the first copy leaves the viewport the
+   second is exactly where the first began and the loop is seamless. The
+   duplicate is aria-hidden as well as being inside an aria-hidden strip —
+   belt and braces, since it is literally the same ten cards again. */
+export function renderMarquee(dict, lang) {
+  const deck = MARQUEE_CARDS.map((c) => renderMarqueeCard(c, dict, lang)).join('\n');
+  return [
+    '      <div class="marquee" data-marquee>',
+    '        <ul class="marquee__track">',
+    deck,
+    '        </ul>',
+    '        <ul class="marquee__track" aria-hidden="true">',
+    deck,
+    '        </ul>',
+    '      </div>'
+  ].join('\n');
+}
+
 export function renderPage(template, lang) {
   const entry = LANGS.find((l) => l.code === lang);
   if (!entry) throw new Error(`unknown language ${lang}`);
@@ -632,6 +778,7 @@ export function renderPage(template, lang) {
     VERSION: escapeHtml(VERSION),
     BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
+    MARQUEE: renderMarquee(dict, lang),
     I18N_SCRIPT: i18nScript
   };
 

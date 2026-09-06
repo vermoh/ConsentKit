@@ -325,6 +325,110 @@
     return c;
   }
 
+  /* ══════════════════════════════════════════════════════════════════
+     SPEC V1.14 §2.7 — Starter on its own card, above the table
+
+     Reads the SAME `plans` array renderPricing() draws from — the live
+     GET /v1/public/pricing payload when it answers, the PRICES/SITE_LIMITS
+     constants when it does not — so the card and the Starter column of the
+     table cannot show different money. loadPricing() re-runs both.
+
+     §2.7 asks for a testimonial beside it. There is none, and §3 forbids
+     inventing one, so the second column is three facts instead — and they are
+     the numbers «Цифры» already carries, read from the same dictionary keys,
+     so the two blocks cannot disagree either.
+     ══════════════════════════════════════════════════════════════════ */
+
+  function renderStarter() {
+    var host = $('#starter');
+    if (!host) return;
+    host.textContent = '';
+
+    var d = null;
+    for (var i = 0; i < plans.length; i++) {
+      if (plans[i].plan === 'starter') { d = plans[i]; break; }
+    }
+    // No Starter in the payload: leave the block empty. `.starter:empty` is
+    // display:none, so the section closes up rather than showing a hole.
+    if (!d || d.priceEur === null) return;
+
+    /* ---- the card ---- */
+    var card = el('div', 'starter__card');
+    card.appendChild(el('h3', 'starter__name', t('starterTitle')));
+
+    var price = el('p', 'starter__price');
+    price.appendChild(el('span', 'starter__num', '\u20AC' + d.priceEur));
+    // The unit comes from the payload, not from a literal: Starter is the one
+    // plan sold per site, and priceUnit is what says so.
+    price.appendChild(el('span', 'starter__unit',
+      d.priceUnit === 'site_month' ? t('starterPriceUnit') : t('perMonth')));
+    card.appendChild(price);
+
+    var points = el('ul', 'starter__points');
+    ['starterPoint1', 'starterPoint2', 'starterPoint3'].forEach(function (k) {
+      points.appendChild(el('li', '', t(k)));
+    });
+    card.appendChild(points);
+
+    // §2.7: this card's button is the dashboard, not the check — it is the
+    // one place on the page where «Открыть кабинет» is the next real step.
+    var cta = el('a', 'btn btn--primary');
+    cta.href = CABINET_URL;
+    cta.textContent = t('ctaCabinet');
+    card.appendChild(cta);
+
+    /* ---- the three facts ---- */
+    var facts = el('div', 'starter__facts');
+    facts.appendChild(el('h3', 'starter__facts-head', t('factsTitle')));
+
+    [
+      ['34', t('statsLanguages')],
+      ['64', t('statsServices')],
+      [t('factCheckFreeNum'), t('factCheckFree')]
+    ].forEach(function (row) {
+      var f = el('div', 'starter__fact');
+      f.appendChild(el('span', 'starter__fact-num', row[0]));
+      f.appendChild(el('span', 'starter__fact-label', row[1]));
+      facts.appendChild(f);
+    });
+
+    host.appendChild(card);
+    host.appendChild(facts);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     SPEC V1.14 §2.2 — the before / after handle
+
+     All the real work is the <input type=range> in the markup: it brings
+     keyboard support (arrows, Home/End), a focus ring and aria-valuenow with
+     it, which is exactly what §2.2 asks for. This function does one thing —
+     mirror its value onto the --ba-pos custom property that clips the top
+     pane and positions the visible handle. Mouse, touch and pen drags are the
+     input's own behaviour, so there is no pointer code here at all.
+     ══════════════════════════════════════════════════════════════════ */
+
+  function wireBeforeAfter() {
+    var stages = document.querySelectorAll('[data-ba]');
+    for (var i = 0; i < stages.length; i++) {
+      (function (root) {
+        var range = root.querySelector('[data-ba-range]');
+        var stage = root.querySelector('.ba__stage');
+        if (!range || !stage) return;
+
+        function sync() {
+          stage.style.setProperty('--ba-pos', range.value + '%');
+          // aria-valuenow is maintained by the input itself; what a screen
+          // reader still needs is the value in words rather than "50".
+          range.setAttribute('aria-valuetext', range.value + '%');
+        }
+
+        range.addEventListener('input', sync);
+        range.addEventListener('change', sync);
+        sync();
+      }(stages[i]));
+    }
+  }
+
   /* P3-8: one comparison table instead of four cards, so a reader compares
      along a row instead of re-reading four columns for the same seven labels.
      A real <table> with <caption> and <th scope> in both directions: the row
@@ -451,9 +555,11 @@
         var next = normalisePayload(data);
         if (!next) return;
         plans = next;
-        // renderPricing() alone, not renderPage(): re-running the latter would
-        // reset the demo the visitor may already be playing with.
+        // renderPricing() and the Starter card alone, not renderPage():
+        // re-running the latter would reset the demo the visitor may already
+        // be playing with. Both read `plans`, so both have to follow it.
         renderPricing();
+        renderStarter();
       })
       .catch(function () { /* offline, timed out, blocked: keep the constants */ })
       .then(function () { clearTimeout(timer); });
@@ -1003,15 +1109,20 @@
     modal: [['', 'posCenter']]
   };
 
-  /* Five accents. The first is the product's own; the rest are far enough
-     apart in hue to be told apart at swatch size, and all five carry enough
-     contrast against white for the banner's own button text. */
+  /* Five accents. SPEC V1.14 §1 puts the brand red first and makes it the
+     default the demo opens on; the other four are far enough apart in hue to
+     be told apart at swatch size, and all five carry enough contrast against
+     white for the banner's own button text.
+
+     This is a CLIENT's banner colour, not one of ours: nothing here is
+     imposed on anyone, and a real installation takes the colours of the site
+     it sits on. */
   var ACCENTS = [
+    ['#E63939', 'accentRed'],
     ['#2B50D8', 'accentBlue'],
     ['#127C56', 'accentGreen'],
     ['#6B3FCB', 'accentViolet'],
-    ['#C2570C', 'accentOrange'],
-    ['#3F4854', 'accentGraphite']
+    ['#C2570C', 'accentOrange']
   ];
 
   var demo = {
@@ -1296,6 +1407,7 @@
      applyLang() had nothing left to apply. */
   function renderPage() {
     renderPricing();
+    renderStarter();
     renderFaq();
     renderStats();
     wireCheckForms();
@@ -1363,6 +1475,7 @@
      ══════════════════════════════════════════════════════════════════ */
 
   wireDemo();
+  wireBeforeAfter();
 
   // First init before the UI's setTimeout(...,0) fallback mount, so the very
   // first render already uses the demo layout and language.

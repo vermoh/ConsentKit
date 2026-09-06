@@ -21,7 +21,8 @@ import {
   pageUrl, jsonForScript, runtimeDict,
   readPages, pageSiblings, lawUrl, lawPath, lawIndexUrl, lawOutputs,
   renderLawPage, bodyWords, faqJsonLd,
-  VERSION, BUILD_DATE, updatedText
+  VERSION, BUILD_DATE, updatedText,
+  MARQUEE_CARDS, renderMarquee, readClientLocales
 } from '../tools/build-site.mjs';
 
 /* ------------------------------------------------------------ the outputs */
@@ -968,5 +969,356 @@ test('«Правила» is in the nav and the footer, on every page', () => {
     const want = (dir ? '/' + dir : '') + '/law';
     assert.ok(nav.includes(`href="${want}"`),
       `the ${code} page's nav points at the wrong «Правила» hub`);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPEC V1.14
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ------------------------------------------------------------- §1 fonts */
+
+test('Onest is self-hosted, with its licence beside it', () => {
+  for (const name of ['onest-latin.woff2', 'onest-cyrillic.woff2']) {
+    const f = join(SITE_DIR, 'fonts', name);
+    assert.ok(existsSync(f), `site/fonts/${name} is missing`);
+    // A truncated download would still "exist"; a real woff2 starts wOF2.
+    assert.equal(readFileSync(f).subarray(0, 4).toString('latin1'), 'wOF2',
+      `site/fonts/${name} is not a woff2 file`);
+    assert.ok(statSync(f).size > 4096, `site/fonts/${name} looks truncated`);
+  }
+  const ofl = join(SITE_DIR, 'fonts', 'OFL.txt');
+  assert.ok(existsSync(ofl), 'site/fonts/OFL.txt is missing — Onest ships under the OFL');
+  assert.match(readFileSync(ofl, 'utf8'), /SIL Open Font License/);
+});
+
+test('the stylesheet loads Onest from our own origin and nowhere else', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  assert.match(css, /@font-face/, 'styles.css declares no @font-face');
+  assert.match(css, /url\('\/fonts\/onest-latin\.woff2'\)/);
+  assert.match(css, /url\('\/fonts\/onest-cyrillic\.woff2'\)/);
+  assert.match(css, /font-display:\s*swap/, 'Onest must not block the first paint');
+  /* The whole point of vendoring it: SPEC V1.14 §1 / §3, zero external
+     requests. Comments are stripped before the check — the header of
+     styles.css explains WHY it does not call Google Fonts, and naming the
+     host in prose must not read as calling it. */
+  const code = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(code, /fonts\.googleapis\.com|fonts\.gstatic\.com/,
+    'the stylesheet still reaches out to Google Fonts');
+  assert.match(css, /font:[^;]*'Onest'/, 'body does not use Onest');
+
+  // Latin and Cyrillic are separate faces, so a Russian page never downloads
+  // the Latin file and vice versa.
+  assert.match(css, /unicode-range:\s*U\+0301, U\+0400-045F/);
+});
+
+test('no page asks for an off-origin stylesheet, font or script', () => {
+  const template = readTemplate();
+
+  /* canonical / alternate / og:url are METADATA: they name a URL for a
+     crawler, they are never fetched by the browser. What matters here is the
+     <link>s that DO cause a request — stylesheets, fonts, preloads, icons. */
+  const FETCHED = /\brel="(stylesheet|preload|preconnect|dns-prefetch|icon|apple-touch-icon|manifest)"/;
+
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+
+    for (const m of html.matchAll(/<link\b[^>]*>/g)) {
+      if (!FETCHED.test(m[0])) continue;
+      assert.doesNotMatch(m[0], /href="(https?:)?\/\//,
+        `the ${code} page fetches an external resource: ${m[0]}`);
+    }
+    for (const m of html.matchAll(/<script\b[^>]*src="(https?:)?\/\/[^"]+"/g)) {
+      assert.fail(`the ${code} page loads an external script: ${m[0]}`);
+    }
+    // No @import or url() reaching off-origin from an inline style either.
+    assert.doesNotMatch(html, /@import\s+url\(['"]?https?:/i);
+  }
+});
+
+/* ---------------------------------------------------------- §1 palette */
+
+test('the palette is the V1.14 one, and on-accent text reaches AA', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  // §1's own colours, by role.
+  for (const [token, value] of [
+    ['--bg', '#FFF2E0'], ['--surface-2', '#F5E7D3'], ['--ink', '#1E1E1E'],
+    ['--accent', '#D63838'], ['--on-accent', '#FFFFFF'],
+    ['--band', '#B82E2D'], ['--on-band', '#FDE1B9'],
+    ['--accent-deco', '#E63939']
+  ]) {
+    assert.ok(new RegExp(`${token}:\\s*${value}`, 'i').test(css),
+      `styles.css does not set ${token} to ${value}`);
+  }
+  // The warm-black dark theme, not the old blue-grey one.
+  assert.match(css, /--bg:\s*#161311/i, 'the dark theme is not the V1.14 warm black');
+
+  const lum = (hex) => {
+    const c = hex.replace('#', '');
+    const v = [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16) / 255)
+      .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  };
+  const ratio = (a, b) => {
+    const [l1, l2] = [lum(a), lum(b)];
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  };
+
+  /* The reason the tokens are not literally §1: nothing reaches 4.5:1 on
+     #E63939, so the brand red is decoration and #D63838 / #B82E2D carry text.
+     These assertions are what stops a future "let's use E63939 for the
+     button" from shipping. */
+  assert.ok(ratio('#FFFFFF', '#D63838') >= 4.5,
+    'white on --accent must clear AA for normal-size button text');
+  assert.ok(ratio('#FDE1B9', '#B82E2D') >= 4.5,
+    'peach on --band must clear AA for normal-size body text');
+  assert.ok(ratio('#1E1E1E', '#FFF2E0') >= 4.5);
+  assert.ok(ratio('#6B5A42', '#FFF2E0') >= 4.5, '--ink-soft must clear AA on the cream');
+  // Dark theme.
+  assert.ok(ratio('#FF6B6B', '#161311') >= 4.5, 'the dark accent must clear AA as text');
+  assert.ok(ratio('#1E1E1E', '#FF6B6B') >= 4.5, 'dark on-accent must clear AA');
+  // The pills are tinted rather than filled, for exactly this reason.
+  assert.ok(ratio('#9B2726', '#FBE3DE') >= 4.5, 'the «до» pill must clear AA');
+  assert.ok(ratio('#14603C', '#DDF0E3') >= 4.5, 'the «после» pill must clear AA');
+
+  // And the trap itself, asserted so the note in styles.css cannot rot.
+  assert.ok(ratio('#FFFFFF', '#E63939') < 4.5,
+    'if #E63939 ever clears AA, the two-red split can be simplified');
+});
+
+/* --------------------------------------------------------- §2.1 marquee */
+
+test('the marquee is 8–10 cards covering every layout, both themes and several languages', () => {
+  assert.ok(MARQUEE_CARDS.length >= 8 && MARQUEE_CARDS.length <= 10,
+    `§2.1 asks for 8–10 cards, the deck has ${MARQUEE_CARDS.length}`);
+
+  const layouts = new Set(MARQUEE_CARDS.map((c) => c.layout));
+  for (const l of ['bar', 'box', 'modal']) {
+    assert.ok(layouts.has(l), `the marquee never shows the ${l} layout`);
+  }
+  const themes = new Set(MARQUEE_CARDS.map((c) => c.theme));
+  assert.ok(themes.has('light') && themes.has('dark'), 'the marquee is single-theme');
+
+  // §1: the brand red leads the deck.
+  assert.equal(MARQUEE_CARDS[0].accent, '#E63939',
+    'the first marquee card must carry the brand red');
+  assert.ok(new Set(MARQUEE_CARDS.map((c) => c.accent)).size >= 4,
+    'the marquee should show several accents');
+
+  // ru/ro/en/de at least — §2.1 names them.
+  const langs = new Set(MARQUEE_CARDS.map((c) => c.lang));
+  for (const l of ['de']) assert.ok(langs.has(l), `the marquee has no ${l} card`);
+});
+
+test('the marquee cards say what the real client says, in each language', () => {
+  const L = readClientLocales();
+  const template = readTemplate();
+
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    const strip = html.match(/<div class="marquee-viewport"[\s\S]*?<\/section>/)[0];
+
+    // The deck is emitted twice for the seamless loop.
+    const cards = strip.match(/class="marquee__item"/g) || [];
+    assert.equal(cards.length, MARQUEE_CARDS.length * 2,
+      `the ${code} marquee should hold the deck twice, for the loop`);
+    assert.equal((strip.match(/class="marquee__track"/g) || []).length, 2);
+    // The duplicate must not be read out a second time.
+    assert.match(strip, /<ul class="marquee__track" aria-hidden="true">/);
+
+    // The whole strip is decorative: one banner, ten times.
+    assert.match(strip, /<div class="marquee-viewport"[^>]*aria-hidden="true"/);
+
+    // The foreign-language cards carry ck-locales.js's own strings verbatim,
+    // so the page cannot advertise wording the banner does not ship.
+    for (const c of MARQUEE_CARDS) {
+      if (['self', 'ru', 'ro', 'en'].includes(c.lang)) continue;
+      assert.ok(strip.includes(L[c.lang].acceptAll),
+        `the ${code} marquee's ${c.lang} card does not use the client's own «${L[c.lang].acceptAll}»`);
+    }
+
+    // And the page's own language uses the page's own dictionary.
+    const dict = readDict(code);
+    assert.ok(strip.includes(dict.mockAccept),
+      `the ${code} marquee has no card in the page's own language`);
+  }
+});
+
+test('the marquee stops for prefers-reduced-motion and pauses on hover', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  /* The global reduce block collapses animations to .001ms, which SNAPS a
+     translate loop to its end state instead of stopping it. The animation is
+     therefore only ever attached under no-preference. */
+  const gate = css.match(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/);
+  assert.ok(gate, 'the marquee animation is not gated behind no-preference');
+  assert.match(gate[0], /\.marquee__track\s*\{[^}]*animation:/,
+    'the marquee animation must live inside the no-preference gate');
+
+  assert.match(css, /\.marquee-viewport:hover \.marquee__track[\s\S]*?animation-play-state:\s*paused/,
+    '§2.1: the strip must pause on hover');
+  assert.match(css, /focus-within \.marquee__track/,
+    'the strip should also pause for a keyboard visitor');
+
+  // Its own scroll container, so a strip wider than the screen never makes
+  // the PAGE scroll sideways (§3) — and gives the phone its finger scroll.
+  assert.match(css, /\.marquee-viewport \{[\s\S]*?overflow-x:\s*auto/);
+});
+
+/* ---------------------------------------------------- §2.2 before/after */
+
+test('the before/after handle is a real range input', () => {
+  const template = readTemplate();
+  const html = renderPage(template, DEFAULT_LANG);
+  const ba = html.match(/<section id="before-after"[\s\S]*?<\/section>/)[0];
+
+  // §2.2 asks for keyboard support and aria-valuenow. A range input has both
+  // by construction; a div with listeners would have to reimplement them.
+  assert.match(ba, /<input class="ba__range" type="range"[^>]*min="0"[^>]*max="100"/);
+  assert.match(ba, /aria-label="[^"]+"/, 'the handle has no accessible name');
+
+  assert.match(ba, /ba__pane--before/);
+  assert.match(ba, /ba__pane--after/);
+
+  const dict = readDict(DEFAULT_LANG);
+  for (const k of ['baPillBefore1', 'baPillBefore2', 'baPillAfter1', 'baPillAfter2']) {
+    assert.ok(ba.includes(dict[k]), `the slider is missing the ${k} pill`);
+  }
+  assert.ok(ba.includes(dict.baLede), 'the slider has lost its caption');
+
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  // Clipped, not resized: the mock inside must not reflow as the handle moves.
+  assert.match(css, /\.ba__pane--before \{[\s\S]*?clip-path:\s*inset\(0 calc\(100% - var\(--ba-pos\)\)/);
+  // The invisible input must stay focusable — display:none would not be.
+  assert.match(css, /\.ba__range \{[\s\S]*?opacity:\s*0/);
+  assert.doesNotMatch(css, /\.ba__range \{[^}]*display:\s*none/);
+
+  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
+  assert.match(app, /wireBeforeAfter/, 'app.js never wires the slider');
+  assert.match(app, /--ba-pos/, 'app.js never moves the handle');
+});
+
+/* ------------------------------------------------------- §2.3/§2.4 CTAs */
+
+test('the page has one primary button, and it is the free check', () => {
+  const template = readTemplate();
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    const html = renderPage(template, code);
+
+    // Header, hero, end of «Как это работает», after the pricing table.
+    const primaries = html.match(/class="btn[^"]*btn--primary[^"]*"[^>]*>/g) || [];
+    const toCheck = (html.match(/href="#check"[^>]*>/g) || []).length;
+    assert.ok(toCheck >= 4,
+      `the ${code} page points at #check ${toCheck} times, §2.4 asks for four places`);
+
+    // Every one of those buttons says the same thing.
+    const cta = dict.ctaCheck;
+    assert.ok(cta && cta.trim(), `${code}.json has no "ctaCheck"`);
+    assert.ok(html.includes(cta), `the ${code} page never offers «${cta}»`);
+
+    // «Открыть кабинет» is a text link in the header now, not a button.
+    const head = html.match(/<header[\s\S]*?<\/header>/)[0];
+    assert.match(head, /class="head-link"[^>]*>\s*[^<]*</,
+      `the ${code} header has no text link to the dashboard`);
+    assert.ok(!/class="btn[^"]*"[^>]*href="https:\/\/app\.ecomconsult\.net"/.test(head)
+      && !/href="https:\/\/app\.ecomconsult\.net"[^>]*class="btn[^"]*"/.test(head),
+      `the ${code} header still renders the dashboard as a button`);
+
+    // The footer keeps its own text link.
+    const foot = html.match(/<footer[\s\S]*?<\/footer>/)[0];
+    assert.match(foot, /app\.ecomconsult\.net/, `the ${code} footer lost the dashboard link`);
+
+    assert.ok(primaries.length >= 1);
+  }
+});
+
+test('the hero leads with the promise chip and one accented word', () => {
+  const template = readTemplate();
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    const html = renderPage(template, code);
+    const hero = html.match(/<section class="hero">[\s\S]*?<\/section>/)[0];
+
+    assert.ok(hero.includes(dict.heroChip), `the ${code} hero has no promise chip`);
+    // Two keys, so each language can put its own word under the accent.
+    assert.ok(hero.includes(dict.heroTitleLead) && hero.includes(dict.heroTitleAccent),
+      `the ${code} headline is not split into lead + accent`);
+    assert.match(hero, /class="h1-accent"/);
+  }
+});
+
+/* ----------------------------------------------------------- §2.6 bands */
+
+test('the check block is the red band and «Цифры» is the sand one', () => {
+  const template = readTemplate();
+  const html = renderPage(template, DEFAULT_LANG);
+
+  assert.match(html, /<section id="check" class="band check-band">/);
+  assert.match(html, /<section id="numbers" class="band band--sand">/);
+
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  assert.match(css, /\.check-band \{[\s\S]*?background:\s*var\(--band\)/);
+  assert.match(css, /\.band--sand \{\s*background:\s*var\(--surface-2\)/);
+  // On a red band the primary button cannot also be red.
+  assert.match(css, /\.check-band \.btn--primary \{[\s\S]*?color:\s*var\(--accent-ink\)/);
+  // The form stays a white card and the tiles stay cream (§2.6).
+  assert.match(css, /\.check-band \.check \{[\s\S]*?background:\s*var\(--surface\)/);
+  assert.match(css, /\.check-band \.fit__list li \{[\s\S]*?background:\s*var\(--bg\)/);
+});
+
+/* --------------------------------------------------------- §2.7 Starter */
+
+test('the Starter card reads the same data as the pricing table', () => {
+  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
+
+  assert.match(app, /function renderStarter/, 'app.js has no Starter card');
+  // It must read the shared `plans` array, not its own literals.
+  assert.match(app, /function renderStarter\(\)[\s\S]*?plans\[i\]\.plan === 'starter'/,
+    'renderStarter does not read the shared plans array');
+  assert.doesNotMatch(
+    app.match(/function renderStarter\(\)[\s\S]*?\n  \}/)[0],
+    /\u20AC\s*9|['"]9['"]/,
+    'the Starter card hard-codes a price instead of reading the payload'
+  );
+  // A fresh payload has to move both.
+  assert.match(app, /renderPricing\(\);\s*\n\s*renderStarter\(\);/,
+    'loadPricing does not refresh the Starter card');
+
+  const template = readTemplate();
+  const html = renderPage(template, DEFAULT_LANG);
+  const pricing = html.match(/<section id="pricing"[\s\S]*?<\/section>/)[0];
+  // Above the table, per §2.7.
+  assert.ok(pricing.indexOf('id="starter"') < pricing.indexOf('id="plans"'),
+    'the Starter card must sit above the pricing table');
+
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    for (const k of ['starterTitle', 'starterPriceUnit', 'starterPoint1',
+                     'starterPoint2', 'starterPoint3', 'factsTitle',
+                     'factCheckFree', 'factCheckFreeNum']) {
+      assert.ok(dict[k] && String(dict[k]).trim(), `${code}.json has no "${k}"`);
+    }
+  }
+});
+
+/* ----------------------------------------------------------- §3 honesty */
+
+test('nothing on the page manufactures scarcity or invents a testimonial', () => {
+  const template = readTemplate();
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    for (const re of [
+      /осталось\s+\d+\s+мест/i, /только\s+сегодня/i,
+      /au mai rămas\s+\d+/i, /only\s+\d+\s+(spots|places|left)/i,
+      /отзыв[а-я]*\s+клиент/i
+    ]) {
+      assert.doesNotMatch(html, re, `the ${code} page manufactures scarcity or a testimonial`);
+    }
+    // §2.7: the second column is three facts precisely because there is no
+    // testimonial to show.
+    assert.doesNotMatch(html, /class="[^"]*testimonial/);
   }
 });
