@@ -20,7 +20,8 @@ import {
   readDict, readTemplate, renderPage, renderSitemap, buildAll, outputs,
   pageUrl, jsonForScript, runtimeDict,
   readPages, pageSiblings, lawUrl, lawPath, lawIndexUrl, lawOutputs,
-  renderLawPage, bodyWords, faqJsonLd
+  renderLawPage, bodyWords, faqJsonLd,
+  VERSION, BUILD_DATE, updatedText
 } from '../tools/build-site.mjs';
 
 /* ------------------------------------------------------------ the outputs */
@@ -128,8 +129,13 @@ test('no dictionary key is unused', () => {
   // keys it renders <html lang>/<title>/meta from, and the V1.11 law-page set —
   // `pages` (the four articles), the hub's own title/description/lede, and the
   // dated note stamped at the top of every article.
+  // `statsUpdated` and `statsMonths` join them for V1.13's version tile: the
+  // build composes «обновлено 6 сентября 2026» from the pattern and the month
+  // names and renders it into {{BUILD_DATE}}, so neither key is ever read at
+  // runtime and neither appears in the template as a data-i18n attribute.
   const BUILD_KEYS = ['htmlLang', 'docTitle', 'docDesc', 'pageLanguage',
-                      'pages', 'lawIndexTitle', 'lawIndexDesc', 'lawIndexLede', 'lawDated'];
+                      'pages', 'lawIndexTitle', 'lawIndexDesc', 'lawIndexLede', 'lawDated',
+                      'statsUpdated', 'statsMonths'];
 
   const used = new Set(BUILD_KEYS);
   for (const m of template.matchAll(/\bdata-i18n="([^"]+)"/g)) used.add(m[1]);
@@ -752,14 +758,57 @@ test('the numbers block hides the counts while there are too few sites', () => {
 
   for (const { code } of LANGS) {
     const dict = readDict(code);
-    for (const key of ['statsTitle', 'statsSites', 'statsConsents', 'statsLanguages', 'statsSince']) {
+    for (const key of ['statsTitle', 'statsSites', 'statsConsents', 'statsLanguages',
+                       'statsVersion', 'statsUpdated']) {
       assert.ok(dict[key] && dict[key].trim(), `${code}.json has no "${key}"`);
     }
-    assert.ok(dict.statsSince.includes('{date}'),
-      `"statsSince" in ${code}.json does not interpolate {date}`);
+    for (const token of ['{day}', '{month}', '{year}']) {
+      assert.ok(dict.statsUpdated.includes(token),
+        `"statsUpdated" in ${code}.json does not interpolate ${token}`);
+    }
     assert.ok(Array.isArray(dict.statsMonths) && dict.statsMonths.length === 12,
-      `${code}.json needs twelve month names for the «since» line`);
+      `${code}.json needs twelve month names for the «обновлено …» line`);
   }
+});
+
+/* The version tile — SPEC V1.13 §2.5 and owner remark 3.
+ *
+ * Both values are the BUILD's, not the runtime's: a version the page fetched
+ * could disagree with the script it is describing, and a date computed in the
+ * browser would read differently for every visitor. The guard below is really
+ * about determinism — see the BUILD_DATE comment in tools/build-site.mjs — so
+ * it checks that what lands in the markup is package.json's own version and a
+ * date the dictionary formatted, in all three languages. */
+test('the fourth tile carries the package version and the build date', () => {
+  const template = readTemplate();
+  const version = JSON.parse(readFileSync(join(SRC_DIR, '..', '..', 'package.json'), 'utf8')).version;
+
+  assert.equal(VERSION, version, 'build-site.mjs does not read package.json’s version');
+
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    const dict = readDict(code);
+
+    assert.ok(html.includes(`<dt class="stat__num">${version}</dt>`),
+      `the ${code} page does not show the package version in the fourth tile`);
+    assert.ok(html.includes(dict.statsVersion),
+      `the ${code} page has no «версия баннера» caption`);
+
+    const want = updatedText(dict, BUILD_DATE);
+    assert.ok(html.includes(want),
+      `the ${code} page does not carry the build date («${want}»)`);
+
+    // The month must be the dictionary's own name, not a number: RU needs the
+    // genitive («сентября»), which no date formatter would produce.
+    const month = dict.statsMonths[parseInt(BUILD_DATE.slice(5, 7), 10) - 1];
+    assert.ok(want.includes(month),
+      `the ${code} «обновлено …» line does not use the dictionary's month name`);
+  }
+
+  // Nothing computes either value in the browser.
+  const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
+  assert.doesNotMatch(app, /statsUpdated|statsMonths/,
+    'app.js reads the build-time date keys — the tile must be rendered by the build');
 });
 
 /* -------------------------------------------------------------- the FAQ */
@@ -859,6 +908,48 @@ test('images cannot widen the page on a phone', () => {
 });
 
 /* ------------------------------------------------------------- navigation */
+
+/* Owner remark 4: the footer stops repeating «Для разработчиков».
+ *
+ * The links it dropped — GitHub, npm, the installation guide — are the entire
+ * content of the #dev section one screen up, so a visitor met them twice and
+ * the footer read as a worse copy of a real section. What the footer keeps is
+ * what only it can offer: who we are, how to write to us, the dashboard, and
+ * the «Правила» group. The #dev section must still carry all three, which is
+ * the half of this that is easy to break by deleting one link too many. */
+test('the footer carries no developer links, and #dev still does', () => {
+  const template = readTemplate();
+
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    const foot = html.match(/<footer[\s\S]*?<\/footer>/)[0];
+
+    for (const url of ['github.com', 'npmjs.com', 'INSTALL.ru.md']) {
+      assert.ok(!foot.includes(url),
+        `the ${code} footer still links to ${url} — #dev already does`);
+    }
+
+    assert.ok(foot.includes('mailto:info@ecomconsult.net'),
+      `the ${code} footer has no «Написать нам» address`);
+    assert.ok(foot.includes(readDict(code).footWrite),
+      `the ${code} footer has no «Написать нам» label`);
+    assert.ok(foot.includes('app.ecomconsult.net'),
+      `the ${code} footer has no «Кабинет» link`);
+    assert.ok(foot.includes('E-COM CONSULT PLUS'),
+      `the ${code} footer has no company line`);
+
+    // Four links exactly: write to us, dashboard, and the «Правила» pair.
+    const links = foot.match(/<a\b[^>]*href=/g) || [];
+    assert.equal(links.length, 4,
+      `the ${code} footer has ${links.length} links, expected 4`);
+
+    const dev = html.match(/<section id="dev"[\s\S]*?<\/section>/)[0];
+    for (const url of ['github.com/vermoh/ConsentKit', 'npmjs.com', 'INSTALL.ru.md']) {
+      assert.ok(dev.includes(url),
+        `#dev on the ${code} page lost its ${url} link`);
+    }
+  }
+});
 
 test('«Правила» is in the nav and the footer, on every page', () => {
   const template = readTemplate();

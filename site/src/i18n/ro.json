@@ -172,7 +172,7 @@
   ],
   "footLegal": "E-COM CONSULT PLUS, Republica Moldova. ConsentKit — cod deschis sub licența MIT.",
   "footLinksLabel": "Legături",
-  "footDocs": "Ghid de instalare",
+  "footWrite": "Scrieți-ne",
   "footCabinet": "Panou de control",
   "devTitle": "Pentru dezvoltatori",
   "devLede": "Trei tag-uri pentru client și un singur apel pentru configurare — fără build și fără cabinet.",
@@ -204,7 +204,8 @@
   "statsSites": "site-uri conectate",
   "statsConsents": "consimțăminte înregistrate",
   "statsLanguages": "limbi ale bannerului",
-  "statsSince": "lucrăm din {date}",
+  "statsVersion": "versiunea bannerului",
+  "statsUpdated": "actualizat la {day} {month} {year}",
   "statsMonths": [
     "ianuarie",
     "februarie",

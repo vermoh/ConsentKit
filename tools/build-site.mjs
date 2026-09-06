@@ -45,6 +45,54 @@ export const LANGS = [
 
 export const DEFAULT_LANG = 'en';
 
+/* ------------------------------------------------- version and build date */
+
+/* SPEC V1.13 §2.5 / owner remark 3: the fourth «Цифры» tile shows the banner
+   version and the date it was built. Both are resolved HERE, at build time,
+   and rendered into the markup — never fetched or computed by app.js, so a
+   crawler and a visitor with JavaScript off see the same two values as
+   everyone else, and the tile is filled before app.js has run. */
+export const VERSION = JSON.parse(
+  readFileSync(join(REPO, 'package.json'), 'utf8')
+).version;
+
+/* The build date, as YYYY-MM-DD.
+ *
+ * `new Date()` on its own would break the guarantee this file opens with — the
+ * output is a pure function of its inputs — in the one way that matters most:
+ * test/site-build.test.mjs compares the COMMITTED pages against a fresh
+ * render, so a page built today would start failing `npm test` tomorrow, on
+ * every machine, with nothing changed. CK_BUILD_DATE keeps that door open for
+ * a deliberate rebuild (`CK_BUILD_DATE=2026-10-01 node tools/build-site.mjs`)
+ * while the committed default keeps the render reproducible in between. */
+export const BUILD_DATE = (() => {
+  const env = process.env.CK_BUILD_DATE;
+  if (env && /^\d{4}-\d{2}-\d{2}$/.test(env)) return env;
+  if (env) throw new Error(`CK_BUILD_DATE must be YYYY-MM-DD, got "${env}"`);
+  return '2026-09-06';
+})();
+
+/* «обновлено 6 сентября 2026» — from the dictionary's own pattern and its own
+   month names. The names are the ones the «работаем с …» line already needed,
+   which in Russian are genitive («сентября»), exactly the form a date reads in;
+   the ORDER is in the pattern, so English can say «updated September 6, 2026»
+   without the build knowing anything about English. */
+export function updatedText(dict, iso = BUILD_DATE) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) throw new Error(`bad build date "${iso}"`);
+  const months = dict.statsMonths;
+  if (!Array.isArray(months) || months.length !== 12) {
+    throw new Error('statsMonths must carry twelve names');
+  }
+  if (typeof dict.statsUpdated !== 'string') {
+    throw new Error('the dictionary has no "statsUpdated" pattern');
+  }
+  return dict.statsUpdated
+    .split('{day}').join(String(parseInt(m[3], 10)))
+    .split('{month}').join(months[parseInt(m[2], 10) - 1])
+    .split('{year}').join(m[1]);
+}
+
 /* site/vercel.json sets cleanUrls:true and trailingSlash:false, so Vercel
    serves site/ru/index.html at /ru and redirects /ru/ -> /ru. Canonical,
    hreflang, the sitemap and the switcher links must all use the form Vercel
@@ -581,6 +629,8 @@ export function renderPage(template, lang) {
     OG_LOCALE_ALT: ogLocaleAlt(lang),
     LANG_SWITCH: langSwitch(lang),
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
+    VERSION: escapeHtml(VERSION),
+    BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
     I18N_SCRIPT: i18nScript
   };

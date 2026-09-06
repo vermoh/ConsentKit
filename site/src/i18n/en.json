@@ -172,7 +172,7 @@
   ],
   "footLegal": "E-COM CONSULT PLUS, Moldova. ConsentKit is open source under the MIT licence.",
   "footLinksLabel": "Links",
-  "footDocs": "Installation guide",
+  "footWrite": "Write to us",
   "footCabinet": "Dashboard",
   "devTitle": "For developers",
   "devLede": "Three tags to load the client and one call to configure it — no build step and no dashboard.",
@@ -204,7 +204,8 @@
   "statsSites": "sites connected",
   "statsConsents": "consents recorded",
   "statsLanguages": "banner languages",
-  "statsSince": "running since {date}",
+  "statsVersion": "banner version",
+  "statsUpdated": "updated {month} {day}, {year}",
   "statsMonths": [
     "January",
     "February",

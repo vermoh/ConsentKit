@@ -82,6 +82,14 @@ body {
 .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
 .wrap--narrow { max-width: 780px; }
 
+/* #faq is the exception. `.wrap--narrow` caps the wrap itself and a wrap is
+   `margin: 0 auto`, so on a law PAGE — which is one column of prose from top
+   to bottom — centring is right, but inside the home page it made #faq's
+   heading start ~170px to the right of every other section's. The FAQ keeps
+   the page's own left edge and applies the reading measure to its contents. */
+#faq .wrap--narrow { max-width: var(--wrap); }
+#faq .wrap--narrow > * { max-width: 780px; margin-right: auto; }
+
 section { padding: 72px 0; }
 .band { background: var(--bg-band); }
 
@@ -344,12 +352,10 @@ a { color: var(--accent-ink); }
 
 /* ── demo panel ─────────────────────────────────────────────────────── */
 
-.panel {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 24px;
-}
+/* `.panel` and `.panel-foot` used to wrap the demo controls in a card of their
+   own under the window. The controls now live inside the window (V1.13 owner
+   remark 2), so both classes are gone rather than left for someone to style
+   against. What survives is what the controls themselves still use. */
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -368,15 +374,6 @@ a { color: var(--accent-ink); }
   min-height: 42px;
 }
 
-.panel-foot {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin: 22px 0 0;
-  padding-top: 20px;
-  border-top: 1px solid var(--line-soft);
-}
 .panel-hint { font-size: .88rem; color: var(--ink-soft); }
 .panel-status {
   margin: 14px 0 0;
@@ -688,12 +685,18 @@ a { color: var(--accent-ink); }
   padding: 40px 0;
   background: var(--bg-band);
 }
+/* Three columns on an explicit grid rather than `space-between`. With flex,
+   removing the two developer links narrowed the middle column and every gap
+   moved with it; on a grid the columns keep their positions, and the first one
+   starts on the same left edge as every section above it. */
 .foot-grid {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 26px;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: start;
+}
+@media (max-width: 700px) {
+  .foot-grid { grid-template-columns: 1fr; gap: 22px; }
 }
 .foot-brand { font-weight: 680; margin: 0 0 4px; letter-spacing: .01em; }
 .foot-small { margin: 0; font-size: .87rem; color: var(--ink-soft); max-width: 46ch; }
@@ -733,6 +736,10 @@ a { color: var(--accent-ink); }
      the headline and both buttons stay above the fold on a phone. */
   .hero-shot { padding: 8px; }
   .shot-frame { min-height: 0; height: min(58vh, 420px); }
+  /* …but not the demo window: it holds a wrapping toolbar and a footer strip,
+     and .shot-frame clips its overflow, so a fixed height would cut the
+     controls off exactly where a phone has the least room to spare. */
+  .demo-win { height: auto; }
   .shot-page { padding: 18px 18px 0; }
   .shot-banner { left: 10px; right: 10px; bottom: 10px; padding: 15px; }
   /* Three buttons in one 375px row leave ~84px each, and the longest label in
@@ -754,7 +761,8 @@ img { max-width: 100%; height: auto; }
 
 /* ── «Проверить сайт» — SPEC V1.13 §2.2, its own block under the hero ── */
 
-.check-band .wrap { padding-top: 60px; padding-bottom: 60px; }
+/* The band used to set its own 60/60 padding, which put it out of step with
+   the 72px every other section uses. Same rhythm as the rest of the page. */
 .check-head { max-width: 62ch; margin: 0 0 22px; }
 .check-head h2 { margin-bottom: .35em; }
 .check-head .section-lede { margin: 0; }
@@ -775,8 +783,11 @@ img { max-width: 100%; height: auto; }
    they answer for. Plain <li>, not links: there is no per-platform page to
    send anyone to, and a tile that looks clickable and is not is worse than a
    tile that does not. */
-.fit { margin-top: 34px; }
-.fit__head { font-size: 1.02rem; margin: 0 0 14px; }
+/* The heading is a grid sibling of .fit, not a child — see the template. On a
+   phone the grid is off and the two simply stack, so the 34px that used to sit
+   on .fit belongs on the heading, which is now what follows the form. */
+.fit { margin-top: 0; }
+.fit__head { font-size: 1.02rem; margin: 34px 0 14px; }
 .fit__list {
   list-style: none;
   margin: 0;
@@ -805,9 +816,24 @@ img { max-width: 100%; height: auto; }
     column-gap: 48px;
     align-items: start;
   }
-  .check-head { grid-column: 1 / -1; }
-  .check-band .check { grid-column: 1; }
-  .check-band .fit { grid-column: 2; margin-top: 0; }
+
+  /* Two rows, both placed explicitly. Row 1 is the head row: the section
+     heading and lede on the left, the tiles' own heading on the right, sitting
+     on the lede's last line rather than floating above it. Row 2 is the
+     content row, and the whole point of the fix — the form card and the tile
+     grid start on the SAME top edge, which auto-placement could not promise
+     once the heading became a grid item of its own. */
+  .check-head { grid-column: 1; grid-row: 1; margin-bottom: 22px; }
+  .fit__head {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    /* Matches .check-head's bottom margin, so both rows' baselines land
+       together and row 2 starts flush on both sides. */
+    margin: 0 0 22px;
+  }
+  .check-band .check { grid-column: 1; grid-row: 2; }
+  .check-band .fit { grid-column: 2; grid-row: 2; }
   .check-band .fit__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -945,8 +971,81 @@ img { max-width: 100%; height: auto; }
  * — a heading bar, body lines and three product cards — that the real banner
  * appears over. Scenery, so aria-hidden; the banner beside it is the thing to
  * read. */
-.demo-stage { margin: 22px 0 26px; }
+.demo-stage { margin: 22px 0 18px; }
 .shot-frame--lg { max-width: none; }
+
+/* The window is now the whole demo: dots, toolbar, page, state strip. Its
+   chrome stays deliberately light in both themes — the frame is a picture of
+   somebody else's browser, and a frame that follows the reader's own dark mode
+   stops reading as one. That means the controls inside it cannot use the page
+   tokens either, or a dark-mode reader gets dark selects on a white window;
+   the toolbar therefore pins its own light values below. */
+.demo-win { display: flex; flex-direction: column; }
+
+/* One row of controls that wraps, not three stacked ones: the four selects
+   share a flexible track, the swatches and the button ride at the end of the
+   same row, and on a narrow screen the whole thing wraps rather than being
+   clipped by the frame's overflow:hidden. */
+.demo-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px 16px;
+  padding: 14px 16px;
+  background: #f7f9fc;
+  border-bottom: 1px solid #e4e8f1;
+}
+.demo-tools .panel-grid {
+  flex: 1 1 520px;
+  gap: 12px 14px;
+  /* 148px is what the longest option in the three dictionaries needs — RU's
+     «Как на странице» and RO's «Ca pe pagină» — with room for the arrow. Below
+     that the label clips, which reads as a bug rather than as a tight fit. */
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+}
+.demo-tools .field select { padding-right: 8px; }
+.demo-tools .swatches { margin: 0; flex: 0 0 auto; }
+.demo-tools__again {
+  margin: 0;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.demo-tools__again .btn { width: auto; }
+/* The hint reads beside the button on a wide toolbar and drops out on a narrow
+   one, where the row is already two lines of controls and a sentence of prose
+   would push the fake page off the bottom of the frame. The button keeps its
+   aria-describedby either way, so a screen reader still hears the explanation. */
+.demo-tools .panel-hint { max-width: 30ch; font-size: .82rem; line-height: 1.35; }
+@media (max-width: 1100px) {
+  .demo-tools .panel-hint { display: none; }
+}
+
+/* Light-locked control chrome, for the reason in the .demo-win comment. */
+.demo-tools .field label,
+.demo-tools .field__label { color: #55607a; }
+.demo-tools .field select {
+  color: #161d2b;
+  background: #ffffff;
+  border-color: #d7dce7;
+}
+.demo-tools .swatch__dot { border-color: #d7dce7; }
+.demo-tools .swatch__input:checked + .swatch__dot {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #161d2b;
+}
+
+/* The state strip, inside the window under the page. Same light chrome. */
+.demo-foot {
+  margin-top: auto;
+  padding: 12px 16px;
+  background: #f7f9fc;
+  border-top: 1px solid #e4e8f1;
+}
+.demo-foot .panel-status { margin: 0; color: #55607a; min-height: 0; }
+.demo-foot .panel-gcm { margin: 4px 0 0; color: #161d2b; }
+
 .shot-page--lg { padding: 26px 26px 30px; gap: 13px; }
 .shot-cards {
   display: grid;
@@ -960,9 +1059,10 @@ img { max-width: 100%; height: auto; }
   border-radius: 9px;
   background: #e7eaf1;
 }
-@media (prefers-color-scheme: dark) {
-  .shot-card { background: #2a3240; }
-}
+/* No dark-mode rule for .shot-card: the frame it sits in is light-locked on
+   purpose (see .shot-frame), so a card that followed the reader's own theme
+   became a dark rectangle on a white page. The frame is a picture of somebody
+   else's browser, and everything inside it stays in that picture's palette. */
 @media (max-width: 560px) {
   .shot-card { height: 52px; }
   .shot-page--lg { padding: 18px 18px 22px; }
@@ -1047,6 +1147,9 @@ img { max-width: 100%; height: auto; }
 }
 .stat__label { margin: 4px 0 0; color: var(--ink-soft); font-size: .93rem; }
 .stat__label:empty { display: none; }
+/* The «обновлено …» line under the version. Quieter than the caption above it:
+   it dates the number, it is not a second fact about the product. */
+.stat__sub { margin: 2px 0 0; color: var(--ink-soft); font-size: .82rem; opacity: .85; }
 /* The «работаем с сентября 2026» tile carries a phrase where the others carry
    a numeral, so it is set at a size the words can live at. */
 .stat__num--sm { font-size: 1.25rem; font-weight: 650; color: var(--ink-soft); }

@@ -527,9 +527,10 @@
   // «3 сайта» does.
   var STATS_MIN_CONSENTS = 1000;
 
-  // What is true regardless of uptake. `since` is what the fourth tile shows
-  // until there are sites to count instead.
-  var STATS_FALLBACK = { sites: 0, consents: 0, languages: 34, since: '2026-09-01' };
+  // What is true regardless of uptake. The fourth tile — the banner version
+  // and its build date — is rendered by tools/build-site.mjs and needs nothing
+  // from here unless there are enough sites to replace it.
+  var STATS_FALLBACK = { sites: 0, consents: 0, languages: 34 };
 
   var stats = STATS_FALLBACK;
 
@@ -546,20 +547,13 @@
     return out;
   }
 
-  /* «с сентября 2026» from an ISO date. The month names are in the dictionary
-     because Russian needs the genitive («с сентября»), which no date formatter
-     would produce from a bare month name. */
-  function sinceText(iso) {
-    var months = Array.isArray(I18N.statsMonths) ? I18N.statsMonths : null;
-    var m = /^(\d{4})-(\d{2})/.exec(String(iso || ''));
-    if (!m || !months || months.length !== 12) return '';
-    var name = months[parseInt(m[2], 10) - 1];
-    if (!name) return '';
-    return t('statsSince').replace('{date}', name + ' ' + m[1]);
-  }
-
   /* Overwrite one tile in place — the number and its label together, because a
-     tile showing a new count under an old label is worse than either. */
+     tile showing a new count under an old label is worse than either.
+
+     The version tile carries a second line («обновлено 6 сентября 2026»)
+     that captions the version and nothing else. When that tile is replaced by
+     a live count the line has to go with it, or «N сайтов подключено» ends up
+     captioned with the build date. */
   function setStat(i, value, label, small) {
     var host = $('#stats');
     if (!host) return;
@@ -572,14 +566,19 @@
     dt.className = 'stat__num' + (small ? ' stat__num--sm' : '');
     dd.textContent = label;
     dd.hidden = false;
+    var sub = $('.stat__sub', tile);
+    if (sub) sub.hidden = true;
   }
 
-  /* SPEC V1.13 §2.5 — the two swap rules, and nothing else.
+  /* SPEC V1.13 §2.5 and owner remark 3 — the two swap rules, and nothing else.
    *
-   * Tile 3 («10 минут на установку») becomes «M согласий записано» once the
-   * journal has four figures in it; tile 4 («с сентября 2026») becomes
-   * «N сайтов подключено» once there are at least ten. Neither swap can empty
-   * a tile: each one writes a number and a label or leaves the markup alone. */
+   * The version tile is the DEFAULT fourth tile: it is true on day one, needs
+   * no API and is rendered by the build. The live counts take tiles in the
+   * order the owner set — «10 минут» goes first, to «M согласий записано» at
+   * four figures; only then does the version tile give way to «N сайтов
+   * подключено» at ten sites. So a service with sites but few consents shows
+   * the sites count and keeps the version; one with both shows both counts.
+   * Four tiles are filled in every one of those states. */
   function renderStats() {
     if (!$('#stats')) return;
 
@@ -588,22 +587,6 @@
     }
     if (isNum(stats.sites) && stats.sites >= STATS_MIN_SITES) {
       setStat(3, groupDigits(stats.sites), t('statsSites'), false);
-      return;
-    }
-
-    // No sites to boast about yet: the fourth tile stays the «работаем с …»
-    // line, refreshed from the payload's own date when it sent one.
-    var since = sinceText(stats.since);
-    if (since) {
-      var host = $('#stats');
-      var tile = host.children[3];
-      if (!tile) return;
-      var dt = $('.stat__num', tile);
-      var dd = $('.stat__label', tile);
-      if (!dt) return;
-      dt.textContent = since;
-      dt.className = 'stat__num stat__num--sm';
-      if (dd) { dd.textContent = ''; }
     }
   }
 
@@ -626,8 +609,7 @@
         var next = {
           sites:      isNum(data.sites) ? data.sites : stats.sites,
           consents:   isNum(data.consents) ? data.consents : stats.consents,
-          languages:  isNum(data.languages) ? data.languages : stats.languages,
-          since:      typeof data.since === 'string' ? data.since : stats.since
+          languages:  isNum(data.languages) ? data.languages : stats.languages
         };
         stats = next;
         renderStats();

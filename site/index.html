@@ -200,9 +200,16 @@
       <!-- The four «подходит любому сайту» tiles. Outside the CHECKFORM
            markers on purpose — see the section comment above. The wording is
            «одна строка в head», which is true of every platform named here;
-           no claim is made about behaviour we have not tested per platform. -->
+           no claim is made about behaviour we have not tested per platform.
+
+           The heading is a SIBLING of .fit, not a child of it: CSS grid places
+           only the direct children of .check-band .wrap, so a heading nested
+           inside .fit could never sit in the head row beside «Проверьте свой
+           сайт бесплатно». As authored the DOM order — head, form, tiles
+           heading, tiles — is also the correct stacking order on a phone,
+           where the grid does not apply. -->
+      <h3 class="fit__head" data-i18n="fitTitle">Works with any site</h3>
       <div class="fit">
-        <h3 class="fit__head" data-i18n="fitTitle">Works with any site</h3>
         <ul class="fit__list">
           <li>
             <span class="fit__title" data-i18n="fit1Title">Site builders</span>
@@ -231,29 +238,22 @@
       <h2 data-i18n="demoTitle">Live demo</h2>
       <p class="section-lede" data-i18n="demoLede">This is a real banner, not a screenshot. Change the layout, position, theme, colour and language — the banner changes at once.</p>
 
-      <!-- The page the banner appears over. Content, not an empty rectangle:
-           a heading bar, body lines and three «product cards», so the frame
-           reads as a site rather than as a placeholder. aria-hidden — it is
-           scenery, and the real banner beside it is the thing to read. -->
-      <div class="demo-stage" aria-hidden="true">
-        <div class="shot-frame shot-frame--lg">
-          <div class="shot-bar"><span></span><span></span><span></span></div>
-          <div class="shot-page shot-page--lg">
-            <span class="shot-line shot-line--title"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line shot-line--short"></span>
-            <div class="shot-cards">
-              <span class="shot-card"></span>
-              <span class="shot-card"></span>
-              <span class="shot-card"></span>
-            </div>
-            <span class="shot-line"></span>
-            <span class="shot-line shot-line--short"></span>
-          </div>
-        </div>
-      </div>
+      <!-- The whole demo is ONE pseudo-window: the three dots, then a toolbar
+           of controls, then the fake page, then a footer strip with the two
+           state lines. The controls used to live in a separate card below the
+           frame, where nothing said what they controlled.
 
-      <div class="panel">
+           aria-hidden sits on the SCENERY only — the title dots and the grey
+           placeholder lines — never on the frame itself. The selects, the
+           swatches and the «Показать снова» button are real controls, and
+           #d-status is a live region: inside an aria-hidden subtree they would
+           be focusable-but-hidden to a screen reader, which is a WCAG failure
+           and would silence the announcements. -->
+      <div class="demo-stage">
+        <div class="shot-frame shot-frame--lg demo-win">
+          <div class="shot-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+
+          <div class="demo-tools">
         <div class="panel-grid">
           <p class="field">
             <label for="d-layout" data-i18n="fieldLayout">Layout</label>
@@ -284,26 +284,58 @@
           </p>
         </div>
 
-        <!-- Five accent swatches. Radio semantics, because exactly one is
-             active: a radiogroup gives arrow-key navigation and a single tab
-             stop for free, which a row of five buttons would not. -->
-        <div class="swatches" role="radiogroup" aria-labelledby="d-accent-label">
-          <span class="field__label" id="d-accent-label" data-i18n="fieldAccent">Colour</span>
-          <span class="swatches__row" id="d-accent"></span>
+            <!-- Five accent swatches. Radio semantics, because exactly one is
+                 active: a radiogroup gives arrow-key navigation and a single
+                 tab stop for free, which a row of five buttons would not. -->
+            <div class="swatches" role="radiogroup" aria-labelledby="d-accent-label">
+              <span class="field__label" id="d-accent-label" data-i18n="fieldAccent">Colour</span>
+              <span class="swatches__row" id="d-accent"></span>
+            </div>
+
+            <!-- The hint belongs NEXT to the button it explains. It used to
+                 sit under the whole window, with the fake page between the
+                 two — the same «what does this control?» problem, one size
+                 down. aria-describedby ties it to the button for a screen
+                 reader as well as for the eye. -->
+            <p class="demo-tools__again">
+              <button type="button" class="btn btn--primary btn--sm" id="d-again"
+                      aria-describedby="d-again-hint" data-i18n="btnShowAgain">Show again</button>
+              <span class="panel-hint" id="d-again-hint" data-i18n="demoHint">Clears the saved choice and shows the banner again.</span>
+            </p>
+          </div>
+
+          <!-- The page the banner appears over. Content, not an empty
+               rectangle: a heading bar, body lines and three «product cards»,
+               so the frame reads as a site rather than as a placeholder.
+               Scenery, hence aria-hidden. -->
+          <div class="shot-page shot-page--lg" aria-hidden="true">
+            <span class="shot-line shot-line--title"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+            <div class="shot-cards">
+              <span class="shot-card"></span>
+              <span class="shot-card"></span>
+              <span class="shot-card"></span>
+            </div>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+          </div>
+
+          <!-- Footer strip, inside the window. Two lines, both in words: the
+               first is what the visitor chose, the second is what those
+               categories mean for Google's own signals. SPEC V1.13 §2.4 asks
+               for the values to move as the choice moves. -->
+          <div class="demo-foot">
+            <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
+            <p class="panel-gcm" id="d-gcm"></p>
+          </div>
         </div>
-
-        <p class="panel-foot">
-          <button type="button" class="btn btn--primary btn--sm" id="d-again" data-i18n="btnShowAgain">Show again</button>
-          <span class="panel-hint" data-i18n="demoHint">Clears the saved choice and shows the banner again.</span>
-        </p>
-
-        <!-- Two lines, both in words. The first is what the visitor chose; the
-             second is what those categories mean for Google's own signals.
-             SPEC V1.13 §2.4 asks for the values to move as the choice moves. -->
-        <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
-        <p class="panel-gcm" id="d-gcm"></p>
-        <p class="panel-gcm-note" data-i18n="gcmNote">In Consent Mode, Google services run before consent without cookies and without identifying the visitor.</p>
       </div>
+
+      <!-- Outside the window: what Consent Mode means. It qualifies the second
+           state line rather than reporting state, so it is not part of the
+           strip — but it must stay next to the line it qualifies. -->
+      <p class="panel-gcm-note" data-i18n="gcmNote">In Consent Mode, Google services run before consent without cookies and without identifying the visitor.</p>
     </div>
   </section>
 
@@ -415,9 +447,21 @@
           <dt class="stat__num">10</dt>
           <dd class="stat__label" data-i18n="statsMinutes">minutes to install</dd>
         </div>
+        <!-- The version tile. Both values are injected by the build from
+             package.json and the build date — never at runtime, so the block
+             is already correct in the served HTML and cannot disagree with
+             itself between a crawler's view and a visitor's.
+
+             The «обновлено …» line is its own <dd>, not a child of the
+             caption: applyDict() replaces the entire body of any element
+             carrying data-i18n, so a span nested inside the caption would be
+             overwritten by the translated string. Two <dd>s under one <dt> is
+             also what a <dl> is for. app.js hides this second line when it
+             swaps the tile for «N сайтов подключено» — see renderStats(). -->
         <div class="stat">
-          <dt class="stat__num stat__num--sm" data-stats-since>с сентября 2026</dt>
-          <dd class="stat__label"></dd>
+          <dt class="stat__num">0.5.9</dt>
+          <dd class="stat__label" data-i18n="statsVersion">banner version</dd>
+          <dd class="stat__sub" data-stats-updated>updated September 6, 2026</dd>
         </div>
       </dl>
     </div>
@@ -546,10 +590,13 @@
       <p class="foot-brand">E-COM CONSULT PLUS</p>
       <p class="foot-small" data-i18n="footLegal">E-COM CONSULT PLUS, Moldova. ConsentKit is open source under the MIT licence.</p>
     </div>
+    <!-- No developer links here. GitHub, npm and the installation guide are
+         the whole content of «Для разработчиков» one section up; repeating
+         them in the footer made the utility row read as a second, worse copy
+         of that section. What is left is what only the footer can offer: a
+         way to reach us, and the dashboard. -->
     <nav class="foot-links" aria-label="Links" data-i18n-aria-label="footLinksLabel">
-      <a href="https://github.com/vermoh/ConsentKit" rel="noopener">GitHub</a>
-      <a href="https://www.npmjs.com/package/@ecomconsult/consentkit" rel="noopener">npm</a>
-      <a href="https://github.com/vermoh/ConsentKit/blob/main/INSTALL.ru.md" rel="noopener" data-i18n="footDocs">Installation guide</a>
+      <a href="mailto:info@ecomconsult.net" data-i18n="footWrite">Write to us</a>
       <a href="https://app.ecomconsult.net" data-i18n="footCabinet">Dashboard</a>
     </nav>
     <!-- The «Правила» group. Its own nav so the articles read as a section of
@@ -569,7 +616,7 @@
 <script src="/vendor/ck-ui.js"></script>
 <!-- Debug panel: inert unless the page is opened with ?ck_debug=1 -->
 <script src="/vendor/ck-debug.js"></script>
-<script>window.__CK_SITE_I18N={"htmlLang":"en","docTitle":"ConsentKit — cookie consent banner for your site","docDesc":"A cookie consent banner you can install in ten minutes. It asks your visitors before any tracker starts. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.","skip":"Skip to main content","navSections":"Sections","pageLanguage":"Page language","navDemo":"Demo","navHow":"How it works","navFeatures":"Features","navPricing":"Pricing","navFaq":"FAQ","navDev":"Developers","ctaCabinet":"Open the dashboard","ctaDemo":"See the demo","heroEyebrow":"Open source · MIT · free plan","heroTitle":"Your site follows EU rules, and your ads and analytics keep working","heroLine1":"The banner goes up in ten minutes on any site. Your visitor answers first, and only then do the trackers start.","mockTitle":"Cookies on this site","mockText":"Necessary cookies keep the site working. The rest are used only if you allow them.","mockAccept":"Accept all","mockReject":"Reject all","mockSettings":"Customize","heroNote":"Free forever: one site, all 34 languages, one manual scan per day.","demoTitle":"Live demo","demoLede":"This is a real banner, not a screenshot. Change the layout, position, theme, colour and language — the banner changes at once.","fieldLayout":"Layout","layoutBar":"Bar","layoutBox":"Corner","layoutModal":"Centred window","fieldBannerLang":"Banner language","langAuto":"Same as the page","btnShowAgain":"Show again","demoHint":"Clears the saved choice and shows the banner again.","statusUndecided":"Choice: the visitor has not answered yet.","statusDecided":"Choice: {cats}.","statusNone":"nothing beyond necessary","statusBroken":"The demo did not start — please reload the page.","howTitle":"How it works","how1Title":"Paste the banner line","how1Text":"One line in the head — in your builder settings, in the site template or through a tag manager. No build step, no dependencies.","how2Title":"Press “Check”","how2Text":"The dashboard finds the line on your site: that both verifies the domain and confirms the install.","how3Title":"Run a scan","how3Text":"The scanner walks the site, finds third-party services and cookies and offers a ready-made table for the banner.","how4Title":"Adjust the banner","how4Text":"The first version publishes itself. Adjust the colours, texts and table in the dashboard if you want to.","featTitle":"Features","feat1Title":"Trackers stay silent until asked","feat1Text":"Analytics and ads do not start until your visitor presses a button.","feat2Title":"The scanner finds your cookies","feat2Text":"We walk your pages and build the cookie list for the banner.","feat3Title":"Consent you can prove","feat3Text":"Every visitor answer is stored in case you are ever asked.","feat4Title":"The banner speaks 34 languages","feat4Text":"Visitors see their own language and you translate nothing.","feat5Title":"Your ads keep working","feat5Text":"A refusal does not switch Google off entirely: it counts without cookies and without identifying the visitor.","feat6Title":"Installs on any site","feat6Text":"A site builder, WordPress, a shop, a tag manager or plain HTML.","priceTitle":"Pricing","priceLede":"A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.","priceFoot":"Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Moldova.","perMonth":"/ mo","perSitePerMonth":"per site / mo","byAgreement":"by agreement","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Free forever","planStarterNote":"For a single site","planBusinessNote":"For agencies and site networks","planAgencyNote":"No site limit","planCtaFree":"Start free","planCtaPaid":"Open the dashboard","planCtaAgency":"Get in touch","recommended":"Most popular","priceTableCaption":"ConsentKit plans compared: price, sites, scans, consent log, alerts, languages and support for every plan.","priceScrollHint":"Scroll the table sideways to see every plan.","rowPlan":"Plan","rowPrice":"Price","rowCta":"Getting started","rowSites":"Sites","rowBranding":"“Made by E-COM Consult” line","rowScans":"Scans","rowLog":"Consent log","rowAlerts":"Email when a new tracker appears","rowLangs":"Banner languages","rowSupport":"Support","sitesOne":"1","sitesOneEach":"1 (each billed separately)","sitesUpTo":"up to {n}","sitesUnlimited":"unlimited","brandingRequired":"required","brandingOptional":"can be turned off","scansScheduled":"automatic weekly + {n} a day on demand","scansManualOnly":"{n} a day on demand","unitScanOne":"{n} manual scan","unitScanFew":"{n} manual scans","unitScanMany":"{n} manual scans","logDays":"{n}, no download","logDaysCsv":"{n}, downloadable file","logMonths":"{n}, no download","logMonthsCsv":"{n}, downloadable file","unitDayOne":"{n} day","unitDayFew":"{n} days","unitDayMany":"{n} days","unitMonthOne":"{n} month","unitMonthFew":"{n} months","unitMonthMany":"{n} months","yes":"yes","no":"no","langsAll":"all 34","supportFree":"documentation","supportStarter":"e-mail","supportBusiness":"e-mail, 1 business day","supportAgency":"dedicated manager","whoTitle":"Who it is for","who1Title":"Sites on builders","who1Text":"There is nowhere to upload files, so we hand you the whole block instead. Paste it into the field for code in the head — one paste, no plugins.","who2Title":"WordPress and WooCommerce","who2Text":"The plugin installs by copying a folder and is configured in the admin. It works with caching plugins too: the banner does not depend on PHP.","who4Title":"Agencies and your own sites","who4Text":"Many sites in one dashboard, scheduled scans and alerts about new trackers. Terms by agreement.","faqTitle":"Frequently asked questions","faq":[["What is cookie consent and why is it needed?","A cookie is a small note a site leaves in your visitor’s browser. Under EU rules anything not needed to run the site itself may only start after the visitor agrees, and you have to be able to prove they did. ConsentKit asks, waits for the answer and saves the decision for you."],["Does ConsentKit really block everything before consent?","Almost everything, right away: the official Google Analytics, Yandex Metrica, Meta, TikTok and Hotjar snippets are stopped automatically, and Google receives Consent Mode v2 signals before any tag loads. Rarer are trackers written into the page by hand as a plain \u003cscript src\u003e tag: the browser starts fetching those, so each one has to be marked once with type=\"text/plain\". The dashboard shows you exactly which ones and explains what to do."],["Where is the data stored?","On servers in Lithuania, in the European Union. The company: E-COM CONSULT PLUS, Moldova. We store the fact of consent and what the person chose, not information about the visitor."],["Can I use it without the dashboard?","Yes, and free of charge. The software is open under the MIT licence: download the files, put them on your site and set it up by hand, with no sign-up. The dashboard is for people who would rather press buttons than edit files."],["How do I turn off the “Made by E-COM Consult” line?","On paid plans a switch in the site settings turns it off; on the free plan it stays. If you installed the banner yourself, without the dashboard, you can remove the line in your own copy’s settings. We charge for the dashboard, the scans and keeping the log, not for hiding a line."],["What about scanning sites that are not mine?","You may only scan your own sites, or client sites you have been asked to look after. That is why a site has to be verified in the dashboard before the first scan. The scanner treads lightly and does not put load on your site."],["What counts as one site?","One site is one domain with everything on it: example.com and all of its pages. A separate domain is a separate site, even if it belongs to you and looks the same."],["What about subdomains?","Subdomains of a connected domain — shop.example.com, blog.example.com — are covered by the same site and do not use up your limit. They share the banner and the consent log with the main domain."],["VAT and invoices?","Payment goes through Creem, which issues the invoice and handles VAT for your country. Prices on this page are excluding VAT; the final amount is shown at checkout, and the invoice arrives by email."],["Can I cancel?","Yes, from the dashboard, at any time. The plan stays active until the end of the period you have already paid for, and nothing is charged after that."],["Does moving to a cheaper plan break anything?","No. The banner keeps working exactly as it is: scheduled scans stop, the developer line comes back, and the consent log keeps the shorter retention of the new plan. The site itself never goes down."]],"footLegal":"E-COM CONSULT PLUS, Moldova. ConsentKit is open source under the MIT licence.","footLinksLabel":"Links","footDocs":"Installation guide","footCabinet":"Dashboard","devTitle":"For developers","devLede":"Three tags to load the client and one call to configure it — no build step and no dashboard.","devFacts":"Open source under MIT, zero dependencies, 34 languages, Google Consent Mode v2.","devDocs":"Installation guide","navLaw":"Rules","lawDated":"Correct as of September 2026. General information, not legal advice.","lawIndexTitle":"Rules and cookies","lawIndexDesc":"Plain-language explanations of the cookie rules that apply to sites in Moldova and Romania: consent, GDPR, Google Consent Mode v2 and what happens without a banner.","lawIndexLede":"Four short articles about the rules a site owner actually runs into. Written for people who own sites, not for lawyers.","checkTitle":"Check your site for free","checkLede":"We will show you which services and cookies load before consent. Public pages only.","checkDomainLabel":"Site address","checkDomainPlaceholder":"example.com","checkEmailLabel":"Your email","checkEmailPlaceholder":"you@example.com","checkAgree":"This is my site, or I work on it under a contract","checkSubmit":"Check","checkNote":"We only read public pages. The result appears here, the details go to your email.","checkRecent":"This site was already checked today.","checkLimit":"Too many checks from your address, please try tomorrow.","checkError":"We could not reach us. Check your connection and try again.","checkInvalid":"Please check the site address.","checkNeedDomain":"Enter your site address.","checkNeedEmail":"Enter the address to send the result to.","checkNeedAgree":"Tick the box to continue.","checkSending":"Sending…","statsTitle":"Numbers","statsSites":"sites connected","statsConsents":"consents recorded","statsLanguages":"banner languages","statsSince":"running since {date}","statsMonths":["January","February","March","April","May","June","July","August","September","October","November","December"],"priceCheaper":"Cheaper than a single letter from a lawyer.","checkRunning":"Checking {domain}…","checkRunningNote":"This usually takes a couple of minutes. You can leave the page open.","checkDone":"Done: {services} third-party services, {before} of them before consent, {cookies} cookies.","checkAskEmail":"Where should we send the full result?","checkEmailSubmit":"Send","checkMailQueued":"The email will arrive within a few minutes.","checkRecentMailed":"This site was already checked today — the full result has already been sent.","checkMailLimit":"Too many requests for this address, please try tomorrow.","checkMailed":"The full result for this site has already been sent.","checkScanError":"We could not check the site. Please try again later.","fitTitle":"Works with any site","fit1Title":"Site builders","fit1Text":"Tilda, Wix, Squarespace, Webflow and others — one line in the site settings.","fit2Title":"WordPress and WooCommerce","fit2Text":"A plugin, or one line in the head.","fit3Title":"Online shops","fit3Text":"Shopify, OpenCart, PrestaShop and others — one line in the template.","fit4Title":"Your own site or an agency","fit4Text":"One line in the template, many sites in one dashboard.","fieldPosition":"Position","posBottom":"Bottom","posTop":"Top","posBottomLeft":"Bottom left","posBottomRight":"Bottom right","posCenter":"Centre","fieldTheme":"Theme","themeAuto":"Follow the browser","themeLight":"Light","themeDark":"Dark","fieldAccent":"Colour","accentBlue":"Blue","accentGreen":"Green","accentViolet":"Violet","accentOrange":"Orange","accentGraphite":"Graphite","gcmLine":"What Google sees: analytics_storage — {analytics}, ad_storage — {ads}.","gcmDenied":"denied","gcmGranted":"granted","gcmNote":"In Consent Mode, Google services run before consent without cookies and without identifying the visitor.","statsServices":"services in our database with ready descriptions","statsMinutes":"minutes to install","checkRegistered":"This site is already connected to ConsentKit — open the dashboard."};</script>
+<script>window.__CK_SITE_I18N={"htmlLang":"en","docTitle":"ConsentKit — cookie consent banner for your site","docDesc":"A cookie consent banner you can install in ten minutes. It asks your visitors before any tracker starts. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.","skip":"Skip to main content","navSections":"Sections","pageLanguage":"Page language","navDemo":"Demo","navHow":"How it works","navFeatures":"Features","navPricing":"Pricing","navFaq":"FAQ","navDev":"Developers","ctaCabinet":"Open the dashboard","ctaDemo":"See the demo","heroEyebrow":"Open source · MIT · free plan","heroTitle":"Your site follows EU rules, and your ads and analytics keep working","heroLine1":"The banner goes up in ten minutes on any site. Your visitor answers first, and only then do the trackers start.","mockTitle":"Cookies on this site","mockText":"Necessary cookies keep the site working. The rest are used only if you allow them.","mockAccept":"Accept all","mockReject":"Reject all","mockSettings":"Customize","heroNote":"Free forever: one site, all 34 languages, one manual scan per day.","demoTitle":"Live demo","demoLede":"This is a real banner, not a screenshot. Change the layout, position, theme, colour and language — the banner changes at once.","fieldLayout":"Layout","layoutBar":"Bar","layoutBox":"Corner","layoutModal":"Centred window","fieldBannerLang":"Banner language","langAuto":"Same as the page","btnShowAgain":"Show again","demoHint":"Clears the saved choice and shows the banner again.","statusUndecided":"Choice: the visitor has not answered yet.","statusDecided":"Choice: {cats}.","statusNone":"nothing beyond necessary","statusBroken":"The demo did not start — please reload the page.","howTitle":"How it works","how1Title":"Paste the banner line","how1Text":"One line in the head — in your builder settings, in the site template or through a tag manager. No build step, no dependencies.","how2Title":"Press “Check”","how2Text":"The dashboard finds the line on your site: that both verifies the domain and confirms the install.","how3Title":"Run a scan","how3Text":"The scanner walks the site, finds third-party services and cookies and offers a ready-made table for the banner.","how4Title":"Adjust the banner","how4Text":"The first version publishes itself. Adjust the colours, texts and table in the dashboard if you want to.","featTitle":"Features","feat1Title":"Trackers stay silent until asked","feat1Text":"Analytics and ads do not start until your visitor presses a button.","feat2Title":"The scanner finds your cookies","feat2Text":"We walk your pages and build the cookie list for the banner.","feat3Title":"Consent you can prove","feat3Text":"Every visitor answer is stored in case you are ever asked.","feat4Title":"The banner speaks 34 languages","feat4Text":"Visitors see their own language and you translate nothing.","feat5Title":"Your ads keep working","feat5Text":"A refusal does not switch Google off entirely: it counts without cookies and without identifying the visitor.","feat6Title":"Installs on any site","feat6Text":"A site builder, WordPress, a shop, a tag manager or plain HTML.","priceTitle":"Pricing","priceLede":"A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.","priceFoot":"Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Moldova.","perMonth":"/ mo","perSitePerMonth":"per site / mo","byAgreement":"by agreement","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Free forever","planStarterNote":"For a single site","planBusinessNote":"For agencies and site networks","planAgencyNote":"No site limit","planCtaFree":"Start free","planCtaPaid":"Open the dashboard","planCtaAgency":"Get in touch","recommended":"Most popular","priceTableCaption":"ConsentKit plans compared: price, sites, scans, consent log, alerts, languages and support for every plan.","priceScrollHint":"Scroll the table sideways to see every plan.","rowPlan":"Plan","rowPrice":"Price","rowCta":"Getting started","rowSites":"Sites","rowBranding":"“Made by E-COM Consult” line","rowScans":"Scans","rowLog":"Consent log","rowAlerts":"Email when a new tracker appears","rowLangs":"Banner languages","rowSupport":"Support","sitesOne":"1","sitesOneEach":"1 (each billed separately)","sitesUpTo":"up to {n}","sitesUnlimited":"unlimited","brandingRequired":"required","brandingOptional":"can be turned off","scansScheduled":"automatic weekly + {n} a day on demand","scansManualOnly":"{n} a day on demand","unitScanOne":"{n} manual scan","unitScanFew":"{n} manual scans","unitScanMany":"{n} manual scans","logDays":"{n}, no download","logDaysCsv":"{n}, downloadable file","logMonths":"{n}, no download","logMonthsCsv":"{n}, downloadable file","unitDayOne":"{n} day","unitDayFew":"{n} days","unitDayMany":"{n} days","unitMonthOne":"{n} month","unitMonthFew":"{n} months","unitMonthMany":"{n} months","yes":"yes","no":"no","langsAll":"all 34","supportFree":"documentation","supportStarter":"e-mail","supportBusiness":"e-mail, 1 business day","supportAgency":"dedicated manager","whoTitle":"Who it is for","who1Title":"Sites on builders","who1Text":"There is nowhere to upload files, so we hand you the whole block instead. Paste it into the field for code in the head — one paste, no plugins.","who2Title":"WordPress and WooCommerce","who2Text":"The plugin installs by copying a folder and is configured in the admin. It works with caching plugins too: the banner does not depend on PHP.","who4Title":"Agencies and your own sites","who4Text":"Many sites in one dashboard, scheduled scans and alerts about new trackers. Terms by agreement.","faqTitle":"Frequently asked questions","faq":[["What is cookie consent and why is it needed?","A cookie is a small note a site leaves in your visitor’s browser. Under EU rules anything not needed to run the site itself may only start after the visitor agrees, and you have to be able to prove they did. ConsentKit asks, waits for the answer and saves the decision for you."],["Does ConsentKit really block everything before consent?","Almost everything, right away: the official Google Analytics, Yandex Metrica, Meta, TikTok and Hotjar snippets are stopped automatically, and Google receives Consent Mode v2 signals before any tag loads. Rarer are trackers written into the page by hand as a plain \u003cscript src\u003e tag: the browser starts fetching those, so each one has to be marked once with type=\"text/plain\". The dashboard shows you exactly which ones and explains what to do."],["Where is the data stored?","On servers in Lithuania, in the European Union. The company: E-COM CONSULT PLUS, Moldova. We store the fact of consent and what the person chose, not information about the visitor."],["Can I use it without the dashboard?","Yes, and free of charge. The software is open under the MIT licence: download the files, put them on your site and set it up by hand, with no sign-up. The dashboard is for people who would rather press buttons than edit files."],["How do I turn off the “Made by E-COM Consult” line?","On paid plans a switch in the site settings turns it off; on the free plan it stays. If you installed the banner yourself, without the dashboard, you can remove the line in your own copy’s settings. We charge for the dashboard, the scans and keeping the log, not for hiding a line."],["What about scanning sites that are not mine?","You may only scan your own sites, or client sites you have been asked to look after. That is why a site has to be verified in the dashboard before the first scan. The scanner treads lightly and does not put load on your site."],["What counts as one site?","One site is one domain with everything on it: example.com and all of its pages. A separate domain is a separate site, even if it belongs to you and looks the same."],["What about subdomains?","Subdomains of a connected domain — shop.example.com, blog.example.com — are covered by the same site and do not use up your limit. They share the banner and the consent log with the main domain."],["VAT and invoices?","Payment goes through Creem, which issues the invoice and handles VAT for your country. Prices on this page are excluding VAT; the final amount is shown at checkout, and the invoice arrives by email."],["Can I cancel?","Yes, from the dashboard, at any time. The plan stays active until the end of the period you have already paid for, and nothing is charged after that."],["Does moving to a cheaper plan break anything?","No. The banner keeps working exactly as it is: scheduled scans stop, the developer line comes back, and the consent log keeps the shorter retention of the new plan. The site itself never goes down."]],"footLegal":"E-COM CONSULT PLUS, Moldova. ConsentKit is open source under the MIT licence.","footLinksLabel":"Links","footWrite":"Write to us","footCabinet":"Dashboard","devTitle":"For developers","devLede":"Three tags to load the client and one call to configure it — no build step and no dashboard.","devFacts":"Open source under MIT, zero dependencies, 34 languages, Google Consent Mode v2.","devDocs":"Installation guide","navLaw":"Rules","lawDated":"Correct as of September 2026. General information, not legal advice.","lawIndexTitle":"Rules and cookies","lawIndexDesc":"Plain-language explanations of the cookie rules that apply to sites in Moldova and Romania: consent, GDPR, Google Consent Mode v2 and what happens without a banner.","lawIndexLede":"Four short articles about the rules a site owner actually runs into. Written for people who own sites, not for lawyers.","checkTitle":"Check your site for free","checkLede":"We will show you which services and cookies load before consent. Public pages only.","checkDomainLabel":"Site address","checkDomainPlaceholder":"example.com","checkEmailLabel":"Your email","checkEmailPlaceholder":"you@example.com","checkAgree":"This is my site, or I work on it under a contract","checkSubmit":"Check","checkNote":"We only read public pages. The result appears here, the details go to your email.","checkRecent":"This site was already checked today.","checkLimit":"Too many checks from your address, please try tomorrow.","checkError":"We could not reach us. Check your connection and try again.","checkInvalid":"Please check the site address.","checkNeedDomain":"Enter your site address.","checkNeedEmail":"Enter the address to send the result to.","checkNeedAgree":"Tick the box to continue.","checkSending":"Sending…","statsTitle":"Numbers","statsSites":"sites connected","statsConsents":"consents recorded","statsLanguages":"banner languages","statsVersion":"banner version","statsUpdated":"updated {month} {day}, {year}","statsMonths":["January","February","March","April","May","June","July","August","September","October","November","December"],"priceCheaper":"Cheaper than a single letter from a lawyer.","checkRunning":"Checking {domain}…","checkRunningNote":"This usually takes a couple of minutes. You can leave the page open.","checkDone":"Done: {services} third-party services, {before} of them before consent, {cookies} cookies.","checkAskEmail":"Where should we send the full result?","checkEmailSubmit":"Send","checkMailQueued":"The email will arrive within a few minutes.","checkRecentMailed":"This site was already checked today — the full result has already been sent.","checkMailLimit":"Too many requests for this address, please try tomorrow.","checkMailed":"The full result for this site has already been sent.","checkScanError":"We could not check the site. Please try again later.","fitTitle":"Works with any site","fit1Title":"Site builders","fit1Text":"Tilda, Wix, Squarespace, Webflow and others — one line in the site settings.","fit2Title":"WordPress and WooCommerce","fit2Text":"A plugin, or one line in the head.","fit3Title":"Online shops","fit3Text":"Shopify, OpenCart, PrestaShop and others — one line in the template.","fit4Title":"Your own site or an agency","fit4Text":"One line in the template, many sites in one dashboard.","fieldPosition":"Position","posBottom":"Bottom","posTop":"Top","posBottomLeft":"Bottom left","posBottomRight":"Bottom right","posCenter":"Centre","fieldTheme":"Theme","themeAuto":"Follow the browser","themeLight":"Light","themeDark":"Dark","fieldAccent":"Colour","accentBlue":"Blue","accentGreen":"Green","accentViolet":"Violet","accentOrange":"Orange","accentGraphite":"Graphite","gcmLine":"What Google sees: analytics_storage — {analytics}, ad_storage — {ads}.","gcmDenied":"denied","gcmGranted":"granted","gcmNote":"In Consent Mode, Google services run before consent without cookies and without identifying the visitor.","statsServices":"services in our database with ready descriptions","statsMinutes":"minutes to install","checkRegistered":"This site is already connected to ConsentKit — open the dashboard."};</script>
 <script src="/app.js"></script>
 </body>
 </html>

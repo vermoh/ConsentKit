@@ -172,7 +172,7 @@
   ],
   "footLegal": "E-COM CONSULT PLUS, Молдова. ConsentKit — открытый код под лицензией MIT.",
   "footLinksLabel": "Ссылки",
-  "footDocs": "Инструкция по установке",
+  "footWrite": "Написать нам",
   "footCabinet": "Кабинет",
   "devTitle": "Для разработчиков",
   "devLede": "Клиент подключается тремя тегами и настраивается одним вызовом — без сборки и без кабинета.",
@@ -204,7 +204,8 @@
   "statsSites": "сайтов подключено",
   "statsConsents": "согласий записано",
   "statsLanguages": "языка баннера",
-  "statsSince": "работаем с {date}",
+  "statsVersion": "версия баннера",
+  "statsUpdated": "обновлено {day} {month} {year}",
   "statsMonths": [
     "января",
     "февраля",
