@@ -176,6 +176,10 @@ a { color: var(--accent-ink); }
   text-decoration: none;
   cursor: pointer;
   transition: transform .12s ease, background-color .12s ease;
+  /* SPEC V1.13 §2.6: never break a button label across two lines. Where the
+     column is too narrow for the words, the fix is a shorter label, not a
+     wrap — a two-line button reads as two controls. */
+  white-space: nowrap;
 }
 .btn:active { transform: translateY(1px); }
 .btn--sm { padding: 8px 15px; font-size: .9rem; }
@@ -399,7 +403,14 @@ a { color: var(--accent-ink); }
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 24px;
 }
-.steps li { margin: 0; }
+/* Each step is its own column, and the illustration is pinned to the BOTTOM
+   of it: the four <p> blocks are different lengths (RU step 1 runs to five
+   lines where step 2 runs to three), and without this the four boxes start at
+   four different heights — the exact «вразнобой» SPEC V1.13 §2.5 replaced the
+   screenshots to fix. `margin-top:auto` on the art pushes it down so all four
+   share one baseline whatever the copy above does. */
+.steps li { margin: 0; display: flex; flex-direction: column; }
+.steps li .step-art { margin-top: auto; }
 .step-n {
   display: inline-grid;
   place-items: center;
@@ -412,6 +423,48 @@ a { color: var(--accent-ink); }
   font-size: .95rem;
 }
 .steps p { color: var(--ink-soft); margin: 0; }
+
+/* SPEC V1.13 §2.5 — four illustrations of ONE size instead of four
+   screenshots of four different shapes.
+
+   Inline SVG on a fixed 4:3 box, so the row is even whatever the column
+   width turns out to be, and every fill is a site token: the same markup is
+   correct in the light and the dark theme, which a screenshot never is.
+   No text inside the art at all — the shapes carry the idea and the <h3>
+   above carries the words. */
+.step-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  /* The gap below the paragraph; `margin-top:auto` in the .steps li rule wins
+     where a column is shorter than its neighbours, which is the point. */
+  margin-top: 16px;
+  border-radius: var(--radius);
+  background: var(--bg-band);
+  border: 1px solid var(--line-soft);
+}
+.art-card    { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+.art-field,
+.art-preview { fill: var(--bg-band); stroke: var(--line); stroke-width: 1.5; }
+.art-line    { fill: var(--ink); opacity: .78; }
+.art-line--soft { fill: var(--ink-soft); opacity: .42; }
+.art-code    { fill: var(--accent); opacity: .55; }
+.art-rule    { fill: var(--line); }
+.art-accent  { fill: var(--accent); }
+.art-on-accent { fill: var(--on-accent); opacity: .92; }
+.art-ghost   { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.art-pill--a { fill: var(--accent); opacity: .22; }
+.art-pill--b { fill: var(--ink-soft); opacity: .22; }
+.art-ok-disc { fill: #17a15e; opacity: .16; }
+.art-ok-tick { stroke: #17a15e; }
+.art-track   { fill: var(--line); }
+.art-track--on { fill: var(--accent); }
+.art-knob    { fill: var(--bg); }
+@media (prefers-color-scheme: dark) {
+  .art-ok-disc { fill: #4ade9a; opacity: .18; }
+  .art-ok-tick { stroke: #4ade9a; }
+}
 
 /* ── cards ──────────────────────────────────────────────────────────── */
 
@@ -562,6 +615,11 @@ a { color: var(--accent-ink); }
 }
 
 .plan-table tfoot .btn { display: inline-block; text-align: center; }
+/* SPEC V1.13 §2.6 — the CTA column is never narrower than its own button.
+   .btn already sets white-space:nowrap; this stops the COLUMN from being
+   squeezed below the width that button needs, so the table scrolls (inside
+   .plan-scroll, which it already does) instead of clipping the label. */
+.plan-table tfoot td { white-space: nowrap; }
 
 /* Always shown: the table can overflow on a laptop too when the browser font
    size is large, and a hint that appears only on touch is a hint nobody with a
@@ -694,10 +752,69 @@ a { color: var(--accent-ink); }
    page's minimum width and the whole layout scrolls sideways on a phone. */
 img { max-width: 100%; height: auto; }
 
-/* ── «Проверить сайт» ───────────────────────────────────────────────── */
+/* ── «Проверить сайт» — SPEC V1.13 §2.2, its own block under the hero ── */
+
+.check-band .wrap { padding-top: 60px; padding-bottom: 60px; }
+.check-head { max-width: 62ch; margin: 0 0 22px; }
+.check-head h2 { margin-bottom: .35em; }
+.check-head .section-lede { margin: 0; }
+
+/* Step 2 is revealed by app.js once the scan reports numbers. The rule below
+   is only a separator — `hidden` does the hiding, so the fields stay out of
+   the tab order and out of the accessibility tree until there is something
+   to send. */
+.check__step--2 {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.check__teaser { margin: 0 0 6px; font-weight: 650; }
+.check__ask { margin: 0 0 12px; color: var(--ink-soft); font-size: .93rem; }
+
+/* The four «подходит любому сайту» tiles, inside the same block as the field
+   they answer for. Plain <li>, not links: there is no per-platform page to
+   send anyone to, and a tile that looks clickable and is not is worse than a
+   tile that does not. */
+.fit { margin-top: 34px; }
+.fit__head { font-size: 1.02rem; margin: 0 0 14px; }
+.fit__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+}
+.fit__list li {
+  margin: 0;
+  padding: 16px 18px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.fit__title { display: block; font-weight: 650; margin-bottom: 5px; }
+.fit__text { display: block; color: var(--ink-soft); font-size: .91rem; }
+
+/* V1.13 §2.2 on wide screens: the form on the left, the four «подходит любому
+   сайту» tiles beside it in two columns, so the block reads as one piece and
+   the right half of the section is not empty. Below 960px it stacks as before. */
+@media (min-width: 960px) {
+  .check-band .wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+    column-gap: 48px;
+    align-items: start;
+  }
+  .check-head { grid-column: 1 / -1; }
+  .check-band .check { grid-column: 1; }
+  .check-band .fit { grid-column: 2; margin-top: 0; }
+  .check-band .fit__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── the form itself ────────────────────────────────────────────────── */
 
 .check {
-  margin: 28px 0 0;
+  margin: 0;
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -818,6 +935,101 @@ img { max-width: 100%; height: auto; }
   background: var(--bg);
 }
 
+/* ── «Живое демо» — SPEC V1.13 §2.4 ─────────────────────────────────── */
+
+/* The page the banner is shown over.
+ *
+ * ck-ui.js mount() appends its shadow host to <body> and every banner surface
+ * is position:fixed, so the client CANNOT be mounted inside this frame. §2.4
+ * anticipates that and asks for the fallback: a full-width frame WITH content
+ * — a heading bar, body lines and three product cards — that the real banner
+ * appears over. Scenery, so aria-hidden; the banner beside it is the thing to
+ * read. */
+.demo-stage { margin: 22px 0 26px; }
+.shot-frame--lg { max-width: none; }
+.shot-page--lg { padding: 26px 26px 30px; gap: 13px; }
+.shot-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 6px 0;
+}
+.shot-card {
+  display: block;
+  height: 74px;
+  border-radius: 9px;
+  background: #e7eaf1;
+}
+@media (prefers-color-scheme: dark) {
+  .shot-card { background: #2a3240; }
+}
+@media (max-width: 560px) {
+  .shot-card { height: 52px; }
+  .shot-page--lg { padding: 18px 18px 22px; }
+}
+
+/* Five accent swatches. A real radiogroup: one tab stop, arrow keys between
+   the options, and — because the colour lives on the <span>, not on an
+   appearance:none input — a visible swatch in forced-colours mode too. */
+.swatches { margin: 16px 0 0; }
+.field__label {
+  display: block;
+  font-size: .87rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.swatches__row { display: flex; gap: 10px; flex-wrap: wrap; }
+.swatch { display: inline-flex; cursor: pointer; }
+.swatch__input {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  margin: 0;
+}
+.swatch__dot {
+  display: block;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  box-shadow: 0 0 0 0 var(--accent);
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+/* The checked ring and the focus ring are deliberately different: one says
+   «this is the colour in use», the other says «the keyboard is here». */
+.swatch__input:checked + .swatch__dot {
+  border-color: var(--bg);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.swatch__input:focus-visible + .swatch__dot {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+/* The colour name: the accessible name for the radio, off-screen rather than
+   display:none so a screen reader still reads it. */
+.swatch__name {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The two status lines under the controls. */
+.panel-gcm {
+  margin: 8px 0 0;
+  font-size: .9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.panel-gcm:empty { display: none; }
+.panel-gcm-note {
+  margin: 6px 0 0;
+  font-size: .84rem;
+  color: var(--ink-soft);
+  max-width: 68ch;
+}
+
 /* ── «Цифры» ────────────────────────────────────────────────────────── */
 
 .stats {
@@ -834,8 +1046,13 @@ img { max-width: 100%; height: auto; }
   line-height: 1.1;
 }
 .stat__label { margin: 4px 0 0; color: var(--ink-soft); font-size: .93rem; }
-.stat__since { font-size: 1.05rem; font-weight: 600; color: var(--ink-soft); }
-.stat--since { align-self: end; }
+.stat__label:empty { display: none; }
+/* The «работаем с сентября 2026» tile carries a phrase where the others carry
+   a numeral, so it is set at a size the words can live at. */
+.stat__num--sm { font-size: 1.25rem; font-weight: 650; color: var(--ink-soft); }
+/* Four tiles that keep their shape: the numeral sits at the top of each tile
+   and the label under it, so a swapped tile does not shift the row. */
+.stats { align-items: start; }
 
 .price-cheap { font-weight: 650; margin: 18px 0 0; }
 

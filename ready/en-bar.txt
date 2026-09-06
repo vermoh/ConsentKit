@@ -3168,9 +3168,13 @@
     'border:1px solid var(--ck-line);border-radius:var(--ck-radius-card);overflow:hidden}',
     '.ck-panel__head{display:flex;align-items:flex-start;gap:16px;padding:22px 24px 14px;',
     'border-bottom:1px solid var(--ck-line)}',
+    // The text block takes the width and the close button sits at the padding
+    // edge, flush with the switches below it: without flex:1 the button
+    // followed the text's own wrapped width and floated short of the edge.
+    '.ck-panel__head>div{flex:1 1 auto;min-width:0}',
     '.ck-panel__head h2{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-.01em}',
     '.ck-panel__head p{margin:0;font-size:14px;color:var(--ck-muted)}',
-    '.ck-x{flex:none;width:36px;height:36px;border-radius:var(--ck-radius-btn);border:1px solid var(--ck-line);',
+    '.ck-x{flex:none;margin-left:auto;width:36px;height:36px;border-radius:var(--ck-radius-btn);border:1px solid var(--ck-line);',
     'background:transparent;display:inline-flex;align-items:center;justify-content:center;color:var(--ck-muted)}',
     '.ck-panel__body{overflow:auto;padding:6px 24px 10px;-webkit-overflow-scrolling:touch}',
     '.ck-panel__foot{display:flex;gap:10px;flex-wrap:wrap;padding:16px 24px;',

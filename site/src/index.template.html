@@ -58,74 +58,22 @@
 
 <main id="main">
 
-  <!-- ── offer ─────────────────────────────────────────────────────── -->
+  <!-- ── offer: ONE block — copy left, banner mockup right ────────── -->
+  <!-- SPEC V1.13 §2.1: no form on the first screen. The visitor either goes
+       to the dashboard, jumps to the demo, or scrolls one section down to the
+       check block — three destinations, not a form to fill in before the page
+       has said what it is. -->
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
-        <p class="eyebrow" data-i18n="heroEyebrow">Открытый код · MIT · без зависимостей</p>
-        <h1 data-i18n="heroTitle">Баннер согласия, который блокирует трекеры до ответа посетителя</h1>
-        <p class="lede" data-i18n="heroLine1">Посетитель отвечает — и только потом включаются счётчики и реклама. Так требуют правила ЕС.</p>
+        <p class="eyebrow" data-i18n="heroEyebrow">Открытый код · MIT · бесплатный тариф</p>
+        <h1 data-i18n="heroTitle">Баннер согласия, счётчики молчат до ответа посетителя</h1>
+        <p class="lede" data-i18n="heroLine1">Ставится за десять минут на любой сайт. Реклама и аналитика продолжают работать.</p>
         <p class="hero-cta">
           <a class="btn btn--primary" href="https://app.ecomconsult.net" data-i18n="ctaCabinet">Открыть кабинет</a>
           <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">Посмотреть демо</a>
         </p>
         <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.</p>
-
-        <!-- SPEC V1.11 §3. The block below is the ONE authored copy of the
-             «Проверить сайт» form: the build slices it out between the
-             CHECKFORM markers and drops the same markup at the bottom of every
-             law page, and app.js clones it wherever a [data-check-form] host
-             asks for one. Authored once, so the honeypot, the consent wording
-             and the four result states cannot drift between the five places
-             the form appears.
-
-             No id= anywhere inside: five instances of one id is invalid, and
-             label[for] would bind every label to whichever field parsed first.
-             app.js stamps per-instance ids on clone. -->
-        <!--CHECKFORM:start-->
-      <form class="check" data-check-form novalidate>
-        <h2 class="check__title" data-i18n="checkTitle">Проверить сайт</h2>
-        <p class="check__lede" data-i18n="checkLede">Посмотрим, что у вас стоит и чего не хватает.</p>
-
-        <p class="check__field">
-          <label data-i18n="checkDomainLabel">Адрес сайта</label>
-          <input type="text" name="domain" inputmode="url" autocomplete="url"
-                 placeholder="example.md" data-i18n-placeholder="checkDomainPlaceholder" required>
-        </p>
-
-        <p class="check__field">
-          <label data-i18n="checkEmailLabel">Ваша почта</label>
-          <input type="email" name="email" autocomplete="email"
-                 placeholder="you@example.md" data-i18n-placeholder="checkEmailPlaceholder" required>
-        </p>
-
-        <!-- Honeypot. Off-screen rather than display:none — a bot that reads
-             computed styles skips hidden fields, and a field that is never
-             painted but is still in the layout catches the ones that fill
-             everything. tabindex=-1 and autocomplete=off keep it away from a
-             real visitor's keyboard and password manager. aria-hidden so a
-             screen reader is not asked to fill an invisible box. -->
-        <div class="check__hp" aria-hidden="true">
-          <label>Company</label>
-          <input type="text" name="hp" value="" tabindex="-1" autocomplete="off">
-        </div>
-
-        <p class="check__agree">
-          <label>
-            <input type="checkbox" name="agree" required>
-            <span data-i18n="checkAgree">Это мой сайт или я работаю с ним по договору, и я согласен получить результат на почту.</span>
-          </label>
-        </p>
-
-        <p class="check__submit">
-          <button type="submit" class="btn btn--primary" data-i18n="checkSubmit">Проверить бесплатно</button>
-        </p>
-
-        <p class="check__state" role="status" aria-live="polite"></p>
-
-        <p class="check__note" data-i18n="checkNote">Результат придёт на почту в течение 10 минут. Проверяем только открытые страницы.</p>
-      </form>
-        <!--CHECKFORM:end-->
       </div>
 
       <!-- Hero mockup: a framed page with a STATIC replica of the default box
@@ -161,27 +109,111 @@
     </div>
   </section>
 
-  <!-- ── who, in three tiles ───────────────────────────────────────── -->
-  <!-- SPEC V1.11 §3: the three tiles sit directly under the hero and each one
-       links to its own anchor in the «Для кого» section further down, which is
-       shortened to those same three. A visitor who recognises their own case
-       in the first screen jumps straight to the instruction for it. -->
-  <section class="who-tiles">
+  <!-- ── check the site: its own block, directly under the hero ────── -->
+  <!-- SPEC V1.13 §2.2. Two steps: the address alone starts the scan, and the
+       e-mail is asked for only once there is a result worth sending. The
+       block also carries the four «подходит любому сайту» tiles, which is
+       where the honest answer to «а мой сайт подойдёт?» belongs — next to the
+       field, not three screens away.
+
+       The FORM is authored once, between the CHECKFORM markers, because
+       build-site.mjs slices it out and drops the same markup at the foot of
+       every law page. The tiles are deliberately OUTSIDE the markers: they
+       belong to this section, not to the form. -->
+  <section id="check" class="band check-band">
     <div class="wrap">
-      <ul class="tiles">
-        <li><a href="#who-tilda">
-          <span class="tile__title" data-i18n="tile1Title">Сайт на Tilda</span>
-          <span class="tile__text" data-i18n="tile1Text">Одна вставка в «HTML-код для HEAD».</span>
-        </a></li>
-        <li><a href="#who-wordpress">
-          <span class="tile__title" data-i18n="tile2Title">Магазин на WordPress</span>
-          <span class="tile__text" data-i18n="tile2Text">Плагин и настройки в админке.</span>
-        </a></li>
-        <li><a href="#who-agency">
-          <span class="tile__title" data-i18n="tile3Title">Агентство с клиентами</span>
-          <span class="tile__text" data-i18n="tile3Text">Много сайтов в одном кабинете.</span>
-        </a></li>
-      </ul>
+      <div class="check-head">
+        <h2 data-i18n="checkTitle">Проверьте свой сайт бесплатно</h2>
+        <p class="section-lede" data-i18n="checkLede">Посмотрим, какие сервисы и cookie загружаются у вас до согласия. Только открытые страницы.</p>
+      </div>
+
+        <!--CHECKFORM:start-->
+      <form class="check" data-check-form novalidate>
+        <!-- Step 1: the address and the consent tick. No e-mail — SPEC V1.13
+             §2.2 asks for it only after the scan has something to report. -->
+        <div class="check__step check__step--1">
+          <p class="check__field">
+            <label data-i18n="checkDomainLabel">Адрес сайта</label>
+            <input type="text" name="domain" inputmode="url" autocomplete="url"
+                   placeholder="example.com" data-i18n-placeholder="checkDomainPlaceholder" required>
+          </p>
+
+          <p class="check__agree">
+            <label>
+              <input type="checkbox" name="agree" required>
+              <span data-i18n="checkAgree">Это мой сайт или я работаю с ним по договору</span>
+            </label>
+          </p>
+
+          <p class="check__submit">
+            <button type="submit" class="btn btn--primary" data-i18n="checkSubmit">Проверить</button>
+          </p>
+        </div>
+
+        <!-- Step 2: revealed by app.js once the poll reports `done`. Hidden
+             with the `hidden` attribute rather than a class, so it is out of
+             the accessibility tree too while there is nothing to send. -->
+        <div class="check__step check__step--2" hidden>
+          <p class="check__teaser" data-check-teaser></p>
+          <p class="check__ask" data-i18n="checkAskEmail">Куда прислать подробный результат?</p>
+
+          <p class="check__field">
+            <label data-i18n="checkEmailLabel">Ваша почта</label>
+            <input type="email" name="email" autocomplete="email"
+                   placeholder="you@example.com" data-i18n-placeholder="checkEmailPlaceholder">
+          </p>
+
+          <p class="check__submit">
+            <button type="button" class="btn btn--primary" data-check-email data-i18n="checkEmailSubmit">Прислать</button>
+          </p>
+        </div>
+
+        <!-- Honeypot. Off-screen rather than display:none — a bot that reads
+             computed styles skips hidden fields, and a field that is never
+             painted but is still in the layout catches the ones that fill
+             everything. tabindex=-1 and autocomplete=off keep it away from a
+             real visitor's keyboard and password manager. aria-hidden so a
+             screen reader is not asked to fill an invisible box. -->
+        <div class="check__hp" aria-hidden="true">
+          <label>Company</label>
+          <input type="text" name="hp" value="" tabindex="-1" autocomplete="off">
+        </div>
+
+        <p class="check__state" role="status" aria-live="polite"></p>
+        <!-- Shown by app.js only while the scan is actually running: a
+             «это займёт пару минут» line is reassuring during the wait and
+             noise at every other moment. -->
+        <p class="check__wait" data-check-wait hidden data-i18n="checkRunningNote">Обычно занимает пару минут. Страницу можно не закрывать.</p>
+
+        <p class="check__note" data-i18n="checkNote">Проверяем только открытые страницы. Результат покажем здесь, подробности пришлём на почту.</p>
+      </form>
+        <!--CHECKFORM:end-->
+
+      <!-- The four «подходит любому сайту» tiles. Outside the CHECKFORM
+           markers on purpose — see the section comment above. The wording is
+           «одна строка в head», which is true of every platform named here;
+           no claim is made about behaviour we have not tested per platform. -->
+      <div class="fit">
+        <h3 class="fit__head" data-i18n="fitTitle">Подходит любому сайту</h3>
+        <ul class="fit__list">
+          <li>
+            <span class="fit__title" data-i18n="fit1Title">Конструкторы</span>
+            <span class="fit__text" data-i18n="fit1Text">Tilda, Wix, Squarespace, Webflow и другие — одна строка в настройках сайта.</span>
+          </li>
+          <li>
+            <span class="fit__title" data-i18n="fit2Title">WordPress и WooCommerce</span>
+            <span class="fit__text" data-i18n="fit2Text">Плагин или одна строка в head.</span>
+          </li>
+          <li>
+            <span class="fit__title" data-i18n="fit3Title">Интернет-магазины</span>
+            <span class="fit__text" data-i18n="fit3Text">Shopify, OpenCart, PrestaShop и другие — одна строка в шаблоне.</span>
+          </li>
+          <li>
+            <span class="fit__title" data-i18n="fit4Title">Свой сайт или агентство</span>
+            <span class="fit__text" data-i18n="fit4Text">Одна строка в шаблоне, много сайтов в одном кабинете.</span>
+          </li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -189,16 +221,52 @@
   <section id="demo" class="band">
     <div class="wrap">
       <h2 data-i18n="demoTitle">Живое демо</h2>
-      <p class="section-lede" data-i18n="demoLede">Это настоящий баннер на этой странице — не картинка. Меняйте режим, тему и язык, нажимайте кнопки.</p>
+      <p class="section-lede" data-i18n="demoLede">Это настоящий баннер, а не картинка. Меняйте вид, положение, тему, цвет и язык — баннер меняется сразу.</p>
+
+      <!-- The page the banner appears over. Content, not an empty rectangle:
+           a heading bar, body lines and three «product cards», so the frame
+           reads as a site rather than as a placeholder. aria-hidden — it is
+           scenery, and the real banner beside it is the thing to read. -->
+      <div class="demo-stage" aria-hidden="true">
+        <div class="shot-frame shot-frame--lg">
+          <div class="shot-bar"><span></span><span></span><span></span></div>
+          <div class="shot-page shot-page--lg">
+            <span class="shot-line shot-line--title"></span>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+            <div class="shot-cards">
+              <span class="shot-card"></span>
+              <span class="shot-card"></span>
+              <span class="shot-card"></span>
+            </div>
+            <span class="shot-line"></span>
+            <span class="shot-line shot-line--short"></span>
+          </div>
+        </div>
+      </div>
 
       <div class="panel">
         <div class="panel-grid">
           <p class="field">
-            <label for="d-layout" data-i18n="fieldLayout">Режим</label>
+            <label for="d-layout" data-i18n="fieldLayout">Вид</label>
             <select id="d-layout">
               <option value="bar" data-i18n="layoutBar">Полоса</option>
               <option value="box" data-i18n="layoutBox">Уголок</option>
               <option value="modal" data-i18n="layoutModal">Окно по центру</option>
+            </select>
+          </p>
+
+          <p class="field">
+            <label for="d-position" data-i18n="fieldPosition">Положение</label>
+            <select id="d-position"></select>
+          </p>
+
+          <p class="field">
+            <label for="d-theme" data-i18n="fieldTheme">Тема</label>
+            <select id="d-theme">
+              <option value="auto" data-i18n="themeAuto">Как в браузере</option>
+              <option value="light" data-i18n="themeLight">Светлая</option>
+              <option value="dark" data-i18n="themeDark">Тёмная</option>
             </select>
           </p>
 
@@ -208,12 +276,25 @@
           </p>
         </div>
 
+        <!-- Five accent swatches. Radio semantics, because exactly one is
+             active: a radiogroup gives arrow-key navigation and a single tab
+             stop for free, which a row of five buttons would not. -->
+        <div class="swatches" role="radiogroup" aria-labelledby="d-accent-label">
+          <span class="field__label" id="d-accent-label" data-i18n="fieldAccent">Цвет</span>
+          <span class="swatches__row" id="d-accent"></span>
+        </div>
+
         <p class="panel-foot">
           <button type="button" class="btn btn--primary btn--sm" id="d-again" data-i18n="btnShowAgain">Показать снова</button>
-          <span class="panel-hint" data-i18n="demoHint">Сбрасывает сохранённое согласие и показывает баннер заново.</span>
+          <span class="panel-hint" data-i18n="demoHint">Сбрасывает сохранённый выбор и показывает баннер заново.</span>
         </p>
 
+        <!-- Two lines, both in words. The first is what the visitor chose; the
+             second is what those categories mean for Google's own signals.
+             SPEC V1.13 §2.4 asks for the values to move as the choice moves. -->
         <p class="panel-status" id="d-status" role="status" aria-live="polite"></p>
+        <p class="panel-gcm" id="d-gcm"></p>
+        <p class="panel-gcm-note" data-i18n="gcmNote">В режиме Consent Mode сервисы Google до согласия работают без cookie и без опознавания посетителя.</p>
       </div>
     </div>
   </section>
@@ -231,30 +312,68 @@
         <li>
           <span class="step-n" aria-hidden="true">1</span>
           <h3 data-i18n="how1Title">Вставьте строку баннера</h3>
-          <p data-i18n="how1Text">Одна строка в &lt;head&gt; — на Tilda, WordPress, через Google Tag Manager или в обычный HTML. Без сборки и зависимостей.</p>
-          <img class="step-shot" src="/img/steps/step1.webp" loading="lazy" decoding="async"
-               width="1200" height="517" alt="" data-i18n-alt="how1Alt">
+          <p data-i18n="how1Text">Одна строка в head — в настройках конструктора, в шаблоне сайта или через диспетчер тегов. Без сборки и зависимостей.</p>
+          <!-- 1 — a field holding one line, and a «copy» button beside it. -->
+          <svg class="step-art" viewBox="0 0 320 240" role="img" aria-hidden="true" focusable="false">
+            <rect class="art-card" x="16" y="40" width="288" height="160" rx="14"/>
+            <rect class="art-line" x="40" y="72" width="120" height="10" rx="5"/>
+            <rect class="art-field" x="40" y="100" width="240" height="40" rx="10"/>
+            <rect class="art-code" x="56" y="114" width="150" height="12" rx="6"/>
+            <rect class="art-accent" x="180" y="156" width="100" height="30" rx="9"/>
+            <rect class="art-on-accent" x="198" y="167" width="64" height="8" rx="4"/>
+          </svg>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">2</span>
           <h3 data-i18n="how2Title">Нажмите «Проверить»</h3>
-          <p data-i18n="how2Text">Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки. Если строка ставится через Google Tag Manager, подтвердите домен meta-тегом или DNS-записью.</p>
-          <img class="step-shot" src="/img/steps/step2.webp" loading="lazy" decoding="async"
-               width="1200" height="338" alt="" data-i18n-alt="how2Alt">
+          <p data-i18n="how2Text">Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки.</p>
+          <!-- 2 — a card with a green tick: «баннер работает». -->
+          <svg class="step-art" viewBox="0 0 320 240" role="img" aria-hidden="true" focusable="false">
+            <rect class="art-card" x="16" y="40" width="288" height="160" rx="14"/>
+            <circle class="art-ok-disc" cx="86" cy="120" r="34"/>
+            <path class="art-ok-tick" d="M70 120l12 12 22-24" fill="none" stroke-width="7"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <rect class="art-line" x="140" y="102" width="130" height="12" rx="6"/>
+            <rect class="art-line art-line--soft" x="140" y="128" width="94" height="10" rx="5"/>
+          </svg>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">3</span>
           <h3 data-i18n="how3Title">Запустите скан</h3>
           <p data-i18n="how3Text">Сканер обойдёт сайт, найдёт сторонние сервисы и cookie и предложит готовую таблицу для баннера.</p>
-          <img class="step-shot" src="/img/steps/step3.webp" loading="lazy" decoding="async"
-               width="1032" height="236" alt="" data-i18n-alt="how3Alt">
+          <!-- 3 — a three-row table, each row ending in a category pill. -->
+          <svg class="step-art" viewBox="0 0 320 240" role="img" aria-hidden="true" focusable="false">
+            <rect class="art-card" x="16" y="40" width="288" height="160" rx="14"/>
+            <rect class="art-line" x="40" y="66" width="88" height="10" rx="5"/>
+            <rect class="art-rule" x="40" y="92" width="240" height="2" rx="1"/>
+            <rect class="art-line art-line--soft" x="40" y="108" width="110" height="10" rx="5"/>
+            <rect class="art-pill art-pill--a" x="196" y="102" width="84" height="22" rx="11"/>
+            <rect class="art-rule" x="40" y="136" width="240" height="2" rx="1"/>
+            <rect class="art-line art-line--soft" x="40" y="150" width="126" height="10" rx="5"/>
+            <rect class="art-pill art-pill--b" x="196" y="144" width="84" height="22" rx="11"/>
+            <rect class="art-rule" x="40" y="178" width="240" height="2" rx="1"/>
+          </svg>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">4</span>
           <h3 data-i18n="how4Title">Настройте баннер</h3>
-          <p data-i18n="how4Text">Баннер уже на сайте, первая версия с таблицей cookie публикуется сама. При желании поправьте цвета, тексты и таблицу в кабинете.</p>
-          <img class="step-shot" src="/img/steps/step4.webp" loading="lazy" decoding="async"
-               width="1200" height="659" alt="" data-i18n-alt="how4Alt">
+          <p data-i18n="how4Text">Первая версия публикуется сама. При желании поправьте цвета, тексты и таблицу в кабинете.</p>
+          <!-- 4 — an editor: two switches on the left, a banner preview right. -->
+          <svg class="step-art" viewBox="0 0 320 240" role="img" aria-hidden="true" focusable="false">
+            <rect class="art-card" x="16" y="40" width="288" height="160" rx="14"/>
+            <rect class="art-line art-line--soft" x="40" y="76" width="56" height="9" rx="4"/>
+            <rect class="art-track art-track--on" x="40" y="96" width="48" height="24" rx="12"/>
+            <circle class="art-knob" cx="76" cy="108" r="9"/>
+            <rect class="art-line art-line--soft" x="40" y="136" width="56" height="9" rx="4"/>
+            <rect class="art-track" x="40" y="156" width="48" height="24" rx="12"/>
+            <circle class="art-knob" cx="52" cy="168" r="9"/>
+            <rect class="art-preview" x="120" y="72" width="160" height="112" rx="10"/>
+            <rect class="art-line" x="136" y="90" width="88" height="9" rx="4"/>
+            <rect class="art-line art-line--soft" x="136" y="108" width="128" height="7" rx="3"/>
+            <rect class="art-line art-line--soft" x="136" y="122" width="104" height="7" rx="3"/>
+            <rect class="art-accent" x="136" y="144" width="60" height="22" rx="8"/>
+            <rect class="art-ghost" x="204" y="144" width="60" height="22" rx="8"/>
+          </svg>
         </li>
       </ol>
     </div>
@@ -270,7 +389,29 @@
   <section id="numbers">
     <div class="wrap">
       <h2 class="stats__head" data-i18n="statsTitle">Цифры</h2>
-      <dl class="stats" id="stats"></dl>
+      <!-- SPEC V1.13 §2.5: four tiles, always. Rendered here by the build so
+           the block is filled before app.js runs and stays filled if it never
+           does; loadStats() replaces the third and fourth tiles when — and
+           only when — the live counts have earned their place (sites >= 10,
+           consents >= 1000). Never a zero, never an empty <dl>. -->
+      <dl class="stats" id="stats">
+        <div class="stat">
+          <dt class="stat__num">34</dt>
+          <dd class="stat__label" data-i18n="statsLanguages">языка баннера</dd>
+        </div>
+        <div class="stat">
+          <dt class="stat__num">64</dt>
+          <dd class="stat__label" data-i18n="statsServices">сервиса в базе с готовыми описаниями</dd>
+        </div>
+        <div class="stat">
+          <dt class="stat__num">10</dt>
+          <dd class="stat__label" data-i18n="statsMinutes">минут на установку</dd>
+        </div>
+        <div class="stat">
+          <dt class="stat__num stat__num--sm" data-stats-since>с сентября 2026</dt>
+          <dd class="stat__label"></dd>
+        </div>
+      </dl>
     </div>
   </section>
 
@@ -283,7 +424,7 @@
       <p class="section-lede" data-i18n="priceLede">Тариф действует на организацию. Понижение тарифа не ломает сайт: баннер продолжает работать, возвращается строка о разработчике, расписание сканов останавливается.</p>
       <div class="plans" id="plans"></div>
       <p class="price-cheap" data-i18n="priceCheaper">Дешевле одного письма от юриста.</p>
-      <p class="price-note" data-i18n="priceFoot">Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS, Литва.</p>
+      <p class="price-note" data-i18n="priceFoot">Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS.</p>
     </div>
   </section>
 
@@ -317,7 +458,7 @@
         </article>
         <article class="card">
           <h3 data-i18n="feat6Title">Ставится на любой сайт</h3>
-          <p data-i18n="feat6Text">WordPress, Tilda, Google Tag Manager или обычный HTML.</p>
+          <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML.</p>
         </article>
       </div>
     </div>
@@ -332,8 +473,8 @@
            its tile targets. The old «Интернет-магазины» card said what feat5
            already says one screen up. -->
       <div class="cards">
-        <article class="card" id="who-tilda">
-          <h3 data-i18n="who1Title">Сайты на Tilda</h3>
+        <article class="card" id="who-builders">
+          <h3 data-i18n="who1Title">Сайты на конструкторах</h3>
           <p data-i18n="who1Text">Файлы загружать некуда — берите самодостаточный блок и вставляйте в «HTML-код для HEAD». Одна вставка, никаких плагинов.</p>
         </article>
         <article class="card" id="who-wordpress">
@@ -341,7 +482,7 @@
           <p data-i18n="who2Text">Плагин ставится копированием папки, настройки — в админке. Работает и с кэширующими плагинами: баннер не зависит от PHP.</p>
         </article>
         <article class="card" id="who-agency">
-          <h3 data-i18n="who4Title">Агентства</h3>
+          <h3 data-i18n="who4Title">Агентства и свои сайты</h3>
           <p data-i18n="who4Text">Много сайтов клиентов в одном кабинете, сканы по расписанию и оповещения о новых трекерах. Условия — по договору.</p>
         </article>
       </div>
@@ -395,7 +536,7 @@
   <div class="wrap foot-grid">
     <div>
       <p class="foot-brand">E-COM CONSULT PLUS</p>
-      <p class="foot-small" data-i18n="footLegal">Литва, ЕС. ConsentKit — открытый код под лицензией MIT.</p>
+      <p class="foot-small" data-i18n="footLegal">ConsentKit — открытый код под лицензией MIT.</p>
     </div>
     <nav class="foot-links" aria-label="Ссылки" data-i18n-aria-label="footLinksLabel">
       <a href="https://github.com/vermoh/ConsentKit" rel="noopener">GitHub</a>

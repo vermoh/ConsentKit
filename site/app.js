@@ -522,8 +522,14 @@
 
   var STATS_MIN_SITES = 10;
 
-  // What is true regardless of uptake, and what the block falls back to.
-  var STATS_FALLBACK = { sites: 0, consents: 0, languages: 34, since: '2026-08-01' };
+  // Below this, «M согласий записано» stays off: a four-figure number is the
+  // point of the tile, and «60 согласий» argues against itself exactly the way
+  // «3 сайта» does.
+  var STATS_MIN_CONSENTS = 1000;
+
+  // What is true regardless of uptake. `since` is what the fourth tile shows
+  // until there are sites to count instead.
+  var STATS_FALLBACK = { sites: 0, consents: 0, languages: 34, since: '2026-09-01' };
 
   var stats = STATS_FALLBACK;
 
@@ -534,14 +540,14 @@
     var s = String(Math.max(0, Math.floor(n)));
     var out = '';
     for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 === 0) out += ' ';
+      if (i > 0 && (s.length - i) % 3 === 0) out += ' ';
       out += s.charAt(i);
     }
     return out;
   }
 
-  /* «август 2026» from an ISO date. The month names are in the dictionary
-     because Russian needs the genitive («с августа»), which no date formatter
+  /* «с сентября 2026» from an ISO date. The month names are in the dictionary
+     because Russian needs the genitive («с сентября»), which no date formatter
      would produce from a bare month name. */
   function sinceText(iso) {
     var months = Array.isArray(I18N.statsMonths) ? I18N.statsMonths : null;
@@ -552,40 +558,52 @@
     return t('statsSince').replace('{date}', name + ' ' + m[1]);
   }
 
-  function statRow(host, value, label) {
-    var d = el('div', 'stat');
-    d.appendChild(el('dt', 'stat__num', value));
-    d.appendChild(el('dd', 'stat__label', label));
-    host.appendChild(d);
-  }
-
-  function renderStats() {
+  /* Overwrite one tile in place — the number and its label together, because a
+     tile showing a new count under an old label is worse than either. */
+  function setStat(i, value, label, small) {
     var host = $('#stats');
     if (!host) return;
-    host.textContent = '';
+    var tile = host.children[i];
+    if (!tile) return;
+    var dt = $('.stat__num', tile);
+    var dd = $('.stat__label', tile);
+    if (!dt || !dd) return;
+    dt.textContent = value;
+    dt.className = 'stat__num' + (small ? ' stat__num--sm' : '');
+    dd.textContent = label;
+    dd.hidden = false;
+  }
 
-    // The threshold rule. Below it the counts are simply absent — not shown as
-    // «—», not shown as 0, and not softened with "already": there is nothing
-    // there to soften.
+  /* SPEC V1.13 §2.5 — the two swap rules, and nothing else.
+   *
+   * Tile 3 («10 минут на установку») becomes «M согласий записано» once the
+   * journal has four figures in it; tile 4 («с сентября 2026») becomes
+   * «N сайтов подключено» once there are at least ten. Neither swap can empty
+   * a tile: each one writes a number and a label or leaves the markup alone. */
+  function renderStats() {
+    if (!$('#stats')) return;
+
+    if (isNum(stats.consents) && stats.consents >= STATS_MIN_CONSENTS) {
+      setStat(2, groupDigits(stats.consents), t('statsConsents'), false);
+    }
     if (isNum(stats.sites) && stats.sites >= STATS_MIN_SITES) {
-      statRow(host, groupDigits(stats.sites), t('statsSites'));
-      if (isNum(stats.consents) && stats.consents > 0) {
-        statRow(host, groupDigits(stats.consents), t('statsConsents'));
-      }
+      setStat(3, groupDigits(stats.sites), t('statsSites'), false);
+      return;
     }
 
-    statRow(host, groupDigits(isNum(stats.languages) ? stats.languages : 34), t('statsLanguages'));
-
+    // No sites to boast about yet: the fourth tile stays the «работаем с …»
+    // line, refreshed from the payload's own date when it sent one.
     var since = sinceText(stats.since);
     if (since) {
-      var p = el('div', 'stat stat--since');
-      p.appendChild(el('dt', 'stat__since', since));
-      // A <dl> row needs its <dd>; this one carries no second line, and an
-      // empty one would be read out as a blank definition.
-      var dd = el('dd', 'stat__label');
-      dd.hidden = true;
-      p.appendChild(dd);
-      host.appendChild(p);
+      var host = $('#stats');
+      var tile = host.children[3];
+      if (!tile) return;
+      var dt = $('.stat__num', tile);
+      var dd = $('.stat__label', tile);
+      if (!dt) return;
+      dt.textContent = since;
+      dt.className = 'stat__num stat__num--sm';
+      if (dd) { dd.textContent = ''; }
     }
   }
 
@@ -619,21 +637,41 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
-     «Проверить сайт» — POST /v1/public/site-check
+     «Проверить сайт» — the two-step flow of SPEC V1.13 §2.2
 
-     One form authored once in site/src/index.template.html, cloned into every
-     [data-check-form] host: the hero and the bottom of each law page. Cloning
-     rather than re-authoring is what keeps the honeypot, the consent wording
-     and the five result states identical everywhere they appear.
+     Step 1  POST /v1/public/site-check   {domain, lang, agree, hp}
+                 202 {queued:true, checkId}      -> poll
+                 200 {queued:false, reason:'recent', checkId} -> poll too:
+                     the existing check may already be done, and its teaser is
+                     exactly what this visitor asked for.
+                 429 -> the limit message.
+     Step 2  GET  /v1/public/site-check/:id      every 5s, up to 10 minutes
+                 {status, hasEmail, teaser?}
+                 done -> show the numbers and ask for an e-mail, unless
+                         hasEmail already said the result is on its way.
+     Step 3  POST /v1/public/site-check/:id/email {email, hp}
+                 204 -> «письмо придёт»
+                 409 check_mailed / 429 check_limit -> their own messages.
+
+     The e-mail is asked for LAST and never before there is something to send.
+     One form authored once in site/src/index.template.html and reused at the
+     foot of every law page, so the honeypot, the consent wording and every
+     result state are identical wherever the form appears.
      ══════════════════════════════════════════════════════════════════ */
 
   var CHECK_PATH = '/v1/public/site-check';
 
+  // Every 5 seconds for at most 10 minutes — SPEC V1.13 §2.2. The cap is what
+  // stops a tab left open overnight polling a check that will never finish.
+  var POLL_MS = 5000;
+  var POLL_MAX_MS = 10 * 60 * 1000;
+
   var checkSeq = 0;
 
-  /* The template carries no id= anywhere — five instances of one id would be
-     invalid, and every label[for] would bind to whichever field parsed first.
-     Ids are stamped here, per instance, and the labels wired to them. */
+  /* The template carries no id= anywhere — the form is cloned onto five pages
+     and five instances of one id would be invalid, with every label[for]
+     binding to whichever field parsed first. Ids are stamped here, per
+     instance, and the labels wired to them. */
   function wireLabels(form) {
     var n = ++checkSeq;
     $$('.check__field', form).forEach(function (p, i) {
@@ -650,6 +688,15 @@
     if (state) state.id = 'ck-check-state-' + n;
   }
 
+  /* ok / wait / warn drive nothing but colour. The text carries the meaning,
+     which is what the aria-live region hands to a screen reader. */
+  var STATE_TONE = {
+    checkSending: 'wait',
+    checkRunning: 'wait',
+    checkMailQueued: 'ok',
+    checkDone: 'ok'
+  };
+
   function setState(form, key, vars) {
     var out = $('.check__state', form);
     if (!out) return;
@@ -660,14 +707,15 @@
       });
     }
     out.textContent = msg;
-    // ok / warn / bad drive nothing but colour; the text carries the meaning,
-    // which is what a screen reader gets from the aria-live region.
-    out.className = 'check__state check__state--' +
-      (key === 'checkSent' ? 'ok' : (key === 'checkSending' ? 'wait' : 'warn'));
+    out.className = 'check__state check__state--' + (STATE_TONE[key] || 'warn');
+
+    // The «обычно занимает пару минут» line belongs to exactly one state.
+    var wait = $('[data-check-wait]', form);
+    if (wait) wait.hidden = (key !== 'checkRunning');
   }
 
-  /* Trim what people actually paste. "https://Example.MD/pricing?x=1" is the
-     same site as "example.md", and a visitor who copies from the address bar
+  /* Trim what people actually paste. "https://Example.COM/pricing?x=1" is the
+     same site as "example.com", and a visitor who copies from the address bar
      should not be told their own domain is invalid. The server normalises
      again — this is for the message, not for security. */
   function cleanDomain(raw) {
@@ -687,73 +735,226 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
   }
 
-  function submitCheck(form) {
-    var domainEl = $('input[name="domain"]', form);
-    var emailEl = $('input[name="email"]', form);
-    var agreeEl = $('input[name="agree"]', form);
-    var hpEl = $('input[name="hp"]', form);
-    var button = $('button[type="submit"]', form);
-    if (!domainEl || !emailEl || !agreeEl) return;
+  function hpValue(form) {
+    var hp = $('input[name="hp"]', form);
+    return hp ? String(hp.value || '') : '';
+  }
 
-    var domain = cleanDomain(domainEl.value);
-    var email = String(emailEl.value || '').trim();
-
-    // Checked here rather than left to the browser: novalidate is set so the
-    // three messages are ours, in the page language, in the same aria-live
-    // region as the server's answers.
-    if (!domain || !looksLikeDomain(domain)) { setState(form, 'checkNeedDomain'); domainEl.focus(); return; }
-    if (!email || !looksLikeEmail(email)) { setState(form, 'checkNeedEmail'); emailEl.focus(); return; }
-    if (!agreeEl.checked) { setState(form, 'checkNeedAgree'); agreeEl.focus(); return; }
-
-    if (typeof fetch !== 'function') { setState(form, 'checkError'); return; }
-
-    setState(form, 'checkSending');
-    if (button) button.disabled = true;
-    var done = function () { if (button) button.disabled = false; };
-
+  /* One JSON request, with a timeout, resolving to {status, data} and never
+     rejecting on a malformed body — every caller below branches on the status
+     first and only then looks at the payload. */
+  function askJson(url, opts, ms) {
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 10000);
-
-    fetch(API_BASE + CHECK_PATH, {
-      method: 'POST',
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        domain: domain,
-        email: email,
-        lang: lang,
-        agree: true,
-        // Always sent, always empty for a real visitor: the server decides what
-        // a filled honeypot means, and a missing field would tell it nothing.
-        hp: hpEl ? String(hpEl.value || '') : ''
-      }),
-      signal: ctl ? ctl.signal : undefined
-    })
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, ms || 10000);
+    var o = { credentials: 'omit', signal: ctl ? ctl.signal : undefined };
+    if (opts) { for (var k in opts) if (Object.prototype.hasOwnProperty.call(opts, k)) o[k] = opts[k]; }
+    return fetch(url, o)
       .then(function (res) {
         return res.json().catch(function () { return null; }).then(function (data) {
           return { status: res.status, data: data };
         });
       })
+      .then(function (r) { clearTimeout(timer); return r; },
+            function (e) { clearTimeout(timer); throw e; });
+  }
+
+  /* Step 2's panel. `hidden` rather than a class, so while there is nothing
+     to send the fields are out of the accessibility tree and out of the tab
+     order too. */
+  function showStep2(form, on) {
+    var step2 = $('.check__step--2', form);
+    if (step2) step2.hidden = !on;
+  }
+
+  function setStep1Disabled(form, on) {
+    var b = $('.check__step--1 button[type="submit"]', form);
+    if (b) b.disabled = !!on;
+  }
+
+  /* The teaser sentence: «Готово: N сторонних сервисов, K из них до согласия,
+     M cookie.» Numbers from the server, every word from the dictionary. */
+  function renderTeaser(form, teaser) {
+    var out = $('[data-check-teaser]', form);
+    if (!out) return;
+    var s = teaser || {};
+    out.textContent = t('checkDone')
+      .split('{services}').join(groupDigits(isNum(s.services) ? s.services : 0))
+      .split('{before}').join(groupDigits(isNum(s.beforeConsent) ? s.beforeConsent : 0))
+      .split('{cookies}').join(groupDigits(isNum(s.cookies) ? s.cookies : 0));
+  }
+
+  /* Poll one check to completion.
+   *
+   * `started` is captured once so the 10-minute cap measures the wait the
+   * visitor actually experienced, not the time since the last response — a
+   * slow server must not be able to extend its own deadline. */
+  function pollCheck(form, checkId, domain, announce) {
+    var started = Date.now();
+
+    // Step 3 reads the id back off the form: the e-mail button is wired once,
+    // at boot, and must work for whichever check this instance is currently
+    // showing — including a second check the visitor starts on the same page.
+    form.setAttribute('data-check-id', checkId);
+
+    var tick = function () {
+      askJson(API_BASE + CHECK_PATH + '/' + encodeURIComponent(checkId), null, 10000)
+        .then(function (r) {
+          if (r.status === 404) { setState(form, 'checkScanError'); return; }
+          if (r.status === 429) { setState(form, 'checkLimit'); return; }
+          if (r.status !== 200 || !r.data) { again(); return; }
+
+          var st = r.data.status;
+
+          if (st === 'done') {
+            // hasEmail: the address was given with the first request, or on an
+            // earlier visit. There is nothing to ask for, so step 2 stays shut
+            // and the visitor is told the mail is already on its way.
+            if (r.data.hasEmail) {
+              renderTeaser(form, r.data.teaser);
+              showStep2(form, false);
+              // `repeat` is set when THIS visit was told «уже проверяли»: the
+              // mail went out earlier, so «придёт в несколько минут» would be
+              // a promise about a letter that has already been delivered.
+              setState(form, form.getAttribute('data-check-repeat')
+                ? 'checkRecentMailed' : 'checkMailQueued');
+              return;
+            }
+            renderTeaser(form, r.data.teaser);
+            showStep2(form, true);
+            setState(form, 'checkDone', {
+              services: groupDigits(isNum((r.data.teaser || {}).services) ? r.data.teaser.services : 0),
+              before: groupDigits(isNum((r.data.teaser || {}).beforeConsent) ? r.data.teaser.beforeConsent : 0),
+              cookies: groupDigits(isNum((r.data.teaser || {}).cookies) ? r.data.teaser.cookies : 0)
+            });
+            var mail = $('input[name="email"]', form);
+            if (mail) { try { mail.focus(); } catch (e) { /* noop */ } }
+            return;
+          }
+
+          if (st === 'error') { setState(form, 'checkScanError'); return; }
+
+          // queued | running | anything unexpected: keep waiting.
+          again();
+        })
+        .catch(function () { again(); });
+    };
+
+    var again = function () {
+      if (Date.now() - started >= POLL_MAX_MS) { setState(form, 'checkScanError'); return; }
+      setTimeout(tick, POLL_MS);
+    };
+
+    // Only when the caller has nothing better to say. The «recent» branch has
+    // already told the visitor something true and more specific, and replacing
+    // it with «Проверяем…» would hide the one message SPEC V1.13 §2.2 asks
+    // that path to show.
+    if (announce !== false) setState(form, 'checkRunning', { domain: domain });
+    setTimeout(tick, POLL_MS);
+  }
+
+  /* Step 1 — the address alone. */
+  function submitCheck(form) {
+    var domainEl = $('input[name="domain"]', form);
+    var agreeEl = $('input[name="agree"]', form);
+    if (!domainEl || !agreeEl) return;
+
+    var domain = cleanDomain(domainEl.value);
+
+    // Checked here rather than left to the browser: novalidate is set so the
+    // messages are ours, in the page language, in the same aria-live region
+    // as the server's answers.
+    if (!domain || !looksLikeDomain(domain)) { setState(form, 'checkNeedDomain'); domainEl.focus(); return; }
+    if (!agreeEl.checked) { setState(form, 'checkNeedAgree'); agreeEl.focus(); return; }
+
+    if (typeof fetch !== 'function') { setState(form, 'checkError'); return; }
+
+    setState(form, 'checkSending');
+    setStep1Disabled(form, true);
+
+    askJson(API_BASE + CHECK_PATH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domain: domain,
+        lang: lang,
+        agree: true,
+        // Always sent, always empty for a real visitor: the server decides
+        // what a filled honeypot means, and a missing field would tell it
+        // nothing. No e-mail here — that is step 3.
+        hp: hpValue(form)
+      })
+    }, 10000)
       .then(function (r) {
-        // Four documented answers, one branch each. 400 is its own message
-        // rather than the generic error: "check the address and the email" is
-        // actionable, "could not reach us" would send the visitor to look at
-        // their wi-fi over a typo.
-        if (r.status === 202) {
-          setState(form, 'checkSent', { domain: domain, email: email });
-          form.reset();
-        } else if (r.status === 200) {
-          setState(form, 'checkRecent');
-        } else if (r.status === 429) {
-          setState(form, 'checkLimit');
-        } else if (r.status === 400) {
-          setState(form, 'checkInvalid');
-        } else {
-          setState(form, 'checkError');
+        var id = r.data && r.data.checkId;
+
+        if (r.status === 202 && id) {
+          form.removeAttribute('data-check-repeat');
+          pollCheck(form, id, domain, true);
+          return;
         }
+
+        // 200 = «этот сайт сегодня уже проверяли». The existing check is very
+        // likely finished already, so its id is polled exactly like a fresh
+        // one: one GET turns the message into real numbers plus the e-mail
+        // field. Without an id there is nothing to poll, so the message is
+        // all the visitor gets.
+        if (r.status === 200) {
+          // Two different 200s, told apart by `reason`. 'registered' is a
+          // domain already connected to a cabinet: it carries no checkId,
+          // there is nothing to scan or send, and the useful answer is the
+          // dashboard rather than a lead form.
+          if (r.data && r.data.reason === 'registered') {
+            setState(form, 'checkRegistered');
+            return;
+          }
+          form.setAttribute('data-check-repeat', '1');
+          setState(form, 'checkRecent');
+          if (id) pollCheck(form, id, domain, false);
+          return;
+        }
+
+        if (r.status === 429) { setState(form, 'checkLimit'); return; }
+        if (r.status === 400) { setState(form, 'checkInvalid'); return; }
+        setState(form, 'checkError');
       })
       .catch(function () { setState(form, 'checkError'); })
-      .then(function () { clearTimeout(timer); done(); });
+      .then(function () { setStep1Disabled(form, false); });
+  }
+
+  /* Step 3 — the address to send the full result to. */
+  function submitEmail(form) {
+    var emailEl = $('input[name="email"]', form);
+    var button = $('[data-check-email]', form);
+    var checkId = form.getAttribute('data-check-id');
+    if (!emailEl || !checkId) return;
+
+    var email = String(emailEl.value || '').trim();
+    if (!email || !looksLikeEmail(email)) { setState(form, 'checkNeedEmail'); emailEl.focus(); return; }
+    if (typeof fetch !== 'function') { setState(form, 'checkError'); return; }
+
+    setState(form, 'checkSending');
+    if (button) button.disabled = true;
+
+    askJson(API_BASE + CHECK_PATH + '/' + encodeURIComponent(checkId) + '/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, hp: hpValue(form) })
+    }, 10000)
+      .then(function (r) {
+        // 204 carries no body, so askJson's data is null — the status alone
+        // is the answer, which is why every branch here reads r.status only.
+        if (r.status === 204 || r.status === 200) {
+          setState(form, 'checkMailQueued');
+          showStep2(form, false);
+          return;
+        }
+        if (r.status === 409) { setState(form, 'checkMailed'); showStep2(form, false); return; }
+        if (r.status === 429) { setState(form, 'checkMailLimit'); return; }
+        if (r.status === 404) { setState(form, 'checkScanError'); return; }
+        setState(form, 'checkError');
+      })
+      .catch(function () { setState(form, 'checkError'); })
+      .then(function () { if (button) button.disabled = false; });
   }
 
   function wireCheckForms() {
@@ -761,9 +962,19 @@
       if (form.getAttribute('data-check-wired')) return;
       form.setAttribute('data-check-wired', '1');
       wireLabels(form);
+
       form.addEventListener('submit', function (ev) {
         ev.preventDefault();
         submitCheck(form);
+      });
+
+      var mailBtn = $('[data-check-email]', form);
+      if (mailBtn) mailBtn.addEventListener('click', function () { submitEmail(form); });
+
+      // Enter inside the e-mail field means «прислать», not «проверить заново».
+      var mailField = $('input[name="email"]', form);
+      if (mailField) mailField.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); submitEmail(form); }
       });
     });
   }
@@ -797,18 +1008,35 @@
     tr: 'Türkçe', uk: 'Українська'
   };
 
-  // resolveLayout() in ck-ui.js accepts only these. V1.9 dropped the
-  // «Положение» and «Тема» selects from the demo — four controls read as a
-  // configuration form, not a demonstration — so this is no longer an option
-  // list but the position each layout is shown at: the conventional one.
-  var POSITION_FOR = {
-    bar: 'bottom',
-    box: 'bottom-right',
-    modal: ''
+  /* resolveLayout() in ck-ui.js decides what a position means per layout: a bar
+     is top or bottom, a box is bottom-left or bottom-right, and a modal is
+     always centred. The select is repopulated from this table on every layout
+     change, so it can never offer a position the client would silently ignore.
+
+     SPEC V1.13 §2.4 puts position back under the visitor's control, so it is
+     state now rather than a constant derived from the layout. */
+  var POSITIONS_FOR = {
+    bar: [['bottom', 'posBottom'], ['top', 'posTop']],
+    box: [['bottom-right', 'posBottomRight'], ['bottom-left', 'posBottomLeft']],
+    modal: [['', 'posCenter']]
   };
+
+  /* Five accents. The first is the product's own; the rest are far enough
+     apart in hue to be told apart at swatch size, and all five carry enough
+     contrast against white for the banner's own button text. */
+  var ACCENTS = [
+    ['#2B50D8', 'accentBlue'],
+    ['#127C56', 'accentGreen'],
+    ['#6B3FCB', 'accentViolet'],
+    ['#C2570C', 'accentOrange'],
+    ['#3F4854', 'accentGraphite']
+  ];
 
   var demo = {
     layout: 'bar',
+    position: 'bottom',
+    theme: 'auto',
+    accent: ACCENTS[0][0],
     bannerLang: 'auto'
   };
 
@@ -836,8 +1064,8 @@
     var effective = (l === 'auto') ? lang : l;
     return {
       language: effective,
-      layout: { type: demo.layout, position: POSITION_FOR[demo.layout] || '' },
-      theme: { mode: 'auto', accent: '#2B50D8', radius: '10px' },
+      layout: { type: demo.layout, position: demo.position },
+      theme: { mode: demo.theme, accent: demo.accent, radius: '10px' },
       branding: brandingFor(effective),
       // Off, so the demo emits no further Consent Mode updates or GTM events as
       // you click around. Note the core still writes ONE all-denied Consent Mode
@@ -902,17 +1130,43 @@
     updateStatus();
   }
 
+  /* The state line, in words: what the visitor chose. */
   function updateStatus() {
     var out = $('#d-status');
-    if (!out) return;
-    if (!CK) { out.textContent = t('statusBroken'); return; }
+    if (!out) { updateGcm(null); return; }
+    if (!CK) { out.textContent = t('statusBroken'); updateGcm(null); return; }
     var s;
-    try { s = CK.getState(); } catch (e) { out.textContent = t('statusBroken'); return; }
+    try { s = CK.getState(); } catch (e) { out.textContent = t('statusBroken'); updateGcm(null); return; }
 
-    if (!s || !s.decided) { out.textContent = t('statusUndecided'); return; }
-    var cats = s.categories || {};
-    var on = ['functional', 'analytics', 'marketing'].filter(function (c) { return cats[c] === true; });
-    out.textContent = t('statusDecided').replace('{cats}', on.length ? on.join(', ') : t('statusNone'));
+    if (!s || !s.decided) {
+      out.textContent = t('statusUndecided');
+    } else {
+      var cats = s.categories || {};
+      var on = ['functional', 'analytics', 'marketing'].filter(function (c) { return cats[c] === true; });
+      out.textContent = t('statusDecided').replace('{cats}', on.length ? on.join(', ') : t('statusNone'));
+    }
+    updateGcm(s);
+  }
+
+  /* «Что увидит Google: analytics_storage — denied, ad_storage — denied.»
+   *
+   * DERIVED from the consent state, not read back from dataLayer: demoConfig()
+   * sets integrations.gcm = false precisely so the demo emits no Consent Mode
+   * updates as the visitor clicks around, which means dataLayer holds only the
+   * core's one parse-time default and would never move. The mapping is the one
+   * the client itself applies (docs/CONSENT-MODE-NOTES-2026-09.md §2):
+   * analytics -> analytics_storage, marketing -> ad_storage.
+   *
+   * Both are denied until the visitor decides, which is the honest reading of
+   * a banner that has not been answered yet. */
+  function updateGcm(state) {
+    var out = $('#d-gcm');
+    if (!out) return;
+    var cats = (state && state.decided && state.categories) || {};
+    var v = function (on) { return t(on === true ? 'gcmGranted' : 'gcmDenied'); };
+    out.textContent = t('gcmLine')
+      .split('{analytics}').join(v(cats.analytics))
+      .split('{ads}').join(v(cats.marketing));
   }
 
   function fillLanguageSelect() {
@@ -934,13 +1188,98 @@
     if (sel.value !== prev) { sel.value = 'auto'; demo.bannerLang = 'auto'; }
   }
 
+  /* The position select, rebuilt for the current layout — see POSITIONS_FOR.
+     The previously chosen position is kept when the new layout still offers
+     it, and otherwise the layout's first (conventional) position is taken, so
+     switching bar -> box never leaves the select showing an option the client
+     would ignore. */
+  function fillPositionSelect() {
+    var sel = $('#d-position');
+    if (!sel) return;
+    var opts = POSITIONS_FOR[demo.layout] || POSITIONS_FOR.bar;
+
+    var keep = null;
+    for (var i = 0; i < opts.length; i++) if (opts[i][0] === demo.position) keep = demo.position;
+    if (keep === null) demo.position = opts[0][0];
+
+    sel.textContent = '';
+    opts.forEach(function (o) {
+      var n = el('option', null, t(o[1]));
+      n.value = o[0];
+      sel.appendChild(n);
+    });
+    sel.value = demo.position;
+    // A modal has exactly one position, so the control has nothing to offer.
+    sel.disabled = opts.length < 2;
+  }
+
+  /* Five swatches, drawn as real radios so one tab stop and the arrow keys
+     come for free. The colour is on the label, not the input: a styled
+     appearance:none radio disappears in forced-colours mode, and the visible
+     swatch has to survive that. */
+  function fillAccentSwatches() {
+    var host = $('#d-accent');
+    if (!host) return;
+    host.textContent = '';
+
+    ACCENTS.forEach(function (a, i) {
+      var id = 'ck-accent-' + i;
+      var label = el('label', 'swatch');
+      label.htmlFor = id;
+      label.title = t(a[1]);
+
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'ck-demo-accent';
+      input.id = id;
+      input.value = a[0];
+      input.className = 'swatch__input';
+      input.checked = (a[0] === demo.accent);
+
+      var dot = el('span', 'swatch__dot');
+      dot.style.background = a[0];
+      // The colour name is the accessible name; the dot itself is decorative.
+      var sr = el('span', 'swatch__name', t(a[1]));
+
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        demo.accent = input.value;
+        // A palette-only change: ck-ui's signature() treats accent as a
+        // restyle, so the banner is repainted where it stands rather than
+        // remounted — a dismissed banner does NOT come back, which is why
+        // «Показать снова» is the only control that calls withdraw().
+        applyDemo();
+      });
+
+      label.appendChild(input);
+      label.appendChild(dot);
+      label.appendChild(sr);
+      host.appendChild(label);
+    });
+  }
+
   function wireDemo() {
-    var layout = $('#d-layout'), dlang = $('#d-lang'), again = $('#d-again');
+    var layout = $('#d-layout'), position = $('#d-position'), theme = $('#d-theme'),
+        dlang = $('#d-lang'), again = $('#d-again');
 
     if (layout) layout.addEventListener('change', function () {
       demo.layout = layout.value;
+      // The position list depends on the layout, so it is rebuilt before the
+      // config that reads demo.position is handed to the client.
+      fillPositionSelect();
       applyDemo();
     });
+
+    if (position) position.addEventListener('change', function () {
+      demo.position = position.value;
+      applyDemo();
+    });
+
+    if (theme) theme.addEventListener('change', function () {
+      demo.theme = theme.value;
+      applyDemo();
+    });
+
     if (dlang) dlang.addEventListener('change', function () { demo.bannerLang = dlang.value; applyDemo(); });
 
     if (again) again.addEventListener('click', function () {
@@ -954,6 +1293,7 @@
     });
 
     // The client tells us when the visitor decides, so the status line stays true.
+    document.addEventListener('ck:change', updateStatus);
     document.addEventListener('ck:change', updateStatus);
     document.addEventListener('ck:consent', updateStatus);
   }
@@ -978,6 +1318,8 @@
     renderStats();
     wireCheckForms();
     fillLanguageSelect();
+    fillPositionSelect();
+    fillAccentSwatches();
     // The demo's cookie table and branding line follow the page language.
     applyDemo();
   }

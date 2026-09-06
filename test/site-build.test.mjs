@@ -667,40 +667,71 @@ test('the check form is authored once and reused, with a honeypot', () => {
   assert.match(hp[0], /position:\s*absolute/, 'the honeypot is not taken out of the flow');
 });
 
-test('the form posts the documented body and handles all four answers', () => {
+test('the check is a two-step flow: scan first, e-mail only after a result', () => {
   const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
 
   assert.match(app, /\/v1\/public\/site-check/, 'app.js does not call the site-check endpoint');
   assert.match(app, /method:\s*'POST'/, 'the check is not sent as a POST');
-  for (const field of ['domain', 'email', 'lang', 'agree', 'hp']) {
-    assert.match(app, new RegExp(`${field}:`), `the posted body has no ${field}`);
+
+  // SPEC V1.13 §2.2 — step 1 posts the domain WITHOUT an e-mail. The address
+  // is asked for later, by its own request, once there is a result to send.
+  const step1 = app.slice(app.indexOf('function submitCheck'), app.indexOf('function submitEmail'));
+  for (const field of ['domain', 'lang', 'agree', 'hp']) {
+    assert.match(step1, new RegExp(`${field}:`), `the first request has no ${field}`);
   }
-  // The four documented statuses, each with its own message. 400 falling into
-  // the generic error branch would tell a visitor with a typo to check their
-  // internet connection.
-  for (const [status, key] of [[202, 'checkSent'], [200, 'checkRecent'],
-                               [429, 'checkLimit'], [400, 'checkInvalid']]) {
+  assert.doesNotMatch(step1, /\bemail:/,
+    'the first request still carries an e-mail — SPEC V1.13 §2.2 asks for it only after the scan');
+
+  // Step 2: poll the status every 5s, give up after 10 minutes.
+  assert.match(app, /POLL_MS\s*=\s*5000/, 'the status is not polled every 5 seconds');
+  assert.match(app, /POLL_MAX_MS\s*=\s*10 \* 60 \* 1000/, 'the poll has no 10-minute cap');
+  assert.match(app, /function pollCheck/, 'there is no status poll at all');
+  for (const st of ['done', 'error']) {
+    assert.match(app, new RegExp(`'${st}'`), `the poll does not handle status "${st}"`);
+  }
+  assert.match(app, /hasEmail/, 'the poll ignores hasEmail, so it would ask for an address twice');
+  assert.match(app, /teaser/, 'the poll never reads the teaser numbers');
+
+  // Step 3: the e-mail goes to its own endpoint, with its own three answers.
+  assert.match(app, /\/email/, 'there is no e-mail endpoint call');
+  assert.match(app, /'checkMailQueued'/, 'nothing is said after the address is accepted');
+  assert.match(app, /409/, 'app.js does not branch on 409 check_mailed');
+  assert.match(app, /'checkMailed'/, 'app.js never shows the «already sent» state');
+  assert.match(app, /'checkMailLimit'/, 'app.js never shows the e-mail rate limit');
+
+  // The states of step 1, each with its own message.
+  for (const [status, key] of [[200, 'checkRecent'], [429, 'checkLimit'], [400, 'checkInvalid']]) {
     assert.match(app, new RegExp(`${status}`), `app.js does not branch on ${status}`);
     assert.match(app, new RegExp(`'${key}'`), `app.js never shows the ${key} state`);
   }
+  // SPEC V1.13 §1 — a 200 is two different answers: 'recent' (poll the existing
+  // check) and 'registered' (already a customer; no checkId, nothing to poll).
+  assert.match(app, /'registered'/, 'app.js does not tell the two kinds of 200 apart');
+  assert.match(app, /'checkRegistered'/, 'app.js never shows the «already connected» state');
+  assert.match(app, /'checkScanError'/, 'app.js has no state for a scan that failed');
   assert.match(app, /'checkError'/, 'app.js has no network-error state');
 });
 
 test('the check form has all its copy in all three dictionaries', () => {
   const KEYS = ['checkTitle', 'checkLede', 'checkDomainLabel', 'checkDomainPlaceholder',
                 'checkEmailLabel', 'checkEmailPlaceholder', 'checkAgree', 'checkSubmit',
-                'checkNote', 'checkSent', 'checkRecent', 'checkLimit', 'checkError',
+                'checkNote', 'checkRunning', 'checkRunningNote', 'checkDone', 'checkAskEmail',
+                'checkEmailSubmit', 'checkMailQueued', 'checkRecent', 'checkRecentMailed',
+                'checkLimit', 'checkMailLimit', 'checkMailed', 'checkScanError', 'checkError',
                 'checkInvalid', 'checkNeedDomain', 'checkNeedEmail', 'checkNeedAgree',
-                'checkSending'];
+                'checkSending', 'checkRegistered'];
   for (const { code } of LANGS) {
     const dict = readDict(code);
     for (const key of KEYS) {
       assert.ok(dict[key] && dict[key].trim(), `${code}.json has no "${key}"`);
     }
-    // The «sent» state names both the domain and the address the mail goes to.
-    for (const token of ['{domain}', '{email}']) {
-      assert.ok(dict.checkSent.includes(token),
-        `"checkSent" in ${code}.json does not interpolate ${token}`);
+    // «Проверяем <домен>…» names the site being scanned, and the teaser
+    // carries all three numbers SPEC V1.13 §2.2 asks it to report.
+    assert.ok(dict.checkRunning.includes('{domain}'),
+      `"checkRunning" in ${code}.json does not interpolate {domain}`);
+    for (const token of ['{services}', '{before}', '{cookies}']) {
+      assert.ok(dict.checkDone.includes(token),
+        `"checkDone" in ${code}.json does not interpolate ${token}`);
     }
   }
 });
@@ -774,35 +805,47 @@ test('every FAQ answer gets its own anchor', () => {
 
 /* -------------------------------------------------------- step screenshots */
 
-test('the four step screenshots exist, are WebP and stay under 120 KB', () => {
-  const LIMIT = 120 * 1024;
+test('the four steps are one-size inline illustrations, not screenshots', () => {
+  // SPEC V1.13 §2.5 — the four mismatched screenshots are replaced by four
+  // illustrations of ONE size. Inline SVG rather than files: the shapes are a
+  // handful of rectangles, and only inline SVG can paint the site's own custom
+  // properties, so the same markup is right in the light and the dark theme.
   const template = readTemplate();
 
-  for (let n = 1; n <= 4; n++) {
-    const file = join(SITE_DIR, 'img', 'steps', `step${n}.webp`);
-    assert.ok(existsSync(file), `site/img/steps/step${n}.webp is missing`);
-    const bytes = statSync(file).size;
-    assert.ok(bytes <= LIMIT,
-      `step${n}.webp is ${(bytes / 1024).toFixed(1)} KB — SPEC V1.11 §3 caps it at 120 KB`);
+  assert.doesNotMatch(template, /img\/steps\//,
+    'the template still references the deleted step screenshots');
+  assert.ok(!existsSync(join(SITE_DIR, 'img', 'steps')),
+    'site/img/steps/ still exists — SPEC V1.13 §2.5 deletes it');
 
-    // width/height are what stop the four images reflowing the section as they
-    // load, and loading=lazy is what keeps them off the critical path.
-    const tag = template.match(new RegExp(`<img[^>]*steps/step${n}\\.webp[^>]*>`, 's'));
-    assert.ok(tag, `the template does not use step${n}.webp`);
-    assert.match(tag[0], /loading="lazy"/, `step${n} is not lazy-loaded`);
-    assert.match(tag[0], /width="\d+"/, `step${n} has no width, so it will reflow the page`);
-    assert.match(tag[0], /height="\d+"/, `step${n} has no height, so it will reflow the page`);
-    assert.match(tag[0], /data-i18n-alt="how\dAlt"/, `step${n} has no translated alt text`);
+  const arts = template.match(/<svg class="step-art"[\s\S]*?<\/svg>/g) || [];
+  assert.equal(arts.length, 4, `the section has ${arts.length} illustrations, not 4`);
+
+  for (const [i, art] of arts.entries()) {
+    // One size for all four, and 4:3 as the spec asks.
+    assert.match(art, /viewBox="0 0 320 240"/,
+      `illustration ${i + 1} is not on the shared 4:3 viewBox`);
+    // Decorative: the <h3> and <p> beside it carry the meaning, so a screen
+    // reader must not be read four wordless diagrams.
+    assert.match(art, /aria-hidden="true"/, `illustration ${i + 1} is not hidden from assistive tech`);
+    // «крупные элементы без мелкого текста» — no glyphs at all inside the art.
+    assert.doesNotMatch(art, /<text\b/, `illustration ${i + 1} contains text`);
+    // Theme-aware by construction: every fill is a class the stylesheet maps
+    // to a token, never a literal colour baked into the markup.
+    assert.doesNotMatch(art, /fill="#/, `illustration ${i + 1} hard-codes a colour`);
   }
 
-  // Described in every language, and never with the empty alt that would hide
-  // a screenshot carrying information from a screen reader.
-  for (const { code } of LANGS) {
-    const dict = readDict(code);
-    for (let n = 1; n <= 4; n++) {
-      assert.ok(dict[`how${n}Alt`] && dict[`how${n}Alt`].trim().length > 10,
-        `${code}.json has no usable alt text for step ${n}`);
-    }
+  // The classes the illustrations use must all be styled, or a shape would
+  // fall back to black-on-black in the dark theme.
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  assert.match(css, /\.step-art\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*3/,
+    'styles.css does not hold the illustrations to one 4:3 box');
+  const classes = new Set();
+  for (const m of template.matchAll(/class="(art-[a-z-]+(?:\s+art-[a-z-]+)*)"/g)) {
+    for (const c of m[1].split(/\s+/)) classes.add(c);
+  }
+  assert.ok(classes.size >= 8, `only ${classes.size} art classes found — did the parse break?`);
+  for (const c of classes) {
+    assert.ok(css.includes('.' + c), `styles.css has no rule for .${c}`);
   }
 });
 
