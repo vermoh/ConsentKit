@@ -7,6 +7,7 @@ repository root:
 |---|---|
 | `ck-core.js` | `/src/ck-core.js` |
 | `ck-locales.js` | `/src/ck-locales.js` |
+| `ck-ui-branding.js` | `/src/ck-ui-branding.js` |
 | `ck-ui.js` | `/src/ck-ui.js` |
 | `ck-debug-loader.js` | `/src/ck-debug-loader.js` |
 
@@ -27,7 +28,7 @@ overwritten by the next synchronization, and the plugin would then ship behavior
 that differs from the demo and the npm package.
 
 `src/ck-debug.js` — the debug panel itself — is deliberately **not** copied
-here. It is roughly 30 KB that every visitor of every page would download and
+here. It is roughly 54 KB that every visitor of every page would download and
 never use. The plugin ships the loader instead; the loader fetches the panel
 from the CDN, pinned to the running core version, only when someone opens the
 page with `?ck_debug=1`. The same test asserts `assets/ck-debug.js` does not
@@ -40,8 +41,10 @@ exist, so a stray copy cannot creep back in and go stale.
 
 1. `ck-core.js` — must run first. It installs the blocking patches at parse time.
 2. `ck-locales.js` — defines `window.__ckLocales`.
-3. `ck-ui.js` — reads the locale dictionary when it renders.
-4. `ck-debug-loader.js` — the opt-in debug switch. It reads
+3. `ck-ui-branding.js` — registers the attribution/logo extension, so it must
+   come before the UI that renders it.
+4. `ck-ui.js` — reads the locale dictionary when it renders.
+5. `ck-debug-loader.js` — the opt-in debug switch. It reads
    `ConsentKit.version` (hence: after the core) to pin the panel it fetches.
    Without `?ck_debug=1` it creates no DOM and makes no request.
 

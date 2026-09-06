@@ -1,6 +1,6 @@
 # ConsentKit
 
-![status: prototype v0.3](https://img.shields.io/badge/status-prototype%20v0.3-orange)
+![status: prototype v0.5](https://img.shields.io/badge/status-prototype%20v0.5-orange)
 ![license: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
 ![no build step](https://img.shields.io/badge/build-none-lightgrey)
@@ -24,17 +24,18 @@ Vanilla ES2020, zero dependencies, no build step.
   (e.g. a direct GA4 `gtag/js` tag) cannot be intercepted before the request
   leaves — mark those up manually; the SaaS install check points at the exact tag
 - **UI:** banner (`bar` / `box` / `modal`), preferences panel, floating re-open
-  button, light/dark, 30+ locales
+  button, light/dark, 34 locales
 - **SSR-safe:** importing on the server never touches the DOM
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
-  fixed by design, see [CONTRIBUTING.md](CONTRIBUTING.md)
+  fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.3).** The core, the UI and the demo are verified in a
-> browser; several distribution paths are not yet tested against live systems.
-> See [Project status](#project-status) before shipping this to production.
+> **Status: prototype (v0.5.11).** The core, the UI and the demo are verified in
+> a browser and covered by an automated suite (`npm test`); several distribution
+> paths are not yet tested against live systems. See
+> [Project status](#project-status) before shipping this to production.
 
 **Не программист?** Пошаговая инструкция по-русски, с картинками и разбором по
-кликам: **[INSTALL.ru.md](INSTALL.ru.md)**.
+кликам: **[INSTALL.ru.md](https://github.com/vermoh/ConsentKit/blob/main/INSTALL.ru.md)**.
 
 ## Install
 
@@ -42,10 +43,11 @@ Four ways to add ConsentKit to a site, from simplest to most integrated.
 
 | # | Method | Best for | Docs |
 |---|---|---|---|
+| 0 | **Prebuilt block** — copy one file from `ready/` into `<head>`, nothing to install | Tilda and other site builders; no developer needed | [`ready/README.md`](https://github.com/vermoh/ConsentKit/blob/main/ready/README.md) |
 | 1 | **Script tags** — copy `src/` to your server, three `<script>` tags in `<head>` | Any site you control | [Quickstart below](#quickstart--script-tags) |
 | 2 | **npm** — `npm install @ecomconsult/consentkit` | Bundled apps, React | [Quickstart below](#quickstart--npm) |
-| 3 | **WordPress plugin** — copy the plugin folder to `wp-content/plugins/`; rewrites static tracker tags server-side | WordPress / WooCommerce | [`plugins/wordpress/consentkit/`](plugins/wordpress/consentkit/) |
-| 4 | **Google Tag Manager** — import the container, trigger tags on consent events | Sites already running GTM | [`integrations/gtm/README.md`](integrations/gtm/README.md) |
+| 3 | **WordPress plugin** — copy the plugin folder to `wp-content/plugins/`; rewrites static tracker tags server-side | WordPress / WooCommerce | [`plugins/wordpress/consentkit/`](https://github.com/vermoh/ConsentKit/tree/main/plugins/wordpress/consentkit) |
+| 4 | **Google Tag Manager** — import the container, trigger tags on consent events | Sites already running GTM | [`integrations/gtm/README.md`](https://github.com/vermoh/ConsentKit/blob/main/integrations/gtm/README.md) |
 
 ```sh
 npm install @ecomconsult/consentkit
@@ -201,6 +203,7 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `hostdb` | `Record<string, Category>` | — | Extra `host: category` pairs merged into the tracker database, applied before the initial scan. SaaS mode fills this from the service; `ConsentKit._extendHostDb()` does the same at any later point |
 | `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel |
 | `services` | `CkService[]` | `[]` | v0.5.8. Third-party services the site declares. Each gets its own toggle inside its category group in the panel, and can be refused individually — see [Services](#services). At most 50 |
+| `branding` | `object` | absent | v0.3.5. The attribution line (and optional logo) at the foot of the banner, rendered by `src/ck-ui-branding.js`. Absent from the defaults: omit the key and nothing renders — see [Branding](#branding) |
 
 `cookieTable` entries:
 
@@ -281,8 +284,8 @@ border rule apply to *derived* values — the automatic text on a filled button,
 the border and text an `outline` button takes from `theme.accent`, the link
 colour read off the accent. A `fg`, `border` or `onAccent` you wrote yourself
 is never repainted, however low it measures: the debug panel reports the ratio
-and warns («контраст 4.32 — ниже рекомендуемых 4.5»), and the choice stays
-yours. Concretely:
+and warns that it is below the recommended floor (for example, "contrast 4.32 —
+below the recommended 4.5"), and the choice stays yours. Concretely:
 
 - a `fg` you set is painted as set and only measured against the fill behind
   it; the *derived* text on a filled button still becomes white or `#161616`,
@@ -300,8 +303,9 @@ arithmetic cannot read — a CSS colour name, an `rgb()` string — is left exac
 as you wrote it rather than being silently replaced.
 
 **The preferences panel follows the banner, with no settings of its own**
-(v0.5.11): «Сохранить выбор» is styled as `accept`, the panel's own accept and
-reject as `settings`, and the floating button takes the `accept` button's fill
+(v0.5.11): the panel's «save choice» button is styled as `accept`, the panel's
+own accept and reject as `settings`, and the floating button takes the
+`accept` button's fill
 (its border colour when `accept` is `outline`), while the category and service
 switches keep `theme.accent`.
 
@@ -350,16 +354,16 @@ safe to call before the banner has mounted: a call that arrives while the UI
 file is still loading is remembered and honoured on mount, so a link clicked
 during a slow page load still works.
 
-The same panel has an address. Ссылка «Изменить выбор cookie» →
-`https://site/#ck-settings`: любая ссылка на страницу сайта с этим хвостом
-открывает окно настроек — и при загрузке страницы, и при переходе по ссылке на
-уже открытой странице. Хвост убирается из адреса через `history.replaceState`,
-поэтому перезагрузка или «назад» не открывают окно повторно. Это тот адрес, на
-который ведёт кнопка «Изменить выбор cookie» на странице декларации cookie, и
-его же удобно поставить в подвал сайта:
+The same panel also has an address. Any link to a page of the site ending in
+`#ck-settings` opens the preferences panel — both when the page loads with that
+fragment and when the link is followed on an already-open page. The fragment is
+then removed from the address with `history.replaceState`, so a reload or a
+«back» does not reopen the panel. This is the address the «change your cookie
+choice» button on a cookie declaration page points at, and the one to put in a
+site footer:
 
 ```html
-<a href="#ck-settings">Изменить выбор cookie</a>
+<a href="#ck-settings">Change your cookie choice</a>
 ```
 
 ### Placeholders for blocked embeds
@@ -368,7 +372,7 @@ When the engine holds back an `<iframe>` before consent — a known tracker, or
 any third-party frame in strict mode — the visitor would otherwise see an empty
 hole where a video or a map should be. Since 0.5.7 ConsentKit draws a card in
 its place: the name of the service, the category the embed is waiting for, a
-primary button «Разрешить и показать» that grants **that one category** and
+primary button ("Allow and show") that grants **that one category** and
 loads the embed, and a link to the full settings panel.
 
 The card is sized from the frame's own `width`/`height` (or its computed size),
@@ -408,8 +412,9 @@ decide. Membership is a claim that a host delivers the site's own assets, not
 that it is harmless in general — anything that *measures* keeps a real consent
 category instead, which is why `static.cloudflareinsights.com` (Cloudflare Web
 Analytics) is classified as `analytics` and blocked before consent even though
-the rest of Cloudflare's CDN is infrastructure. Both lists are matched by suffix
-and returned as copies, so reading them cannot widen what strict mode allows.
+the rest of Cloudflare's CDN is infrastructure. The list holds **37 entries**.
+Both lists are matched by suffix and returned as copies, so reading them cannot
+widen what strict mode allows.
 
 ## API
 
@@ -448,6 +453,44 @@ All methods are safe to call at any time and never throw.
 Already-loaded scripts are not unloaded by `withdraw()` — cookies are cleared
 and the next page load is clean.
 
+### Introspection
+
+Members prefixed with `_` are **not** private-by-convention placeholders: they
+are a deliberate read-only surface for tooling — the debug panel, the hosted
+cabinet's theme editor, and tests — and they are documented because those
+consumers depend on them. They are stable within a minor version, and every one
+of them returns a copy, so reading can never widen what the engine allows.
+
+| Member | Returns | Description |
+|---|---|---|
+| `_blocked()` | `array` | What the engine is currently holding back, plus a sweep of blocked markup. Drives the debug panel's list |
+| `_categoryForUrl(url)` | `string \| null` | The category the database gives a URL — the same lookup the engine uses |
+| `_categories` | `string[]` | The four category names, as a copy |
+| `_services()` | `array` | The normalised service rows from the config |
+| `_serviceForUrl(url)` | `object \| null` | Which declared service a URL belongs to |
+| `_deniedServices()` | `string[]` | Ids the visitor refused individually |
+| `_extendHostDb(map)` | `number` | Merge extra `host: category` pairs; returns how many were accepted — see [Extending the tracker database](#extending-the-tracker-database) |
+| `_infra()` | `string[]` | The 37 infrastructure hosts, as a copy |
+| `_isInfra(url)` | `boolean` | Is this URL or hostname infrastructure? |
+| `_baseAllow` | `object` | The built-in strict-mode allowlist (hosts plus path-scoped entries), as a copy |
+
+`ConsentKit._contrast`, published by `src/ck-ui.js`, exposes the theme
+arithmetic as pure functions so a theme editor can show exactly the numbers the
+banner paints rather than reimplementing them. Nothing in it touches the DOM, so
+it is safe to call in Node:
+
+| Group | Functions |
+|---|---|
+| Colour maths | `relativeLuminance`, `contrastRatio`, `ensureContrast`, `stepToContrast` |
+| Resolution | `resolveButtonStyles`, `resolveRadius`, `resolveFont`, `pickPageFont`, `resolveDetails`, `buildThemeCss` |
+| Font probing | `nextProbeDelay`, `shouldReprobe` |
+| Placeholders | `placeholderText`, `placeholdersEnabled` |
+| Services panel | `cookieRowsForService`, `looseCookies`, `servicePurpose`, `groupCountLabel`, `serviceSignature`, `signature` |
+| Wording | `plural`, `pluralIndex`, `buildStrings`, `localeTable`, `resolveLang` |
+
+`ConsentKit._resolvePageFont()` reports the font family the banner resolved from
+the page.
+
 ## Events
 
 All are `CustomEvent` on `document`, with the payload in `detail`.
@@ -469,6 +512,20 @@ document.addEventListener('ck:change', (e) => {
 
 The core never touches the UI directly; it only dispatches these events, and the
 UI layer only calls the public API.
+
+### dataLayer events (GTM)
+
+Separately from the DOM events above, `integrations.gtmDataLayer` (on by
+default) pushes to `window.dataLayer`, which is what GTM triggers listen to:
+
+| Push | When |
+|---|---|
+| `ck_consent_update` with `ck_consent: { necessary, functional, analytics, marketing }` and `ck_method` | Every decision, including `withdraw()` |
+| `ck_consent_functional` / `ck_consent_analytics` / `ck_consent_marketing` | Once per granted category, on the decision and again on a return visit when stored consent is restored. Each fires at most once per page |
+
+The per-category events exist so a GTM tag can trigger on exactly the category
+it needs without reading the payload. See
+[`integrations/gtm/README.md`](https://github.com/vermoh/ConsentKit/blob/main/integrations/gtm/README.md).
 
 ## Blocking trackers
 
@@ -517,9 +574,23 @@ document.head.appendChild(s);
 ```
 
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
-granting consent later loads them without a reload. Recognised hosts include
-Google Analytics, Google Tag Manager, Facebook, Yandex Metrica, Hotjar, TikTok
-and DoubleClick.
+granting consent later loads them without a reload.
+
+The database ships **116 hosts** and **11 path rules**, matched by suffix (a
+bare registrable domain also covers its subdomains) and by substring
+respectively:
+
+| Table | Entries | By category |
+|---|---|---|
+| `HOST_DB` | 116 | 40 `functional`, 32 `marketing`, 31 `analytics`, 13 `necessary` |
+| `PATH_DB` | 11 | 4 `marketing`, 3 `functional`, 2 `analytics`, 2 `necessary` |
+| `INFRA_DB` | 37 | not a category — see [Infrastructure](#infrastructure) |
+
+Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
+TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
+tags inside it obey Consent Mode); `/gtag/js` is blocked by path instead. The
+same tables are exported to the WordPress plugin, so server and browser
+classify a host identically.
 
 Because the patches install at parse time, `ck-core.js` must load before any
 tracker — put it first in `<head>` and do not add `defer`.
@@ -607,8 +678,8 @@ Two limits are worth stating plainly:
 
 Runtime injection is covered by the patches above. A tracker tag written
 **directly into the HTML** is not: the parser starts that request before the
-first line of `ck-core.js` runs. The gap was measured (debt Д9: request at
-14 ms, our script at 18 ms) and it is negative — no client-side technique
+first line of `ck-core.js` runs. The gap was measured (debt D9 in SPEC.md:
+request at 14 ms, our script at 18 ms) and it is negative — no client-side technique
 closes it. Such tags need either manual markup, or a server that rewrites them
 before the page is sent.
 
@@ -649,10 +720,38 @@ Outside WordPress the same idea applies to any server-side template: emit the
 
 ## Google Consent Mode v2
 
-With `integrations.gcm` (default), the core pushes `consent: default` with every
-signal `denied` at parse time, then `consent: update` after each choice:
-`analytics` → `analytics_storage`; `marketing` → `ad_storage`, `ad_user_data`,
-`ad_personalization`.
+With `integrations.gcm` (the default), the core pushes `consent: default` at
+parse time — before any tag can load — with every signal `denied` and
+`wait_for_update: 500`, then `consent: update` after each choice. Seven signals
+are set, always as one block:
+
+| Signal | Follows |
+|---|---|
+| `analytics_storage` | `analytics` |
+| `ad_storage`, `ad_user_data`, `ad_personalization` | `marketing` |
+| `functionality_storage`, `personalization_storage` | `functional` |
+| `security_storage` | always `granted` |
+
+`integrations.gtmDataLayer` (also on by default) is an independent gate: it
+pushes a `ck_consent_update` event carrying `ck_consent` (the four categories)
+and `ck_method`, so GTM triggers work even with `gcm: false`.
+
+**What "denied" actually means.** Consent Mode is Google's own mechanism, not a
+block: a Google tag that runs under denied signals sets **no cookies and no
+identifiers**, but it still sends *cookieless pings* to Google, and those pings
+carry the **page URL, the referrer and the user agent**, from an IP address
+Google necessarily sees. That is enough for Google to see the
+visit, and in the EU an IP address is personal data. Consent Mode alone is
+therefore not the same as not being measured.
+
+ConsentKit's blocking engine is the part that makes the difference: a tag it
+holds back never runs at all, so it sends nothing — no ping, no URL, no IP. The
+two work together, and Consent Mode is the fallback for the case the engine
+cannot cover (a tag inside a GTM container, or a static `<script src>` the
+parser requested before ConsentKit loaded — see
+[Static tags](#static-tags-what-the-browser-cannot-catch)). If you need "nothing
+reaches Google before consent", rely on the blocking engine and mark such tags
+up; do not rely on Consent Mode by itself.
 
 ## Storage
 
@@ -696,36 +795,31 @@ hosting, the cabinet and the scanner — not the line itself.
 For site builders that will not let you upload files, `ready/` holds
 ready-to-paste `<script>` blocks — copy one wholesale into `<head>`. Zero
 external requests. Rebuild them with `tools/build-inline.mjs` (see
-[`tools/README.md`](tools/README.md)); each block's header records the exact
+[`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.0, rebuilt 2026-09-05, uncompressed — gzip on the server cuts
-this roughly three- to fourfold. Every block includes the branding extension
-and the attribution line; `--no-branding` drops both the code and the config
-and takes **~24 KB** back off:
+ConsentKit 0.5.11, rebuilt 2026-09-06, uncompressed — gzip on the server cuts
+this roughly threefold. Every block includes the branding extension and the
+attribution line; `--no-branding` drops both the code and the config and takes
+**~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 160,388 | 48,950 | 136,326 |
-| `ready/ru-bar.txt` | ru, ro, en | 162,009 | 49,711 | 137,927 |
-| `ready/ru-box.txt` | ru, ro, en | 162,024 | 49,718 | 137,942 |
-| `ready/ru-box-right.txt` | ru, ro, en | 162,033 | 49,718 | 137,945 |
-| `ready/ru-modal.txt` | ru, ro, en | 162,017 | 49,713 | 137,933 |
-| `ready/eu-bar.txt` | 34 languages | 210,663 | 68,094 | 186,601 |
+| `ready/en-bar.txt` | en | 264,816 | 82,798 | 238,438 |
+| `ready/ru-bar.txt` | ru, ro, en | 266,806 | 83,673 | 240,242 |
+| `ready/ru-box.txt` | ru, ro, en | 266,821 | 83,682 | 240,257 |
+| `ready/ru-box-right.txt` | ru, ro, en | 266,830 | 83,687 | 240,266 |
+| `ready/ru-modal.txt` | ru, ro, en | 266,814 | 83,679 | 240,250 |
+| `ready/eu-bar.txt` | 34 languages | 315,460 | 101,998 | 288,916 |
 
-0.5.0 adds roughly 18.5 KB over 0.4.1 (about 6.1 KB gzipped): the contrast
-engine, the per-button token resolution, the new stylesheet rules and the
-comments explaining the rules the arithmetic implements. 0.4.1 had added
-roughly 6.3 KB over 0.4.0 (the infrastructure list), and 0.4.0 roughly 16.1 KB
-over 0.3.6: iframe interception, strict mode (same-site detection, the
-allowlists, the public-suffix table) and the extensible tracker database.
-
-Size is driven almost entirely by the bundled languages: `en` and `ru` are
-built into the UI and cost nothing extra, while layout, position, theme and
-accent change only a few bytes of config.
+The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
+source respectively, comments included — the builder concatenates the sources
+as they are and does not minify). Bundled languages account for the rest:
+`en` and `ru` are built into the UI and cost nothing extra, while layout,
+position, theme and accent change only a few bytes of config.
 
 The debug panel is **not** in these numbers. Blocks carry a ~5.1 KB loader
-(`src/ck-debug-loader.js`) which fetches the 33 KB panel only when someone opens
+(`src/ck-debug-loader.js`) which fetches the ~54 KB panel only when someone opens
 the page with `?ck_debug=1` — see [Debug mode](#debug-mode). An ordinary visitor
 downloads the loader and nothing more.
 
@@ -768,7 +862,7 @@ a support ticket.
 
 ### How the panel gets onto the page
 
-The panel is ~33 KB, and on any given page exactly one person will ever open
+The panel is ~54 KB, and on any given page exactly one person will ever open
 it. So `ready/*.txt` and the WordPress plugin ship **`src/ck-debug-loader.js`**
 (~5.1 KB) instead, and the loader fetches the panel on demand. With no flag set
 the loader creates no DOM, installs no observers and makes **no network
@@ -877,6 +971,24 @@ When the configuration contains a `log` endpoint, each decision is POSTed with
 via `sendBeacon` on `pagehide`. Withdrawals are sent with `method: "withdraw"`.
 No other network requests are made.
 
+The payload is a **closed schema** — anything outside this list is rejected by
+the server as a 400:
+
+| Field | Always? | Value |
+|---|---|---|
+| `siteId`, `key` | yes | The site id and the log key from the config |
+| `cfg` | yes | Version of the config the decision was made under |
+| `id`, `ts` | yes | uuid and ISO timestamp of the record. A withdrawal gets a fresh pair |
+| `categories` | yes | Exactly three booleans: `functional`, `analytics`, `marketing`. `necessary` is not part of the schema |
+| `method` | yes | `accept_all` \| `reject_all` \| `custom` \| `withdraw` |
+| `lang`, `layout` | when resolved | The language and layout the visitor actually saw |
+| `services` | only on `custom` | v0.5.8. The ids the visitor refused, sent only when the list is non-empty. Capped at 50 ids of at most 64 characters |
+
+The client puts no page URL, referrer or user agent in the body. The request
+itself is still an ordinary HTTP request to the API host, so that host sees the
+connection's IP address like any server would — what the *payload* carries is
+the list above and nothing more.
+
 To try it locally, a mock API is included:
 
 ```sh
@@ -884,10 +996,119 @@ node demo/mock-api.mjs          # http://localhost:8788
 # serve the repo root, then open demo/saas.html
 ```
 
+## Changelog
+
+Client versions. The WordPress plugin tracks the same numbers and keeps its own
+notes in
+[`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.11
+- The preferences panel and the floating button follow the **banner's** buttons
+  by role, with no theme settings of their own: «save choice» is styled as
+  `accept`, the panel's own accept and reject as `settings`, and the floating
+  button takes the `accept` fill (its border colour when `accept` is `outline`).
+
+### 0.5.10
+- **A colour the site owner set is painted as set.** The 4.5:1 text rule and the
+  3:1 border rule now correct only *derived* colours; an explicit `fg`, `border`
+  or `onAccent` is left alone however low it measures.
+- `theme.light.onAccent` — the light-mode mirror of `theme.dark.onAccent`.
+- The debug panel reports the measured ratio and warns, instead of claiming a
+  value was fixed automatically.
+
+### 0.5.9
+- Tracker database: +42 entries — YouTube, Vimeo, Facebook and Instagram embeds,
+  chats and CRM (Freshworks, Viber, Telegram, Bitrix24, amoCRM), forms and
+  scheduling (Calendly, Typeform), payments (Stripe, PayPal, paynet.md, MAIB),
+  Sentry, 999.md. Vercel and Netlify are classified as infrastructure.
+- The debug panel is honest about Consent Mode: "no cookies, but the page
+  address and browser type are sent".
+
+### 0.5.8
+- **Services** (`services`): a site declares individual third parties, each of
+  which gets its own toggle inside its category group in the panel, with its own
+  vendor, purpose, privacy link and cookies. A visitor can accept a category and
+  still refuse one service; the refusal survives the group being switched off
+  and on again. Refusals are stored in `ck_consent` as `services: { id: false }`
+  and, in SaaS mode, reported in the beacon's `services` field.
+- `ConsentKit.allowedService(id)`.
+
+### 0.5.7
+- Placeholders for blocked embeds: a card in place of a held-back video or map,
+  with an "Allow and show" button that grants just that category
+  (`blocking.placeholders`, on by default).
+- `#ck-settings` in a page address opens the preferences panel;
+  `ConsentKit.openSettings()` is safe to call before the UI has mounted.
+- `texts.detailsAction: "declaration"` and `texts.declarationUrl`.
+
+### 0.5.6
+- The attribution line follows the banner's language
+  (`branding.poweredBy.texts`).
+
+### 0.5.5
+- Banner and panel texts rewritten in plain language (ru, ro, en).
+
+### 0.5.4
+- Database: Google Maps is `functional`; Tilda platform services and
+  `fonts.google.com` are infrastructure; Google Ads pings
+  (`/pagead/1p-user-list`, `/ads/ga-audiences`) are `marketing`.
+
+### 0.5.3
+- The banner re-resolves the page font after full load (on Tilda a reload from
+  cache left the banner in Times), and falls back to the system stack when the
+  page font cannot be determined.
+
+### 0.5.2
+- The banner takes its font from the page's real text rather than from `body`.
+
+### 0.5.1
+- Database: general CDNs (gstatic.com, aspnetcdn.com, kxcdn.com, jsDelivr,
+  cdnjs, unpkg, CloudFront and others) are infrastructure, not trackers; Google
+  reCAPTCHA is `necessary`; Searchanise and iuteCredit are `functional`.
+
+### 0.5.0
+- **The theme engine.** `theme.font` (the banner takes the site's font by
+  default, `'system'` restores the old stack), `theme.radius: { card, button }`
+  in px, and `theme.buttons` — variant, background, text, border and border
+  width per button. Accept and reject are always equal in size, weight and
+  variant, by construction. Contrast is checked automatically: text below 4.5:1
+  and borders below 3:1 are corrected.
+- `texts.policyUrl` and `texts.detailsAction` (`policy` / `settings` / `hide`):
+  «Learn more» now does something. Before 0.5.0 it was `<a href="#">` with no
+  handler — any site on 0.4.x or earlier has a dead link.
+- The corner card gained its reference geometry: up to 540px wide, 24px padding,
+  buttons in a row with an 8px gap and stacked on narrow screens.
+
+### 0.4.1
+- Infrastructure list (`ConsentKit._infra()`): builder CDNs, Google Fonts and
+  captcha, never intercepted by strict mode.
+  `static.cloudflareinsights.com` is deliberately excluded — it is analytics.
+
+### 0.4.0
+- **Strict mode** (`blocking.mode: 'strict'`): before consent, any third-party
+  script or iframe that is not same-site, allow-listed or in the built-in
+  allowlist is held back and filed as `marketing`.
+- `ConsentKit._extendHostDb()` and the `hostdb` config key.
+- `<iframe src>` is intercepted, not just scripts.
+
+### 0.3.6
+- Branding moved to `src/ck-ui-branding.js`, so `--no-branding` drops the code
+  as well as the config (~26 KB off a block).
+
+### 0.3.5
+- **Server-side tracker markup in the WordPress plugin, on by default** — the
+  one case the browser engine cannot cover. The database shipped to PHP is
+  generated from `src/ck-core.js`, and a test fails when the two drift.
+- The debug panel became a lazily-loaded file behind a ~5 KB loader.
+
+### 0.3.2
+- The GTM container is no longer blocked: tags inside it obey Consent Mode, and
+  blocking the container breaks that. `/gtag/js` is still blocked by path.
+
 ## Project status
 
-**This is a prototype (v0.3), not a released product.** It is honest about what
-has been verified and what has not.
+**This is a prototype (v0.5.11), not a released product.** It is honest about
+what has been verified and what has not.
 
 ### Verified
 
@@ -899,6 +1120,11 @@ has been verified and what has not.
 - `dataLayer` event trace for consent restore, upgrade and withdrawal.
 - npm entry points and TypeScript types: syntax and import smoke tests in Node
   without a DOM.
+- An automated suite runs under `npm test` (`node --test test/*.test.mjs`):
+  blocking engine, tracker-database classification and its PHP export, services,
+  the theme and contrast arithmetic, the settings panel, branding, the debug
+  loader and panel, the generated site, and a version guard that fails when
+  `package.json`, `src/ck-core.js` and the blocks in `ready/` drift apart.
 - PHP files of the WordPress plugin pass `php -l` on 7.4, 8.3 and 8.5.
 - The server-side rewriting engine has its own suite of 61 cases
   (`plugins/wordpress/consentkit/tests/rewrite.test.php`), green on PHP 7.4,
@@ -916,16 +1142,20 @@ has been verified and what has not.
   and structurally modelled on the documented export format, but Tag Manager has
   not accepted it in practice; some field names (notably GA4 config
   `measurementId` vs `tagId`) may need correction on first import.
-- **Translations beyond `en`, `ru`, `de` and `fr` are drafts.** They are usable
-  but have not been reviewed by native speakers. Legal wording — "Reject all",
-  "always active" — should be checked by someone who knows the local regulator's
-  language before you rely on it.
+- **The 32 locales of the language pack are drafts.** Only `en` and `ru` — the
+  two built into the UI — are authored rather than translated. The rest are
+  usable but have not been reviewed by native speakers (the weakest are `mt`,
+  `ga`, `is`, `sq`, `mk`; `pl` mixes politeness forms). Legal wording — "Reject
+  all", "always active" — should be checked by someone who knows the local
+  regulator's language before you rely on it.
 - **There is no server-side consent log.** Consent lives only in the visitor's
   browser (cookie plus `localStorage`). GDPR accountability may require you to
   be able to *demonstrate* that consent was given; that record-keeping is not
   part of this prototype and you would have to build it yourself.
-- No automated test suite and no CI beyond the Pages deployment; verification is
-  the manual smoke checklist in [CONTRIBUTING.md](CONTRIBUTING.md).
+- **No end-to-end browser tests and no CI beyond the Pages deployment.** The
+  `npm test` suite runs in Node against DOM stubs, not a real browser; browser
+  verification is still the manual smoke checklist in
+  [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md).
 - Not audited by a lawyer. ConsentKit is a technical building block, not legal
   advice, and it cannot make a site compliant on its own — your privacy policy,
   your cookie inventory and your record-keeping are still yours.
@@ -933,7 +1163,7 @@ has been verified and what has not.
 ### Contributing
 
 Structure of the repository, the GDPR invariants that must not change, and how
-to run the checks: [CONTRIBUTING.md](CONTRIBUTING.md).
+to run the checks: [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md).
 
 ## License
 
@@ -941,8 +1171,8 @@ Copyright (c) 2026 E-COM CONSULT PLUS.
 
 | Part | Licence |
 |---|---|
-| Client (`src/`), npm package, inline builder, demo | [MIT](LICENSE) |
-| WordPress plugin (`plugins/wordpress/consentkit/`) | [GPL-2.0-or-later](plugins/wordpress/consentkit/LICENSE) |
+| Client (`src/`), npm package, inline builder, demo | [MIT](https://github.com/vermoh/ConsentKit/blob/main/LICENSE) |
+| WordPress plugin (`plugins/wordpress/consentkit/`) | [GPL-2.0-or-later](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/LICENSE) |
 
 The client is MIT so it can be embedded anywhere without licence friction. The
 WordPress plugin ships under GPLv2+ because the WordPress ecosystem effectively
@@ -950,4 +1180,4 @@ requires it; MIT permits the plugin to bundle copies of the client in its
 `assets/` directory.
 
 Contributions require a `Signed-off-by` line (DCO) — see
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md).

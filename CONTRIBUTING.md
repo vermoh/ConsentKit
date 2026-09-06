@@ -43,21 +43,30 @@ git commit -s -m "Краткое описание изменения"
 | `src/ck-core.js` | Ядро: состояние согласия, движок блокировки, storage, Google Consent Mode v2 |
 | `src/ck-locales.js` | Словари локалей (`window.__ckLocales`), кроме встроенных en/ru |
 | `src/ck-ui.js` | UI-слой в Shadow DOM: баннер, панель настроек, плавающая кнопка |
+| `src/ck-ui-branding.js` | Необязательное расширение UI: логотип и строка-подпись |
+| `src/ck-debug-loader.js` | Загрузчик панели отладки (~5 КБ), подключается всегда |
+| `src/ck-debug.js` | Сама панель отладки (~54 КБ), грузится только по `?ck_debug=1` |
+| `src/ck-saas.js` | Необязательный режим SaaS: конфиг с сервера и журнал решений |
+| `test/` | Автотесты (`npm test`), Node с заглушками DOM |
 | `demo/` | Демо-магазин с фейковыми трекерами и панелью статуса |
+| `ready/` | Готовые инлайн-блоки для конструкторов сайтов (генерируются) |
+| `site/` | Сайт проекта (генерируется `tools/build-site.mjs`) |
 | `npm/` | npm-обёртка: ESM/CJS-точки входа, React-хук, TypeScript-типы |
 | `plugins/wordpress/consentkit/` | Плагин WordPress (PHP) со своей копией `src/` в `assets/` |
 | `integrations/gtm/` | Пакет для Google Tag Manager: экспорт контейнера и инструкция |
-| `tools/` | Сборщик инлайн-версии (`build-inline.mjs`) для конструкторов сайтов |
+| `tools/` | Сборщик инлайн-версии, экспорт базы хостов в PHP, сборка сайта |
 | `INSTALL.ru.md` | Инструкция по установке для не-программистов |
 | `.github/workflows/` | CI: публикация демо на GitHub Pages |
 
 Особенности, о которых легко забыть:
 
-- **Порядок подключения контрактный:** `ck-core.js` → `ck-locales.js` → `ck-ui.js`
-  → `ConsentKit.init(...)`. Ядро включает блокировку на parse-time, поэтому оно
-  обязано грузиться первым и **без** `defer`/`async`.
+- **Порядок подключения контрактный:** `ck-core.js` → `ck-locales.js` →
+  (`ck-ui-branding.js`) → `ck-ui.js` → `ConsentKit.init(...)`. Ядро включает
+  блокировку на parse-time, поэтому оно обязано грузиться первым и **без**
+  `defer`/`async`. Расширение брендинга регистрирует себя до UI, который его
+  рисует; `ck-debug-loader.js` идёт последним и читает `ConsentKit.version`.
 - **`plugins/wordpress/consentkit/assets/` — побайтовые копии `src/`.** Меняете
-  `src/` — синхронизируйте копии и проверяйте совпадение (`shasum`).
+  `src/` — синхронизируйте копии; совпадение sha256 стережёт `npm test`.
 - **`demo/` ходит в ядро по относительным путям** (`../src/ck-core.js`), поэтому
   на Pages выкладывается корень репозитория, а не папка `demo/`.
 
@@ -100,12 +109,32 @@ git commit -s -m "Краткое описание изменения"
 
 Зависимостей и сборки нет — всё проверяется штатным Node и браузером.
 
+**Главное — автотесты.** Прогоняются одной командой и обязательны перед любым
+PR:
+
+```sh
+npm test        # node --test test/*.test.mjs
+```
+
+Что они стерегут: движок блокировки, классификацию хостов и её экспорт в PHP,
+сервисы, арифметику темы и контраста, окно настроек, брендинг, загрузчик и саму
+панель отладки, сборку сайта — и совпадение версий между `package.json`,
+`src/ck-core.js`, заглушками в `npm/` и блоками в `ready/`. Тест падает, если
+блоки не пересобраны под текущее ядро.
+
+Тесты идут в Node на заглушках DOM — браузерные проверки по-прежнему делаются
+руками, см. смоук ниже.
+
+**Тесты PHP-плагина** живут отдельно (обычный PHP CLI, вне `npm test`):
+
+```sh
+php plugins/wordpress/consentkit/tests/rewrite.test.php
+```
+
 **Синтаксис JS:**
 
 ```sh
-node --check src/ck-core.js
-node --check src/ck-locales.js
-node --check src/ck-ui.js
+for f in src/*.js; do node --check "$f"; done
 for f in npm/*.mjs npm/*.cjs; do node --check "$f"; done
 ```
 
@@ -134,12 +163,21 @@ php -l plugins/wordpress/consentkit/consentkit.php
 php -l plugins/wordpress/consentkit/uninstall.php
 ```
 
-**Синхронность копий ядра в плагине:**
+**Синхронность копий ядра в плагине** — это уже проверяет `npm test`
+(`test/wp-assets.test.mjs` сверяет sha256 всех пяти файлов). Вручную, если
+нужно посмотреть глазами:
 
 ```sh
-for f in ck-core.js ck-locales.js ck-ui.js; do
+for f in ck-core.js ck-locales.js ck-ui-branding.js ck-ui.js ck-debug-loader.js; do
   shasum "src/$f" "plugins/wordpress/consentkit/assets/$f"
 done
+```
+
+Разошлось — пересинхронизировать копии:
+
+```sh
+cp -f src/ck-core.js src/ck-locales.js src/ck-ui-branding.js src/ck-ui.js \
+      src/ck-debug-loader.js plugins/wordpress/consentkit/assets/
 ```
 
 **Демо в браузере** — обслуживать нужно с корня репозитория, иначе относительные

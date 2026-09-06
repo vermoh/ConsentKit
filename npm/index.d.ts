@@ -141,6 +141,12 @@ export interface CkThemeConfig {
   mode?: 'auto' | 'light' | 'dark';
   /** v0.2. Overrides the built-in dark palette. */
   dark?: CkDarkTheme;
+  /**
+   * v0.5.10. The light-mode mirror of `dark`, for one value: an `onAccent` the
+   * owner set for the filled buttons' text in light mode. A typed value is
+   * painted as typed (contrast is a warning, never a correction).
+   */
+  light?: { onAccent?: string };
 }
 
 /** v0.5.0 (SPEC V1.6 §2). Copy and the «Learn more» control. */

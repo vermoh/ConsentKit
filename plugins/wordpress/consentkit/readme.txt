@@ -27,18 +27,22 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers about 70 known tracker hosts.
+  requests them. This is on by default and covers 116 known tracker hosts and
+  11 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
   Analytics, Facebook, Yandex Metrica, Hotjar, TikTok, chat widgets).
 * Google Consent Mode v2 signals are sent as `denied` at parse time and updated
-  after the visitor decides.
+  after the visitor decides. Note that Consent Mode is not by itself a block: a
+  Google tag running under denied signals sets no cookies, but still sends
+  cookieless pings carrying the page address, referrer and browser type. The
+  blocking above is what stops a tag from running at all.
 
 Other features:
 
 * Three layouts: bar, compact box, centered modal.
 * Light, dark and automatic theme modes.
-* 30+ built-in locales; unknown languages fall back to English.
+* 34 built-in locales; unknown languages fall back to English.
 * Preferences panel with per-category toggles and a cookie table.
 * Keyboard accessible: focus trap, Esc to close, ARIA roles on toggles.
 
@@ -47,8 +51,9 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The automatic tracker database is small and matches by domain. Trackers served
-  from your own domain or from an unlisted vendor need manual `data-ck` markup.
+* The tracker database is a snapshot (116 hosts, 11 path rules) and matches by
+  domain. Trackers served from your own domain or from an unlisted vendor need
+  manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
   must be reloaded for a clean state — this is a browser limitation and applies
   to every consent tool.
@@ -76,6 +81,24 @@ on the page can inject a tracker.
 Place the shortcode `[consentkit_settings]` in a footer widget or a page. It
 renders a link that reopens the preferences panel. Custom label:
 `[consentkit_settings text="Manage cookies"]`.
+
+Where a shortcode is not available — a theme menu, an external page — a plain
+link to `#ck-settings` does the same thing without any code: any address on the
+site ending in that fragment opens the preferences panel, and the fragment is
+removed afterwards so a reload does not reopen it. A small round button in the
+corner of the screen also appears on its own once a choice has been made.
+
+= How do I check that the blocking actually works? =
+
+Open any page of your site with `?ck_debug=1` appended to the address. A debug
+panel appears in the corner listing what the engine is holding back, which
+tracker requests actually left the page (each marked before or after consent),
+and the Consent Mode signals that were sent. It is local to your browser,
+sends nothing anywhere, and reports cookie names without their values. Turn it
+off with `?ck_debug=0`.
+
+The panel itself is not shipped to visitors: the plugin enqueues a small loader
+that fetches it only when someone opens a page with that flag.
 
 = I updated my privacy policy. How do I ask for consent again? =
 
@@ -126,60 +149,107 @@ policy, your legal basis, your processors and your record keeping.
 == Changelog ==
 
 = 0.5.11 =
-* Кнопки окна настроек повторяют кнопки баннера: «Сохранить выбор» как «Принять всё», остальные как «Настроить»; плавающая кнопка в цветах «Принять всё»
+* The preferences panel now follows the banner's buttons: "Save choice" is
+  styled as "Accept all", the panel's other buttons as "Customize", and the
+  floating button takes the "Accept all" colours.
 
 = 0.5.10 =
-* Цвет, заданный владельцем сайта, применяется как задан: правило контраста 4.5:1 (и 3:1 для обводки) больше не перекрашивает выбранные цвета, а только те, что подобраны автоматически
-* Панель отладки предупреждает о низком контрасте и показывает измеренное значение вместо отметки «исправлено автоматически»
+* A colour set by the site owner is painted as set: the 4.5:1 text rule (and
+  3:1 for borders) no longer repaints chosen colours, only derived ones.
+* The debug panel warns about low contrast and reports the measured ratio
+  instead of claiming the value was corrected automatically.
 
 = 0.5.9 =
-* База хостов: +42 записи — YouTube, Vimeo, Facebook и Instagram, чаты и CRM (Freshworks, Viber, Telegram, Bitrix24, amoCRM), формы и запись (Calendly, Typeform), платежи (Stripe, PayPal, paynet.md, MAIB), Sentry, 999.md; Vercel и Netlify учтены как инфраструктура
-* Панель отладки честнее про Consent Mode: «без cookie, но адрес страницы и тип браузера уходят»
-* Кнопка закрытия окна настроек выровнена по переключателям
+* Tracker database: +42 entries - YouTube, Vimeo, Facebook and Instagram, chats
+  and CRM (Freshworks, Viber, Telegram, Bitrix24, amoCRM), forms and scheduling
+  (Calendly, Typeform), payments (Stripe, PayPal, paynet.md, MAIB), Sentry,
+  999.md. Vercel and Netlify are treated as infrastructure.
+* The debug panel is more honest about Consent Mode: "no cookies, but the page
+  address and browser type are sent".
+* The preferences panel's close button is aligned with the toggles.
 
 = 0.5.8 =
-* Сервисы в окне настроек: внутри каждой группы список сервисов (название, поставщик, назначение, ссылка на политику) со своим переключателем и своими cookie; заголовок группы показывает «N сервисов · M cookie»
-* Посетитель может отключить один сервис, оставив категорию включённой: его запросы задерживаются, его cookie удаляются
-* Панель отладки не прыгает вверх при обновлении и объясняет словами каждую строку «до согласия»
+* Services in the preferences panel: inside each category group, a list of
+  services (name, vendor, purpose, privacy link) with its own toggle and its
+  own cookies; the group header shows "N services, M cookies".
+* A visitor can switch off one service while leaving its category on: its
+  requests are held back and its cookies are deleted.
+* The debug panel no longer jumps to the top on refresh, and explains each
+  "before consent" row in words.
 
 = 0.5.7 =
-* Заглушки вместо заблокированных видео и карт с кнопкой «Разрешить и показать»; ссылка `#ck-settings` открывает настройки; «Подробнее» может вести на декларацию cookie
+* Placeholders in place of blocked videos and maps, with an "Allow and show"
+  button; a `#ck-settings` link opens the preferences panel; "Learn more" can
+  point at a cookie declaration page.
 
 = 0.5.6 =
-* Строка «Сделано в …» на языке баннера: сервер может передать `poweredBy.texts` по языкам
+* The "Made by ..." line follows the banner's language: the server can supply
+  `poweredBy.texts` per language.
 
 = 0.5.5 =
-* Тексты баннера и окна настроек переписаны простым языком (ru, ro, en)
+* Banner and preferences texts rewritten in plain language (ru, ro, en).
 
 = 0.5.4 =
-* База: Google Maps — функциональные; сервисы платформы Tilda (feeds/geo/members.tildaapi.one, tildacdn.one) и fonts.google.com — инфраструктура; пинги Google Ads (/pagead/1p-user-list, /ads/ga-audiences) — маркетинг
+* Database: Google Maps is functional; Tilda platform services
+  (feeds/geo/members.tildaapi.one, tildacdn.one) and fonts.google.com are
+  infrastructure; Google Ads pings (/pagead/1p-user-list, /ads/ga-audiences)
+  are marketing.
 
 = 0.5.3 =
-* Шрифт баннера повторно определяется после полной загрузки страницы (на Tilda при перезагрузке из кэша баннер оставался в Times)
-* Если шрифт страницы определить не удалось, баннер берёт системный шрифт, а не наследует шрифт body.
+* The banner re-resolves the page font after the page has fully loaded (on
+  Tilda a reload from cache left the banner in Times).
+* When the page font cannot be determined, the banner uses the system font
+  rather than inheriting from body.
 
 = 0.5.2 =
-* Шрифт баннера берётся у реального текста страницы, а не у body (сайты, где шрифт задан на блоках, получали Times)
+* The banner takes its font from the page's real text rather than from body
+  (sites that set fonts per block were getting Times).
 
 = 0.5.1 =
-* База сторонних сервисов: CDN (gstatic.com, aspnetcdn.com, kxcdn.com, jsdelivr, cdnjs, unpkg, cloudfront и др.) — инфраструктура, не трекеры; Google reCAPTCHA — необходимые; Searchanise (поиск по сайту) и iuteCredit — функциональные.
+* Database: general CDNs (gstatic.com, aspnetcdn.com, kxcdn.com, jsdelivr,
+  cdnjs, unpkg, cloudfront and others) are infrastructure, not trackers;
+  Google reCAPTCHA is necessary; Searchanise (site search) and iuteCredit are
+  functional.
 
 = 0.5.0 =
-* Клиент 0.5.0: оформление баннера. `theme.font` — баннер по умолчанию берёт шрифт сайта (`inherit`), прежний системный стек остаётся как `font: 'system'`. `theme.radius: { card, button }` в пикселях (0–32, по умолчанию 16 и 8). `theme.buttons` — вид, фон, текст, обводка и её толщина отдельно для «Принять всё», «Отклонить всё» и «Настроить»; «Принять» и «Отклонить» всегда одинаковы по размеру, весу и виду. Контраст проверяется автоматически: текст, который не набирает 4.5:1 к своему фону, заменяется на белый или тёмный, а обводка доводится до 3:1 к фону карточки — задать нечитаемую пару кнопок через настройки нельзя.
-* Новое `texts.policyUrl` и `texts.detailsAction` (`policy` / `settings` / `hide`): «Подробнее» открывает политику в новой вкладке, открывает настройки cookie или не показывается вовсе. Раньше эта ссылка вела в никуда (`href="#"`) — теперь она работает.
-* Карточка в углу («уголок») получила геометрию по образцу: ширина до 540 px, отступы 24 px, заголовок 20/700, кнопки в ряд с зазором 8 px и в столбик на узких экранах.
+* Client 0.5.0: banner appearance. `theme.font` - the banner takes the site's
+  font by default (`inherit`), with the previous system stack available as
+  `font: 'system'`. `theme.radius: { card, button }` in pixels (0-32, default
+  16 and 8). `theme.buttons` - variant, background, text, border and border
+  width separately for "Accept all", "Reject all" and "Customize"; accept and
+  reject are always identical in size, weight and variant. Contrast is checked
+  automatically: text below 4.5:1 against its background becomes white or dark,
+  and a border is brought to 3:1 against the card, so an unreadable pair of
+  buttons cannot be configured.
+* New `texts.policyUrl` and `texts.detailsAction` (`policy` / `settings` /
+  `hide`): "Learn more" opens the policy in a new tab, opens the cookie
+  settings, or is not shown at all. Previously this link led nowhere
+  (`href="#"`).
+* The corner card gained its reference geometry: up to 540px wide, 24px
+  padding, 20/700 heading, buttons in a row with an 8px gap and stacked on
+  narrow screens.
 
 = 0.4.1 =
-* Клиент 0.4.1: список инфраструктуры (`ConsentKit._infra()`) — CDN и статика конструкторов сайтов (Tilda, Wix, Shopify, Squarespace, Webflow), шрифты Google и капча. Строгий режим их никогда не задерживает, поэтому динамические модули конструкторов не ломаются. `static.cloudflareinsights.com` в список не входит: это аналитика Cloudflare, и она блокируется как аналитика.
+* Client 0.4.1: the infrastructure list (`ConsentKit._infra()`) - CDNs and
+  static hosts of site builders (Tilda, Wix, Shopify, Squarespace, Webflow),
+  Google Fonts and captcha. Strict mode never holds these back, so builders'
+  dynamic modules keep working. `static.cloudflareinsights.com` is deliberately
+  excluded: it is Cloudflare's analytics and is blocked as analytics.
 
 = 0.4.0 =
-* Клиент 0.4.0: строгий режим блокировки (`blocking.mode: 'strict'`) — до согласия задерживается любой сторонний скрипт и iframe, кроме same-site, разрешённых хостов и встроенного списка; перехваченное относится к категории «маркетинг». В панели отладки такие строки помечены `strict`.
-* Клиент 0.4.0: `ConsentKit._extendHostDb()` — база трекеров расширяется на лету (в режиме SaaS — из настроек сайта, до инициализации).
-* Ядро теперь перехватывает и `<iframe src>`, а не только скрипты.
-* Серверная разметка (`includes/rewrite.php`) по-прежнему размечает только известные хосты: строгий режим действует лишь на теги, которые страница подставляет динамически.
+* Client 0.4.0: strict blocking mode (`blocking.mode: 'strict'`) - before
+  consent, every third-party script and iframe is held back except same-site,
+  allowed hosts and the built-in list; whatever is intercepted is filed as
+  marketing. Such rows are labelled `strict` in the debug panel.
+* Client 0.4.0: `ConsentKit._extendHostDb()` - the tracker database can be
+  extended at runtime (in SaaS mode from the site's settings, before init).
+* The core now intercepts `<iframe>` as well as scripts.
+* Server-side markup (`includes/rewrite.php`) still marks up known hosts only:
+  strict mode applies to tags the page inserts dynamically.
 
 = 0.3.6 =
-* Клиент 0.3.6: код брендинга вынесен в отдельный файл ck-ui-branding.js (подключается плагином перед ck-ui.js).
+* Client 0.3.6: the branding code moved to a separate file, ck-ui-branding.js
+  (enqueued by the plugin before ck-ui.js).
 
 = 0.3.5 =
 * **Server-side tracker markup (on by default).** The plugin now rewrites
@@ -214,6 +284,17 @@ policy, your legal basis, your processors and your record keeping.
 * dataLayer events per granted category for Google Tag Manager triggers.
 
 == Upgrade Notice ==
+
+= 0.5.10 =
+Colours you set in the settings are now applied exactly as entered. If you had
+picked a colour that the previous version silently corrected for contrast, the
+banner will now show your colour and report the measured ratio in the debug
+panel instead.
+
+= 0.5.0 =
+The banner now takes your site's font by default instead of a fixed system
+stack, so it may look different after updating. The previous behaviour is
+available as `theme.font: 'system'`.
 
 = 0.3.5 =
 Adds server-side tracker markup, on by default: tracker tags written into your
