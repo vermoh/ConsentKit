@@ -39,6 +39,7 @@ return array(
 		'bitrix24.com' => 'functional',
 		'bitrix24.eu' => 'functional',
 		'bitrix24.ru' => 'functional',
+		'c.bing.com' => 'marketing',
 		'calendly.com' => 'functional',
 		'cdninstagram.com' => 'marketing',
 		'chimpstatic.com' => 'marketing',

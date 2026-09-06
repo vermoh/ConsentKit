@@ -49,6 +49,9 @@ const CASES = [
   ['https://www.facebook.com/plugins/like.php?href=x', 'marketing'],
   ['https://www.instagram.com/p/Cabc123/embed/', 'marketing'],
   ['https://scontent.cdninstagram.com/v/t51/photo.jpg', 'marketing'],
+  // Owner's finding 06.09.2026 (admin «Трекеры»): the Bing pixel UET and
+  // Clarity fire, seen on a customer site as c.bing.com /c.gif.
+  ['https://c.bing.com/c.gif?RD=1', 'marketing'],
   ['https://cdn.sendpulse.com/js/push/sdk.js', 'marketing'],
 
   // --- functional: features the owner chose --------------------------------

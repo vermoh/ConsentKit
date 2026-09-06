@@ -124,6 +124,7 @@
     'ct.pinterest.com': 'marketing',          // subdomain: pinterest.com is a normal site
     'sc-static.net': 'marketing',             // Snapchat pixel CDN
     'bat.bing.com': 'marketing',              // subdomain: bing.com is a normal site
+    'c.bing.com': 'marketing',                // Bing pixel (/c.gif) fired by UET and Clarity
     'adroll.com': 'marketing',
     'hs-analytics.net': 'marketing',          // HubSpot tracking
     'hs-scripts.com': 'marketing',
