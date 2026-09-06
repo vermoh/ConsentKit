@@ -1537,7 +1537,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.6',
+    version: '0.5.7',
     config: config,
 
     init: function (userConfig) {
@@ -1596,6 +1596,28 @@
 
     show: function () { dispatch('ck:ui:open-preferences', { state: publicState(), config: config }); },
     hide: function () { dispatch('ck:ui:close', { state: publicState() }); },
+
+    /* SPEC V1.10 §1 — the public name for «открыть настройки cookie». A site
+       puts it behind a footer link, and the declaration page links to
+       `https://site/#ck-settings`, which ck-ui turns into the same call.
+
+       Deliberately not just an alias of show(): the event is a broadcast, and a
+       page that calls openSettings() before ck-ui.js has been PARSED has no
+       listener to receive it — the request would be silently lost, which is the
+       one case a footer link hits (a click during a slow load). So the request
+       is latched here as well as dispatched, and ck-ui's mount() consumes the
+       latch at the end of its first render. ck-ui already writes to this object
+       (_contrast, _resolvePageFont), so the coupling direction is established.
+
+       `_pendingOpen` is read-and-cleared by ck-ui; nothing else touches it. */
+    openSettings: function () {
+      try { ConsentKit._pendingOpen = true; } catch (e) { /* noop */ }
+      dispatch('ck:ui:open-preferences', { state: publicState(), config: config });
+    },
+
+    // Set by openSettings() when the UI may not be listening yet; cleared by
+    // ck-ui.js the moment it can honour it. Underscored: not a public API.
+    _pendingOpen: false,
 
     // Introspection helpers for the demo status panel (read-only).
     _categoryForUrl: categoryForUrl,

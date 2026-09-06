@@ -28,7 +28,7 @@ export function undecidedState() {
  */
 export function createStub() {
   const stub = {
-    version: '0.5.6',
+    version: '0.5.7',
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },
@@ -37,6 +37,7 @@ export function createStub() {
     rejectAll: function () { return undecidedState(); },
     withdraw: function () { return undecidedState(); },
     show: function () {},
+    openSettings: function () {},
     hide: function () {},
     _categories: CATEGORIES.slice(),
     // v0.4.0: the stub mirrors the real surface, so consumer code that calls

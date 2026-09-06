@@ -188,13 +188,15 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `theme.mode` | `"auto" \| "light" \| "dark"` | `"auto"` | `auto` follows `prefers-color-scheme` |
 | `theme.dark` | `{ bg, ink, accent, onAccent }` | built-in | Overrides the dark palette |
 | `texts.policyUrl` | `string` | — | v0.5.0. Cookie policy address. `http(s)` only; anything else is ignored |
-| `texts.detailsAction` | `"policy" \| "settings" \| "hide"` | see notes | v0.5.0. What «Learn more» does. Defaults to `policy` when `policyUrl` is set, `settings` when it is not. `policy` without a usable URL falls back to `settings` rather than rendering a dead link |
+| `texts.detailsAction` | `"policy" \| "settings" \| "hide" \| "declaration"` | see notes | v0.5.0, `declaration` in v0.5.7. What «Learn more» does. Defaults to `policy` when `policyUrl` is set, `settings` when it is not. `policy` or `declaration` without a usable URL falls back to `settings` rather than rendering a dead link |
+| `texts.declarationUrl` | `string` | — | v0.5.7. Address of the cookie declaration page, used by `detailsAction: "declaration"`. `http(s)` only. Filled by the hosted service; the client only reads it |
 | `categories.*.enabled` | `boolean` | `true` | Per category: `functional`, `analytics`, `marketing`. Hides the toggle when `false` |
 | `consentTtlDays` | `number` | `365` | Lifetime of the stored decision |
 | `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2 signals |
 | `integrations.gtmDataLayer` | `boolean` | `true` | Push consent events to `window.dataLayer` |
 | `blocking.mode` | `"known" \| "strict"` | `"known"` | `strict` also holds back unknown third-party scripts and iframes — see [Strict mode](#strict-mode) |
 | `blocking.allow` | `string[]` | `[]` | Hosts strict mode must never intercept. Matched by suffix, so `partner.com` also covers `cdn.partner.com` |
+| `blocking.placeholders` | `boolean` | `true` | v0.5.7. Draw a card in place of an embed held back before consent — see [Placeholders for blocked embeds](#placeholders-for-blocked-embeds). `false` restores the pre-0.5.7 behaviour: the frame is still blocked, just invisible |
 | `hostdb` | `Record<string, Category>` | — | Extra `host: category` pairs merged into the tracker database, applied before the initial scan. SaaS mode fills this from the service; `ConsentKit._extendHostDb()` does the same at any later point |
 | `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel |
 
@@ -267,13 +269,68 @@ resolved colours, its contrast ratio, and whether the value was adjusted.
 | `"policy"` | A link to `texts.policyUrl`, opened with `target="_blank" rel="noopener"` |
 | `"settings"` | A button that opens the preferences panel |
 | `"hide"` | Nothing at all |
+| `"declaration"` | v0.5.7. A link to `texts.declarationUrl` — the cookie declaration page — opened the same way as `policy` |
 
 The default follows `policyUrl`: `policy` when one is set, `settings` when it
-is not — so supplying only a URL does the obvious thing.
+is not — so supplying only a URL does the obvious thing. `declarationUrl`
+deliberately does *not* affect that default: a site that gains a declaration
+address keeps whatever «Learn more» already did until it asks for the change.
+
+Both link forms accept `http(s)` addresses only. A `javascript:` or `data:` URL
+in a control the visitor is invited to click is an XSS vector, so anything else
+is refused and the link degrades to `settings`.
 
 > Before 0.5.0 this control was rendered as `<a href="#">` with no handler at
 > all: clicking it jumped to the top of the page and nothing else. Any site
 > running 0.4.x or earlier has a dead «Learn more» link.
+
+### Reopening the settings
+
+`ConsentKit.openSettings()` opens the preferences panel from anywhere on the
+page — a footer link, a menu item, a button in your own cookie policy. It is
+safe to call before the banner has mounted: a call that arrives while the UI
+file is still loading is remembered and honoured on mount, so a link clicked
+during a slow page load still works.
+
+The same panel has an address. Ссылка «Изменить выбор cookie» →
+`https://site/#ck-settings`: любая ссылка на страницу сайта с этим хвостом
+открывает окно настроек — и при загрузке страницы, и при переходе по ссылке на
+уже открытой странице. Хвост убирается из адреса через `history.replaceState`,
+поэтому перезагрузка или «назад» не открывают окно повторно. Это тот адрес, на
+который ведёт кнопка «Изменить выбор cookie» на странице декларации cookie, и
+его же удобно поставить в подвал сайта:
+
+```html
+<a href="#ck-settings">Изменить выбор cookie</a>
+```
+
+### Placeholders for blocked embeds
+
+When the engine holds back an `<iframe>` before consent — a known tracker, or
+any third-party frame in strict mode — the visitor would otherwise see an empty
+hole where a video or a map should be. Since 0.5.7 ConsentKit draws a card in
+its place: the name of the service, the category the embed is waiting for, a
+primary button «Разрешить и показать» that grants **that one category** and
+loads the embed, and a link to the full settings panel.
+
+The card is sized from the frame's own `width`/`height` (or its computed size),
+never shorter than 120px, and never wider than its container. It is rendered in
+its own Shadow DOM and takes the banner's theme — the page's font, your accent
+colour and corner radius — so it looks like part of the site rather than part of
+a third-party widget. Strings ship in ru, ro and en; every other language falls
+back to en.
+
+The button grants one category through the ordinary consent path: the decision
+is stored and journalled as `method: 'custom'`, the usual `ck:consent` /
+`ck:change` events fire, and consent the visitor had already given to *other*
+categories is preserved rather than overwritten. The frame itself is restored by
+the core's normal revival pass, which is the same code path the panel's switches
+and «Accept all» already use.
+
+Frames that are `display:none`, 1×1 tracking pixels, or outside `<body>` are
+left alone, and a frame the site allowed never gets a card at all — an allowed
+frame is never intercepted in the first place. Set `blocking.placeholders:
+false` to restore the pre-0.5.7 behaviour.
 
 ### Infrastructure
 
@@ -310,6 +367,7 @@ All methods are safe to call at any time and never throw.
 | `rejectAll()` | `CkState` | Denies every opt-in category. `method: 'reject_all'` |
 | `withdraw()` | `CkState` | Clears storage and known cookies, sends GCM `denied`, resets to `decided: false` |
 | `show()` | `void` | Opens the preferences panel |
+| `openSettings()` | `void` | v0.5.7. Opens the preferences panel. Safe before the UI has loaded — the request is remembered and honoured as soon as the banner mounts |
 | `hide()` | `void` | Closes the panel |
 | `config` | `CkConfig` | The merged, effective config |
 | `version` | `string` | Core version string |

@@ -136,8 +136,17 @@ export interface CkTextsConfig {
    * What «Learn more» does. Defaults to `'policy'` when `policyUrl` is set and
    * `'settings'` when it is not. `'policy'` without a usable URL falls back to
    * `'settings'` rather than rendering a dead link. `'hide'` renders nothing.
+   * v0.5.7 adds `'declaration'`: a link to {@link CkTextsConfig.declarationUrl},
+   * the cookie declaration page, which likewise degrades to `'settings'`
+   * without a usable URL.
    */
-  detailsAction?: 'policy' | 'settings' | 'hide';
+  detailsAction?: 'policy' | 'settings' | 'hide' | 'declaration';
+  /**
+   * v0.5.7. Address of the cookie declaration page, used by
+   * `detailsAction: 'declaration'`. `http(s)` only. Supplied by the hosted
+   * service; the client only reads it.
+   */
+  declarationUrl?: string;
 }
 
 /** Whether a category is offered in the preferences panel at all. */
@@ -170,6 +179,12 @@ export interface CkBlockingConfig {
   mode?: 'known' | 'strict';
   /** Hosts strict mode must never intercept. Suffix match: `p.com` covers `cdn.p.com`. */
   allow?: string[];
+  /**
+   * v0.5.7. Draw a card in place of an `<iframe>` held back before consent,
+   * offering «Разрешить и показать» for that one category. Default `true`;
+   * `false` restores the pre-0.5.7 behaviour (still blocked, just invisible).
+   */
+  placeholders?: boolean;
 }
 
 /** One declared cookie, shown under its category in the preferences panel. */
@@ -234,6 +249,12 @@ export interface ConsentKitApi {
   withdraw(): CkState;
   /** Dispatches `ck:ui:open-preferences`. */
   show(): void;
+  /**
+   * v0.5.7. Opens the preferences panel. Unlike {@link show}, a call made
+   * before the UI has loaded is remembered and honoured once the banner
+   * mounts, so a footer link clicked during a slow load still works.
+   */
+  openSettings(): void;
   /** Dispatches `ck:ui:close`. */
   hide(): void;
 
@@ -380,6 +401,7 @@ export declare function accept(choice?: CkAcceptArg): CkState;
 export declare function rejectAll(): CkState;
 export declare function withdraw(): CkState;
 export declare function show(): void;
+export declare function openSettings(): void;
 export declare function hide(): void;
 export declare function _extendHostDb(map: Record<string, CkCategory>): number;
 
@@ -410,6 +432,7 @@ declare module '@ecomconsult/consentkit' {
   export function rejectAll(): CkState;
   export function withdraw(): CkState;
   export function show(): void;
+  export function openSettings(): void;
   export function hide(): void;
 }
 
@@ -424,6 +447,7 @@ declare module '@ecomconsult/consentkit/core' {
   export function rejectAll(): CkState;
   export function withdraw(): CkState;
   export function show(): void;
+  export function openSettings(): void;
   export function hide(): void;
 }
 

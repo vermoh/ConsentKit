@@ -30,6 +30,7 @@ function createStub() {
     rejectAll: function () { return undecidedState(); },
     withdraw: function () { return undecidedState(); },
     show: function () {},
+    openSettings: function () {},
     hide: function () {},
     _categories: CATEGORIES.slice(),
     _isStub: true

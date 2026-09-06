@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.6
+ * Версия ConsentKit: 0.5.7
  * Дата сборки:      2026-09-06
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
@@ -1553,7 +1553,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.6',
+    version: '0.5.7',
     config: config,
 
     init: function (userConfig) {
@@ -1612,6 +1612,28 @@
 
     show: function () { dispatch('ck:ui:open-preferences', { state: publicState(), config: config }); },
     hide: function () { dispatch('ck:ui:close', { state: publicState() }); },
+
+    /* SPEC V1.10 §1 — the public name for «открыть настройки cookie». A site
+       puts it behind a footer link, and the declaration page links to
+       `https://site/#ck-settings`, which ck-ui turns into the same call.
+
+       Deliberately not just an alias of show(): the event is a broadcast, and a
+       page that calls openSettings() before ck-ui.js has been PARSED has no
+       listener to receive it — the request would be silently lost, which is the
+       one case a footer link hits (a click during a slow load). So the request
+       is latched here as well as dispatched, and ck-ui's mount() consumes the
+       latch at the end of its first render. ck-ui already writes to this object
+       (_contrast, _resolvePageFont), so the coupling direction is established.
+
+       `_pendingOpen` is read-and-cleared by ck-ui; nothing else touches it. */
+    openSettings: function () {
+      try { ConsentKit._pendingOpen = true; } catch (e) { /* noop */ }
+      dispatch('ck:ui:open-preferences', { state: publicState(), config: config });
+    },
+
+    // Set by openSettings() when the UI may not be listening yet; cleared by
+    // ck-ui.js the moment it can honour it. Underscored: not a public API.
+    _pendingOpen: false,
 
     // Introspection helpers for the demo status panel (read-only).
     _categoryForUrl: categoryForUrl,
@@ -2366,6 +2388,14 @@
       colExpiry: 'Expires',
       floating: 'Cookie settings',
       poweredBy: 'Powered by ConsentKit',
+      // SPEC V1.10 §2 — the blocked-embed placeholder. {host} is the vendor
+      // label when the database knows one and the bare host otherwise; {cat} is
+      // the localized category title, taken from cat.<name>.title below, so the
+      // name in the placeholder is the name on the switch in the panel.
+      phText: 'Content from {host} goes here. It will load once you allow «{cat}».',
+      phAllow: 'Allow and show',
+      phSettings: 'Cookie settings',
+      phLabel: 'Blocked content',
       cat: {
         necessary: {
           title: 'Necessary',
@@ -2406,6 +2436,10 @@
       colExpiry: 'Срок',
       floating: 'Настройки cookie',
       poweredBy: 'Работает на ConsentKit',
+      phText: 'Здесь содержимое от {host}. Оно загрузится после согласия на «{cat}».',
+      phAllow: 'Разрешить и показать',
+      phSettings: 'Настроить cookie',
+      phLabel: 'Заблокированное содержимое',
       cat: {
         necessary: {
           title: 'Необходимые',
@@ -2437,7 +2471,11 @@
     'bannerTitle', 'bannerText', 'more', 'acceptAll', 'rejectAll', 'customize',
     'bannerLabel', 'panelTitle', 'panelIntro', 'save', 'close', 'alwaysOn',
     'cookiesIn', 'noCookies', 'colName', 'colVendor', 'colPurpose', 'colExpiry', 'floating',
-    'poweredBy'
+    'poweredBy',
+    // SPEC V1.10 §2. Present in ck-locales.js for ro only; every other external
+    // locale falls back to DICT.en through buildStrings(), which is what §2
+    // asks for («остальные языки — en»).
+    'phText', 'phAllow', 'phSettings', 'phLabel'
   ];
 
   // builtin(en,ru) <- window.__ckLocales, read at render time so the locales
@@ -2493,6 +2531,47 @@
       };
     }
     return out;
+  }
+
+  /* ------------------------------------------- blocked-embed placeholder (§2) */
+
+  /* The one piece of the placeholder that is worth testing without a DOM: which
+     sentence a visitor reads. PURE — takes a host (or vendor label), a category
+     name and a language, returns the finished string.
+
+     `host` is used verbatim: the core has no vendor-label table (only the SaaS
+     scanner's VENDOR_DB does, server-side), so §2's «ярлык хоста; без ярлыка —
+     содержимое с <host>» collapses to the host here. When a label lookup is
+     added to the core later, this signature already accepts it — pass the label
+     instead of the host and nothing else changes.
+
+     The category name is resolved through the SAME buildStrings() the panel
+     uses, so «Маркетинг» in the placeholder is «Маркетинг» on the switch. An
+     unknown language falls back to en, an unknown category to marketing — the
+     category a strict-mode interception is filed under. */
+  function placeholderText(host, category, lang) {
+    var table = localeTable();
+    var T2 = buildStrings(resolveLang(lang, table), table);
+    var cat = (category && T2.cat[category]) ? category : 'marketing';
+    var name = String(host || '').trim();
+    return T2.phText
+      .replace('{host}', name || T2.phLabel)
+      .replace('{cat}', T2.cat[cat].title);
+  }
+
+  /* Hostname of a blocked frame's real address, for the sentence above. The
+     data-src is whatever the page asked for, which may be protocol-relative or
+     relative, so it is resolved against the page like the core does it. */
+  function hostOf(src) {
+    var s = String(src || '');
+    try {
+      var base = (typeof location !== 'undefined' && location.href) || 'http://localhost/';
+      var h = new URL(s, base).hostname || '';
+      return h.toLowerCase().replace(/^www\./, '');
+    } catch (e) {
+      var m = /^(?:[a-z]+:)?\/\/([^/?#]+)/i.exec(s);
+      return m ? m[1].toLowerCase().replace(/:\d+$/, '').replace(/^www\./, '') : '';
+    }
   }
 
   /* --------------------------------------------------------------- styles */
@@ -3622,12 +3701,30 @@
     var url = str(texts.policyUrl);
     if (url && !/^https?:\/\//i.test(url)) url = null;
 
+    /* SPEC V1.10 §1 — the third destination: our own cookie declaration page.
+       `declarationUrl` is server-owned (the SaaS config injects it, like
+       `branding`); the client only reads it and never invents one. It is
+       validated exactly like policyUrl — http(s) only, because a link the
+       visitor is invited to click must not be able to carry javascript: — and
+       it deliberately does NOT influence the default action: the URL-sensitive
+       default above stays policyUrl-driven, so a site that gains a declaration
+       address does not silently lose its «Подробнее» → политика link. */
+    var decl = str(texts.declarationUrl);
+    if (decl && !/^https?:\/\//i.test(decl)) decl = null;
+
     var action = texts.detailsAction;
-    if (action !== 'policy' && action !== 'settings' && action !== 'hide') {
+    if (action !== 'policy' && action !== 'settings' && action !== 'hide' && action !== 'declaration') {
       action = url ? 'policy' : 'settings';
     }
     if (action === 'policy' && !url) action = 'settings';
-    return { kind: action, href: action === 'policy' ? url : null };
+    // Asked for the declaration with no address to send anyone to: fall back to
+    // opening the settings rather than rendering a dead link.
+    if (action === 'declaration' && !decl) action = 'settings';
+
+    var href = null;
+    if (action === 'policy') href = url;
+    else if (action === 'declaration') href = decl;
+    return { kind: action, href: href };
   }
 
   // Unknown type -> bar/bottom. Known type with an unrecognized position ->
@@ -3669,11 +3766,15 @@
       p.appendChild(document.createTextNode(T.bannerText));
     } else {
       p.appendChild(document.createTextNode(T.bannerText + ' '));
-      if (det.kind === 'policy') {
+      // 'policy' and 'declaration' are the same DOM shape — an outbound link in
+      // a new tab — and differ only in where they point (resolveDetails picked
+      // the address). Both must be listed here: a missing branch would silently
+      // render 'declaration' as the settings BUTTON instead of the link.
+      if (det.kind === 'policy' || det.kind === 'declaration') {
         var link = el('a', 'ck-banner__more', T.more);
         link.href = det.href;
         link.target = '_blank';
-        link.rel = 'noopener';          // never hand the policy page window.opener
+        link.rel = 'noopener';          // never hand the linked page window.opener
         p.appendChild(link);
       } else {
         // A control that changes what is on screen is a button, not a link:
@@ -3941,6 +4042,290 @@
     if (nodes.scrim) nodes.scrim.classList.toggle('ck-hidden', decided || !nodes.bannerModal);
     if (nodes.fab) nodes.fab.classList.toggle('ck-hidden', !decided);
     if (!panelOpen) syncSwitches(s);
+
+    /* §2 — a consent change is exactly when a card must go: the core's
+       applyConsentToDom() has already put the frame's src back by the time
+       ck:change reaches us (commit() revives before it dispatches), so the
+       sweep sees a frame with a src and retires its placeholder. It runs on
+       every sync, which also catches a category the visitor turned back OFF —
+       though a frame that already loaded cannot be un-loaded, so that direction
+       only matters for frames still held back. */
+    try { sweepPlaceholders(); } catch (e) { /* noop */ }
+  }
+
+  /* ------------------------------------------- blocked-embed placeholders (§2) */
+
+  /* SPEC V1.10 §2. When the core holds an <iframe> back — a known tracker, or
+     any third-party frame in strict mode — it leaves it in one shape:
+     `data-ck` + `data-src` and NO src (markBlockedIframe in ck-core.js). This
+     module draws a block of the same size in its place, offering the visitor
+     the one decision that would make the embed appear.
+
+     WHY A SIBLING, NOT A WRAPPER: sites style embeds through the parent
+     (`.video-wrap > iframe`, grid children, aspect-ratio boxes). Wrapping the
+     frame inserts a node into that relationship and breaks the layout it was
+     meant to preserve. A sibling inserted before the frame inherits the same
+     parent context, and removing it later restores the DOM exactly.
+
+     WHO RESTORES THE FRAME: not this file. `Element.prototype.setAttribute` is
+     patched by the core, and only applyConsentToDom() may write a blocked
+     frame's src — under `bypass`, through the native setter it captured before
+     patching. So «Разрешить и показать» grants the category through the normal
+     consent path and the CORE brings the frame back; the next sweep sees a
+     frame that has a src again and drops the placeholder. One code path for
+     the button, the panel's switches and «Принять всё» alike. */
+
+  var PH_ATTR = 'data-ck-ph';            // marks a frame this file hid
+  var PH_DISPLAY = 'data-ck-ph-display'; // its previous inline display value
+  var placeholders = [];                 // [{ frame, node }]
+
+  function placeholdersEnabled(cfg) {
+    // No default in the core's DEFAULT_CONFIG, exactly like detailsAction:
+    // absent means on, and only an explicit false opts out.
+    try {
+      var b = cfg && cfg.blocking;
+      return !(b && b.placeholders === false);
+    } catch (e) { return true; }
+  }
+
+  /* §2: «Не трогать фреймы display:none, 1×1, и те, что не в <body>.»
+     Order matters — a frame this file has already hidden reads as display:none,
+     which would make it skip its own placeholder and leave it stranded forever.
+     Frames we marked are therefore exempted before the display test runs. */
+  function frameEligible(frame) {
+    try {
+      if (!frame || !document.body) return false;
+      if (!document.body.contains(frame)) return false;
+      if (frame.getAttribute(PH_ATTR)) return true;   // ours: already measured
+      var cs = null;
+      try { cs = window.getComputedStyle(frame); } catch (e) { cs = null; }
+      if (cs && (cs.display === 'none' || cs.visibility === 'hidden')) return false;
+      var r = null;
+      try { r = frame.getBoundingClientRect(); } catch (e) { r = null; }
+      // A 1×1 (or 0×0) frame is a tracking pixel dressed as an embed: there is
+      // nothing for a visitor to watch and a card in its place would be noise.
+      if (r && r.width <= 1 && r.height <= 1) {
+        // Zero-sized because it is not laid out YET (a lazy tab, a collapsed
+        // section) is indistinguishable here from a real pixel except via the
+        // attributes, which a pixel sets to 1 and a video does not.
+        var aw = parseInt(frame.getAttribute('width') || '0', 10);
+        var ah = parseInt(frame.getAttribute('height') || '0', 10);
+        if (!(aw > 1 || ah > 1)) return false;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* Size the card to the hole the frame left. Attributes first (an embed is
+     nearly always `width="560" height="315"`), computed size second. Read
+     BEFORE the frame is hidden — getComputedStyle on a display:none element
+     reports nothing worth copying. */
+  function frameSize(frame) {
+    var w = '', h = '';
+    try {
+      var aw = frame.getAttribute('width');
+      var ah = frame.getAttribute('height');
+      if (aw && /^\d+$/.test(String(aw).trim())) w = String(aw).trim() + 'px';
+      if (ah && /^\d+$/.test(String(ah).trim())) h = String(ah).trim() + 'px';
+      if (!w || !h) {
+        var cs = window.getComputedStyle(frame);
+        if (!w && cs && cs.width && cs.width !== 'auto' && cs.width !== '0px') w = cs.width;
+        if (!h && cs && cs.height && cs.height !== 'auto' && cs.height !== '0px') h = cs.height;
+      }
+    } catch (e) { /* fall through to the defaults in PH_CSS */ }
+    return { width: w, height: h };
+  }
+
+  var PLAY_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/>' +
+    '<path d="M10.5 9.2v5.6l4.6-2.8-4.6-2.8Z"/></svg>';
+
+  // Own sheet: a placeholder is its own shadow root, so it cannot borrow the
+  // banner's. Tokens come from buildThemeCss() (theme.accent, radius, font),
+  // which is why a placeholder repaints with the banner.
+  var PH_CSS = [
+    ':host{all:initial;display:block;max-width:100%}',
+    '*,*::before,*::after{box-sizing:border-box}',
+    '.ck-ph{width:100%;height:100%;min-height:120px;max-width:100%;',
+    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+    'gap:10px;padding:20px;text-align:center;',
+    'font-family:var(--ck-font);font-size:14px;line-height:1.5;color:var(--ck-ink);',
+    'background:var(--ck-soft);border:1px solid var(--ck-line);',
+    'border-radius:var(--ck-radius-card)}',
+    '.ck-ph svg{width:32px;height:32px;display:block;color:var(--ck-muted);flex:none}',
+    '.ck-ph p{margin:0;color:var(--ck-muted);max-width:44ch}',
+    '.ck-ph__row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}',
+    '.ck-ph__btn{font:inherit;font-weight:600;cursor:pointer;padding:9px 16px;',
+    'border-radius:var(--ck-radius-btn);border:1px solid var(--ck-accent);',
+    'background:var(--ck-accent);color:var(--ck-on-accent)}',
+    '.ck-ph__link{font:inherit;background:none;border:0;padding:4px;cursor:pointer;',
+    'color:var(--ck-link);text-decoration:underline}',
+    ':focus-visible{outline:2px solid var(--ck-accent);outline-offset:2px;border-radius:4px}'
+  ].join('\n');
+
+  function categoryEnabled(cfg, cat) {
+    try {
+      if (cat === 'necessary') return false;         // nothing to grant
+      var c = cfg && cfg.categories && cfg.categories[cat];
+      return !c || c.enabled !== false;
+    } catch (e) { return true; }
+  }
+
+  function buildPlaceholder(frame, cat, cfg) {
+    var mountEl = document.createElement('div');
+    mountEl.setAttribute('data-ck-placeholder', '1');
+    var size = frameSize(frame);
+    var st = mountEl.style;
+    st.setProperty('max-width', '100%');
+    if (size.width) st.setProperty('width', size.width);
+    if (size.height) st.setProperty('min-height', size.height);
+
+    var sr = mountEl.attachShadow({ mode: 'open' });
+    var sheet = document.createElement('style');
+    /* buildThemeCss writes :host tokens — the same tokens, in this root, which
+       is what makes a placeholder repaint with the banner.
+
+       The font gets applyTheme()'s treatment for the same reason it needs it
+       there: `:host{all:initial}` resets the family, so a bare `inherit` in
+       this root resolves to the UA default (Times), not to the page's type.
+       The probed page font when it can be read, the system stack when it
+       cannot — never a bare `inherit`. */
+    var built = buildThemeCss(cfg);
+    var phFont = '';
+    if (built.font === 'inherit') {
+      phFont = '\n:host{--ck-font:' + (resolvePageFont() || SYSTEM_FONT) + '}';
+    }
+    sheet.textContent = PH_CSS + '\n' + built.css + phFont;
+    sr.appendChild(sheet);
+
+    var card = el('div', 'ck-ph');
+    card.setAttribute('role', 'group');
+    card.setAttribute('aria-label', T.phLabel);
+
+    var icon = document.createElement('div');
+    icon.innerHTML = PLAY_ICON;
+    card.appendChild(icon);
+
+    var label = hostOf(frame.getAttribute('data-src'));
+    card.appendChild(el('p', null, placeholderText(label, cat, LANG)));
+
+    var row = el('div', 'ck-ph__row');
+    /* Only offer the grant when it can actually take effect: the core's
+       filterByConfig() drops a category the site disabled in config, so the
+       button would consume the click and change nothing. The panel link stays
+       either way — it is always an honest answer. */
+    if (categoryEnabled(cfg, cat)) {
+      var allow = el('button', 'ck-ph__btn', T.phAllow);
+      allow.type = 'button';
+      allow.addEventListener('click', function () { grantCategory(cat); });
+      row.appendChild(allow);
+    }
+    var settings = el('button', 'ck-ph__link', T.phSettings);
+    settings.type = 'button';
+    settings.addEventListener('click', function () { openPanel(settings); });
+    row.appendChild(settings);
+    card.appendChild(row);
+
+    sr.appendChild(card);
+    return mountEl;
+  }
+
+  /* «Разрешить и показать» — one category, through the normal consent path.
+
+     MERGE, DO NOT REPLACE: ConsentKit.accept({...}) SETS the whole opt-in set
+     from the object it is given, so passing `{marketing:true}` alone would
+     silently switch OFF an analytics consent the visitor had already given.
+     The current state is read first and only the one category is flipped.
+
+     accept(object) files the decision as method 'custom', which is what §2 asks
+     the journal to record, and ck-saas.js logs it off the ck:consent/ck:change
+     the core dispatches — so there is no logging code here. The core's
+     applyConsentToDom() restores the frame; sweepPlaceholders() then removes
+     this card, driven by the ck:change that same commit dispatches. */
+  function grantCategory(cat) {
+    var ck = api();
+    if (!ck || typeof ck.accept !== 'function') return;
+    var cur = safeState().categories || {};
+    var next = {
+      functional: cur.functional === true,
+      analytics: cur.analytics === true,
+      marketing: cur.marketing === true
+    };
+    if (cat === 'functional' || cat === 'analytics' || cat === 'marketing') next[cat] = true;
+    try { ck.accept(next); } catch (e) { /* noop */ }
+    syncFromState();
+  }
+
+  function hideFrame(frame) {
+    try {
+      frame.setAttribute(PH_DISPLAY, frame.style.display || '');
+      frame.setAttribute(PH_ATTR, '1');
+      frame.style.display = 'none';
+    } catch (e) { /* noop */ }
+  }
+
+  function restoreFrame(frame) {
+    try {
+      var prev = frame.getAttribute(PH_DISPLAY);
+      frame.style.display = prev || '';
+      frame.removeAttribute(PH_DISPLAY);
+      frame.removeAttribute(PH_ATTR);
+    } catch (e) { /* noop */ }
+  }
+
+  function dropPlaceholder(entry) {
+    try {
+      if (entry.node && entry.node.parentNode) entry.node.parentNode.removeChild(entry.node);
+    } catch (e) { /* noop */ }
+    restoreFrame(entry.frame);
+  }
+
+  function clearPlaceholders() {
+    for (var i = 0; i < placeholders.length; i++) dropPlaceholder(placeholders[i]);
+    placeholders = [];
+  }
+
+  /* Idempotent: called from mount() and from every consent change. Adds cards
+     for frames still held back, removes them from frames the core revived. */
+  function sweepPlaceholders(cfg) {
+    if (typeof document === 'undefined' || !document.body) return;
+    var c = cfg || safeConfig();
+
+    // Placeholders turned off after some were drawn: take them all down.
+    if (!placeholdersEnabled(c)) { clearPlaceholders(); return; }
+
+    // 1. Retire cards whose frame came back (or left the document).
+    var kept = [];
+    for (var i = 0; i < placeholders.length; i++) {
+      var e = placeholders[i];
+      var revived = false;
+      try {
+        revived = !document.body.contains(e.frame) || !!e.frame.getAttribute('src');
+      } catch (e2) { revived = true; }
+      if (revived) dropPlaceholder(e); else kept.push(e);
+    }
+    placeholders = kept;
+
+    // 2. Draw cards for frames the core is holding back. The selector is the
+    //    core's own revival selector, which is why a frame the SITE allowed can
+    //    never match: an allowed frame keeps its src and is never marked.
+    var list;
+    try { list = document.querySelectorAll('iframe[data-ck][data-src]'); } catch (e3) { return; }
+    for (var j = 0; j < list.length; j++) {
+      var frame = list[j];
+      try {
+        if (frame.getAttribute('src')) continue;              // already revived
+        if (frame.getAttribute(PH_ATTR)) continue;            // already carded
+        if (!frameEligible(frame)) continue;
+        var cat = frame.getAttribute('data-ck') || 'marketing';
+        var node = buildPlaceholder(frame, cat, c);
+        if (frame.parentNode) frame.parentNode.insertBefore(node, frame);
+        hideFrame(frame);
+        placeholders.push({ frame: frame, node: node });
+      } catch (e4) { /* one bad frame must not stop the sweep */ }
+    }
   }
 
   /* ----------------------------------------------------------------- mount */
@@ -3971,6 +4356,10 @@
     mounted = false;
     panelOpen = false;
     lastFocus = null;
+    // The cards belong to the render about to be replaced: their listeners close
+    // over the old T and the old shadow root. mount() sweeps again and draws
+    // fresh ones in the new language and theme.
+    clearPlaceholders();
     // The pending schedule belongs to the shadow root about to be rebuilt; the
     // fresh mount() starts its own ladder from a clean count.
     clearFontTimers();
@@ -4026,6 +4415,55 @@
     // Only now: scheduleFontProbes() re-applies the theme from a timer, and
     // applyTheme() is a no-op until there is a host and a themeStyle to write.
     scheduleFontProbes(cfg);
+
+    // SPEC V1.10 §2 — заглушки вместо задержанных встраиваний. After the shadow
+    // root exists, because a placeholder's «Настроить cookie» calls openPanel().
+    sweepPlaceholders(cfg);
+
+    /* SPEC V1.10 §1 — honour a settings request that arrived before there was
+       anything to open: either ConsentKit.openSettings() called while this file
+       was still loading (the core latches it), or a page opened directly on
+       `#ck-settings`. Both end in the same panel. */
+    consumePendingOpen();
+    openFromHash();
+  }
+
+  /* ---------------------------------------------------- settings deep link */
+
+  var SETTINGS_HASH = '#ck-settings';
+
+  // The core latches openSettings() calls made before ck-ui.js was parsed, so a
+  // footer link clicked during a slow load still opens the panel once we exist.
+  function consumePendingOpen() {
+    var ck = api();
+    if (!ck || !ck._pendingOpen) return;
+    try { ck._pendingOpen = false; } catch (e) { /* noop */ }
+    openPanel(null);
+  }
+
+  /* `https://site/#ck-settings` — the address the cookie declaration page links
+     «Изменить выбор cookie» to. The hash is removed again via replaceState so a
+     reload, a shared link or a back-navigation does not re-open the panel, and
+     so the address bar does not keep a control fragment in it.
+
+     replaceState is fed pathname+search rather than '' — an empty URL argument
+     is a no-op in some engines, which would leave the hash in place and re-open
+     the panel on the next hashchange. Everything is guarded: a sandboxed iframe
+     throws on replaceState, and a panel that opened is worth more than a tidy
+     address bar. */
+  function openFromHash() {
+    try {
+      if (typeof location === 'undefined' || location.hash !== SETTINGS_HASH) return;
+    } catch (e) { return; }
+    clearSettingsHash();
+    openPanel(null);
+  }
+
+  function clearSettingsHash() {
+    try {
+      if (typeof history === 'undefined' || typeof history.replaceState !== 'function') return;
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) { /* noop */ }
   }
 
   /* ---------------------------------------------------------------- events */
@@ -4056,7 +4494,11 @@
       nextProbeDelay: nextProbeDelay,
       shouldReprobe: shouldReprobe,
       resolveDetails: resolveDetails,
-      buildThemeCss: buildThemeCss
+      buildThemeCss: buildThemeCss,
+      // SPEC V1.10 §2: which sentence a blocked embed shows. Pure, so the
+      // wording is testable (and quotable by the cabinet) without a DOM.
+      placeholderText: placeholderText,
+      placeholdersEnabled: placeholdersEnabled
     };
     // The page-font probe reads the DOM, so it is not part of the pure block —
     // but the debug panel must be able to quote the family the banner painted
@@ -4102,8 +4544,28 @@
 
   document.addEventListener('ck:ui:open-preferences', function () {
     if (!mounted) mount(safeConfig());
+    // mount() consumes the core's latch itself; clear it here too so a call
+    // made while we were already mounted cannot leave a stale flag behind for
+    // a later remount to act on.
+    var ck = api();
+    if (ck && ck._pendingOpen) { try { ck._pendingOpen = false; } catch (e) { /* noop */ } }
     openPanel(null);
   });
+
+  /* SPEC V1.10 §1 — navigating to `#ck-settings` on a page that is already
+     loaded (a footer link, or the declaration page opened in the same tab).
+     mount() covers the other half: a page ENTERED on that hash.
+
+     Feature-checked rather than assumed: the SSR guard above only proves there
+     is a `document`, and the branding suite evaluates this file against a stub
+     window that has none of the event plumbing. A missing hashchange costs the
+     deep link, not the banner. */
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('hashchange', function () {
+      if (!mounted) mount(safeConfig());
+      openFromHash();
+    });
+  }
 
   document.addEventListener('ck:ui:close', function () {
     closePanel();

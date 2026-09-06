@@ -572,6 +572,12 @@
     colPurpose: 'Pentru ce',
     colExpiry: 'Expiră',
     floating: 'Setări cookie-uri',
+    // SPEC V1.10 §2 — заглушка встраивания. Only ro carries these here: en and
+    // ru are builtin in ck-ui.js, and every other locale falls back to en.
+    phText: 'Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».',
+    phAllow: 'Permite și arată',
+    phSettings: 'Setări cookie-uri',
+    phLabel: 'Conținut blocat',
     cat: {
       necessary: { title: 'Necesare', desc: 'Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate.' },
       functional: { title: 'Funcționale', desc: 'Rețin alegerile dumneavoastră: limba, coșul, chatul.' },

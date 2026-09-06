@@ -51,6 +51,9 @@ export const {
   rejectAll,
   withdraw,
   show,
+  // v0.5.7: the public name for «open the cookie settings», safe to call
+  // before the UI has loaded.
+  openSettings,
   hide,
   // v0.4.0 (§1.3): merging service overrides into the tracker database is part
   // of the public surface, so it must be reachable as a named import too.
