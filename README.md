@@ -299,6 +299,12 @@ The card is `#ffffff` in light mode and `#1c1c1e` in dark. A colour the
 arithmetic cannot read — a CSS colour name, an `rgb()` string — is left exactly
 as you wrote it rather than being silently replaced.
 
+**The preferences panel follows the banner, with no settings of its own**
+(v0.5.11): «Сохранить выбор» is styled as `accept`, the panel's own accept and
+reject as `settings`, and the floating button takes the `accept` button's fill
+(its border colour when `accept` is `outline`), while the category and service
+switches keep `theme.accent`.
+
 The same arithmetic is exposed as pure functions on `ConsentKit._contrast`
 (`relativeLuminance`, `contrastRatio`, `ensureContrast`, `stepToContrast`,
 `resolveButtonStyles`, `resolveRadius`, `resolveFont`, `resolveDetails`,

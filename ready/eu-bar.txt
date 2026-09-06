@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.10
+ * Версия ConsentKit: 0.5.11
  * Дата сборки:      2026-09-06
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -1957,7 +1957,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.10',
+    version: '0.5.11',
     config: config,
 
     init: function (userConfig) {
@@ -3235,15 +3235,11 @@
     'border-color:var(--ck-reject-bd);border-width:var(--ck-reject-bw)}',
     '.ck-btn--settings{background:var(--ck-settings-bg);color:var(--ck-settings-fg);',
     'border-color:var(--ck-settings-bd);border-width:var(--ck-settings-bw)}',
-    /* Kept for the preferences panel's own footer, which is not themable. */
+    /* Unused by the UI since 0.5.11: the preferences panel's footer moved to
+       the accept/settings role classes above, so it follows the banner. Kept
+       as a compatibility shim for integrator CSS and older inline blocks that
+       still name these classes — nothing in this file emits them any more. */
     '.ck-btn--filled{background:var(--ck-accent);border-color:var(--ck-accent);color:var(--ck-on-accent)}',
-    /* Live, not a fallback: these paint the preferences panel's own Accept
-       all / Reject all. Transparent fill means the LABEL sits on the card, so
-       it takes --ck-link like every other accent-coloured text; the BORDER is
-       non-text and answers to 3:1, so it keeps the raw accent. The footer's
-       background is --ck-soft rather than --ck-bg, but soft is a 5% ink mix of
-       the card — the ratio difference is well inside the noise, and a second
-       link token per background would break «один код — одни числа». */
     '.ck-btn--outline{background:transparent;border-color:var(--ck-accent);color:var(--ck-link)}',
     '.ck-btn--ghost{min-width:0;border-color:var(--ck-line);color:var(--ck-ink);font-weight:500}',
 
@@ -3331,8 +3327,12 @@
     '.ck-empty{margin:8px 0 0;font-size:13px;color:var(--ck-muted)}',
 
     /* ---- floating button ---- */
+    /* 0.5.11 — the floating button wears the ACCEPT button's colours, so the
+       one control that outlives the banner still reads as the owner's brand.
+       Both tokens are resolved once in resolveButtonStyles (`fab`) and only
+       read here — «один код — одни числа». */
     '.ck-fab{position:fixed;left:16px;bottom:16px;z-index:2147482999;width:48px;height:48px;',
-    'border-radius:50%;border:1px solid var(--ck-line);background:var(--ck-bg);color:var(--ck-link);',
+    'border-radius:50%;border:1px solid var(--ck-line);background:var(--ck-fab-bg);color:var(--ck-fab-fg);',
     'display:inline-flex;align-items:center;justify-content:center;padding:0}',
     '.ck-fab svg{width:24px;height:24px;display:block}',
 
@@ -3713,7 +3713,7 @@
 
   /* Config values are interpolated into the TEXT of a generated stylesheet, so
      an unvalidated value can close the declaration and open rules of its own
-     ("10px;}.ck-btn--filled{display:none" hides "Reject all"). config.theme is
+     ("10px;}.ck-btn--reject{display:none" hides "Reject all"). config.theme is
      not trusted input: in standalone mode it comes straight from the embedding
      page or an integrator's admin panel, with no server-side validation
      anywhere in the path. So every value is matched against a strict grammar
@@ -4086,9 +4086,10 @@
     };
 
     /* The accent as TEXT on the card. Same >= 4.5 rule, same function, one
-       number: links, «Подробнее», the cookie-table summary and the floating
-       button's icon all read the token this produces, so none of them can
-       drift from what the debug panel and the cabinet quote. Note the
+       number: links, «Подробнее» and the cookie-table summary all read the
+       token this produces, so none of them can drift from what the debug
+       panel and the cabinet quote. (The floating button left this token in
+       0.5.11 — it now follows the accept button; see `fab` below.) Note the
        measurement is against cardBg — an accent that is fine inside a filled
        button can still be unreadable on the card behind it.
 
@@ -4229,6 +4230,46 @@
       }
       out.buttons[role] = rec;
     }
+
+    /* The floating button (0.5.11). It is a filled circle that outlives the
+       banner, and the owner's rule is that it wears the ACCEPT button's
+       colours — no setting of its own.
+
+       accept FILLED: take its bg/fg verbatim. That inherits the 0.5.10 rule
+       for free — a typed low-contrast fg stays exactly as typed here too, and
+       is reported through `low` rather than corrected.
+
+       accept OUTLINE: there is no fill to borrow, so the button's BORDER
+       colour becomes the circle and the CARD colour becomes the icon — the
+       outline button's two real colours, swapped. Both are derived for the
+       fab (nobody typed "the floating button is this colour"), so the icon
+       goes through the >= 4.5 rule; ensureContrast picks the readable member
+       of the pair, which on a dark border is the card itself and on a pale
+       one steps away from it. When accept's border is itself derived it is
+       already the accent stepped to 3:1, so this is also the accent/on-accent
+       fallback the brief describes. */
+    var acc = out.buttons.accept;
+    if (acc.variant === 'filled') {
+      out.fab = {
+        bg: acc.bg,
+        fg: acc.fg,
+        ratio: acc.ratio,
+        adjusted: acc.adjusted,
+        low: acc.low,
+        against: acc.bg
+      };
+    } else {
+      var fabBg = acc.border;
+      var fabRes = ensureContrast(cardBg, fabBg, 4.5);
+      out.fab = {
+        bg: fabBg,
+        fg: fabRes.color,
+        ratio: fabRes.ratio,
+        adjusted: fabRes.adjusted,
+        low: below(fabRes.ratio, 4.5),
+        against: fabBg
+      };
+    }
     return out;
   }
 
@@ -4253,6 +4294,12 @@
     // same way as __buttons: one pass per mode, so the light and dark blocks
     // each carry their own contrast-checked link colour.
     if (p.__link) d.push('--ck-link:' + p.__link.color);
+    // The floating button's pair, resolved from the accept button in the same
+    // pass, so light and dark each carry their own (0.5.11).
+    if (p.__fab) {
+      d.push('--ck-fab-bg:' + p.__fab.bg);
+      d.push('--ck-fab-fg:' + p.__fab.fg);
+    }
     var btns = p.__buttons;
     if (btns) {
       for (var i = 0; i < BTN_ROLES.length; i++) {
@@ -4326,17 +4373,20 @@
     light.__buttons = lightBtn.buttons;
     dark.__buttons = darkBtn.buttons;
 
-    // `--ck-on-accent` paints the text of every filled surface that is NOT a
-    // banner button — the panel's «Сохранить выбор» and the floating button —
-    // straight from the palette. A derived onAccent therefore has to pass the
-    // same >= 4.5 rule against the accent, or a white accent gets white text
-    // (the owner saw exactly that). Done AFTER the buttons are resolved, so
+    // `--ck-on-accent` paints the text of the remaining filled surfaces that
+    // are not banner buttons — since 0.5.11 that is the blocked-embed
+    // placeholder's button, the panel foot and the floating button having
+    // moved onto the accept button's own tokens. A derived onAccent still has
+    // to pass the >= 4.5 rule against the accent, or a white accent gets white
+    // text (the owner saw exactly that). Done AFTER the buttons are resolved, so
     // the accept button still records `adjusted:true` for the same correction.
     // An onAccent the owner set is painted as set — the 0.5.10 rule.
     if (!light.onAccentExplicit) light.onAccent = ensureContrast(light.onAccent, light.accent, 4.5).color;
     if (!dark.onAccentExplicit) dark.onAccent = ensureContrast(dark.onAccent, dark.accent, 4.5).color;
     light.__link = lightBtn.link;
     dark.__link = darkBtn.link;
+    light.__fab = lightBtn.fab;
+    dark.__fab = darkBtn.fab;
 
     var mode = theme.mode;
     if (mode !== 'light' && mode !== 'dark') mode = 'auto';
@@ -4812,11 +4862,21 @@
     p.appendChild(body);
 
     var foot = el('div', 'ck-panel__foot');
-    var save = el('button', 'ck-btn ck-btn--filled', T.save);
+    /* 0.5.11 — the panel follows the BANNER's buttons, with no setting of its
+       own: «Сохранить выбор» is the same role as «Принять всё» and wears the
+       accept class, «Принять всё»/«Отклонить всё» here are secondary and wear
+       the settings («Настроить») class. Reusing the role classes means the
+       filled/outline split stays a VALUE change in the tokens — the panel
+       never picks a class from the resolved variant, so a theme.buttons edit
+       is still applyTheme()-only and signature() still need not see buttons.
+       Panel layout is untouched: `.ck-panel__foot .ck-btn{flex:1 1 150px}`
+       (0,2,0) outranks `.ck-btn{flex:1 1 auto}` and the role classes set no
+       flex of their own. */
+    var save = el('button', 'ck-btn ck-btn--accept', T.save);
     save.type = 'button';
-    var acc = el('button', 'ck-btn ck-btn--outline', T.acceptAll);
+    var acc = el('button', 'ck-btn ck-btn--settings', T.acceptAll);
     acc.type = 'button';
-    var rej = el('button', 'ck-btn ck-btn--outline', T.rejectAll);
+    var rej = el('button', 'ck-btn ck-btn--settings', T.rejectAll);
     rej.type = 'button';
 
     save.addEventListener('click', function () { doSave(); });

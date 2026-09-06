@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.10
+Stable tag: 0.5.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,9 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.11 =
+* Кнопки окна настроек повторяют кнопки баннера: «Сохранить выбор» как «Принять всё», остальные как «Настроить»; плавающая кнопка в цветах «Принять всё»
 
 = 0.5.10 =
 * Цвет, заданный владельцем сайта, применяется как задан: правило контраста 4.5:1 (и 3:1 для обводки) больше не перекрашивает выбранные цвета, а только те, что подобраны автоматически

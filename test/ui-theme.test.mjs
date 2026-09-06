@@ -523,14 +523,14 @@ test('every accent-as-TEXT rule consumes --ck-link, not the raw accent', () => {
     '.ck-linkbtn still reads --ck-accent');
   assert.match(UI_SRC, /\.ck-det>summary\{[\s\S]{0,200}?color:var\(--ck-link\)/,
     'the cookie-table summary still reads --ck-accent');
-  assert.match(UI_SRC, /\.ck-fab\{[\s\S]{0,400}?color:var\(--ck-link\)/,
-    'the floating button icon still reads --ck-accent');
-  // The panel footer's own Accept/Reject. This is the one rule where both
-  // tokens appear, so pin the split: the LABEL moved to --ck-link, the BORDER
-  // stayed on the raw accent because a border is non-text and answers to 3:1.
+  // The floating button left --ck-link in 0.5.11 (it follows the accept
+  // button now — see the fab tests below), and the panel foot left
+  // .ck-btn--outline for the settings role class, so neither is pinned here
+  // any more. The .ck-btn--outline rule itself survives only as a shim for
+  // integrator CSS; nothing in the UI emits that class.
   assert.match(UI_SRC,
     /\.ck-btn--outline\{background:transparent;border-color:var\(--ck-accent\);color:var\(--ck-link\)\}/,
-    'the panel footer outline buttons must take link text and an accent border');
+    'the .ck-btn--outline compatibility shim changed shape');
 });
 
 test('non-text accent usages keep the raw accent', () => {
@@ -852,11 +852,12 @@ test('the default accent needs no correction on either card', () => {
   }
 });
 
-/* 0.5.10 follow-up: the panel's «Сохранить выбор» and the floating button paint
-   their text from `--ck-on-accent` straight off the palette. A DERIVED onAccent
-   must therefore pass the >= 4.5 rule against the accent, or a white accent
-   gets white text — which is what the owner saw. A typed onAccent is painted
-   as typed (the 0.5.10 rule). */
+/* 0.5.10 follow-up: the remaining filled surfaces that are not banner buttons
+   paint their text from `--ck-on-accent` straight off the palette. (Since
+   0.5.11 that is the blocked-embed placeholder button — the panel foot and the
+   floating button moved onto the accept button's tokens.) A DERIVED onAccent
+   must pass the >= 4.5 rule against the accent, or a white accent gets white
+   text — which is what the owner saw. A typed onAccent is painted as typed. */
 test('a white accent gets a dark derived on-accent token', () => {
   const css = C.buildThemeCss({ theme: { accent: '#ffffff' } }).css;
   assert.match(css, /--ck-on-accent:#161616/);
@@ -866,4 +867,161 @@ test('a white accent gets a dark derived on-accent token', () => {
 test('a typed light.onAccent is painted as typed even when it fails 4.5', () => {
   const css = C.buildThemeCss({ theme: { accent: '#ffffff', light: { onAccent: '#ffffff' } } }).css;
   assert.match(css.split('@media')[0], /--ck-on-accent:#ffffff/);
+});
+
+/* ------------------------------------------------- 0.5.11: panel follows banner
+ *
+ * The owner's complaint: colours set for the BANNER's buttons stopped at the
+ * banner. The panel's «Сохранить выбор» painted from `--ck-on-accent` and its
+ * «Принять всё»/«Отклонить всё» were plain outline buttons, so a red accept
+ * button opened a panel with a blue save button.
+ *
+ * The rule, with no setting of its own: save = the banner's ACCEPT button,
+ * panel accept/reject = the banner's SETTINGS («Настроить») button, floating
+ * button = the accept button's fill.
+ *
+ * The role classes are reused rather than re-derived, which is the point:
+ * filled-vs-outline stays a VALUE change in the tokens, so a theme.buttons
+ * edit is still applyTheme()-only and never a remount.
+ */
+
+// `ck-btn ck-btn--accept` also appears in buildBanner, so asserting against the
+// whole file would pass for the wrong reason. Slice the panel builder out.
+const PANEL_SRC = (() => {
+  const from = UI_SRC.indexOf('function buildPanel');
+  const to = UI_SRC.indexOf('function buildFab');
+  assert.ok(from > 0 && to > from, 'buildPanel/buildFab not found — did the builders move?');
+  return UI_SRC.slice(from, to);
+})();
+
+test('the panel foot wears the banner role classes, not its own', () => {
+  assert.match(PANEL_SRC, /var save = el\('button', 'ck-btn ck-btn--accept', T\.save\)/,
+    '«Сохранить выбор» must carry the accept classes so it follows «Принять всё»');
+  assert.match(PANEL_SRC, /var acc = el\('button', 'ck-btn ck-btn--settings', T\.acceptAll\)/,
+    'the panel «Принять всё» must carry the settings classes');
+  assert.match(PANEL_SRC, /var rej = el\('button', 'ck-btn ck-btn--settings', T\.rejectAll\)/,
+    'the panel «Отклонить всё» must carry the settings classes');
+  // The old, unthemable pair must be gone from the panel specifically.
+  assert.doesNotMatch(PANEL_SRC, /ck-btn--filled|ck-btn--outline/,
+    'the panel foot still builds a --filled/--outline button');
+});
+
+test('the panel foot keeps its own layout rule', () => {
+  // The role classes set colour only. If this rule were lost the panel's three
+  // buttons would fall back to `.ck-btn{flex:1 1 auto}` and stop sharing the row.
+  assert.match(UI_SRC, /'\.ck-panel__foot \.ck-btn\{flex:1 1 150px\}'/,
+    'the panel foot lost its flex basis');
+});
+
+test('a filled accept paints the panel save button from --ck-accept-*', () => {
+  // The owner's exact case: filled #e63939 with #fff2e0 text.
+  const built = C.buildThemeCss({ theme: { buttons: { accept: { bg: '#e63939', fg: '#fff2e0' } } } });
+  const light = built.css.split('@media')[0];
+  assert.match(light, /--ck-accept-bg:#e63939/);
+  assert.match(light, /--ck-accept-fg:#fff2e0/);
+  // And the rule the save button now reads must consume those tokens.
+  assert.match(UI_SRC,
+    /\.ck-btn--accept\{background:var\(--ck-accept-bg\);color:var\(--ck-accept-fg\)/,
+    '.ck-btn--accept stopped reading the accept tokens');
+
+  // 0.5.10 rule, inherited: a typed fg is painted as typed. #fff2e0 on #e63939
+  // is ~3.8:1, so it is reported as low and NOT corrected.
+  const acc = built.light.buttons.accept;
+  assert.equal(acc.fg, '#fff2e0', 'a typed accept fg must be painted as typed');
+  assert.equal(acc.adjusted, false, 'a typed fg must not be reported as corrected');
+  assert.equal(acc.low, true, 'a typed fg under 4.5 must still be reported as low');
+});
+
+test('an outline accept makes the panel save button outline too', () => {
+  // The save button's CLASS never changes — that is the design (filled/outline
+  // is a value change in the tokens, not a class swap), so the variant is
+  // asserted through the tokens the class reads.
+  const built = C.buildThemeCss({
+    theme: { buttons: { accept: { variant: 'outline' }, reject: { variant: 'outline' } } }
+  });
+  const light = built.css.split('@media')[0];
+  assert.equal(built.light.buttons.accept.variant, 'outline');
+  assert.match(light, /--ck-accept-bg:transparent/,
+    'an outline accept must give the save button a transparent fill');
+  assert.match(light, /--ck-accept-bd:#2B50D8/,
+    'the outline save button lost its border colour');
+});
+
+test('the panel accept/reject follow the SETTINGS button, whatever it is', () => {
+  // They are secondary controls: whatever the owner chose for «Настроить».
+  const built = C.buildThemeCss({
+    theme: { buttons: { settings: { variant: 'filled', bg: '#0b7a3b', fg: '#ffffff' } } }
+  });
+  const light = built.css.split('@media')[0];
+  assert.match(light, /--ck-settings-bg:#0b7a3b/);
+  assert.match(light, /--ck-settings-fg:#ffffff/);
+  assert.match(UI_SRC,
+    /\.ck-btn--settings\{background:var\(--ck-settings-bg\);color:var\(--ck-settings-fg\)/,
+    '.ck-btn--settings stopped reading the settings tokens');
+});
+
+test('the switches keep the raw accent, not the accept button colour', () => {
+  // Explicitly NOT part of the rule: a red accept button must not turn the
+  // per-category and per-service switches red.
+  assert.match(UI_SRC, /\.ck-switch\[aria-checked="true"\]\{background:var\(--ck-accent\)/,
+    'the switch fill must stay on --ck-accent');
+});
+
+/* ---------------------------------------------------------- floating button */
+
+test('.ck-fab paints from the fab tokens', () => {
+  assert.match(UI_SRC, /\.ck-fab\{[\s\S]{0,400}?background:var\(--ck-fab-bg\);color:var\(--ck-fab-fg\)/,
+    'the floating button no longer reads --ck-fab-bg/--ck-fab-fg');
+});
+
+test('the fab tokens are emitted for both palettes', () => {
+  // Three blocks, like --ck-link: :host, the prefers-color-scheme override and
+  // :host(.ck-mode-dark). Missing the dark pair would leave a light-coloured
+  // circle on a dark page and nothing else would notice.
+  const css = C.buildThemeCss({}).css;
+  const bg = css.match(/--ck-fab-bg:[^;}]+/g) || [];
+  const fg = css.match(/--ck-fab-fg:[^;}]+/g) || [];
+  assert.equal(bg.length, 3, `expected a fab bg in all three blocks, got ${bg.length}`);
+  assert.equal(fg.length, 3, `expected a fab fg in all three blocks, got ${fg.length}`);
+  assert.equal(bg[0], '--ck-fab-bg:#2B50D8', 'the light fab lost the light accent');
+  assert.equal(bg.filter((d) => d === '--ck-fab-bg:#7B96F0').length, 2,
+    'both dark blocks must carry the dark fab background');
+});
+
+test('a filled accept hands the fab its exact bg and fg', () => {
+  const built = C.buildThemeCss({ theme: { buttons: { accept: { bg: '#e63939', fg: '#fff2e0' } } } });
+  assert.deepEqual(
+    { bg: built.light.fab.bg, fg: built.light.fab.fg },
+    { bg: '#e63939', fg: '#fff2e0' },
+    'the floating button must wear the accept button colours verbatim');
+  const light = built.css.split('@media')[0];
+  assert.match(light, /--ck-fab-bg:#e63939/);
+  assert.match(light, /--ck-fab-fg:#fff2e0/);
+  // The typed low-contrast pair is kept as typed here too, and reported.
+  assert.equal(built.light.fab.adjusted, false);
+  assert.equal(built.light.fab.low, true);
+});
+
+test('an outline accept gives the fab its border as fill and a readable icon', () => {
+  // No fill to borrow: the border becomes the circle and ensureContrast picks
+  // the readable icon colour from the card.
+  const built = C.buildThemeCss({
+    theme: { buttons: { accept: { variant: 'outline', border: '#0b7a3b' },
+                        reject: { variant: 'outline' } } }
+  });
+  const fab = built.light.fab;
+  assert.equal(fab.bg, '#0b7a3b', 'the fab must take the outline accept border as its fill');
+  assert.ok(typeof fab.ratio === 'number' && fab.ratio >= 4.5,
+    `the fab icon must clear 4.5:1, got ${fab.ratio}`);
+  assert.match(built.css.split('@media')[0], /--ck-fab-bg:#0b7a3b/);
+});
+
+test('the fab pair is resolved once, on resolveButtonStyles', () => {
+  // «один код — одни числа»: the debug panel and the cabinet read the same
+  // record the stylesheet does, so nothing can recompute these numbers.
+  const r = C.resolveButtonStyles({}, 'light');
+  assert.ok(r.fab && typeof r.fab === 'object', 'resolveButtonStyles publishes no fab record');
+  for (const k of ['bg', 'fg', 'ratio', 'adjusted', 'low', 'against']) {
+    assert.ok(k in r.fab, `the fab record is missing ${k}`);
+  }
 });
