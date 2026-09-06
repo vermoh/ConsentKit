@@ -584,6 +584,10 @@
     ckCount: ['{n} cookie', '{n} cookie-uri', '{n} de cookie-uri'],
     svcPolicy: 'Politica',
     svcCookies: 'Ce cookie-uri pune',
+    // 0.5.12 — dezvăluirea din rând. NU `more`, care aici este o propoziție
+    // («Aflați mai multe»), nu un control de rând.
+    svcDetails: 'Detalii',
+    svcListLabel: 'Servicii și cookie-uri din acest grup',
     cat: {
       necessary: { title: 'Necesare', desc: 'Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate.' },
       functional: { title: 'Funcționale', desc: 'Rețin alegerile dumneavoastră: limba, coșul, chatul.' },

@@ -915,6 +915,9 @@ a:hover { color: var(--accent-ink); }
   .foot-grid { grid-template-columns: 1fr; gap: 22px; }
 }
 .foot-brand { font-weight: 680; margin: 0 0 4px; letter-spacing: .01em; }
+/* The company name links to the agency site; it reads as the brand line, not as a link, until hovered. */
+.foot-brand a { color: inherit; text-decoration: none; }
+.foot-brand a:hover, .foot-brand a:focus-visible { text-decoration: underline; }
 .foot-small { margin: 0; font-size: .87rem; color: var(--ink-soft); max-width: 46ch; }
 .foot-links { display: flex; gap: 22px; flex-wrap: wrap; }
 .foot-links a { color: var(--ink-soft); font-size: .92rem; }

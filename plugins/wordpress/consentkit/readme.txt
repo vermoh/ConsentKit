@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.11
+Stable tag: 0.5.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,15 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.12 =
+* Services in the preferences panel are collapsed by default and compact: the
+  group's "N services / M cookies" line is now a disclosure button, and each
+  service row is one line (name, vendor, switch) with its purpose, privacy link
+  and cookie list behind a small "Details" disclosure.
+* A service in the "necessary" group has no switch at all - it carries the
+  "always on" badge instead, and a refusal for such a service is never stored.
+* Tracker database: c.bing.com.
 
 = 0.5.11 =
 * The preferences panel now follows the banner's buttons: "Save choice" is

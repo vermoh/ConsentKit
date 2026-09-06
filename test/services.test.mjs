@@ -670,6 +670,32 @@ test('«Политика» is translated in all three languages', () => {
   assert.equal(stringsFor(C, 'en').svcPolicy, 'Privacy policy');
 });
 
+test('the row disclosure «Подробнее» is translated in ru, ro and en', () => {
+  /* 0.5.12. It is NOT the banner's `more`: ro renders that as «Aflați mai
+     multe», a sentence, where the row needs a one-word control. */
+  const C = loadUi();
+  assert.equal(stringsFor(C, 'ru').svcDetails, 'Подробнее');
+  assert.equal(stringsFor(C, 'ro').svcDetails, 'Detalii');
+  assert.equal(stringsFor(C, 'en').svcDetails, 'Details');
+  assert.notEqual(stringsFor(C, 'ro').svcDetails, stringsFor(C, 'ro').more);
+});
+
+test('the 0.5.12 keys are in STR_KEYS, so no locale renders «undefined»', () => {
+  /* A key added to DICT but not to STR_KEYS is `undefined` for all 32 external
+     locales — the file's own comment warns about exactly this, and the string
+     "undefined" would be painted on the card. */
+  const C = loadUi();
+  for (const lang of ['de', 'fr', 'pl', 'ro', 'ru', 'en']) {
+    const T = stringsFor(C, lang);
+    for (const key of ['svcDetails', 'svcListLabel']) {
+      assert.equal(typeof T[key], 'string', `${lang}.${key} is not a string`);
+      assert.ok(T[key].length > 0 && T[key] !== 'undefined', `${lang}.${key} is empty`);
+    }
+  }
+  // A locale with no translation of its own falls back to en, not to nothing.
+  assert.equal(stringsFor(C, 'de').svcDetails, 'Details');
+});
+
 test('a service’s cookies are listed under it and dropped from the group table', () => {
   const C = loadUi();
   const rows = COOKIE_TABLE.filter((r) => r.category === 'analytics');
@@ -699,19 +725,180 @@ test('with no services the group table is the whole cookie list, untouched', () 
   assert.deepEqual(plain(loose.map((r) => r.name)), ['_hjSession', '_hjSessionUser', '_ga', 'own_stat']);
 });
 
+/* The source region of buildCategory(), which several tests below read. */
+function categorySource() {
+  const body = UI_SRC.slice(UI_SRC.indexOf('function buildCategory'));
+  return body.slice(0, body.indexOf('\n  /* SPEC V1.6 §2'));
+}
+
+function serviceSource() {
+  const body = UI_SRC.slice(UI_SRC.indexOf('  function buildService(svc, cat, rows)'));
+  return body.slice(0, body.indexOf('\n  /* The <details> block'));
+}
+
 test('the panel source renders the counter ONLY when the group has services', () => {
   /* «старый конфиг без services рендерится как раньше» means the header carries
      NO counter at all — not «0 сервисов · 3 cookie». Asserted on the source,
      because the guard is a branch rather than a value: the DOM render itself is
-     covered in a real browser. */
-  const body = UI_SRC.slice(UI_SRC.indexOf('function buildCategory'));
-  const region = body.slice(0, body.indexOf('\n  /* SPEC V1.6 §2'));
-  assert.match(region, /if \(svcs\.length\) \{\s*\n\s*name\.appendChild/,
+     covered in a real browser.
+
+     0.5.12: the counter became the disclosure BUTTON, so the guard now wraps
+     makeGroupToggle() rather than a bare appendChild — but it is still one
+     `if (svcs.length)`, and the service list still sits behind the same test. */
+  const region = categorySource();
+  assert.match(region, /if \(svcs\.length\) \{\s*\n\s*toggle = makeGroupToggle\(/,
     'the counter must sit behind a services-present guard');
-  assert.match(region, /if \(svcs\.length\) \{\s*\n\s*var list = el\('div', 'ck-svcs'\)/,
+  assert.match(region, /if \(svcs\.length\) \{[\s\S]*?var list = el\('div', 'ck-svcs'\)/,
     'the service list must sit behind the same guard');
   // And the group's own summary line is unchanged from 0.5.7.
   assert.match(region, /T\.cookiesIn \+ ' \(' \+ loose\.length \+ '\)'/);
+});
+
+/* ==================================== 0.5.12: collapsed by default, compact */
+
+test('a group with services starts COLLAPSED, and the header control opens it', () => {
+  /* Owner finding 2: eight services pushed the switches off the screen. The
+     region must therefore be built `hidden`, and the ONLY thing that clears it
+     is the toggle's own click handler. */
+  const region = categorySource();
+  assert.match(region, /region\.hidden = true;/,
+    'the services region must be built collapsed');
+  assert.match(region, /toggle\.addEventListener\('click'[\s\S]*?region\.hidden = open;/,
+    "the header control must be what toggles the region");
+  assert.match(region, /toggle\.setAttribute\('aria-expanded'/,
+    'the control must report its expanded state');
+});
+
+test('the group control is a real button wired to the region it shows', () => {
+  /* A <div> with a click handler is not keyboard reachable and announces
+     nothing; §2 asks for «a real <button aria-expanded>». */
+  const src = UI_SRC.slice(UI_SRC.indexOf('function makeGroupToggle'));
+  const body = src.slice(0, src.indexOf('\n  function buildCategory'));
+  assert.match(body, /el\('button', 'ck-cat__count ck-cat__toggle'\)/,
+    'the disclosure must be a <button>, not a styled div');
+  assert.match(body, /b\.type = 'button'/,
+    'a bare <button> inside a form would submit it');
+  assert.match(body, /aria-expanded', 'false'/, 'it must start collapsed');
+  assert.match(body, /aria-controls', regionId/,
+    'the control must name the region it shows');
+});
+
+test('the loose-cookie list moves INSIDE the region, but only when there are services', () => {
+  /* «opening it reveals the services list and, at the end, the «Какие cookie
+     (N)» list». A group with no services keeps the 0.5.7 shape: the table sits
+     at the top level, never behind a disclosure that does not exist. */
+  const region = categorySource();
+  const inside = region.indexOf("region.appendChild(cookieTable(loose");
+  const outside = region.indexOf("wrap.appendChild(cookieTable(loose");
+  assert.ok(inside > -1, 'with services the group table must live inside the region');
+  assert.ok(outside > inside,
+    'with no services the group table must still be appended to the card itself');
+  assert.match(region, /\} else if \(loose\.length\) \{/,
+    'the service-less path must be the else branch, not a second disclosure');
+});
+
+test('a service row is one line until its own «Подробнее» is opened', () => {
+  /* The purpose, the policy link and «Какие cookie ставит (N)» must ALL be
+     inside the row's <details>, not next to the name. */
+  const body = serviceSource();
+  const detAt = body.indexOf("el('details', 'ck-det ck-svc__det')");
+  assert.ok(detAt > -1, 'the row needs its own <details> disclosure');
+  for (const marker of ["el('p', 'ck-svc__desc'", "el('a', 'ck-svc__policy'", 'T.svcCookies']) {
+    assert.ok(body.indexOf(marker) > detAt,
+      `${marker} must be built inside the row's disclosure, not on the visible line`);
+  }
+  // The visible line is name + vendor, and the vendor joins the name element.
+  assert.match(body.slice(0, detAt), /name\.appendChild\(el\('span', 'ck-svc__vendor', svc\.vendor\)\)/,
+    'the vendor belongs on the name line, not in a paragraph under it');
+});
+
+test('the row disclosure is labelled per service, not «Подробнее» eight times', () => {
+  const body = serviceSource();
+  assert.match(body, /aria-label', T\.svcDetails \+ ' — ' \+ svc\.name/,
+    'every row would otherwise announce the same bare word');
+});
+
+/* ============================================ 0.5.12: necessary has no switch */
+
+test('a service in the necessary group gets NO switch, only the «always on» badge', () => {
+  /* Owner finding 1: the Cloudflare card rendered a switch, stuck at OFF —
+     syncGroup() only ever ran for the opt-in groups, so nothing could ever turn
+     it on, and the visitor was shown a control that lied. */
+  const body = serviceSource();
+  assert.match(body, /var locked = cat === 'necessary';/);
+  assert.match(body, /if \(!locked\) \{[\s\S]*?makeServiceSwitch\(svc, cat\)/,
+    'the switch must sit behind a not-necessary guard');
+  assert.match(body, /if \(locked\) name\.appendChild\(el\('span', 'ck-svc__badge', T\.alwaysOn\)\)/,
+    'the badge must take the switch\u2019s place');
+  // And it must not be registered, so no loop can ever write it into the map.
+  const pushAt = body.indexOf('serviceSwitches[cat].push(sw)');
+  const guardAt = body.indexOf('if (!locked) {');
+  assert.ok(pushAt > guardAt && guardAt > -1,
+    'a necessary service must never enter serviceSwitches[]');
+});
+
+/* The owner's live shape: a Cloudflare card in the «Необходимые» group. */
+const NECESSARY_SVC = {
+  id: 'cloudflare',
+  name: 'Cloudflare',
+  vendor: 'Cloudflare, Inc.',
+  category: 'necessary',
+  hosts: ['cf-assets.example'],
+  cookies: ['__cf_bm'],
+  purpose: { ru: 'Защищает сайт от перегрузки и ботов.', en: 'Protects the site from bots.' }
+};
+
+test('a necessary service cannot be denied through accept()', () => {
+  const env = loadCore();
+  env.CK.init({ policyVersion: '1', services: SERVICES.concat([NECESSARY_SVC]) });
+  // The shape the owner's config produced: a denial aimed at a necessary id.
+  env.CK.accept({ analytics: true, services: { cloudflare: false, hotjar: false } });
+
+  assert.equal(env.CK.allowedService('cloudflare'), true,
+    'a necessary service is always allowed');
+  const stored = plain(env.CK.getState().services);
+  assert.ok(!('cloudflare' in stored),
+    'the denial map must never carry a necessary service id');
+  // The refusal that IS legitimate is untouched — this is not a blanket wipe.
+  assert.equal(stored.hotjar, false);
+  assert.equal(env.CK.allowedService('hotjar'), false);
+  assert.deepEqual(plain(env.CK._deniedServices()), ['hotjar']);
+  // …and it never reaches the cookie either.
+  const rec = env.record();
+  assert.deepEqual(plain(rec.services), { hotjar: false });
+});
+
+test('a stored record naming a necessary service is stripped on read', () => {
+  /* THE VACUOUS-PASS TRAP: testing only the accept() path would pass even if the
+     filter lived nowhere near the read path. init() runs buildServices() BEFORE
+     loadRecord(), which is what makes the category known in time — reverse that
+     ordering and this is the test that fails. Written by hand, the way a record
+     from a client that predates the fix would look. */
+  const rec = {
+    id: '11111111-1111-4111-8111-111111111111',
+    ts: new Date().toISOString(),
+    policyVersion: '1',
+    categories: { necessary: true, functional: false, analytics: true, marketing: false },
+    services: { cloudflare: false, hotjar: false },
+    method: 'custom'
+  };
+  const payload = Buffer.from(JSON.stringify(rec), 'utf8').toString('base64');
+  const env = loadCore({ jar: { ck_consent: payload } });
+  env.CK.init({ policyVersion: '1', services: SERVICES.concat([NECESSARY_SVC]) });
+
+  assert.equal(env.CK.allowedService('cloudflare'), true,
+    'a stored denial for a necessary service must not survive the read');
+  assert.deepEqual(plain(env.CK.getState().services), { hotjar: false });
+  assert.deepEqual(plain(env.CK._deniedServices()), ['hotjar']);
+});
+
+test('a necessary service’s resources are never held back by a denial', () => {
+  const env = loadCore();
+  env.CK.init({ policyVersion: '1', services: [NECESSARY_SVC] });
+  env.CK.accept({ functional: false, analytics: false, marketing: false,
+                  services: { cloudflare: false } });
+  assert.ok(!isBlocked(insert(env, 'script', 'https://cf-assets.example/turnstile.js')),
+    'a necessary service must load whatever the denial map was asked to say');
 });
 
 test('a config with no services leaves the core with an empty registry', () => {

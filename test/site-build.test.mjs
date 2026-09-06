@@ -946,8 +946,13 @@ test('the footer carries no developer links, and #dev still does', () => {
        three anchors are load-bearing rather than decoration — asserted by
        name below, not just counted. */
     const links = foot.match(/<a\b[^>]*href=/g) || [];
-    assert.equal(links.length, 7,
-      `the ${code} footer has ${links.length} links, expected 7`);
+    // Eight since 07.09.2026: the company name links to the agency site
+    // (owner's rule — the banner's attribution goes to the product site, the
+    // product site's company line goes to the agency).
+    assert.equal(links.length, 8,
+      `the ${code} footer has ${links.length} links, expected 8`);
+    assert.ok(foot.includes('href="https://ecomconsult.net"'),
+      `the ${code} footer's company name does not link to the agency site`);
 
     const dict = readDict(code);
     for (const [id, key] of [['demo', 'navDemo'], ['features', 'navFeatures'], ['dev', 'navDev']]) {

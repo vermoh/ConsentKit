@@ -797,13 +797,26 @@
   // key that is not a service id — is dropped rather than trusted: this record
   // is attacker-writable (it lives in a cookie and in localStorage), and a
   // malformed entry must not be able to widen or narrow what gets blocked.
+  //
+  // 0.5.12 — a service in the `necessary` group is ALSO dropped, on read and on
+  // write alike. Such a service has no switch in the panel (the group is always
+  // on, so a control that could only ever refuse it would be a lie), and
+  // allowedService() answers `true` for it unconditionally — so a denial for one
+  // could only ever be dead weight that survives in the record and confuses the
+  // beacon and the debug report. The filter is safe here because init() runs
+  // buildServices() BEFORE loadRecord(), so SERVICE_BY_ID is already populated
+  // when a stored map is read back; an id the registry does not know is left
+  // alone, exactly as before, because nothing can be claimed about its category.
   function readServices(raw) {
     var out = {};
     if (!isPlainObject(raw)) { return out; }
     var keys = Object.keys(raw);
     for (var i = 0; i < keys.length && i < SERVICE_MAX; i++) {
       var k = keys[i];
-      if (raw[k] === false && SERVICE_ID_RE.test(k)) { out[k] = false; }
+      if (raw[k] !== false || !SERVICE_ID_RE.test(k)) { continue; }
+      var s = SERVICE_BY_ID[k];
+      if (s && s.category === 'necessary') { continue; }
+      out[k] = false;
     }
     return out;
   }
@@ -1202,6 +1215,14 @@
   // silent block of something the visitor was never asked about.
   function serviceDenied(id) {
     if (!id || typeof id !== 'string') { return false; }
+    /* 0.5.12 — a service in the `necessary` group is NEVER denied, whatever the
+       map says. readServices() already strips such an entry on every read and
+       write, so this is the single choke point that also covers a map mutated
+       by some other path: deniedForSrc() (the blocking patches), and
+       deniedServiceIds() (the beacon field and the debug report) both ask this
+       question, so answering it once here keeps the three from drifting. */
+    var s = SERVICE_BY_ID[id];
+    if (s && s.category === 'necessary') { return false; }
     return state.services[id] === false;
   }
 
@@ -1213,6 +1234,13 @@
   function allowedService(id) {
     var s = SERVICE_BY_ID[id];
     if (!s) { return true; }                  // unknown id: nothing to withhold
+    /* 0.5.12 — a `necessary` service is allowed, full stop. The group cannot be
+       switched off (allowed('necessary') is always true), the panel renders no
+       switch for it, and readServices() drops any denial that reaches the map.
+       This is the belt to that braces: a denial arriving by some path neither
+       covers — a stale in-memory map, a caller reaching past accept() — must
+       still not be able to hold back something the visitor cannot re-enable. */
+    if (s.category === 'necessary') { return true; }
     if (!allowed(s.category)) { return false; }
     return !serviceDenied(id);
   }
@@ -1230,7 +1258,10 @@
   function deniedServiceIds() {
     var out = [];
     for (var i = 0; i < SERVICES.length; i++) {
-      if (state.services[SERVICES[i].id] === false) { out.push(SERVICES[i].id); }
+      // Through serviceDenied(), not the raw map: that is the one place the
+      // `necessary` rule lives, so the beacon and the debug report can never
+      // name a service the blocking engine is in fact allowing.
+      if (serviceDenied(SERVICES[i].id)) { out.push(SERVICES[i].id); }
     }
     return out;
   }
@@ -1942,7 +1973,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.11',
+    version: '0.5.12',
     config: config,
 
     init: function (userConfig) {

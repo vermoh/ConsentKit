@@ -44,6 +44,14 @@
       // The service's own cookies, listed under it rather than in the group's
       // «Which cookies» table.
       svcCookies: 'Cookies it sets',
+      // 0.5.12 — the per-row disclosure. A row is one line until this is opened;
+      // the purpose, the policy link and the service's cookie table live behind
+      // it. NOT `more`: that string is the banner's «Подробнее» and reads
+      // «Aflați mai multe» in ro, which is a sentence, not a row control.
+      svcDetails: 'Details',
+      // The group's own disclosure: how many services are hidden behind the
+      // «N services · M cookies» button. Only ever read by a screen reader.
+      svcListLabel: 'Services and cookies in this group',
       // SPEC V1.10 §2 — the blocked-embed placeholder. {host} is the vendor
       // label when the database knows one and the bare host otherwise; {cat} is
       // the localized category title, taken from cat.<name>.title below, so the
@@ -97,6 +105,8 @@
       ckCount: ['{n} cookie', '{n} cookie', '{n} cookie'],
       svcPolicy: 'Политика',
       svcCookies: 'Какие cookie ставит',
+      svcDetails: 'Подробнее',
+      svcListLabel: 'Сервисы и cookie этой группы',
       phText: 'Здесь содержимое от {host}. Оно загрузится после согласия на «{cat}».',
       phAllow: 'Разрешить и показать',
       phSettings: 'Настроить cookie',
@@ -142,7 +152,12 @@
     // branch in buildStrings() — listing them here would be a bug, because this
     // loop only copies values that are `typeof === 'string'` and would leave
     // every external locale on the English plurals.
-    'svcPolicy', 'svcCookies'
+    'svcPolicy', 'svcCookies',
+    // 0.5.12 — the per-row «Подробнее» disclosure and the accessible name of the
+    // group's own one. Both are plain strings, so they belong here: a key left
+    // out of this list is `undefined` for all 32 external locales and renders
+    // the literal word "undefined" on the card.
+    'svcDetails', 'svcListLabel'
   ];
 
   // Plural-form keys, filled separately from STR_KEYS (see above).
@@ -461,21 +476,50 @@
     /* SPEC V1.12 §3 — «N сервисов · M cookie». --ck-muted, like every other
        secondary label on the card, and it is measured for AA against the card
        background by the same rule the description above answers to. */
+    /* 0.5.12 — the counter is now the group's disclosure BUTTON. It keeps the
+       muted label's size and colour (it is still a secondary label, measured
+       for AA against the card background by the same rule as the description),
+       and gains a caret and a hit area. `border:0;background:transparent` is
+       needed because the panel's reset styles buttons, not because a link is
+       being faked — it is a real button and the global :focus-visible rule
+       gives it a visible ring. */
     '.ck-cat__count{font-size:12px;font-weight:500;color:var(--ck-muted)}',
+    '.ck-cat__toggle{border:0;background:transparent;padding:2px 0;cursor:pointer;',
+    'display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-align:left}',
+    '.ck-cat__caret{width:0;height:0;flex:none;border:4px solid transparent;',
+    'border-left-color:currentColor;border-right:0}',
+    '.ck-cat__toggle[aria-expanded="true"] .ck-cat__caret{transform:rotate(90deg)}',
 
-    /* ---- services inside a group (SPEC V1.12 §3) ---- */
+    /* ---- services inside a group (SPEC V1.12 §3, compacted in 0.5.12) ---- */
     /* Indented and rule-separated so the nesting reads without colour: a
        service belongs to the group above it, and its own cookie table belongs
        to it. The left border is the only decoration; everything else is
        spacing, which survives forced-colours mode intact. */
-    '.ck-svcs{margin:12px 0 0;padding-left:12px;border-left:2px solid var(--ck-line)}',
-    '.ck-svc{padding:10px 0;border-bottom:1px solid var(--ck-line)}',
+    '.ck-cat__region{margin-top:12px}',
+    '.ck-svcs{padding-left:12px;border-left:2px solid var(--ck-line)}',
+    '.ck-svc{padding:8px 0;border-bottom:1px solid var(--ck-line)}',
     '.ck-svc:first-child{padding-top:2px}',
     '.ck-svc:last-child{border-bottom:0;padding-bottom:2px}',
-    '.ck-svc__top{display:flex;gap:12px;align-items:flex-start}',
+    /* One line: name, vendor, then the switch pinned to the right. `center`
+       rather than flex-start, because the row is a single line of text now and
+       the switch reads as belonging to it. */
+    '.ck-svc__top{display:flex;gap:10px;align-items:center}',
     '.ck-svc__txt{flex:1 1 auto;min-width:0}',
-    '.ck-svc__name{font-size:14px;font-weight:600}',
-    '.ck-svc__vendor{margin:2px 0 0;font-size:12.5px;color:var(--ck-muted)}',
+    /* The name and the vendor share a line and WRAP rather than truncate: at
+       320px a long «Google Analytics · Google Ireland Limited» becomes two
+       lines and the switch stays where it is, still reachable. */
+    '.ck-svc__name{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;',
+    'font-size:14px;font-weight:600;line-height:1.35}',
+    '.ck-svc__vendor{margin:0;font-size:12.5px;font-weight:400;color:var(--ck-muted)}',
+    /* «всегда активны» on a necessary service's row, where its switch used to
+       be: the same pill the group header wears, one step smaller. */
+    '.ck-svc__badge{font-size:11px;font-weight:500;color:var(--ck-muted);',
+    'border:1px solid var(--ck-line);border-radius:999px;padding:0 7px}',
+    /* The row's own «Подробнее». Tighter than a group's <details> — it sits
+       inside a row, not between two of them. */
+    '.ck-svc__det{margin-top:2px}',
+    '.ck-svc__det>summary{font-size:12.5px}',
+    '.ck-svc__body{padding:2px 0 4px}',
     '.ck-svc__desc{margin:4px 0 0;font-size:13px;color:var(--ck-muted)}',
     /* --ck-link, not --ck-accent: accent-coloured TEXT goes through the same
        >= 4.5:1 rule as «Подробнее» — see the note on the `a{}` rule above. */
@@ -1708,7 +1752,23 @@
     }
   }
 
+  /* SPEC V1.12 §3, reshaped in 0.5.12 — one service, on ONE line.
+
+     0.5.8 rendered the name, the vendor, the purpose paragraph, the policy link
+     and a cookie table for every service, all at once. Eight services filled the
+     panel and the visitor scrolled past the switches they came for. The row is
+     now: name (bold) · vendor (muted) · switch, and nothing else until the row's
+     own «Подробнее» is opened — behind which the purpose, the policy link and
+     «Какие cookie ставит (N)» live, unchanged.
+
+     `cat === 'necessary'` renders NO switch. The group is always on and cannot
+     be refused, so a control that could only ever sit at «off» (which is what
+     0.5.11 showed, because syncGroup() only ever ran for the opt-in groups)
+     tells the visitor a lie about what they can change. The «всегда активны»
+     badge the group header already carries says the true thing instead. */
   function buildService(svc, cat, rows) {
+    var locked = cat === 'necessary';
+
     var wrap = el('div', 'ck-svc');
     var top = el('div', 'ck-svc__top');
     var txt = el('div', 'ck-svc__txt');
@@ -1718,45 +1778,68 @@
     var nameSpan = el('span', null, svc.name);
     nameSpan.id = nameId;
     name.appendChild(nameSpan);
+    // Vendor on the SAME line as the name now, not a paragraph under it. The
+    // row wraps rather than truncates, so a long pair still reads at 320px.
+    if (svc.vendor) name.appendChild(el('span', 'ck-svc__vendor', svc.vendor));
+    if (locked) name.appendChild(el('span', 'ck-svc__badge', T.alwaysOn));
     txt.appendChild(name);
 
-    if (svc.vendor) txt.appendChild(el('p', 'ck-svc__vendor', svc.vendor));
-
-    var descId = null;
-    var purpose = servicePurpose(svc);
-    if (purpose) {
-      descId = nameId + '-desc';
-      var p = el('p', 'ck-svc__desc', purpose);
-      p.id = descId;
-      txt.appendChild(p);
-    }
-
-    /* «Политика» — target=_blank rel=noopener, per §3. The URL is already
-       http(s)-validated by the core's normalizeService(), which is where a
-       javascript: address is dropped; nothing unvalidated reaches an href. */
-    if (svc.privacyUrl) {
-      var a = el('a', 'ck-svc__policy', T.svcPolicy);
-      a.href = svc.privacyUrl;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      // The link text is the same word on every row, so a screen reader needs
-      // the service name to tell them apart.
-      a.setAttribute('aria-label', T.svcPolicy + ' — ' + svc.name);
-      txt.appendChild(a);
-    }
-
-    var sw = makeServiceSwitch(svc, cat);
-    sw.setAttribute('aria-labelledby', nameId);
-    if (descId) sw.setAttribute('aria-describedby', descId);
-    if (!serviceSwitches[cat]) serviceSwitches[cat] = [];
-    serviceSwitches[cat].push(sw);
-
     top.appendChild(txt);
-    top.appendChild(sw);
+
+    /* No switch for a necessary service — and no entry in serviceSwitches[],
+       which is what keeps readSwitches() from ever writing such an id into the
+       denial map. (It iterates OPT_IN, so it could not today; not registering
+       the switch means it still cannot if that loop ever widens.) */
+    if (!locked) {
+      var sw = makeServiceSwitch(svc, cat);
+      /* aria-labelledby only. 0.5.8 also pointed aria-describedby at the purpose
+         paragraph; in 0.5.12 that paragraph lives inside a CLOSED <details>, and
+         a description a screen reader cannot reach until the visitor opens
+         something else is worse than none — the name and the switch's own state
+         are what the control has to announce. The purpose is still there, one
+         «Подробнее» away, as its own readable text. */
+      sw.setAttribute('aria-labelledby', nameId);
+      if (!serviceSwitches[cat]) serviceSwitches[cat] = [];
+      serviceSwitches[cat].push(sw);
+      top.appendChild(sw);
+    }
+
     wrap.appendChild(top);
 
+    /* Everything else goes behind the row's own disclosure. <details>/<summary>
+       rather than a button: the keyboard behaviour, the focus ring and the
+       expanded state come from the browser, and it is the same control the
+       cookie tables have used since 0.5.7. */
+    var purpose = servicePurpose(svc);
     var own = cookieRowsForService(rows, svc);
-    if (own.length) wrap.appendChild(cookieTable(own, T.svcCookies + ' (' + own.length + ')'));
+    if (purpose || svc.privacyUrl || own.length) {
+      var det = el('details', 'ck-det ck-svc__det');
+      var sum = el('summary');
+      sum.appendChild(document.createTextNode(T.svcDetails));
+      // The word is the same on every row, so a screen reader needs the service
+      // name to tell one «Подробнее» from the next.
+      sum.setAttribute('aria-label', T.svcDetails + ' — ' + svc.name);
+      det.appendChild(sum);
+
+      var body = el('div', 'ck-svc__body');
+      if (purpose) body.appendChild(el('p', 'ck-svc__desc', purpose));
+
+      /* «Политика» — target=_blank rel=noopener, per §3. The URL is already
+         http(s)-validated by the core's normalizeService(), which is where a
+         javascript: address is dropped; nothing unvalidated reaches an href. */
+      if (svc.privacyUrl) {
+        var a = el('a', 'ck-svc__policy', T.svcPolicy);
+        a.href = svc.privacyUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.setAttribute('aria-label', T.svcPolicy + ' — ' + svc.name);
+        body.appendChild(a);
+      }
+
+      if (own.length) body.appendChild(cookieTable(own, T.svcCookies + ' (' + own.length + ')'));
+      det.appendChild(body);
+      wrap.appendChild(det);
+    }
 
     return wrap;
   }
@@ -1798,6 +1881,27 @@
     return det;
   }
 
+  /* 0.5.12 — the group's disclosure button.
+
+     «N сервисов · M cookie» was a static label in 0.5.8; it is now the control
+     that reveals the group's services and its cookie list, COLLAPSED by default.
+     A real <button aria-expanded> rather than a <details>, because the panel
+     already owns the region it toggles — the services list and the loose-cookie
+     table are siblings that must move together, and wrapping both in a
+     <details> would put a second summary line above the one the header already
+     has. Keyboard and focus come free with a button; the ring is the panel's
+     own :focus-visible rule. */
+  function makeGroupToggle(cat, label, regionId) {
+    var b = el('button', 'ck-cat__count ck-cat__toggle');
+    b.type = 'button';
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-controls', regionId);
+    b.appendChild(el('span', 'ck-cat__caret'));
+    b.appendChild(document.createTextNode(label));
+    b.dataset.cat = cat;
+    return b;
+  }
+
   function buildCategory(cfg, cat) {
     var meta = T.cat[cat] || { title: cat, desc: '' };
     var locked = cat === 'necessary';
@@ -1829,9 +1933,11 @@
        «0 сервисов · 3 cookie». The cookie half counts the whole group, services
        and loose rows alike: it answers «сколько cookie в этой группе», which is
        the question the line is there to answer. */
+    var toggle = null;
+    var regionId = nameId + '-svcs';
     if (svcs.length) {
-      name.appendChild(el('span', 'ck-cat__count',
-        groupCountLabel(svcs.length, rows.length, T, LANG)));
+      toggle = makeGroupToggle(cat, groupCountLabel(svcs.length, rows.length, T, LANG), regionId);
+      name.appendChild(toggle);
     }
 
     var sw = makeSwitch(cat, locked);
@@ -1843,23 +1949,47 @@
     top.appendChild(sw);
     wrap.appendChild(top);
 
+    // «Cookie в этой группе (N)» keeps its old meaning: what is left once each
+    // service has claimed its own. With no services that is the whole table and
+    // the summary line is byte-for-byte what 0.5.7 rendered.
+    var loose = looseCookies(rows, svcs);
+
     if (svcs.length) {
+      /* Both halves live inside the collapsed region: the services and, at the
+         end, the group's own «Какие cookie (N)». `hidden` rather than a class,
+         so the region is out of the accessibility tree and out of the tab order
+         while collapsed — a class that only sets display:none would leave the
+         switches focusable to a keyboard user who cannot see them. */
+      var region = el('div', 'ck-cat__region');
+      region.id = regionId;
+      region.hidden = true;
+
       var list = el('div', 'ck-svcs');
       // A list, so a screen reader announces «3 items» before reading them.
       list.setAttribute('role', 'list');
+      list.setAttribute('aria-label', T.svcListLabel);
       for (var s = 0; s < svcs.length; s++) {
         var item = buildService(svcs[s], cat, rows);
         item.setAttribute('role', 'listitem');
         list.appendChild(item);
       }
-      wrap.appendChild(list);
-    }
+      region.appendChild(list);
 
-    // «Cookie в этой группе (N)» keeps its old meaning: what is left once each
-    // service has claimed its own. With no services that is the whole table and
-    // the summary line is byte-for-byte what 0.5.7 rendered.
-    var loose = looseCookies(rows, svcs);
-    if (loose.length) {
+      if (loose.length) {
+        region.appendChild(cookieTable(loose, T.cookiesIn + ' (' + loose.length + ')'));
+      }
+
+      toggle.addEventListener('click', function () {
+        var open = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+        region.hidden = open;
+      });
+
+      wrap.appendChild(region);
+    } else if (loose.length) {
+      // No services: the cookie table sits where it always did, top level and
+      // never behind a disclosure — a pre-0.5.8 config renders as it did in
+      // 0.5.7, which is what «старый конфиг рендерится как раньше» asks for.
       wrap.appendChild(cookieTable(loose, T.cookiesIn + ' (' + loose.length + ')'));
     }
 

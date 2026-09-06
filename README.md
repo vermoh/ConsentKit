@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.11).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.12).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -233,6 +233,26 @@ services: [{
 }]
 ```
 
+**How the list is laid out (v0.5.12).** A group's «N services · M cookies» line
+is a disclosure **button**, and it is **collapsed by default** — eight services
+no longer push the switches the visitor came for off the screen. Opening it
+reveals the group's services and, at the end, the group's own «Which cookies
+(N)» table. Each service is **one line**: name, vendor, and its switch on the
+right. Everything else — the purpose, the privacy link, «Cookies it sets (N)» —
+lives behind that row's own small «Details» disclosure. Both controls are real
+focusable controls with a visible focus ring, and both are translated in ru, ro
+and en (every other language falls back to en, as elsewhere).
+
+A group with **no services** is unchanged from 0.5.7: no counter, no disclosure,
+and its cookie table sits at the top level where it always did.
+
+**A service in the `necessary` group gets no switch** (v0.5.12). That group
+cannot be refused, so a control that could only ever sit at «off» would be
+telling the visitor something untrue — the «always on» badge is rendered in its
+place. `allowedService(id)` answers `true` for such a service unconditionally,
+and a refusal for one is stripped from the denial map on every read and write,
+including a record written by hand or by an older client.
+
 What the toggle does:
 
 - **Group off** — every service of that group is off and blocked, as before.
@@ -248,7 +268,8 @@ the block map under the row's own category, so a service host ConsentKit has
 never heard of is still held back.
 
 Refusals are stored in `ck_consent` as `services: { '<id>': false }` — denials
-only. An id absent from the map is allowed, subject to its category.
+only. An id absent from the map is allowed, subject to its category. A
+`necessary` service is never in the map.
 
 ### Button appearance
 
@@ -798,7 +819,7 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.11, rebuilt 2026-09-06, uncompressed — gzip on the server cuts
+ConsentKit 0.5.12, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
@@ -1002,6 +1023,17 @@ Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
 
+### 0.5.12
+- **Services in the preferences panel are collapsed by default and compact.**
+  The group's «N services · M cookies» line became a disclosure button; opening
+  it reveals the services and the group's cookie table. Each service row is one
+  line — name, vendor, switch — with the purpose, the privacy link and its
+  cookie list behind a small «Details» disclosure inside the row.
+- **A service in the «necessary» group has no switch.** It carries the «always
+  on» badge instead, `allowedService()` is unconditionally `true` for it, and a
+  refusal for such a service is stripped from the denial map on read and write.
+- Tracker database: `c.bing.com`.
+
 ### 0.5.11
 - The preferences panel and the floating button follow the **banner's** buttons
   by role, with no theme settings of their own: «save choice» is styled as
@@ -1107,7 +1139,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.11), not a released product.** It is honest about
+**This is a prototype (v0.5.12), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

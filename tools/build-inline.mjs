@@ -358,7 +358,7 @@ function build(flags) {
   };
   const poweredBy = {
     text: ATTRIBUTION[primaryLang] || ATTRIBUTION.en,
-    url: 'https://ecomconsult.net'
+    url: 'https://consentkit.ecomconsult.net'   // the product site, not the agency (owner, 07.09.2026)
   };
   // Only the bundled languages: a block that ships no Romanian has no use for
   // the Romanian line. A single surviving entry adds nothing over `text`.
