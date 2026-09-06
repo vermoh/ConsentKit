@@ -37,6 +37,13 @@
       </svg>
       <span>ConsentKit</span>
     </a>
+    <!-- Owner, 07.09.2026: the languages sit by the logo, where a visitor looks
+         for them, not among the actions on the right. -->
+      <div class="lang-switch" role="group" aria-label="Язык страницы">
+        <a class="lang-btn" href="/law" hreflang="en" lang="en" aria-pressed="false">EN</a>
+        <a class="lang-btn" href="/ru/law" hreflang="ru" lang="ru" aria-current="page" aria-pressed="true">RU</a>
+        <a class="lang-btn" href="/ro/law" hreflang="ro" lang="ro" aria-pressed="false">RO</a>
+      </div>
 
     <!-- SPEC V1.14.1 §1.1: four items, not seven. At 1366 the seven-item nav
          plus the languages plus «Открыть кабинет» plus a six-word button did
@@ -57,11 +64,6 @@
          dashboard is for people who already have an account, and giving it the
          same weight as the offer made the header ask two things at once. -->
     <div class="head-actions">
-      <div class="lang-switch" role="group" aria-label="Язык страницы">
-        <a class="lang-btn" href="/law" hreflang="en" lang="en" aria-pressed="false">EN</a>
-        <a class="lang-btn" href="/ru/law" hreflang="ru" lang="ru" aria-current="page" aria-pressed="true">RU</a>
-        <a class="lang-btn" href="/ro/law" hreflang="ro" lang="ro" aria-pressed="false">RO</a>
-      </div>
       <!-- V1.14.1 §1.1: «Кабинет» as one word, and a SHORT button label. The
            full «Проверить сайт бесплатно» stays where it has room to persuade
            — the hero and the end of each section; in a sticky bar it was six

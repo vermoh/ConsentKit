@@ -292,6 +292,7 @@ a:hover { color: var(--accent-ink); }
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  margin-left: 4px;
 }
 .lang-btn {
   appearance: none;
@@ -1536,14 +1537,23 @@ section { padding: 96px 0; }
 
 /* ── §2.4 the dashboard as a text link ─────────────────────────────── */
 
+/* Owner, 07.09.2026: as a bare word «Кабинет» blended into the nav. It is now
+   an outlined button (the .btn--ghost look, one size smaller) — still the
+   secondary action next to the red one, but visibly a door of its own. */
 .head-link {
-  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
   text-decoration: none;
-  font-size: .93rem;
+  font-size: .9rem;
   font-weight: 600;
   white-space: nowrap;
 }
-.head-link:hover { color: var(--ink); text-decoration: underline; }
+.head-link:hover, .head-link:focus-visible { background: var(--surface-2); text-decoration: none; }
 
 /* The actions group gained a second item in V1.14 (the check button beside
    the dashboard link), and its contents are all `white-space: nowrap`. On a
