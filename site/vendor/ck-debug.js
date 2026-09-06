@@ -322,6 +322,14 @@
       btnAdjusted: 'исправлено автоматически',
       btnOk: 'AA',
       btnFail: 'ниже AA',
+      // 0.5.10: a colour the owner set is painted as set, so a low ratio is a
+      // WARNING, not a correction. Split around the measured number because it
+      // is the whole point of the note — «ниже рекомендуемых» with no reading
+      // tells the owner nothing about how far below they are.
+      lowTextA: 'контраст ',
+      lowTextB: ' — ниже рекомендуемых 4.5, текст может читаться хуже',
+      lowBorderA: 'обводка ',
+      lowBorderB: ' — ниже 3, кнопка плохо видна',
       secActions: 'Действия',
       reset: 'Сбросить согласие',
       showPrefs: 'Показать настройки',
@@ -388,6 +396,10 @@
       btnAdjusted: 'adjusted automatically',
       btnOk: 'AA',
       btnFail: 'below AA',
+      lowTextA: 'contrast ',
+      lowTextB: ' — below the recommended 4.5, the text may be harder to read',
+      lowBorderA: 'border ',
+      lowBorderB: ' — below 3, the button is hard to see',
       secActions: 'Actions',
       reset: 'Reset consent',
       showPrefs: 'Show preferences',
@@ -459,6 +471,10 @@
       btnAdjusted: 'corectat automat',
       btnOk: 'AA',
       btnFail: 'sub AA',
+      lowTextA: 'contrast ',
+      lowTextB: ' — sub 4.5 recomandat, textul poate fi mai greu de citit',
+      lowBorderA: 'contur ',
+      lowBorderB: ' — sub 3, butonul se vede greu',
       secActions: 'Acțiuni',
       reset: 'Resetează consimțământul',
       showPrefs: 'Arată setările',
@@ -1035,7 +1051,8 @@
           lkTxt = lk.color + ' ' + T.btnOn + ' ' + lk.against +
             ' · ' + fmtRatio(lk.ratio) +
             ' ' + ((typeof lk.ratio === 'number' && lk.ratio >= 4.5) ? T.btnOk : T.btnFail) +
-            (lk.adjusted ? ' · ' + T.btnAdjusted : '');
+            (lk.adjusted ? ' · ' + T.btnAdjusted : '') +
+            (lk.low ? ' · ' + T.lowTextA + fmtRatio(lk.ratio) + T.lowTextB : '');
         }
 
         sT.appendChild(defs([
@@ -1062,8 +1079,20 @@
             (b.variant === 'outline'
               ? ' · ' + T.btnBorder + ' ' + b.border + ' (' + fmtRatio(b.borderRatio) + ')'
               : '')));
+          // «исправлено» only where something WAS in fact replaced. Since
+          // 0.5.10 a colour the owner set is painted as set, and its shortfall
+          // is reported as a plain warning with the measured number instead —
+          // the panel must never claim to have corrected what it left alone.
           if (b.adjusted) {
             li.appendChild(el('span', { class: 'mut' }, ' · ' + T.btnAdjusted));
+          }
+          if (b.low) {
+            li.appendChild(el('span', { class: 'mut' },
+              ' · ' + T.lowTextA + fmtRatio(b.ratio) + T.lowTextB));
+          }
+          if (b.borderLow) {
+            li.appendChild(el('span', { class: 'mut' },
+              ' · ' + T.lowBorderA + fmtRatio(b.borderRatio) + T.lowBorderB));
           }
           uT.appendChild(li);
         });

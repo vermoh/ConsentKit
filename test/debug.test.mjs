@@ -400,3 +400,52 @@ test('every language dictionary carries all four §3 notes', () => {
     }
   }
 });
+
+/* ------------------------------ §1 low-contrast warnings (0.5.10) */
+
+/* 0.5.10 stopped overriding a colour the site owner explicitly set: the banner
+   paints it as set and the panel WARNS instead of correcting. That makes the
+   wording load-bearing — it is the only place an owner learns their brand
+   colour is hard to read, and it must not sound like something was changed for
+   them. The note is split around the measured ratio because the number is the
+   point: «ниже рекомендуемых» with no reading tells nobody how far below. */
+
+test('every language carries both low-contrast notes, split around the number', () => {
+  for (const [lang, dict] of Object.entries(load().strings)) {
+    for (const k of ['lowTextA', 'lowTextB', 'lowBorderA', 'lowBorderB']) {
+      assert.ok(dict[k] && String(dict[k]).trim(), `${lang}.${k} is missing or empty`);
+    }
+    // The halves must actually sandwich a number: a trailing space on the
+    // opener and a leading separator on the closer, or the row reads
+    // "контраст4.32— ниже".
+    assert.match(dict.lowTextA, / $/, `${lang}.lowTextA must end with a space`);
+    assert.match(dict.lowBorderA, / $/, `${lang}.lowBorderA must end with a space`);
+    assert.match(dict.lowTextB, /^ /, `${lang}.lowTextB must start with a space`);
+    assert.match(dict.lowBorderB, /^ /, `${lang}.lowBorderB must start with a space`);
+    // Each note names its own floor, so the two are never confusable.
+    assert.match(dict.lowTextB, /4\.5/, `${lang}.lowTextB must name the 4.5 floor`);
+    assert.match(dict.lowBorderB, /3/, `${lang}.lowBorderB must name the 3 floor`);
+  }
+});
+
+test('the ru wording is the owner\'s, pinned verbatim', () => {
+  // Pinned because this is the sentence that replaced «исправлено
+  // автоматически»: a well-meaning rewrite back towards "corrected" would
+  // restore exactly the impression 0.5.10 exists to remove.
+  const { ru } = load().strings;
+  assert.equal(ru.lowTextA + '4.32:1' + ru.lowTextB,
+    'контраст 4.32:1 — ниже рекомендуемых 4.5, текст может читаться хуже');
+  assert.equal(ru.lowBorderA + '2.1:1' + ru.lowBorderB,
+    'обводка 2.1:1 — ниже 3, кнопка плохо видна');
+});
+
+test('no language describes a low-contrast warning as a correction', () => {
+  // The whole point: the colour was NOT changed. A note that says otherwise
+  // is a lie about what the banner painted.
+  for (const [lang, dict] of Object.entries(load().strings)) {
+    for (const k of ['lowTextB', 'lowBorderB']) {
+      assert.ok(!/исправ|correct|adjust/i.test(dict[k]),
+        `${lang}.${k} claims the colour was corrected — it was painted as set`);
+    }
+  }
+});

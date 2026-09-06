@@ -184,9 +184,10 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `theme.accent` | `string` | `"#2B50D8"` | Exposed as `--ck-accent` |
 | `theme.font` | `"inherit" \| "system"` | `"inherit"` | v0.5.0. `inherit` takes the host page's font family; `system` restores the pre-0.5.0 system stack. Font *sizes* are fixed either way |
 | `theme.radius` | `{ card, button }` | `{ card: 16, button: 8 }` | v0.5.0. px, clamped 0–32. A bare string or number is the pre-0.5.0 form and still sets the card radius |
-| `theme.buttons` | `{ accept, reject, settings }` | see below | v0.5.0. Per-button appearance. **Contrast is enforced automatically** — see [Button appearance](#button-appearance) |
+| `theme.buttons` | `{ accept, reject, settings }` | see below | v0.5.0. Per-button appearance. A colour you set is painted as set; contrast rules correct only derived colours (v0.5.10) — see [Button appearance](#button-appearance) |
 | `theme.mode` | `"auto" \| "light" \| "dark"` | `"auto"` | `auto` follows `prefers-color-scheme` |
 | `theme.dark` | `{ bg, ink, accent, onAccent }` | built-in | Overrides the dark palette |
+| `theme.light` | `{ onAccent }` | built-in | v0.5.10. The light mirror of `theme.dark`. An `onAccent` set here is the filled buttons' text colour for light mode, painted as given |
 | `texts.policyUrl` | `string` | — | v0.5.0. Cookie policy address. `http(s)` only; anything else is ignored |
 | `texts.detailsAction` | `"policy" \| "settings" \| "hide" \| "declaration"` | see notes | v0.5.0, `declaration` in v0.5.7. What «Learn more» does. Defaults to `policy` when `policyUrl` is set, `settings` when it is not. `policy` or `declaration` without a usable URL falls back to `settings` rather than rendering a dead link |
 | `texts.declarationUrl` | `string` | — | v0.5.7. Address of the cookie declaration page, used by `detailsAction: "declaration"`. `http(s)` only. Filled by the hosted service; the client only reads it |
@@ -274,18 +275,25 @@ accept is a dark pattern, and consent collected through one is not freely
 given, so the config simply cannot express it. `settings` is independent and
 may itself be filled.
 
-**Contrast is enforced automatically and cannot be switched off.** A colour
-combination that would be unreadable is corrected before it reaches the
-stylesheet:
+**A colour you set is painted as you set it; contrast rules decide only the
+colours you left to us.** Since v0.5.10 the **4.5:1** text rule and the **3:1**
+border rule apply to *derived* values — the automatic text on a filled button,
+the border and text an `outline` button takes from `theme.accent`, the link
+colour read off the accent. A `fg`, `border` or `onAccent` you wrote yourself
+is never repainted, however low it measures: the debug panel reports the ratio
+and warns («контраст 4.32 — ниже рекомендуемых 4.5»), and the choice stays
+yours. Concretely:
 
-- button text keeps the colour you set only when it clears **4.5:1** against
-  the fill it sits on; otherwise it becomes white or `#161616`, whichever
-  contrasts more;
-- an `outline` border is darkened (light card) or lightened (dark card) in
-  small steps until it clears **3:1** against the card, so it stays
-  recognisably your colour rather than jumping to black or white;
-- that resolved border colour is then the outline button's text colour,
-  subject to the same 4.5:1 rule.
+- a `fg` you set is painted as set and only measured against the fill behind
+  it; the *derived* text on a filled button still becomes white or `#161616`,
+  whichever contrasts more, when it would fall under 4.5:1;
+- a `border` you set on an `outline` button is painted as set; a border
+  *derived* from `theme.accent` is darkened (light card) or lightened (dark
+  card) in small steps until it clears 3:1 against the card, so a default theme
+  can never produce a button invisible against its own card;
+- an outline button's text, when you did not set one, is that resolved border
+  colour put through the same 4.5:1 rule — derived even when the border it came
+  from was yours.
 
 The card is `#ffffff` in light mode and `#1c1c1e` in dark. A colour the
 arithmetic cannot read — a CSS colour name, an `rgb()` string — is left exactly
@@ -298,7 +306,11 @@ The same arithmetic is exposed as pure functions on `ConsentKit._contrast`
 instead of reimplementing them. It is present whenever `src/ck-ui.js` is loaded,
 and it is safe to call in Node — nothing in it touches the DOM. The debug
 panel's **Appearance** section reads it directly and reports each button's
-resolved colours, its contrast ratio, and whether the value was adjusted.
+resolved colours, its contrast ratio, and either that a derived value was
+adjusted or that a value you set measures below the recommended floor. Each
+resolved record carries `ratio` and `adjusted`, plus `low` (painted text under
+4.5:1) and, for outline buttons, `borderRatio`, `borderAdjusted` and
+`borderLow` (border under 3:1).
 
 ### The «Learn more» link
 

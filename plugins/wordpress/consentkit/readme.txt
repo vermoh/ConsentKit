@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.9
+Stable tag: 0.5.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,10 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.10 =
+* Цвет, заданный владельцем сайта, применяется как задан: правило контраста 4.5:1 (и 3:1 для обводки) больше не перекрашивает выбранные цвета, а только те, что подобраны автоматически
+* Панель отладки предупреждает о низком контрасте и показывает измеренное значение вместо отметки «исправлено автоматически»
 
 = 0.5.9 =
 * База хостов: +42 записи — YouTube, Vimeo, Facebook и Instagram, чаты и CRM (Freshworks, Viber, Telegram, Bitrix24, amoCRM), формы и запись (Calendly, Typeform), платежи (Stripe, PayPal, paynet.md, MAIB), Sentry, 999.md; Vercel и Netlify учтены как инфраструктура

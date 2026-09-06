@@ -195,25 +195,208 @@ test('a variant mismatch warns only in debug mode, and only once', () => {
   assert.match(calls[0], /variant/);
 });
 
-test('a filled button with an unreadable text colour is corrected against its own bg', () => {
+/* ------------------------------------- 0.5.10: the owner's colour is painted */
+
+/* The rule, in the owner's words: warning about contrast is fine, FORBIDDING a
+   colour change below the threshold is not. A colour the site owner explicitly
+   set is painted as set; the >= 4.5 text rule and the >= 3 border rule may only
+   decide colours the owner did NOT choose. Before 0.5.10 a typed fg was
+   silently swapped for white or #161616 — the owner set a brand colour and the
+   banner painted something else, with no way to say "I meant it". */
+
+test('a filled button PAINTS the text colour the owner set, even below 4.5', () => {
   const r = C.resolveButtonStyles(
     { buttons: { accept: { variant: 'filled', bg: '#ffff00', fg: '#ffffff' } } }, 'light');
   const a = r.buttons.accept;
   assert.equal(a.bg, '#ffff00');
-  assert.equal(a.fg, '#161616', 'white on yellow must have become dark text');
-  assert.equal(a.adjusted, true);
+  assert.equal(a.fg, '#ffffff', 'the owner typed white; white is what must be painted');
+  assert.equal(a.adjusted, false, 'nothing was replaced, so nothing may claim to have been');
+  assert.equal(a.low, true, 'the shortfall must still be reported as a warning');
+  assert.ok(a.ratio < 4.5, `white on yellow measured ${a.ratio}`);
   assert.equal(a.against, '#ffff00', 'a filled button is measured against its own fill');
 });
 
-test('an outline button is measured against the CARD, not against itself', () => {
+test('a DERIVED filled text colour is still corrected', () => {
+  // No fg in the config: nobody chose this colour, so the rule owns it. This is
+  // the half of the old behaviour that 0.5.10 deliberately keeps.
+  const r = C.resolveButtonStyles(
+    { buttons: { accept: { variant: 'filled', bg: '#ffff00' } } }, 'light');
+  const a = r.buttons.accept;
+  assert.equal(a.fg, '#161616', 'the default white onAccent must have been corrected on yellow');
+  assert.equal(a.adjusted, true);
+  assert.equal(a.low, false, 'a corrected colour is above the floor, so it is not low');
+  assert.ok(a.ratio >= 4.5);
+});
+
+test('an owner-set onAccent is explicit and is painted as given', () => {
+  // theme.dark.onAccent is how a mode states its filled-button text once for
+  // all three buttons; it is the owner's word, not a derived default.
+  const built = C.buildThemeCss({ theme: { dark: { accent: '#7B96F0', onAccent: '#333333' } } });
+  const a = built.dark.buttons.accept;
+  assert.equal(a.fg, '#333333', 'the owner-set onAccent must survive');
+  assert.equal(a.adjusted, false);
+  assert.ok(a.ratio < 4.5, `#333333 on #7B96F0 should be just under the floor, got ${a.ratio}`);
+  assert.equal(a.low, true);
+
+  // The built-in dark onAccent is NOT explicit: it is a default, so the rule
+  // may still move it. Same field, opposite provenance. #12182A is nearly black
+  // and survives on yellow, so the case that proves it is a PALE dark accent,
+  // where the near-black default falls under the floor.
+  const plain = C.buildThemeCss({ theme: { dark: { accent: '#2f3550' } } });
+  assert.equal(plain.dark.buttons.accept.adjusted, true,
+    'the built-in onAccent is derived and must still be correctable');
+  assert.equal(plain.dark.buttons.accept.fg, '#ffffff');
+  assert.equal(plain.dark.buttons.accept.low, false);
+});
+
+test('theme.light.onAccent is the light mirror of theme.dark.onAccent', () => {
+  const built = C.buildThemeCss({ theme: { accent: '#ffff00', light: { onAccent: '#ffffff' } } });
+  const a = built.light.buttons.accept;
+  assert.equal(a.fg, '#ffffff', 'white-on-yellow was asked for explicitly');
+  assert.equal(a.adjusted, false);
+  assert.equal(a.low, true);
+});
+
+test('an outline button KEEPS a border the owner set, below 3:1 or not', () => {
   const r = C.resolveButtonStyles(
     { buttons: { settings: { variant: 'outline', border: '#2B50D8' } } },
     'dark', { bg: '#1c1c1e', accent: '#7B96F0', onAccent: '#12182A' });
   const s = r.buttons.settings;
   assert.equal(s.against, '#1c1c1e');
-  assert.equal(s.borderAdjusted, true, 'the border had to be lightened');
-  assert.ok(s.borderRatio >= 3);
+  assert.equal(s.border, '#2B50D8', 'the typed border must not be lightened');
+  assert.equal(s.borderAdjusted, false);
+  assert.equal(s.borderLow, true, 'a border under 3:1 is reported, not repaired');
+  assert.ok(s.borderRatio < 3, `#2B50D8 on the dark card measured ${s.borderRatio}`);
+
+  // The TEXT is derived from that kept border, so it is still corrected — this
+  // is the line between "the owner's colour" and "a colour we chose for them".
+  assert.equal(s.fg, '#ffffff');
+  assert.equal(s.adjusted, true);
   assert.ok(s.ratio >= 4.5, 'the outline text must still clear 4.5 against the card');
+});
+
+test('a DERIVED outline border is still stepped to 3:1', () => {
+  // No border in the config: it comes from the accent, so the rule owns it.
+  const r = C.resolveButtonStyles(
+    { buttons: { settings: { variant: 'outline' } } },
+    'dark', { bg: '#1c1c1e', accent: '#2B50D8', onAccent: '#12182A' });
+  const s = r.buttons.settings;
+  assert.equal(s.borderAdjusted, true, 'a border nobody typed must still be lightened');
+  assert.ok(s.borderRatio >= 3);
+  assert.equal(s.borderLow, false);
+});
+
+test('a typed outline text colour is painted as typed', () => {
+  const r = C.resolveButtonStyles(
+    { buttons: { settings: { variant: 'outline', border: '#0a5c2e', fg: '#9ad5b0' } } }, 'light');
+  const s = r.buttons.settings;
+  assert.equal(s.fg, '#9ad5b0', 'a pale green the owner asked for stays pale green');
+  assert.equal(s.adjusted, false);
+  assert.equal(s.low, true);
+});
+
+test('a hostile colour never counts as "the owner set it"', () => {
+  // The dangerous reading of the new rule: sanitizeCssValue returns the
+  // FALLBACK for a value that fails the grammar, so treating "the config had
+  // something here" as explicit would paint the fallback with no contrast check
+  // at all — an injected value would disable the rule as a side effect.
+  const r = C.resolveButtonStyles(
+    { buttons: { accept: { variant: 'filled', bg: '#ffff00', fg: '#fff;}.ck-btn--reject{display:none' } } },
+    'light');
+  const a = r.buttons.accept;
+  assert.equal(a.fg, '#161616', 'a rejected value must fall through to the derived path');
+  assert.equal(a.adjusted, true);
+  assert.equal(a.low, false);
+});
+
+/* ------------------------------------------------------- cabinet parity */
+
+/* SPEC §3, «один код — одни числа»: the cabinet's theme editor must quote the
+   number the banner paints. The cabinet keeps its own copy of this arithmetic
+   (consentkit-server/.../cabinet/src/lib/contrast.ts, `resolveButton`) because
+   it cannot import an unpublished client, so the two implementations can drift
+   silently — nothing in either repo imports the other, and no CI job sees both.
+
+   This table is the guard: six text pairs (and three border rows below) pinned
+   here as literals, each one VERIFIED against the cabinet by running its own
+   `resolveButton()` and comparing colour, ratio and the adjusted flag — not
+   copied out of this client, which would only pin it against itself. A client
+   change that moves any of these numbers fails, and whoever made it has to go
+   and make the same change in the cabinet.
+
+   Re-verify after changing either side (Node strips the TS types unaided):
+
+     node --input-type=module -e "import {resolveButton} from
+       '<repo>/ConsentKit-SaaS/cabinet/src/lib/contrast.ts';
+       console.log(resolveButton({variant:'filled',bg:'#ffff00',fg:'#ffffff'},
+         '#2B50D8','#ffffff','filled'))"
+
+   The cabinet normalises through toHex() (lowercase) while the client returns
+   the string as typed, so only the VALUE is comparable, not its spelling.
+
+   SCOPE, deliberately narrow: every row exercises an EXPLICIT colour, which is
+   what 0.5.10 changed and where both resolvers agree by construction (the typed
+   value is returned untouched and merely measured). Derived filled text is NOT
+   in the table: the cabinet seeds ensureContrast with the background itself
+   (always failing, always white-or-#161616), while the client seeds it with
+   onAccent and keeps that when it passes — so on the dark defaults the cabinet
+   says #161616 and the client says #12182A. That divergence predates this
+   release and is out of its scope; the table must not be read as full parity.
+
+   Ratios are rounded to 2dp: the arithmetic is identical, so this only guards
+   against float-formatting noise, not against a real difference. */
+const CABINET_PARITY = [
+  // [label, variant, {bg,fg,border}, accent, cardBg, expected fg, expected ratio]
+  ['white on yellow, typed', 'filled',
+    { bg: '#ffff00', fg: '#ffffff' }, '#2B50D8', '#ffffff', '#ffffff', 1.07],
+  ['near-black on the default accent, typed', 'filled',
+    { bg: '#2B50D8', fg: '#161616' }, '#2B50D8', '#ffffff', '#161616', 2.79],
+  ['white on the default accent, typed', 'filled',
+    { fg: '#ffffff' }, '#2B50D8', '#ffffff', '#ffffff', 6.48],
+  ['a typed fg on a dark card, outline', 'outline',
+    { border: '#7B96F0', fg: '#7B96F0' }, '#7B96F0', '#1c1c1e', '#7b96f0', 6.05],
+  ['a typed low fg on a light card, outline', 'outline',
+    { border: '#0a5c2e', fg: '#9ad5b0' }, '#2B50D8', '#ffffff', '#9ad5b0', 1.68],
+  ['a typed dark fg on a mid fill', 'filled',
+    { bg: '#808080', fg: '#000000' }, '#2B50D8', '#ffffff', '#000000', 5.32],
+];
+
+test('the resolved text colour and ratio match the cabinet, colour for colour', () => {
+  const round = (n) => Math.round(n * 100) / 100;
+  for (const [label, variant, btn, accent, cardBg, wantFg, wantRatio] of CABINET_PARITY) {
+    const r = C.resolveButtonStyles(
+      { buttons: { settings: Object.assign({ variant }, btn) } },
+      cardBg === '#1c1c1e' ? 'dark' : 'light',
+      { bg: cardBg, accent, onAccent: '#ffffff' });
+    const s = r.buttons.settings;
+    // Lowercase: the cabinet normalises through toHex(), the client returns the
+    // string as typed, so only the VALUE is comparable, not its spelling.
+    assert.equal(s.fg.toLowerCase(), wantFg, `${label}: colour`);
+    assert.equal(round(s.ratio), wantRatio, `${label}: ratio (client says ${s.ratio})`);
+    assert.equal(s.adjusted, false, `${label}: a typed colour is never "adjusted"`);
+    assert.equal(s.low, wantRatio < 4.5, `${label}: low flag`);
+  }
+});
+
+test('a typed border matches the cabinet on colour and borderRatio', () => {
+  // The cabinet skips ensureBorderContrast entirely for a typed border and
+  // reports contrastRatio(border, cardBg); so must the client.
+  const rows = [
+    ['#2B50D8', '#1c1c1e', 'dark', 2.63, true],
+    ['#2B50D8', '#ffffff', 'light', 6.48, false],
+    ['#7B96F0', '#1c1c1e', 'dark', 6.05, false],
+  ];
+  const round = (n) => Math.round(n * 100) / 100;
+  for (const [border, cardBg, mode, wantRatio, wantLow] of rows) {
+    const r = C.resolveButtonStyles(
+      { buttons: { settings: { variant: 'outline', border } } },
+      mode, { bg: cardBg, accent: '#2B50D8', onAccent: '#ffffff' });
+    const s = r.buttons.settings;
+    assert.equal(s.border, border, `${border} on ${cardBg}: painted as typed`);
+    assert.equal(round(s.borderRatio), wantRatio, `${border} on ${cardBg}: ratio`);
+    assert.equal(s.borderAdjusted, false);
+    assert.equal(s.borderLow, wantLow);
+  }
 });
 
 test('outline text defaults to the resolved border colour', () => {
@@ -667,4 +850,20 @@ test('the default accent needs no correction on either card', () => {
         `the default ${mode} ${role} button had to be corrected`);
     }
   }
+});
+
+/* 0.5.10 follow-up: the panel's «Сохранить выбор» and the floating button paint
+   their text from `--ck-on-accent` straight off the palette. A DERIVED onAccent
+   must therefore pass the >= 4.5 rule against the accent, or a white accent
+   gets white text — which is what the owner saw. A typed onAccent is painted
+   as typed (the 0.5.10 rule). */
+test('a white accent gets a dark derived on-accent token', () => {
+  const css = C.buildThemeCss({ theme: { accent: '#ffffff' } }).css;
+  assert.match(css, /--ck-on-accent:#161616/);
+  assert.doesNotMatch(css.split('@media')[0], /--ck-on-accent:#ffffff/);
+});
+
+test('a typed light.onAccent is painted as typed even when it fails 4.5', () => {
+  const css = C.buildThemeCss({ theme: { accent: '#ffffff', light: { onAccent: '#ffffff' } } }).css;
+  assert.match(css.split('@media')[0], /--ck-on-accent:#ffffff/);
 });

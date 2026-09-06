@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.9
+ * Версия ConsentKit: 0.5.10
  * Дата сборки:      2026-09-06
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
@@ -1957,7 +1957,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.9',
+    version: '0.5.10',
     config: config,
 
     init: function (userConfig) {
@@ -3654,10 +3654,14 @@
   var WHITE = '#ffffff';
   var NEAR_BLACK = '#161616';   // SPEC §1: white or #161616, whichever contrasts more
 
-  /* SPEC §1, the TEXT rule: keep the author's fg when it clears `min` against
-     bg; otherwise swap to white or #161616 — whichever wins. Unreadable input
+  /* SPEC §1, the TEXT rule: keep `fg` when it clears `min` against bg;
+     otherwise swap to white or #161616 — whichever wins. Unreadable input
      (a colour name, rgb(), a missing value) is returned untouched with
-     adjusted:false: the author sees their own colour, not a silent rewrite. */
+     adjusted:false rather than guessed at.
+
+     Since 0.5.10 this is only ever handed a DERIVED colour — resolveButtonStyles
+     keeps an explicitly set one out of here entirely — so the swap can no longer
+     overwrite something the owner chose. */
   function ensureContrast(fg, bg, min) {
     var floor = typeof min === 'number' && min > 0 ? min : 4.5;
     var have = contrastRatio(fg, bg);
@@ -3673,7 +3677,10 @@
      against the CARD background, so the button is visible as a button at all.
      Stepwise rather than a jump to black/white: a brand colour that is only
      slightly too pale should stay recognisably the brand colour. Direction is
-     chosen by which way there is room to move — away from the card. */
+     chosen by which way there is room to move — away from the card.
+
+     Since 0.5.10 only a DERIVED border reaches this: a border the owner set is
+     painted as set and merely measured. */
   function stepToContrast(color, bg, min) {
     var floor = typeof min === 'number' && min > 0 ? min : 3;
     var have = contrastRatio(color, bg);
@@ -4033,7 +4040,14 @@
      числа": nothing recomputes these numbers a second time.
 
      `palette` is optional and lets buildThemeCss pass the ALREADY-RESOLVED
-     accent/card colours for the mode, so a theme.dark.accent is honoured. */
+     accent/card colours for the mode, so a theme.dark.accent is honoured.
+
+     OWNER'S RULE (0.5.10): a colour the owner EXPLICITLY SET is painted as set.
+     The >= 4.5 text rule and the >= 3 border rule may only decide colours the
+     owner did NOT choose — the automatic text on a filled button, the border
+     and text derived from the accent on an outline one. A typed colour that
+     falls short is reported (`low` / `borderLow`) so the debug panel and the
+     cabinet can WARN about it, never corrected behind the owner's back. */
   function resolveButtonStyles(theme, mode, palette) {
     var t = (theme && typeof theme === 'object') ? theme : {};
     var base = mode === 'dark' ? DARK : LIGHT;
@@ -4041,9 +4055,12 @@
 
     var cardBg = sanitizeCssValue('color', pal.bg, base.bg);
     var accent = sanitizeCssValue('color', pal.accent, base.accent);
-    // theme.dark.onAccent stays meaningful: it is the GIVEN fg for filled
-    // buttons in that mode. The >= 4.5 rule may still override it.
+    // theme.dark.onAccent / theme.light.onAccent is the GIVEN fg for filled
+    // buttons in that mode. When the owner set it, it counts as an explicit
+    // colour and is painted as set; the built-in default is derived and stays
+    // subject to the >= 4.5 rule.
     var onAccent = sanitizeCssValue('color', pal.onAccent, base.onAccent);
+    var onAccentExplicit = pal.onAccentExplicit === true;
 
     var cfg = (t.buttons && typeof t.buttons === 'object') ? t.buttons : {};
 
@@ -4070,7 +4087,12 @@
        button's icon all read the token this produces, so none of them can
        drift from what the debug panel and the cabinet quote. Note the
        measurement is against cardBg — an accent that is fine inside a filled
-       button can still be unreadable on the card behind it. */
+       button can still be unreadable on the card behind it.
+
+       Still corrected in 0.5.10, deliberately: the ACCENT is the owner's, but
+       the LINK colour is derived from it — nobody typed "links are this
+       colour". The accent itself is never repainted, so the owner still sees
+       the brand colour everywhere they actually chose it. */
     var linkRes = ensureContrast(accent, cardBg, 4.5);
 
     var out = {
@@ -4081,10 +4103,34 @@
         color: linkRes.color,
         ratio: linkRes.ratio,
         adjusted: linkRes.adjusted,
+        // A link is always derived, so this is normally false — the rule
+        // already lifted it. It can still be true on a mid-tone custom card
+        // where even the better of white and #161616 falls short of 4.5.
+        low: (typeof linkRes.ratio === 'number' && linkRes.ratio < 4.5),
         against: cardBg
       },
       buttons: {}
     };
+
+    /* "Did the owner explicitly set this colour?" — the gate on the whole
+       0.5.10 rule, and it cannot be a plain `str(c.fg)` test. sanitizeCssValue
+       silently returns the FALLBACK for a hostile or malformed value, so a
+       value that failed the grammar would otherwise be painted as "the owner's
+       choice" with no correction at all — the injected-colour case would lose
+       its contrast check as well as its value. Sanitising against a sentinel
+       tells the two apart: a value that survives is the owner's, anything else
+       falls through to the derived path exactly as before 0.5.10. */
+    var NOT_SET = '\x00';
+    function explicitColor(v) {
+      var got = sanitizeCssValue('color', v, NOT_SET);
+      return got === NOT_SET ? null : got;
+    }
+    // A measured ratio is `null` for a colour the arithmetic cannot read (a CSS
+    // name, an rgb() string). That is "no verdict", not "below the floor", so it
+    // must not raise the warning flag — the panel would print a note with no number.
+    function below(ratio, floor) {
+      return typeof ratio === 'number' && ratio < floor;
+    }
 
     for (var i = 0; i < BTN_ROLES.length; i++) {
       var role = BTN_ROLES[i];
@@ -4095,40 +4141,86 @@
       var rec;
 
       if (variant === 'filled') {
-        // bg: author's, else the accent. fg: author's, else onAccent for the
-        // default accent fill, then checked against the resolved bg.
+        // bg: author's, else the accent — always painted as given either way.
         var bg = sanitizeCssValue('color', c.bg, accent);
-        var wantFg = sanitizeCssValue('color', c.fg, onAccent);
-        var fgRes = ensureContrast(wantFg, bg, 4.5);
         var bd = sanitizeCssValue('color', c.border, bg);
+        // fg: an EXPLICIT colour (the button's own, or an owner-set onAccent
+        // for the mode) is painted as set and only measured. Only the derived
+        // default goes through the >= 4.5 rule.
+        var setFg = explicitColor(c.fg) || (onAccentExplicit ? onAccent : null);
+        var fgColor, fgRatio, fgAdjusted;
+        if (setFg) {
+          fgColor = setFg;
+          fgRatio = contrastRatio(setFg, bg);
+          fgAdjusted = false;
+        } else {
+          var fgRes = ensureContrast(onAccent, bg, 4.5);
+          fgColor = fgRes.color;
+          fgRatio = fgRes.ratio;
+          fgAdjusted = fgRes.adjusted;
+        }
         rec = {
           variant: 'filled',
           bg: bg,
-          fg: fgRes.color,
+          fg: fgColor,
           border: bd,
           borderWidth: bw,
-          ratio: fgRes.ratio,
-          adjusted: fgRes.adjusted,
+          ratio: fgRatio,
+          adjusted: fgAdjusted,
+          // Warn-only: true when the PAINTED text falls under 4.5:1 —
+          // usually a typed colour (the owner's own trade-off), but also a
+          // CORRECTED one on a mid-tone fill near #767676, where neither
+          // white nor #161616 reaches 4.5 and the better of the two still fails.
+          low: below(fgRatio, 4.5),
           against: bg
         };
       } else {
         // outline: transparent fill, so everything is measured against the CARD.
-        // border >= 3:1 with the card (stepped), text = the border colour with
-        // the >= 4.5 rule against the card.
-        var wantBd = sanitizeCssValue('color', c.border, accent);
-        var bdRes = stepToContrast(wantBd, cardBg, 3);
-        var wantTx = str(c.fg) ? sanitizeCssValue('color', c.fg, bdRes.color) : bdRes.color;
-        var txRes = ensureContrast(wantTx, cardBg, 4.5);
+        // A border the owner TYPED is painted as typed and only measured; one
+        // DERIVED from the accent is still stepped to >= 3:1 so a default-themed
+        // button cannot vanish into the card.
+        var setBd = explicitColor(c.border);
+        var bdColor, bdRatio, bdAdjusted;
+        if (setBd) {
+          bdColor = setBd;
+          bdRatio = contrastRatio(setBd, cardBg);
+          bdAdjusted = false;
+        } else {
+          var bdRes = stepToContrast(accent, cardBg, 3);
+          bdColor = bdRes.color;
+          bdRatio = bdRes.ratio;
+          bdAdjusted = bdRes.adjusted;
+        }
+        // Text: the owner's when set, otherwise the resolved border colour put
+        // through the >= 4.5 rule — that text is derived even when the border
+        // it came from was typed, so it is still corrected.
+        var setTx = explicitColor(c.fg);
+        var txColor, txRatio, txAdjusted;
+        if (setTx) {
+          txColor = setTx;
+          txRatio = contrastRatio(setTx, cardBg);
+          txAdjusted = false;
+        } else {
+          var txRes = ensureContrast(bdColor, cardBg, 4.5);
+          txColor = txRes.color;
+          txRatio = txRes.ratio;
+          txAdjusted = txRes.adjusted;
+        }
         rec = {
           variant: 'outline',
           bg: sanitizeCssValue('color', c.bg, 'transparent'),
-          fg: txRes.color,
-          border: bdRes.color,
+          fg: txColor,
+          border: bdColor,
           borderWidth: bw,
-          ratio: txRes.ratio,
-          adjusted: txRes.adjusted || bdRes.adjusted,
-          borderRatio: bdRes.ratio,
-          borderAdjusted: bdRes.adjusted,
+          ratio: txRatio,
+          // `adjusted` now tracks the TEXT alone. A typed border that was kept
+          // must not make the row say «исправлено» about a colour nobody
+          // touched; the border reports itself through borderAdjusted.
+          adjusted: txAdjusted,
+          low: below(txRatio, 4.5),
+          borderRatio: bdRatio,
+          borderAdjusted: bdAdjusted,
+          borderLow: below(bdRatio, 3),
           against: cardBg
         };
       }
@@ -4193,6 +4285,11 @@
   function buildThemeCss(cfg) {
     var theme = (cfg && cfg.theme) || {};
     var dk = (theme.dark && typeof theme.dark === 'object') ? theme.dark : {};
+    // theme.light is the mirror of theme.dark and exists for one value: an
+    // onAccent the owner set for the light mode. Without it a light-mode
+    // filled button had no way to state its text colour once for all three
+    // buttons, and theme.dark could do what theme.light could not.
+    var lt = (theme.light && typeof theme.light === 'object') ? theme.light : {};
 
     var radius = resolveRadius(theme);
     var font = resolveFont(theme);
@@ -4202,6 +4299,11 @@
       sanitizeCssValue('color', theme.bg, LIGHT.bg),
       sanitizeCssValue('color', theme.ink, LIGHT.ink));
     if (str(theme.accent)) light.accent = sanitizeCssValue('color', theme.accent, LIGHT.accent);
+    // An onAccent that SURVIVES the grammar is the owner's word on the filled
+    // buttons' text and is painted as given; one that fails it falls back to
+    // the built-in default, which is derived and still gets corrected.
+    var ltOn = sanitizeCssValue('color', lt.onAccent, null);
+    if (ltOn) { light.onAccent = ltOn; light.onAccentExplicit = true; }
 
     // Dark: theme.dark overrides on top of the built-in dark palette.
     // A light-only theme.accent deliberately does NOT carry into dark — the
@@ -4210,7 +4312,8 @@
       sanitizeCssValue('color', dk.bg, DARK.bg),
       sanitizeCssValue('color', dk.ink, DARK.ink));
     if (str(dk.accent)) dark.accent = sanitizeCssValue('color', dk.accent, DARK.accent);
-    if (str(dk.onAccent)) dark.onAccent = sanitizeCssValue('color', dk.onAccent, DARK.onAccent);
+    var dkOn = sanitizeCssValue('color', dk.onAccent, null);
+    if (dkOn) { dark.onAccent = dkOn; dark.onAccentExplicit = true; }
 
     // Buttons are resolved per mode against that mode's real card colour, so a
     // custom dark card changes the outline border the same way a custom light
@@ -4219,6 +4322,16 @@
     var darkBtn = resolveButtonStyles(theme, 'dark', dark);
     light.__buttons = lightBtn.buttons;
     dark.__buttons = darkBtn.buttons;
+
+    // `--ck-on-accent` paints the text of every filled surface that is NOT a
+    // banner button — the panel's «Сохранить выбор» and the floating button —
+    // straight from the palette. A derived onAccent therefore has to pass the
+    // same >= 4.5 rule against the accent, or a white accent gets white text
+    // (the owner saw exactly that). Done AFTER the buttons are resolved, so
+    // the accept button still records `adjusted:true` for the same correction.
+    // An onAccent the owner set is painted as set — the 0.5.10 rule.
+    if (!light.onAccentExplicit) light.onAccent = ensureContrast(light.onAccent, light.accent, 4.5).color;
+    if (!dark.onAccentExplicit) dark.onAccent = ensureContrast(dark.onAccent, dark.accent, 4.5).color;
     light.__link = lightBtn.link;
     dark.__link = darkBtn.link;
 
