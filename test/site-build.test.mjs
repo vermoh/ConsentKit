@@ -14,6 +14,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 
 import {
   LANGS, DEFAULT_LANG, SRC_DIR, SITE_DIR, TEMPLATE,
@@ -22,7 +23,8 @@ import {
   readPages, pageSiblings, lawUrl, lawPath, lawIndexUrl, lawOutputs,
   renderLawPage, renderLawIndex, bodyWords, faqJsonLd,
   VERSION, BUILD_DATE, updatedText,
-  MARQUEE_CARDS, renderMarquee, readClientLocales
+  MARQUEE_CARDS, renderMarquee, readClientLocales,
+  VERSIONED_ASSETS, assetHash, THEME_KEY, THEME_BOOT
 } from '../tools/build-site.mjs';
 
 /* ------------------------------------------------------------ the outputs */
@@ -485,8 +487,21 @@ test('app.js no longer switches language at runtime', () => {
   assert.doesNotMatch(app, /ck_site_lang/, 'app.js still stores a language preference');
   assert.doesNotMatch(app, /navigator\.language/,
     'app.js still guesses the language from the browser');
-  assert.doesNotMatch(app, /localStorage/,
-    'app.js still touches localStorage for the page language');
+
+  /* app.js may touch localStorage — the site THEME is stored there (owner,
+     07.09.2026) — but the only key it is allowed to touch is that one. A
+     language preference in storage is the exact bug this test exists for: it
+     would make /ru render English for a returning visitor, because the URL
+     would say Russian and the stored key would say otherwise. */
+  const keys = [...app.matchAll(/localStorage\.(?:get|set|remove)Item\(\s*([A-Za-z_$][\w$]*|'[^']*'|"[^"]*")/g)]
+    .map((m) => m[1]);
+  assert.ok(keys.length > 0, 'the localStorage guard below matched nothing — has the API changed?');
+  for (const k of keys) {
+    assert.equal(k, 'THEME_KEY',
+      `app.js reads or writes localStorage with ${k} — only the site theme may be stored`);
+  }
+  assert.match(app, /var THEME_KEY = 'ck-site-theme'/,
+    'app.js does not use the ck-site-theme key the <head> boot script writes');
 });
 
 test('the template is the only place page structure is authored', () => {
@@ -1564,7 +1579,12 @@ test('the capsule inks itself from its own tokens, in both themes', () => {
   const panel = css.match(/^\.menu-panel \{[\s\S]*?^\}/m)[0];
   assert.match(panel, /background:\s*var\(--capsule-bg\)/,
     'the panel is not the capsule\'s surface');
-  assert.match(panel, /margin:\s*12px auto 0/, '§2 asks the panel to sit 12px below');
+  // 07.09.2026: the panel drops OVER the content (absolute, from the header's
+  // bottom edge), so it no longer pushes the hero down or reveals the page
+  // background as a band behind the capsule.
+  assert.match(panel, /position:\s*absolute/, 'the panel must overlay the content, not push it');
+  assert.match(panel, /top:\s*100%/, 'the panel hangs from the header\'s bottom edge');
+  assert.match(panel, /margin:\s*0 auto/, 'the panel is centred with no top margin');
 
   /* The old width rules that hid nav items are gone. Inside the panel the nav
      wraps freely, and hiding «Демо» below 1440 (as the bar's CSS did) would
@@ -1681,8 +1701,26 @@ test('§1.2: the demo window is a white page with sand chrome in both themes', (
 
   // Dark theme: the chrome darkens, the page does NOT — it depicts a client's
   // site, not ours, so it stays white.
-  const darkWin = css.match(/@media \(prefers-color-scheme: dark\) \{\s*\.demo-win \{[\s\S]*?\n  \}/);
-  assert.ok(darkWin, 'the demo window has no dark-theme chrome');
+  /* Two homes since the manual theme switch (owner, 07.09.2026): the system
+     one behind prefers-color-scheme, and the forced one under
+     :root[data-theme="dark"]. Both are checked, because the demo window
+     following only ONE of them is exactly the half-switched look the owner
+     asked to avoid — the page would go dark and the window's chrome stay
+     sand. The pairing test above already proves the two carry identical
+     declarations; this asserts the values themselves. */
+  const darkWins = [
+    css.match(/@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) \.demo-win \{[\s\S]*?\n  \}/),
+    css.match(/\n:root\[data-theme="dark"\] \.demo-win \{[\s\S]*?\n\}/)
+  ];
+  assert.ok(darkWins[0], 'the demo window has no dark-theme chrome for the system theme');
+  assert.ok(darkWins[1], 'the demo window does not follow a forced dark site theme');
+  const darkWin = darkWins[0];
+  for (const w of darkWins) {
+    assert.match(w[0], /--win-chrome:\s*#262626/i,
+      '§1.2: in the dark theme the chrome is a dark surface');
+    assert.ok(!/--shot-paper/.test(w[0]),
+      'the depicted page must stay white in the dark theme');
+  }
   assert.match(darkWin[0], /--win-chrome:\s*#262626/i,
     '§1.2: in the dark theme the chrome is a dark surface');
   assert.ok(!/--shot-paper/.test(darkWin[0]),
@@ -1713,4 +1751,221 @@ test('§1.3: the chip is short and only refuses to wrap from 560 up', () => {
     assert.ok(chipText.length <= 46,
       `the ${code} chip is ${chipText.length} chars — §1.3 asks for a shorter one`);
   }
+});
+
+/* ────────────────────────────── the manual theme switch (owner, 07.09.2026) */
+
+/* Every dark declaration now lives in TWO places: behind the system's
+   prefers-color-scheme and under a forced :root[data-theme="dark"]. That is
+   the only way one stylesheet can serve three states — and it is also two
+   copies of the same values, which drift the moment someone tunes a colour in
+   one home and forgets the other. Then «Тёмная» and a dark system preference
+   render the same page differently, which is the worst kind of bug: it looks
+   right on the machine of whoever made the change.
+
+   This parses styles.css and asserts the two homes are declaration-identical,
+   keyed by the selector INSIDE the block rather than by block order, so
+   reordering the file is free and changing one half of a pair is not. */
+test('every forced-dark block matches its prefers-color-scheme twin', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+
+  const SYS_PREFIX = ':root:not([data-theme="light"])';
+  const DARK_PREFIX = ':root[data-theme="dark"]';
+
+  /* Comments carry the AA arithmetic and wrap differently at the two indents,
+     so they are stripped before comparing; whitespace goes the same way. A
+     declaration set is compared as a SET, because the order of custom
+     properties inside a block has no meaning. */
+  const declarations = (body) => {
+    const clean = body.replace(/\/\*[\s\S]*?\*\//g, '');
+    return clean.split(';')
+      .map((d) => d.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .sort();
+  };
+
+  /* Brace-matched, so a nested block inside a rule could not truncate it. */
+  const blockAt = (src, open) => {
+    let depth = 0;
+    for (let i = open; i < src.length; i++) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}') { depth--; if (depth === 0) return src.slice(open + 1, i); }
+    }
+    throw new Error('unbalanced braces in styles.css');
+  };
+
+  /* The forced home: every top-level :root[data-theme="dark"] rule.
+
+     A selector may legitimately appear more than once — the page palette and
+     the capsule tokens are two separate `:root` blocks, written next to the
+     light values they override rather than merged into one far-away block.
+     So the declarations for a selector ACCUMULATE, and the comparison below
+     is against everything the other home says about that same selector. */
+  const forced = new Map();
+  for (const m of css.matchAll(/^:root\[data-theme="dark"\]([^{]*)\{/gm)) {
+    const sel = m[1].trim();          // '' for the token blocks, '.demo-win' etc.
+    const body = blockAt(css, m.index + m[0].length - 1);
+    forced.set(sel, (forced.get(sel) || []).concat(declarations(body)));
+  }
+  for (const [sel, d] of forced) forced.set(sel, d.sort());
+  assert.ok(forced.size > 0,
+    'styles.css has no :root[data-theme="dark"] blocks — the manual dark theme cannot work');
+
+  /* The system home: the same rules inside prefers-color-scheme blocks.
+
+     Every occurrence of the feature in the file has to be one of these plain
+     blocks. A compound query — `@media (prefers-color-scheme: dark) and
+     (min-width: 560px)` — would be invisible to the matcher below AND
+     ungated on :root:not([data-theme="light"]), so it would leak dark styling
+     onto a visitor who explicitly chose «Светлая». Counting first is what
+     makes this guard exhaustive rather than merely indicative. */
+  const blockCount = [...css.matchAll(/@media \(prefers-color-scheme: dark\) \{/g)].length;
+  const featureCount = [...css.matchAll(/prefers-color-scheme/g)].length;
+  assert.equal(featureCount, blockCount,
+    'styles.css mentions prefers-color-scheme in a form this guard cannot read — ' +
+    'every dark block must be exactly "@media (prefers-color-scheme: dark) {", ' +
+    'or its declarations escape the light/dark pairing check');
+
+  const system = new Map();
+  for (const m of css.matchAll(/@media \(prefers-color-scheme: dark\) \{/g)) {
+    const inner = blockAt(css, m.index + m[0].length - 1);
+    for (const r of inner.matchAll(/(^|\n)\s*([^{}\n][^{}]*)\{/g)) {
+      const sel = r[2].trim();
+      assert.ok(sel.startsWith(SYS_PREFIX),
+        `styles.css has a dark rule for "${sel}" that is not gated on ` +
+        `${SYS_PREFIX} — a visitor who chose «Светлая» would still get it`);
+      const key = sel.slice(SYS_PREFIX.length).trim();
+      const body = blockAt(inner, r.index + r[0].length - 1);
+      system.set(key, (system.get(key) || []).concat(declarations(body)));
+    }
+  }
+  for (const [sel, d] of system) system.set(sel, d.sort());
+
+  // Same set of selectors on both sides…
+  assert.deepEqual([...forced.keys()].sort(), [...system.keys()].sort(),
+    'the forced and system dark themes cover different selectors — one of them ' +
+    'has a rule the other is missing, so the two look different');
+
+  // …and the same declarations under each.
+  for (const [sel, decls] of forced) {
+    assert.deepEqual(decls, system.get(sel),
+      `the dark declarations for "${sel || ':root'}" have drifted: ` +
+      `${DARK_PREFIX} and the prefers-color-scheme twin must stay identical`);
+  }
+});
+
+/* The control itself: three buttons, aria-pressed, in every language, on the
+   home pages AND the law pages (which slice the same header). */
+test('the menu panel carries the three-state theme switch in every language', () => {
+  for (const f of [...outputs(), ...lawOutputs()]) {
+    const html = readFileSync(f.path, 'utf8');
+    const group = html.match(/<div class="theme-group"[\s\S]*?<\/div>/);
+    assert.ok(group, `${f.label} has no theme switch in the menu panel`);
+
+    for (const choice of ['system', 'light', 'dark']) {
+      assert.match(group[0], new RegExp(`data-theme-choice="${choice}"`),
+        `${f.label} has no «${choice}» theme button`);
+    }
+    // A segmented group states which member is current, or a screen reader
+    // cannot tell the visitor what the theme is set to.
+    assert.equal((group[0].match(/aria-pressed="/g) || []).length, 3,
+      `${f.label}'s theme buttons do not all carry aria-pressed`);
+    assert.equal((group[0].match(/aria-pressed="true"/g) || []).length, 1,
+      `${f.label} does not mark exactly one theme as current`);
+    assert.match(group[0], /data-theme-choice="system"[^>]*aria-pressed="true"/,
+      `${f.label} is authored with a forced theme pressed — with JavaScript ` +
+      'off the truthful state is «as in the system»');
+    assert.match(group[0], /role="group"|<div class="theme-group" role="group"/,
+      `${f.label}'s theme buttons are not grouped`);
+  }
+
+  // The labels are translated, and they are NOT the banner demo's own theme
+  // select (which keeps its themeAuto/themeLight/themeDark keys).
+  for (const { code } of LANGS) {
+    const dict = readDict(code);
+    for (const key of ['siteThemeLabel', 'siteThemeSystem', 'siteThemeLight', 'siteThemeDark']) {
+      assert.equal(typeof dict[key], 'string',
+        `site/src/i18n/${code}.json has no "${key}"`);
+      assert.ok(dict[key].length > 0, `${code}.json leaves "${key}" empty`);
+    }
+  }
+});
+
+/* No flash. The stored choice has to be on <html> before the stylesheet that
+   reads it is even fetched, which means an inline script in <head>, ABOVE the
+   <link>. In the header slice it would run after the header markup has been
+   parsed and the page would paint light before turning dark. */
+test('the stored theme is applied in <head>, before the stylesheet', () => {
+  for (const f of [...outputs(), ...lawOutputs()]) {
+    const html = readFileSync(f.path, 'utf8');
+
+    const boot = html.indexOf("localStorage.getItem('ck-site-theme')");
+    assert.ok(boot > -1, `${f.label} has no before-paint theme script`);
+
+    const sheet = html.search(/<link rel="stylesheet" href="\/styles\.css/);
+    assert.ok(sheet > -1, `${f.label} does not load the stylesheet`);
+    assert.ok(boot < sheet,
+      `${f.label} applies the theme after the stylesheet link — that is the flash`);
+
+    const headEnd = html.indexOf('</head>');
+    assert.ok(boot < headEnd, `${f.label} applies the theme outside <head>`);
+
+    // `system` is the ABSENCE of the attribute: anything else would defeat
+    // the :root:not([data-theme="light"]) gate the whole scheme rests on.
+    assert.doesNotMatch(html, /<html[^>]*\bdata-theme=/,
+      `${f.label} hardcodes data-theme on <html> — the system theme could ` +
+      'never apply, and prefers-color-scheme would be dead');
+
+    // Reading localStorage throws outright where site data is blocked.
+    const script = html.slice(boot - 200, boot + 200);
+    assert.match(script, /try\s*\{/,
+      `${f.label}'s theme script does not guard localStorage with try/catch`);
+  }
+});
+
+/* ─────────────────────────────────────────── asset versioning (owner, 07.09.2026) */
+
+/* Vercel caches /styles.css and /app.js hard, so after a deploy a browser
+   could render NEW html against OLD css — the owner saw the previous header's
+   dark bar under the new capsule. The pages therefore ask for the asset with
+   a `?v=` the file's own bytes decide. The files are NOT renamed: a direct
+   link to /styles.css has to keep working. */
+test('every page references its assets with the current content hash', () => {
+  for (const f of [...outputs(), ...lawOutputs()]) {
+    const html = readFileSync(f.path, 'utf8');
+
+    for (const asset of VERSIONED_ASSETS) {
+      // The law pages carry no demo, so they load no vendor client.
+      const referenced = html.includes('"' + asset + '?v=');
+      if (!referenced) {
+        assert.ok(asset.startsWith('/vendor/'),
+          `${f.label} does not reference ${asset} at all`);
+        continue;
+      }
+      const want = assetHash(asset);
+      assert.ok(html.includes('"' + asset + '?v=' + want + '"'),
+        `${f.label} references ${asset} with a stale hash — run: node tools/build-site.mjs`);
+    }
+
+    // And never bare: a bare reference is the cached-asset bug coming back.
+    for (const asset of ['/styles.css', '/app.js']) {
+      assert.ok(!html.includes('"' + asset + '"'),
+        `${f.label} references ${asset} without a version — Vercel will serve a stale copy`);
+    }
+  }
+});
+
+test('the asset hash actually follows the file contents', () => {
+  // A hash that ignored the bytes would still make every assertion above pass
+  // while busting no cache at all.
+  const before = assetHash('/styles.css');
+  assert.match(before, /^[0-9a-f]{8}$/, 'the asset hash is not 8 hex characters');
+
+  const css = readFileSync(join(SITE_DIR, 'styles.css'));
+  const expected = createHash('sha256').update(css).digest('hex').slice(0, 8);
+  assert.equal(before, expected, 'assetHash() is not the sha256 of the file');
+
+  // Two different files must not share a version.
+  assert.notEqual(assetHash('/styles.css'), assetHash('/app.js'),
+    'two different assets hash to the same version');
 });

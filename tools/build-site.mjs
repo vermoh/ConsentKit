@@ -27,6 +27,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createContext, runInContext } from 'node:vm';
+import { createHash } from 'node:crypto';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -46,6 +47,74 @@ export const LANGS = [
 ];
 
 export const DEFAULT_LANG = 'en';
+
+/* ---------------------------------------------------------- theme, before paint */
+
+/* Owner, 07.09.2026: a manual «Тема» switch, three states, remembered.
+ *
+ * The stored choice has to reach <html> BEFORE the first paint, or a visitor
+ * who chose «Тёмная» gets a white flash on every navigation while the
+ * stylesheet resolves against a system preference that is about to be
+ * overridden. That rules out app.js — and it also rules out the header slice's
+ * own inline script, which runs only after ~70 lines of header markup have
+ * been parsed. So this goes in <head>, immediately before the stylesheet link:
+ * the attribute is on the element before any rule that reads it is fetched.
+ *
+ * `system` is the absence of the attribute, not a third value: with no
+ * data-theme at all the CSS falls through to prefers-color-scheme, which is
+ * exactly what «Как в системе» means. Wrapped in try/catch because reading
+ * localStorage throws outright in a browser set to block site data, and a
+ * theme preference is never worth a blank page. */
+export const THEME_KEY = 'ck-site-theme';
+
+export const THEME_BOOT =
+  '<script>' +
+  '(function(){try{' +
+  "var t=localStorage.getItem('" + THEME_KEY + "');" +
+  "if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);" +
+  '}catch(e){}})();' +
+  '</script>';
+
+/* ------------------------------------------------------- asset versioning */
+
+/* The pages used to reference /styles.css and /app.js bare, and Vercel caches
+ * both hard. After a deploy that meant NEW HTML could render against OLD CSS —
+ * the owner saw the previous header's dark bar under the new capsule. A query
+ * string the file's own content decides fixes it without renaming anything:
+ * /styles.css keeps working for anyone who links it directly, and the URL the
+ * PAGES ask for changes exactly when the bytes change.
+ *
+ * Eight characters of sha256: enough that two builds of the same file never
+ * collide in practice, short enough to stay readable in view-source. */
+export const VERSIONED_ASSETS = [
+  '/styles.css',
+  '/app.js',
+  '/vendor/ck-core.js',
+  '/vendor/ck-locales.js',
+  '/vendor/ck-ui-branding.js',
+  '/vendor/ck-ui.js',
+  '/vendor/ck-debug.js'
+];
+
+export function assetHash(urlPath) {
+  const file = join(SITE_DIR, urlPath.replace(/^\//, ''));
+  return createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 8);
+}
+
+/* Applied to the FINISHED html of every page, as the last step before the
+   leftover-placeholder check: one pass catches the template's own references
+   and the ones the two law renderers build by hand, so a new page cannot
+   forget to version its assets. */
+export function versionAssets(html) {
+  const known = new Set(VERSIONED_ASSETS);
+  return html.replace(
+    /\b(href|src)="(\/(?:styles\.css|app\.js|vendor\/[a-z0-9-]+\.js))"/g,
+    (m, attr, path) => {
+      if (!known.has(path)) return m;
+      return attr + '="' + path + '?v=' + assetHash(path) + '"';
+    }
+  );
+}
 
 /* ------------------------------------------------- version and build date */
 
@@ -467,7 +536,7 @@ export function renderLawPage(template, lang, page) {
 
   const html = [
     '<!DOCTYPE html>',
-    '<html lang="' + escapeAttr(dict.htmlLang) + '" data-theme="light">',
+    '<html lang="' + escapeAttr(dict.htmlLang) + '">',
     '<head>',
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -486,6 +555,7 @@ export function renderLawPage(template, lang, page) {
     ogLocaleAlt(lang),
     '<meta name="twitter:card" content="summary_large_image">',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
     '<body>',
@@ -520,10 +590,12 @@ export function renderLawPage(template, lang, page) {
     ''
   ].join('\n');
 
-  const left = html.match(/\{\{[A-Z_]+\}\}/);
+  const versioned = versionAssets(html);
+
+  const left = versioned.match(/\{\{[A-Z_]+\}\}/);
   if (left) throw new Error(`unsubstituted placeholder ${left[0]} in ${lang}/law/${page.slug}`);
 
-  return html;
+  return versioned;
 }
 
 /* The hub page: one list of the four articles, in the current language. */
@@ -561,7 +633,7 @@ export function renderLawIndex(template, lang) {
 
   const html = [
     '<!DOCTYPE html>',
-    '<html lang="' + escapeAttr(dict.htmlLang) + '" data-theme="light">',
+    '<html lang="' + escapeAttr(dict.htmlLang) + '">',
     '<head>',
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -580,6 +652,7 @@ export function renderLawIndex(template, lang) {
     ogLocaleAlt(lang),
     '<meta name="twitter:card" content="summary_large_image">',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
     '<body>',
@@ -615,10 +688,12 @@ export function renderLawIndex(template, lang) {
     ''
   ].join('\n');
 
-  const left = html.match(/\{\{[A-Z_]+\}\}/);
+  const versioned = versionAssets(html);
+
+  const left = versioned.match(/\{\{[A-Z_]+\}\}/);
   if (left) throw new Error(`unsubstituted placeholder ${left[0]} in ${lang}/law`);
 
-  return html;
+  return versioned;
 }
 
 /* ------------------------------------------------------- banner marquee */
@@ -784,6 +859,7 @@ export function renderPage(template, lang) {
     OG_LOCALE: entry.ogLocale,
     OG_LOCALE_ALT: ogLocaleAlt(lang),
     LANG_SWITCH: langSwitch(lang),
+    THEME_BOOT,
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
     VERSION: escapeHtml(VERSION),
     BUILD_DATE: escapeHtml(updatedText(dict)),
@@ -795,6 +871,8 @@ export function renderPage(template, lang) {
   for (const [key, value] of Object.entries(map)) {
     html = html.split('{{' + key + '}}').join(value);
   }
+
+  html = versionAssets(html);
 
   const left = html.match(/\{\{[A-Z_]+\}\}/);
   if (left) throw new Error(`unsubstituted placeholder ${left[0]} in the ${lang} page`);

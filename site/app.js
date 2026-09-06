@@ -1553,9 +1553,76 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
+     The theme switch — «Тема» in the menu panel
+     ══════════════════════════════════════════════════════════════════
+
+     Three states, and the third one is the absence of a state: `system` means
+     no data-theme attribute at all, so the CSS falls through to
+     prefers-color-scheme exactly as it did before this control existed.
+
+     The stored choice was already applied by the inline script in <head> —
+     that is what stops the flash — so this function only has to reflect the
+     current value in the buttons and write the new one when a button is
+     pressed. It deliberately does NOT close the panel: comparing two themes
+     means pressing two buttons, and a panel that shut after the first would
+     make the second a two-click job.
+
+     Every localStorage access is wrapped: a browser set to block site data
+     throws on read AND on write, and neither is worth an exception that would
+     stop the rest of the boot sequence below from running. */
+
+  var THEME_KEY = 'ck-site-theme';
+
+  function wireTheme() {
+    var group = $('.theme-group');
+    if (!group) return;
+    var buttons = group.querySelectorAll('.theme-btn');
+    if (!buttons.length) return;
+
+    function stored() {
+      var t = null;
+      try { t = localStorage.getItem(THEME_KEY); } catch (e) { /* blocked */ }
+      return (t === 'dark' || t === 'light') ? t : 'system';
+    }
+
+    function reflect(choice) {
+      for (var i = 0; i < buttons.length; i++) {
+        var b = buttons[i];
+        b.setAttribute('aria-pressed',
+          b.getAttribute('data-theme-choice') === choice ? 'true' : 'false');
+      }
+    }
+
+    function apply(choice) {
+      if (choice === 'system') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', choice);
+      }
+      try {
+        if (choice === 'system') localStorage.removeItem(THEME_KEY);
+        else localStorage.setItem(THEME_KEY, choice);
+      } catch (e) { /* blocked — the choice still holds for this page */ }
+      reflect(choice);
+    }
+
+    // The markup is authored with «Как в системе» pressed (the no-JS truth);
+    // straighten it to whatever the visitor actually chose last time.
+    reflect(stored());
+
+    group.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('.theme-btn') : null;
+      if (!btn) return;
+      var choice = btn.getAttribute('data-theme-choice');
+      if (choice) apply(choice);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
      Boot
      ══════════════════════════════════════════════════════════════════ */
 
+  wireTheme();
   wireMenu();
   wireDemo();
   wireBeforeAfter();

@@ -42,8 +42,12 @@ for (const page of PAGES) {
   test(`site/${page.replace(/\\/g, '/')} references every vendored file`, () => {
     const html = readFileSync(join(VENDOR_DIR, '..', page), 'utf8');
     for (const name of VENDORED) {
-      // Absolute paths: a relative "vendor/…" would 404 from /ru and /ro.
-      assert.match(html, new RegExp(`"/vendor/${name.replace('.', '\\.')}"`),
+      /* Absolute paths: a relative "vendor/…" would 404 from /ru and /ro.
+         The `?v=<hash>` is the cache-busting suffix tools/build-site.mjs adds
+         (see versionAssets there) — the FILE is what this test is about, so
+         the query string is optional here and asserted on its own in
+         test/site-build.test.mjs. */
+      assert.match(html, new RegExp(`"/vendor/${name.replace('.', '\\.')}(\\?v=[0-9a-f]+)?"`),
         `site/${page} does not load /vendor/${name}`);
     }
   });

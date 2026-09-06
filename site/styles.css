@@ -71,7 +71,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     /* §2's own dark values. The «cream» role becomes the surface tone: a
        cream band on a dark page would be a white slab, so the hero and
        «Цифры» take a lifted dark surface instead and the rhythm survives as
@@ -107,6 +107,42 @@
     --ok-ink:     #7DDCA8;
     --ok-line:    #24462F;
   }
+}
+:root[data-theme="dark"] {
+  /* §2's own dark values. The «cream» role becomes the surface tone: a
+     cream band on a dark page would be a white slab, so the hero and
+     «Цифры» take a lifted dark surface instead and the rhythm survives as
+     a change of value rather than of hue. */
+  --bg:         #141414;  /* neutral black (owner, 07.09.2026: no warm browns) */
+  --cream:      #1B1B1B;  /* the hero / «Цифры» lift, dark-mode equivalent */
+  --surface:    #1F1F1F;
+  --surface-2:  #262626;  /* sand's dark stand-in: trim and panels */
+  --bg-band:    #141414;
+  --ink:        #F2F2F2;  /* 16.9:1 on --bg */
+  --ink-soft:   #B3B3B3;  /* 8.9:1 on --bg */
+  --line:       #333333;
+  --line-soft:  #262626;
+  /* The split matters most here. The BUTTON keeps the light theme's fill —
+     §2 asks for «#D63838 + белый», and white on it is 4.69:1 in any theme.
+     The TEXT red has to lighten: #D63838 as text on #171412 is 3.90:1,
+     #FF6B6B is 6.61:1 and still reads as the same red. */
+  --accent:     #D63838;
+  --accent-ink: #FF6B6B;
+  --accent-deco:#E63939;
+  --on-accent:  #FFFFFF;  /* 4.69:1 on --accent */
+  --band:       #B82E2D;  /* the band keeps its red in both themes */
+  --on-band:    #FDE1B9;  /* 4.80:1 */
+  --on-band-strong: #FFFFFF;
+  --code-bg:    #0F0F0F;
+  --code-ink:   #FFF2E0;
+  /* #FF9A9A on #3A1F1D = 7.42:1, #7DDCA8 on #16301F = 8.58:1, and
+     #7DDCA8 on --bg = 11.16:1 for the «после» label. */
+  --bad-bg:     #3A1F1D;
+  --bad-ink:    #FF9A9A;
+  --bad-line:   #522B28;
+  --ok-bg:      #16301F;
+  --ok-ink:     #7DDCA8;
+  --ok-line:    #24462F;
 }
 
 /* ── Onest, self-hosted ─────────────────────────────────────────────────
@@ -241,7 +277,19 @@ a:hover { color: var(--accent-ink); }
      allows; the extra air UNDER the pill is the hero's own margin below,
      which costs the header box nothing. */
   padding: 0 12px 12px;
+  /* Owner, 07.09.2026: the header box used to sit IN the flow above the hero,
+     so behind the capsule (and behind the open menu) the visitor saw the page
+     background and, right under it, the hero's lifted tint — a full-width
+     band that read as «old header left behind». Now the box pulls the hero up
+     underneath itself: the first section starts at the very top, the capsule
+     floats over it, and the menu panel drops OVER the content instead of
+     pushing it down. The first section pays the overlay back as padding
+     (--head-overlay) so nothing is covered. */
+  --head-box: 69px;
+  margin-bottom: calc(-1 * var(--head-box));
 }
+:root { --head-overlay: 81px; }
+@media (max-width: 560px) { :root { --head-overlay: 72px; } }
 
 /* The capsule's own colours. They must NOT come from --ink / --ink-soft: in
    the light theme those are dark brown, and dark brown on a #1E1E1E pill is
@@ -255,7 +303,7 @@ a:hover { color: var(--accent-ink); }
   --capsule-hover:    #2C2C2C;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     /* §2's dark surface, so the capsule reads as lifted off the warm black
        page rather than as a second, blacker hole in it. */
     --capsule-bg:       #1F1F1F;
@@ -264,6 +312,15 @@ a:hover { color: var(--accent-ink); }
     --capsule-line:     #3A3A3A;
     --capsule-hover:    #2F2925;
   }
+}
+:root[data-theme="dark"] {
+  /* §2's dark surface, so the capsule reads as lifted off the warm black
+     page rather than as a second, blacker hole in it. */
+  --capsule-bg:       #1F1F1F;
+  --capsule-ink:      #FFF2E0;  /* 14.9:1 on #1F1F1F */
+  --capsule-ink-soft: #CFCFCF;
+  --capsule-line:     #3A3A3A;
+  --capsule-hover:    #2F2925;
 }
 
 /* The pill itself. Painted on its own element, never on .wrap: .wrap's
@@ -286,8 +343,9 @@ a:hover { color: var(--accent-ink); }
   box-shadow: 0 10px 30px rgba(30, 22, 12, .18), 0 2px 6px rgba(30, 22, 12, .10);
 }
 @media (prefers-color-scheme: dark) {
-  .capsule { box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30); }
+  :root:not([data-theme="light"]) .capsule { box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30); }
 }
+:root[data-theme="dark"] .capsule { box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30); }
 
 /* Left: the disclosure button. */
 .capsule-menu {
@@ -340,8 +398,12 @@ a:hover { color: var(--accent-ink); }
 
 /* Drops from the capsule: same dark surface, same 16px radius, 12px below. */
 .menu-panel {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 100%;
   max-width: var(--wrap);
-  margin: 12px auto 0;
+  margin: 0 auto;
   padding: 14px;
   border-radius: 16px;
   background: var(--capsule-bg);
@@ -349,8 +411,9 @@ a:hover { color: var(--accent-ink); }
   box-shadow: 0 14px 40px rgba(30, 22, 12, .20), 0 2px 6px rgba(30, 22, 12, .10);
 }
 @media (prefers-color-scheme: dark) {
-  .menu-panel { box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30); }
+  :root:not([data-theme="light"]) .menu-panel { box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30); }
 }
+:root[data-theme="dark"] .menu-panel { box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30); }
 
 /* All seven section links. They wrap into as many rows as they need — the
    panel is not competing for the capsule's single row, which is the entire
@@ -393,7 +456,6 @@ a:hover { color: var(--accent-ink); }
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-right: auto;
 }
 .lang-btn {
   appearance: none;
@@ -425,6 +487,65 @@ a:hover { color: var(--accent-ink); }
   background: var(--capsule-hover);
 }
 
+/* ── the theme switch ───────────────────────────────────────────────────
+   Owner, 07.09.2026: «Тема» beside the languages. Three real <button>s in a
+   role="group", because unlike a language this is not a URL — it is a
+   preference stored in localStorage and applied as data-theme on <html>.
+   The group is styled as a segmented control rather than as three bare
+   letters: the labels are words, not three-letter codes, so they need the
+   plate to read as one control instead of three loose links. */
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  /* Takes over the spacer the language switch used to carry: languages and
+     theme sit together on the left, «Кабинет» stays at the far right. */
+  margin-right: auto;
+}
+.theme-switch__label {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--capsule-ink-soft);
+  white-space: nowrap;
+}
+.theme-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--capsule-line);
+  border-radius: 10px;
+}
+.theme-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--capsule-ink-soft);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  /* Same 40px touch floor the languages and the nav links keep, so the panel
+     stays usable with a thumb at 375. */
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* The chosen theme is stated the same way the current language is — by ink
+   and weight on the panel's own hover surface. §2 spends its red on the one
+   call to action, so this control gets none of it. */
+.theme-btn[aria-pressed="true"] {
+  color: var(--capsule-ink);
+  background: var(--capsule-hover);
+  font-weight: 700;
+}
+.theme-btn:not([aria-pressed="true"]):hover {
+  color: var(--capsule-ink);
+  background: var(--capsule-hover);
+}
+
 /* Sticky shifts the header down by its own `top` without reserving that
    space, so the 12px inset is taken out of the gap below the pill and the
    capsule would sit flush on the hero. The page gives the 12px back — on the
@@ -432,7 +553,7 @@ a:hover { color: var(--accent-ink); }
    the header's own box stays inside the 80px the one-row budget allows. */
 .site-head + main > :first-child,
 .site-head + main.law > :first-child {
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 /* ── anchors under the capsule ──────────────────────────────────────── */
@@ -499,7 +620,7 @@ section[id],
 
 /* §2's rhythm starts here: the hero is one of exactly two cream sections on
    the page (the other is «Цифры»). Everything between them is white. */
-.hero { padding: 76px 0 68px; background: var(--cream); }
+.hero { padding: calc(76px + var(--head-overlay)) 0 68px; background: var(--cream); }
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
@@ -813,9 +934,11 @@ section[id],
 .art-track--on { fill: var(--accent); }
 .art-knob    { fill: var(--bg); }
 @media (prefers-color-scheme: dark) {
-  .art-ok-disc { fill: #4ade9a; opacity: .18; }
-  .art-ok-tick { stroke: #4ade9a; }
+  :root:not([data-theme="light"]) .art-ok-disc { fill: #4ade9a; opacity: .18; }
+  :root:not([data-theme="light"]) .art-ok-tick { stroke: #4ade9a; }
 }
+:root[data-theme="dark"] .art-ok-disc { fill: #4ade9a; opacity: .18; }
+:root[data-theme="dark"] .art-ok-tick { stroke: #4ade9a; }
 
 /* ── cards ──────────────────────────────────────────────────────────── */
 
@@ -1077,7 +1200,7 @@ section[id],
 @media (max-width: 560px) {
   section { padding: 52px 0; }
   .wrap { padding: 0 18px; }
-  .hero { padding: 48px 0 44px; }
+  .hero { padding: calc(48px + var(--head-overlay)) 0 44px; }
   .btn { width: 100%; text-align: center; }
   .btn--sm { width: auto; }
   .hero-cta .btn { width: 100%; }
@@ -1284,9 +1407,11 @@ img { max-width: 100%; height: auto; }
 .check__note { margin: 10px 0 0; font-size: .84rem; color: var(--ink-soft); }
 
 @media (prefers-color-scheme: dark) {
-  .check__state--ok { color: #6ee7a8; }
-  .check__state--warn { color: #f0b46b; }
+  :root:not([data-theme="light"]) .check__state--ok { color: #6ee7a8; }
+  :root:not([data-theme="light"]) .check__state--warn { color: #f0b46b; }
 }
+:root[data-theme="dark"] .check__state--ok { color: #6ee7a8; }
+:root[data-theme="dark"] .check__state--warn { color: #f0b46b; }
 
 /* ── hero tiles ─────────────────────────────────────────────────────── */
 
@@ -1380,7 +1505,7 @@ img { max-width: 100%; height: auto; }
   --win-field-line:  #C6AF8D;
 }
 @media (prefers-color-scheme: dark) {
-  .demo-win {
+  :root:not([data-theme="light"]) .demo-win {
     /* The dots strip is chrome, so it follows the theme with the toolbar;
        the paper stays white, because the page it depicts is not ours. */
     --shot-chrome:     #262626;
@@ -1392,6 +1517,18 @@ img { max-width: 100%; height: auto; }
     --win-field:       #141414;
     --win-field-line:  #4A423B;
   }
+}
+:root[data-theme="dark"] .demo-win {
+  /* The dots strip is chrome, so it follows the theme with the toolbar;
+     the paper stays white, because the page it depicts is not ours. */
+  --shot-chrome:     #262626;
+  --shot-chrome-line:#3A3A3A;
+  --win-chrome:      #262626;
+  --win-chrome-line: #3A3A3A;
+  --win-ink:         #F2F2F2;  /* 13.6:1 on #262626 */
+  --win-ink-soft:    #B3B3B3;  /* 7.1:1 on #262626 */
+  --win-field:       #141414;
+  --win-field-line:  #4A423B;
 }
 
 /* One row of controls that wraps, not three stacked ones: the four selects
@@ -1588,7 +1725,7 @@ img { max-width: 100%; height: auto; }
 
 /* ── law pages ──────────────────────────────────────────────────────── */
 
-.law-article { padding: 56px 0 8px; }
+.law-article { padding: calc(56px + var(--head-overlay)) 0 8px; }
 .law-crumb { margin: 0 0 10px; font-size: .9rem; }
 .law-article h1 { margin: 0 0 10px; }
 .law-dated { color: var(--ink-soft); font-size: .87rem; margin: 0 0 26px; }
@@ -1617,7 +1754,7 @@ img { max-width: 100%; height: auto; }
 @media (max-width: 560px) {
   .check { padding: 18px; }
   .check__submit .btn { width: 100%; }
-  .law-article { padding: 36px 0 8px; }
+  .law-article { padding: calc(36px + var(--head-overlay)) 0 8px; }
   .stat__num { font-size: 1.7rem; }
 }
 
