@@ -46,7 +46,7 @@
   // Bare entries are used ONLY for domains dedicated entirely to tracking;
   // where a parent domain also serves ordinary site assets (CDNs, fonts,
   // images) the specific tracking subdomain is listed instead.
-  // Snapshot: 2026-08. Not exhaustive — extended as new trackers appear.
+  // Snapshot: 2026-09. Not exhaustive — extended as new trackers appear.
   var HOST_DB = {
     // --- analytics -----------------------------------------------------
     'google-analytics.com': 'analytics',
@@ -77,6 +77,7 @@
     'nr-data.net': 'analytics',               // New Relic beacon
     'datadoghq.com': 'analytics',             // RUM
     'datadoghq-browser-agent.com': 'analytics',
+    'vercel-insights.com': 'analytics',    // Vercel Web Analytics
     // Cloudflare Web Analytics. Subdomain only, and deliberately NOT in
     // INFRA_DB: the rest of Cloudflare's edge is infrastructure, but this one
     // beacon is a measurement product (§8 names it by hand for that reason).
@@ -116,6 +117,15 @@
     'redditstatic.com': 'marketing',
     'q.quora.com': 'marketing',               // subdomain: quora.com is a normal site
     'amazon-adsystem.com': 'marketing',
+    // Embedded video and social plugins. The player/plugin sets the vendor's own
+    // advertising cookies on play or render, which is an ad-profile decision the
+    // visitor has to make — not a feature the site owner merely switched on.
+    'youtube.com': 'marketing',               // the player sets Google ad cookies on play
+    'youtube-nocookie.com': 'marketing',      // "privacy-enhanced" still sets them once played
+    'facebook.com': 'marketing',              // like/page/comments plugins and iframes
+    'instagram.com': 'marketing',             // post and profile embeds
+    'cdninstagram.com': 'marketing',          // the embed's own asset host
+    'sendpulse.com': 'marketing',             // email/push marketing automation
 
     // --- functional ----------------------------------------------------
     'intercom.io': 'functional',
@@ -161,12 +171,72 @@
     'places.googleapis.com': 'functional',
     'maps.gstatic.com': 'functional',
 
+    // Vimeo — an embedded player. Unlike YouTube it does not feed an ad
+    // profile by default, so a visitor who declines functional loses the video
+    // and nothing else. player.vimeo.com is redundant under the bare entry
+    // (suffix matching covers it) and is named anyway, the way
+    // static.tildacdn.one and fonts.gstatic.com are: the embed fixtures and the
+    // docs both refer to it by its full host.
+    'vimeo.com': 'functional',
+    'player.vimeo.com': 'functional',
+    'vimeocdn.com': 'functional',             // the player's own asset host
+    // Freshworks — support chat and helpdesk widgets. The widget IS the support
+    // channel, so declining functional costs the visitor the feature, not a
+    // measurement they were unaware of.
+    'freshworks.com': 'functional',
+    'freshchat.com': 'functional',
+    'freshdesk.com': 'functional',
+    // Messenger buttons and chat widgets a shop puts on its own pages. The
+    // Moldovan/Romanian market runs on these the way the western one runs on
+    // Intercom, and each is a feature the owner chose.
+    'viber.com': 'functional',
+    'telegram.org': 'functional',
+    't.me': 'functional',
+    // CRM widgets: callback forms, chat and lead capture embedded on the site.
+    // Every regional TLD is named in full — hostMatches is plain suffix
+    // matching with no pattern form, so bitrix24.ru does not cover
+    // bitrix24.com.
+    'bitrix24.ru': 'functional',
+    'bitrix24.com': 'functional',
+    'bitrix24.eu': 'functional',
+    'amocrm.ru': 'functional',
+    'amocrm.com': 'functional',
+    // Booking and form embeds — the visitor came to the page to use them.
+    'calendly.com': 'functional',
+    'typeform.com': 'functional',
+    // 999.md — the Moldovan classifieds platform. Shops embed its listing
+    // widgets; simpalsmedia.com is the group's asset host that serves them.
+    '999.md': 'functional',
+    'simpalsmedia.com': 'functional',
+
     // --- necessary -----------------------------------------------------
     // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
     // where google.com is unreachable. Unlike the two path-scoped Google hosts
     // in PATH_DB, this domain hosts NOTHING but the captcha, so the whole host
     // is the right scope.
-    'recaptcha.net': 'necessary'
+    'recaptcha.net': 'necessary',
+    // Payment, error reporting and the page builder's own runtime. A
+    // `necessary` category is never held — allowed('necessary') is always true,
+    // so shouldBlock() lets these through before strict mode is ever consulted.
+    // What the entry buys is a NAME: the audit stops filing a checkout form or
+    // a crash reporter under «сторонние подключения без категории». This is why
+    // js.stripe.com can stay in BASE_ALLOW and gain a category here without
+    // contradiction — the allowlist decides strict mode, the category decides
+    // the report, and both answers are «let it through».
+    'sentry.io': 'necessary',                 // crash reporting: no visitor profile
+    'ingest.sentry.io': 'necessary',          // redundant under the line above, named
+                                              // because the DSN host is what an owner
+                                              // actually sees in a report
+    'sentry-cdn.com': 'necessary',
+    'paypal.com': 'necessary',
+    'paypalobjects.com': 'necessary',         // PayPal button assets
+    'paynet.md': 'necessary',                 // Moldovan payment gateway
+    'maib.md': 'necessary',                   // MAIB card processing
+    'maibank.md': 'necessary',
+    'stripe.com': 'necessary',
+    'js.stripe.com': 'necessary',             // also in BASE_ALLOW; see the note above
+    'stripe.network': 'necessary',
+    'elementor.com': 'necessary'              // the WordPress builder's own runtime
   };
 
   // Runtime overrides fed in by ConsentKit._extendHostDb(map) — the SaaS
@@ -416,6 +486,20 @@
     // Google-hosted halves are path-scoped in BASE_ALLOW_PATH below, since
     // www.google.com and www.gstatic.com cannot be waved through wholesale.
     'hcaptcha.com',
+    // --- hosting platforms (continued) -----------------------------------
+    // Vercel and Netlify serve the site's own build output. Vercel's MEASUREMENT
+    // product is vercel-insights.com, a separate registrable domain filed above
+    // as analytics — so neither entry here shadows it (the §8 invariant that an
+    // infra host must carry no category still holds).
+    'vercel.app',
+    'vercel.com',
+    'netlify.app',
+    'netlify.com',
+    // YouTube thumbnails and player static assets. The PLAYER is marketing and
+    // sits in HOST_DB on youtube.com; this host serves only the poster image
+    // and sprites, sets nothing, and a held placeholder still wants its
+    // thumbnail.
+    'ytimg.com',
     // --- our own service -------------------------------------------------
     // The consent tool must not report itself as an unnamed third party.
     'consent.ecomconsult.net'
@@ -1857,7 +1941,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.8',
+    version: '0.5.9',
     config: config,
 
     init: function (userConfig) {

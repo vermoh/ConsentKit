@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.8
+Stable tag: 0.5.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,11 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.9 =
+* База хостов: +42 записи — YouTube, Vimeo, Facebook и Instagram, чаты и CRM (Freshworks, Viber, Telegram, Bitrix24, amoCRM), формы и запись (Calendly, Typeform), платежи (Stripe, PayPal, paynet.md, MAIB), Sentry, 999.md; Vercel и Netlify учтены как инфраструктура
+* Панель отладки честнее про Consent Mode: «без cookie, но адрес страницы и тип браузера уходят»
+* Кнопка закрытия окна настроек выровнена по переключателям
 
 = 0.5.8 =
 * Сервисы в окне настроек: внутри каждой группы список сервисов (название, поставщик, назначение, ссылка на политику) со своим переключателем и своими cookie; заголовок группы показывает «N сервисов · M cookie»

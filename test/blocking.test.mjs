@@ -836,3 +836,74 @@ test('a malformed hostdb in config is ignored rather than fatal', () => {
   CK.init({ policyVersion: '1', hostdb: { 'bad.example': 'nonsense' } });
   assert.equal(CK._categoryForUrl('https://bad.example/x.js'), null);
 });
+
+/* --------------------------------------------- 0.5.9 database additions */
+
+test('a YouTube embed is held before consent and released after it', () => {
+  /* What makes the §2 placeholder appear is the frame being HELD, and what
+     decides that is the classification 0.5.9 adds: before this release
+     youtube.com was unknown, so on a non-strict site the player loaded
+     straight through and no placeholder was ever drawn. */
+  const env = load();
+  env.CK.init({ policyVersion: '1' });
+  const frame = insert(env, 'iframe', 'https://www.youtube.com/embed/dQw4w9WgXcQ');
+  assert.ok(isBlocked(frame), 'the YouTube player must be held until marketing is granted');
+  assert.equal(frame.getAttribute('data-ck'), 'marketing',
+    'the held frame must be filed under marketing — the placeholder reads this');
+
+  // The thumbnail host beside it is infrastructure and must NOT be held: a
+  // placeholder still wants its poster image.
+  assert.ok(!isBlocked(insert(env, 'iframe', 'https://i.ytimg.com/vi/abc/hqdefault.jpg')));
+});
+
+test('the new necessary hosts are never held, in strict mode or out of it', () => {
+  /* Why `stripe.com: necessary` can coexist with `js.stripe.com` in BASE_ALLOW
+     without contradiction. shouldBlock() asks categoryForUrl FIRST and returns
+     !allowed(cat); allowed('necessary') is unconditionally true, so
+     strictBlocks() is never reached. The allowlist decides strict mode, the
+     category decides the report, and both answers are «let it through» — what
+     the entry buys is a NAME in the audit, not a change in behaviour. */
+  for (const mode of ['known', 'strict']) {
+    const env = load();
+    env.CK.init({ policyVersion: '1', blocking: { mode } });
+    for (const url of [
+      'https://js.stripe.com/v3/',
+      'https://api.stripe.com/v1/tokens',
+      'https://www.paypal.com/sdk/js?client-id=x',
+      'https://o123456.ingest.sentry.io/api/1/envelope/',
+      'https://paynet.md/acquiring/pay',
+      'https://maib.md/ecomm/ClientHandler'
+    ]) {
+      assert.ok(!isBlocked(insert(env, 'script', url)),
+        `${url} is necessary and must never be held (mode: ${mode})`);
+    }
+  }
+  // …and js.stripe.com is still in the strict allowlist: the category does not
+  // replace the allowlist entry, it names it.
+  const { CK } = load();
+  assert.ok(CK._baseAllow.includes('js.stripe.com'));
+});
+
+test('the new opt-in hosts are held before consent and released after', () => {
+  /* The other half: a category that is not `necessary` means the host really is
+     withheld. Without this an entry filed into the wrong block would look
+     identical to a correctly filed one. */
+  const env = load();
+  env.CK.init({ policyVersion: '1' });
+  const held = [
+    'https://www.facebook.com/plugins/like.php?href=x',
+    'https://player.vimeo.com/video/76979871',
+    'https://wchat.freshchat.com/js/widget.js',
+    'https://mycompany.bitrix24.ru/upload/crm/site_button/loader.js',
+    'https://assets.calendly.com/assets/external/widget.js',
+    'https://vercel-insights.com/v1/vitals'
+  ];
+  for (const url of held) {
+    assert.ok(isBlocked(insert(env, 'script', url)), `${url} should be held before consent`);
+  }
+
+  // The hosting platforms around them are infrastructure and stay untouched —
+  // asserted in the SAME fixture so a broken location cannot hide here.
+  assert.ok(!isBlocked(insert(env, 'script', 'https://my-app.vercel.app/main.js')));
+  assert.ok(!isBlocked(insert(env, 'script', 'https://my-app.netlify.app/main.js')));
+});

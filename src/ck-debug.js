@@ -173,7 +173,7 @@
       /* A `necessary` host is never held — allowed('necessary') is always true —
          so it appears in no `blocked` record, and every note below would be a
          lie about it: «раньше строки баннера» (we never wanted to hold it) or
-         «Consent Mode: без cookie» (it is not a Consent Mode decision). §4 files
+         «Consent Mode: без cookie, но адрес…» (it is not a Consent Mode decision). §4 files
          necessary under `ok`, and §3's four notes have no slot for it, so it
          gets what an after-consent row gets: nothing. Sending the owner off to
          chase __cf_bm is exactly the noise §3 exists to remove. */
@@ -286,7 +286,7 @@
       // SPEC V1.12 §3 — пометка словами на каждой строке «до согласия»:
       // что именно случилось и можно ли было это остановить.
       whyEarly: 'раньше строки баннера — задержать не можем',
-      whyGcm: 'Consent Mode: без cookie',
+      whyGcm: 'Consent Mode: без cookie, но адрес страницы и тип браузера уходят',
       whyHeld: 'задержан баннером',
       whyDead: 'не ожил после согласия — проверьте, что тег помечен type="text/plain"',
       cabinet: 'Что с этим делать — в кабинете',
@@ -352,7 +352,7 @@
       strict: 'strict',
       notRevived: ' — did not come back after consent',
       whyEarly: 'loaded before the banner line — we cannot hold it',
-      whyGcm: 'Consent Mode: no cookies',
+      whyGcm: 'Consent Mode: no cookies, but the page address and browser type are sent',
       whyHeld: 'held back by the banner',
       whyDead: 'did not come back after consent — check the tag is marked type="text/plain"',
       cabinet: 'What to do about it — in your account',
@@ -423,7 +423,7 @@
       strict: 'strict',
       notRevived: ' — nu a repornit după consimțământ',
       whyEarly: 'încărcat înaintea liniei bannerului — nu îl putem opri',
-      whyGcm: 'Consent Mode: fără cookie-uri',
+      whyGcm: 'Consent Mode: fără cookie, dar adresa paginii și tipul browserului pleacă',
       whyHeld: 'reținut de banner',
       whyDead: 'nu a repornit după consimțământ — verificați că eticheta are type="text/plain"',
       cabinet: 'Ce este de făcut — în contul dumneavoastră',

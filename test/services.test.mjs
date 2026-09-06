@@ -1010,7 +1010,7 @@ test('a necessary host gets no note at all', () => {
   /* A `necessary` host is never held back, so it is in no `blocked` record —
      and every note would then be a lie about it: «раньше строки баннера» (we
      never wanted to hold it) or, on any page where Consent Mode defaults to
-     denied, «Consent Mode: без cookie». Sending the owner off to chase
+     denied, «Consent Mode: без cookie, но адрес…». Sending the owner off to chase
      __cf_bm is exactly the noise §3 exists to remove. */
   const D = loadDebug();
   const requests = [

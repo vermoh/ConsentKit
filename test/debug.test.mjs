@@ -364,3 +364,39 @@ test('the JSON report stays language-neutral', () => {
   assert.equal(report.consent.status, 'rejected', 'the report must carry the neutral status key');
   assert.ok(!/[А-Яа-яЁё]/.test(JSON.stringify(report)), 'the JSON report contains Russian text');
 });
+
+/* ------------------------------------------------ §3 note wording (0.5.9) */
+
+test('the Consent Mode note says what still leaves the browser', () => {
+  /* «Consent Mode: без cookie» was true and incomplete, and the incompleteness
+     was the misleading half: with storage denied the tag sets no cookie, but it
+     still fires — the page URL, the referrer and the user agent reach Google
+     either way. An owner reading the old note could reasonably conclude that
+     nothing left at all. 0.5.9 says the rest out loud.
+
+     Pinned verbatim in all three languages because this is a compliance claim
+     shown to a site owner, not incidental copy: a well-meaning shortening back
+     to «без cookie» would restore exactly the wrong impression. */
+  const { ru, en, ro } = load().strings;
+  assert.equal(ru.whyGcm, 'Consent Mode: без cookie, но адрес страницы и тип браузера уходят');
+  assert.equal(en.whyGcm, 'Consent Mode: no cookies, but the page address and browser type are sent');
+  assert.equal(ro.whyGcm, 'Consent Mode: fără cookie, dar adresa paginii și tipul browserului pleacă');
+
+  // The claim itself: every language must mention what is sent, not only what
+  // is absent. A translation that kept the old short form would pass the
+  // equality above only by being changed deliberately — this catches a NEW
+  // language added later with the incomplete sentence.
+  for (const [lang, dict] of Object.entries(load().strings)) {
+    assert.ok(dict.whyGcm.length > 'Consent Mode: no cookies'.length + 8,
+      `${lang}.whyGcm looks like the pre-0.5.9 short form — it must also say what is sent`);
+  }
+});
+
+test('every language dictionary carries all four §3 notes', () => {
+  // A missing note renders the literal "undefined" against a request row.
+  for (const [lang, dict] of Object.entries(load().strings)) {
+    for (const k of ['whyEarly', 'whyGcm', 'whyHeld', 'whyDead']) {
+      assert.ok(dict[k] && String(dict[k]).trim(), `${lang}.${k} is missing or empty`);
+    }
+  }
+});
