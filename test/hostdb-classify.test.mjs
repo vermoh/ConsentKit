@@ -52,12 +52,17 @@ const CASES = [
   // Owner's finding 06.09.2026 (admin «Трекеры»): the Bing pixel UET and
   // Clarity fire, seen on a customer site as c.bing.com /c.gif.
   ['https://c.bing.com/c.gif?RD=1', 'marketing'],
+  // Owner's findings 07.09.2026 (admin «Трекеры», estheticlab.pro audit).
+  ['https://static.xx.fbcdn.net/rsrc.php/v4/yB/r/an7UzX-0acj.js', 'marketing'],
+  ['https://scontent.fvno8-1.fna.fbcdn.net/v/t1.30497-1/453178253.png', 'marketing'],
   ['https://cdn.sendpulse.com/js/push/sdk.js', 'marketing'],
 
   // --- functional: features the owner chose --------------------------------
   ['https://vimeo.com/api/oembed.json?url=x', 'functional'],
   ['https://player.vimeo.com/video/76979871', 'functional'],
   ['https://f.vimeocdn.com/p/4.6.0/js/player.js', 'functional'],
+  ['https://bubble.aichat.md/apif/serve/chatbot-script.js', 'functional'],
+  ['https://aichat.md/api/v1/widget/loader.js', 'functional'],
   ['https://widget.freshworks.com/widgets/1.js', 'functional'],
   ['https://wchat.freshchat.com/js/widget.js', 'functional'],
   ['https://euc-widget.freshdesk.com/widgets/1.js', 'functional'],
@@ -107,12 +112,13 @@ test('the 0.5.9 infrastructure hosts carry no category and are waved through', (
      youtube.com, while the thumbnail host beside it must stay infrastructure —
      a held placeholder still wants its poster image. */
   const CK = loadCore();
-  for (const host of ['vercel.app', 'vercel.com', 'netlify.app', 'netlify.com', 'ytimg.com']) {
+  for (const host of ['vercel.app', 'vercel.com', 'netlify.app', 'netlify.com', 'ytimg.com', 'challenges.cloudflare.com', 'i.imgur.com']) {
     assert.ok(CK._infra().includes(host), `${host} is missing from _infra()`);
     assert.equal(CK._categoryForUrl('https://' + host + '/x.js'), null,
       `${host} is infrastructure but the database also gives it a category`);
     assert.ok(CK._isInfra(host), `_isInfra(${host}) should be true`);
   }
+  assert.ok(CK._isInfra('hagen.challenges.cloudflare.com'), 'a challenge subdomain is infrastructure too');
   assert.equal(CK._categoryForUrl('https://i.ytimg.com/vi/abc/hqdefault.jpg'), null,
     'the YouTube thumbnail host must stay uncategorised');
   assert.equal(CK._categoryForUrl('https://www.youtube.com/embed/abc'), 'marketing',

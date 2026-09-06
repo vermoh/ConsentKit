@@ -92,6 +92,7 @@
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
+    'fbcdn.net': 'marketing',                 // Facebook CDN: SDK chunks (static.xx) and plugin images (scontent.*)
     'facebook.net': 'marketing',              // connect.facebook.net covered above
     'analytics.tiktok.com': 'marketing',
     'googleadservices.com': 'marketing',
@@ -205,6 +206,7 @@
     // Booking and form embeds — the visitor came to the page to use them.
     'calendly.com': 'functional',
     'typeform.com': 'functional',
+    'aichat.md': 'functional',                // aichat.md chat widget (bubble.aichat.md loader)
     // 999.md — the Moldovan classifieds platform. Shops embed its listing
     // widgets; simpalsmedia.com is the group's asset host that serves them.
     '999.md': 'functional',
@@ -432,6 +434,9 @@
   // places is classified, not waved through — so a bare `cloudflare.com` here
   // would be a bug.
   var INFRA_DB = [
+    // --- bot checks and image hosts: not a consent decision -------------
+    'challenges.cloudflare.com',           // Cloudflare challenge / Turnstile (incl. *.challenges.cloudflare.com)
+    'i.imgur.com',                          // hot-linked images
     // --- site builders and hosting platforms ---------------------------
     'tildacdn.com',
     'tildacdn.net',
@@ -1973,7 +1978,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.12',
+    version: '0.5.13',
     config: config,
 
     init: function (userConfig) {

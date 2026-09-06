@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.12
+Stable tag: 0.5.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,12 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.13 =
+* Host database: fbcdn.net (Facebook SDK chunks and plugin images) is marketing,
+  aichat.md and bubble.aichat.md (chat widget) are functional,
+  challenges.cloudflare.com (Cloudflare challenge / Turnstile) and i.imgur.com
+  are infrastructure and never held.
 
 = 0.5.12 =
 * Services in the preferences panel are collapsed by default and compact: the
