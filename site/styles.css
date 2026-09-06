@@ -873,3 +873,13 @@ img { max-width: 100%; height: auto; }
   .law-article { padding: 36px 0 8px; }
   .stat__num { font-size: 1.7rem; }
 }
+
+/* Header stays on one row down to tablets: the demo link duplicates the hero
+   button, and the gaps tighten before anything wraps (RO labels are longest). */
+@media (max-width: 1440px) {
+  .head-nav { gap: 14px; }
+  .head-nav a[href="#demo"] { display: none; }
+}
+@media (max-width: 1100px) {
+  .head-nav { gap: 10px; font-size: 14px; }
+}
