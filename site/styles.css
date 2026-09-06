@@ -684,3 +684,192 @@ a { color: var(--accent-ink); }
   .shot-banner__actions { flex-wrap: wrap; gap: 7px; }
   .shot-btn { flex: 1 1 100%; font-size: 13px; min-height: 38px; padding: 8px 10px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SPEC V1.11 — check form, hero tiles, step screenshots, numbers, law pages
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Every image on the page is inside a text column that narrows to 375px, and
+   the step screenshots are 1200px wide. Without this one rule they set the
+   page's minimum width and the whole layout scrolls sideways on a phone. */
+img { max-width: 100%; height: auto; }
+
+/* ── «Проверить сайт» ───────────────────────────────────────────────── */
+
+.check {
+  margin: 28px 0 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  max-width: 520px;
+}
+
+.check__title { font-size: 1.12rem; margin: 0 0 4px; }
+.check__lede { color: var(--ink-soft); font-size: .92rem; margin: 0 0 16px; }
+
+.check__field { margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.check__field label { font-size: .87rem; font-weight: 600; color: var(--ink-soft); }
+
+.check__field input {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  width: 100%;
+  /* Without this an input's default width is its size attribute, which on a
+     narrow screen overflows the card rather than shrinking with it. */
+  box-sizing: border-box;
+}
+
+.check__field input:focus-visible,
+.check__agree input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The honeypot. Off the canvas rather than display:none — a bot that reads
+   computed styles skips a hidden field, and one that fills everything it can
+   reach still trips over this. It keeps its size so it stays "real". */
+.check__hp {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.check__agree { margin: 0 0 14px; }
+.check__agree label {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: .88rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.check__agree input {
+  margin: 2px 0 0;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.check__submit { margin: 0 0 12px; }
+
+/* Reserves no space when empty: an always-visible blank line under the button
+   reads as a rendering fault. It is still in the accessibility tree, so
+   aria-live announces the first message it receives. */
+.check__state { margin: 0; font-size: .9rem; font-weight: 600; }
+.check__state:empty { display: none; }
+.check__state--ok { color: #17603a; }
+.check__state--warn { color: #8a4b00; }
+.check__state--wait { color: var(--ink-soft); }
+
+.check__note { margin: 10px 0 0; font-size: .84rem; color: var(--ink-soft); }
+
+@media (prefers-color-scheme: dark) {
+  .check__state--ok { color: #6ee7a8; }
+  .check__state--warn { color: #f0b46b; }
+}
+
+/* ── hero tiles ─────────────────────────────────────────────────────── */
+
+.who-tiles { padding: 0 0 8px; }
+
+.tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.tiles a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: inherit;
+  text-decoration: none;
+}
+.tiles a:hover { border-color: var(--accent); }
+.tile__title { font-weight: 650; }
+.tile__text { font-size: .9rem; color: var(--ink-soft); }
+
+/* ── step screenshots ───────────────────────────────────────────────── */
+
+.step-shot {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+/* ── «Цифры» ────────────────────────────────────────────────────────── */
+
+.stats {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 0;
+}
+.stat { margin: 0; }
+.stat__num {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.stat__label { margin: 4px 0 0; color: var(--ink-soft); font-size: .93rem; }
+.stat__since { font-size: 1.05rem; font-weight: 600; color: var(--ink-soft); }
+.stat--since { align-self: end; }
+
+.price-cheap { font-weight: 650; margin: 18px 0 0; }
+
+/* ── law pages ──────────────────────────────────────────────────────── */
+
+.law-article { padding: 56px 0 8px; }
+.law-crumb { margin: 0 0 10px; font-size: .9rem; }
+.law-article h1 { margin: 0 0 10px; }
+.law-dated { color: var(--ink-soft); font-size: .87rem; margin: 0 0 26px; }
+
+.law-body h2 { font-size: 1.25rem; margin: 1.8em 0 .5em; }
+.law-body p { color: var(--ink-soft); margin: 0 0 1em; }
+.law-body ul { color: var(--ink-soft); margin: 0 0 1em; padding-left: 1.15em; }
+.law-body li { margin: 0 0 .45em; }
+
+/* The dated / not-legal-advice note. Set apart because it qualifies everything
+   above it, and a reader who skims must not mistake it for another paragraph. */
+.law-note {
+  border-left: 3px solid var(--line);
+  padding: 2px 0 2px 14px;
+  font-size: .9rem;
+}
+
+.law-check { margin-top: 40px; }
+.law-check .check { max-width: none; margin-top: 0; }
+.law-list { margin-top: 22px; }
+.law-list h2 { font-size: 1.08rem; margin: 0 0 6px; }
+
+.foot-links--law { display: flex; flex-direction: column; gap: 8px; }
+.foot-links__head { font-weight: 650; }
+
+@media (max-width: 560px) {
+  .check { padding: 18px; }
+  .check__submit .btn { width: 100%; }
+  .law-article { padding: 36px 0 8px; }
+  .stat__num { font-size: 1.7rem; }
+}

@@ -21,11 +21,13 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/styles.css">
+{{JSON_LD}}
 </head>
 <body>
 
 <a class="skip" href="#main" data-i18n="skip">К основному содержанию</a>
 
+<!--HEADER:start-->
 <header class="site-head">
   <div class="wrap head-row">
     <a class="brand" href="#main">
@@ -42,6 +44,7 @@
       <a href="#pricing" data-i18n="navPricing">Тарифы</a>
       <a href="#features" data-i18n="navFeatures">Что умеет</a>
       <a href="#faq" data-i18n="navFaq">Вопросы</a>
+      <a href="{{LAW_HOME}}" data-i18n="navLaw">Правила</a>
       <a href="#dev" data-i18n="navDev">Для разработчиков</a>
     </nav>
 
@@ -51,6 +54,7 @@
     </div>
   </div>
 </header>
+<!--HEADER:end-->
 
 <main id="main">
 
@@ -66,6 +70,62 @@
           <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">Посмотреть демо</a>
         </p>
         <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.</p>
+
+        <!-- SPEC V1.11 §3. The block below is the ONE authored copy of the
+             «Проверить сайт» form: the build slices it out between the
+             CHECKFORM markers and drops the same markup at the bottom of every
+             law page, and app.js clones it wherever a [data-check-form] host
+             asks for one. Authored once, so the honeypot, the consent wording
+             and the four result states cannot drift between the five places
+             the form appears.
+
+             No id= anywhere inside: five instances of one id is invalid, and
+             label[for] would bind every label to whichever field parsed first.
+             app.js stamps per-instance ids on clone. -->
+        <!--CHECKFORM:start-->
+      <form class="check" data-check-form novalidate>
+        <h2 class="check__title" data-i18n="checkTitle">Проверить сайт</h2>
+        <p class="check__lede" data-i18n="checkLede">Посмотрим, что у вас стоит и чего не хватает.</p>
+
+        <p class="check__field">
+          <label data-i18n="checkDomainLabel">Адрес сайта</label>
+          <input type="text" name="domain" inputmode="url" autocomplete="url"
+                 placeholder="example.md" data-i18n-placeholder="checkDomainPlaceholder" required>
+        </p>
+
+        <p class="check__field">
+          <label data-i18n="checkEmailLabel">Ваша почта</label>
+          <input type="email" name="email" autocomplete="email"
+                 placeholder="you@example.md" data-i18n-placeholder="checkEmailPlaceholder" required>
+        </p>
+
+        <!-- Honeypot. Off-screen rather than display:none — a bot that reads
+             computed styles skips hidden fields, and a field that is never
+             painted but is still in the layout catches the ones that fill
+             everything. tabindex=-1 and autocomplete=off keep it away from a
+             real visitor's keyboard and password manager. aria-hidden so a
+             screen reader is not asked to fill an invisible box. -->
+        <div class="check__hp" aria-hidden="true">
+          <label>Company</label>
+          <input type="text" name="hp" value="" tabindex="-1" autocomplete="off">
+        </div>
+
+        <p class="check__agree">
+          <label>
+            <input type="checkbox" name="agree" required>
+            <span data-i18n="checkAgree">Это мой сайт или я работаю с ним по договору, и я согласен получить результат на почту.</span>
+          </label>
+        </p>
+
+        <p class="check__submit">
+          <button type="submit" class="btn btn--primary" data-i18n="checkSubmit">Проверить бесплатно</button>
+        </p>
+
+        <p class="check__state" role="status" aria-live="polite"></p>
+
+        <p class="check__note" data-i18n="checkNote">Результат придёт на почту в течение 10 минут. Проверяем только открытые страницы.</p>
+      </form>
+        <!--CHECKFORM:end-->
       </div>
 
       <!-- Hero mockup: a framed page with a STATIC replica of the default box
@@ -98,6 +158,30 @@
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ── who, in three tiles ───────────────────────────────────────── -->
+  <!-- SPEC V1.11 §3: the three tiles sit directly under the hero and each one
+       links to its own anchor in the «Для кого» section further down, which is
+       shortened to those same three. A visitor who recognises their own case
+       in the first screen jumps straight to the instruction for it. -->
+  <section class="who-tiles">
+    <div class="wrap">
+      <ul class="tiles">
+        <li><a href="#who-tilda">
+          <span class="tile__title" data-i18n="tile1Title">Сайт на Tilda</span>
+          <span class="tile__text" data-i18n="tile1Text">Одна вставка в «HTML-код для HEAD».</span>
+        </a></li>
+        <li><a href="#who-wordpress">
+          <span class="tile__title" data-i18n="tile2Title">Магазин на WordPress</span>
+          <span class="tile__text" data-i18n="tile2Text">Плагин и настройки в админке.</span>
+        </a></li>
+        <li><a href="#who-agency">
+          <span class="tile__title" data-i18n="tile3Title">Агентство с клиентами</span>
+          <span class="tile__text" data-i18n="tile3Text">Много сайтов в одном кабинете.</span>
+        </a></li>
+      </ul>
     </div>
   </section>
 
@@ -148,23 +232,45 @@
           <span class="step-n" aria-hidden="true">1</span>
           <h3 data-i18n="how1Title">Вставьте строку баннера</h3>
           <p data-i18n="how1Text">Одна строка в &lt;head&gt; — на Tilda, WordPress, через Google Tag Manager или в обычный HTML. Без сборки и зависимостей.</p>
+          <img class="step-shot" src="/img/steps/step1.webp" loading="lazy" decoding="async"
+               width="1200" height="517" alt="" data-i18n-alt="how1Alt">
         </li>
         <li>
           <span class="step-n" aria-hidden="true">2</span>
           <h3 data-i18n="how2Title">Нажмите «Проверить»</h3>
           <p data-i18n="how2Text">Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки. Если строка ставится через Google Tag Manager, подтвердите домен meta-тегом или DNS-записью.</p>
+          <img class="step-shot" src="/img/steps/step2.webp" loading="lazy" decoding="async"
+               width="1200" height="338" alt="" data-i18n-alt="how2Alt">
         </li>
         <li>
           <span class="step-n" aria-hidden="true">3</span>
           <h3 data-i18n="how3Title">Запустите скан</h3>
           <p data-i18n="how3Text">Сканер обойдёт сайт, найдёт сторонние сервисы и cookie и предложит готовую таблицу для баннера.</p>
+          <img class="step-shot" src="/img/steps/step3.webp" loading="lazy" decoding="async"
+               width="1032" height="236" alt="" data-i18n-alt="how3Alt">
         </li>
         <li>
           <span class="step-n" aria-hidden="true">4</span>
           <h3 data-i18n="how4Title">Настройте баннер</h3>
           <p data-i18n="how4Text">Баннер уже на сайте, первая версия с таблицей cookie публикуется сама. При желании поправьте цвета, тексты и таблицу в кабинете.</p>
+          <img class="step-shot" src="/img/steps/step4.webp" loading="lazy" decoding="async"
+               width="1200" height="659" alt="" data-i18n-alt="how4Alt">
         </li>
       </ol>
+    </div>
+  </section>
+
+  <!-- ── numbers ───────────────────────────────────────────────────── -->
+  <!-- SPEC V1.11 §3: filled from GET /v1/public/stats by app.js, which starts
+       from the static fallback below and only ever replaces it with fresher
+       numbers — so the block is never empty and never flashes zeros. The rule
+       that matters: while `sites` is under ten the counts are not shown at
+       all, only the language count and «работаем с …». A young service that
+       advertises "3 sites" argues against itself. -->
+  <section id="numbers">
+    <div class="wrap">
+      <h2 class="stats__head" data-i18n="statsTitle">Цифры</h2>
+      <dl class="stats" id="stats"></dl>
     </div>
   </section>
 
@@ -176,6 +282,7 @@
       <h2 data-i18n="priceTitle">Тарифы</h2>
       <p class="section-lede" data-i18n="priceLede">Тариф действует на организацию. Понижение тарифа не ломает сайт: баннер продолжает работать, возвращается строка о разработчике, расписание сканов останавливается.</p>
       <div class="plans" id="plans"></div>
+      <p class="price-cheap" data-i18n="priceCheaper">Дешевле одного письма от юриста.</p>
       <p class="price-note" data-i18n="priceFoot">Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS, Литва.</p>
     </div>
   </section>
@@ -220,20 +327,20 @@
   <section id="who" class="band">
     <div class="wrap">
       <h2 data-i18n="whoTitle">Для кого</h2>
-      <div class="cards cards--4">
-        <article class="card">
+      <!-- Three cases, not four: SPEC V1.11 §3 shortens this block to exactly
+           the three the hero tiles link to, and each card carries the anchor
+           its tile targets. The old «Интернет-магазины» card said what feat5
+           already says one screen up. -->
+      <div class="cards">
+        <article class="card" id="who-tilda">
           <h3 data-i18n="who1Title">Сайты на Tilda</h3>
           <p data-i18n="who1Text">Файлы загружать некуда — берите самодостаточный блок и вставляйте в «HTML-код для HEAD». Одна вставка, никаких плагинов.</p>
         </article>
-        <article class="card">
+        <article class="card" id="who-wordpress">
           <h3 data-i18n="who2Title">WordPress и WooCommerce</h3>
           <p data-i18n="who2Text">Плагин ставится копированием папки, настройки — в админке. Работает и с кэширующими плагинами: баннер не зависит от PHP.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="who3Title">Интернет-магазины</h3>
-          <p data-i18n="who3Text">Реклама и ремаркетинг живут по Consent Mode v2: теги получают корректные сигналы, а не отключаются целиком.</p>
-        </article>
-        <article class="card">
+        <article class="card" id="who-agency">
           <h3 data-i18n="who4Title">Агентства</h3>
           <p data-i18n="who4Text">Много сайтов клиентов в одном кабинете, сканы по расписанию и оповещения о новых трекерах. Условия — по договору.</p>
         </article>
@@ -283,6 +390,7 @@
 
 </main>
 
+<!--FOOTER:start-->
 <footer class="site-foot">
   <div class="wrap foot-grid">
     <div>
@@ -295,8 +403,15 @@
       <a href="https://github.com/vermoh/ConsentKit/blob/main/INSTALL.ru.md" rel="noopener" data-i18n="footDocs">Инструкция по установке</a>
       <a href="https://app.ecomconsult.net" data-i18n="footCabinet">Кабинет</a>
     </nav>
+    <!-- The «Правила» group. Its own nav so the articles read as a section of
+         the site rather than four more links in the utility row. -->
+    <nav class="foot-links foot-links--law" aria-label="Правила" data-i18n-aria-label="navLaw">
+      <a href="{{LAW_HOME}}" class="foot-links__head" data-i18n="navLaw">Правила</a>
+      <a href="{{LAW_HOME}}" data-i18n="lawIndexTitle">Правила и cookie</a>
+    </nav>
   </div>
 </footer>
+<!--FOOTER:end-->
 
 <script src="/vendor/ck-core.js"></script>
 <script src="/vendor/ck-locales.js"></script>

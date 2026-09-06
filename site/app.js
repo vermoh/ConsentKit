@@ -1,8 +1,15 @@
 /* ConsentKit public page — language switch, pricing render, live demo.
  *
  * No frameworks, no build step, and only our own API: the page that argues for
- * privacy must not itself load a third-party font, script or beacon. Its one
- * off-origin request is GET {API_BASE}/v1/public/pricing, for the prices.
+ * privacy must not itself load a third-party font, script or beacon. Its three
+ * off-origin requests all go to {API_BASE}, which is ours: GET /v1/public/pricing
+ * for the prices, GET /v1/public/stats for the «Цифры» block, and the
+ * POST /v1/public/site-check the «Проверить сайт» form sends.
+ *
+ * The file is also loaded by the law pages under /law/<slug>, which carry the
+ * header, the footer and one check form but none of the demo, pricing or FAQ
+ * markup. Every renderer below therefore returns early when its host element is
+ * absent, and the vendor client is optional — CK is null there.
  *
  * Load order matters. index.html loads vendor/ck-core.js, ck-locales.js and
  * ck-ui.js before this file, so ConsentKit.init() below runs before the UI's
@@ -464,10 +471,300 @@
     items.forEach(function (qa, i) {
       var d = el('details', 'qa');
       if (i === 0) d.open = true;
+      // SPEC V1.11 §3: every answer gets its own anchor, so a support reply can
+      // link to one question rather than to the section. The id is positional
+      // (q1..qN) and therefore identical on all three language pages — the same
+      // fragment works whichever URL it was copied from. The build's
+      // faqAnchor() in tools/build-site.mjs produces the same string for the
+      // FAQPage markup, so the two cannot drift.
+      d.id = 'q' + (i + 1);
       var s = el('summary', null, qa[0]);
       d.appendChild(s);
       d.appendChild(el('p', null, qa[1]));
       host.appendChild(d);
+    });
+
+    // A visitor arriving on /#q7 must land with that answer open: <details>
+    // ignores the fragment, so nothing would scroll to a collapsed element.
+    openFaqFromHash();
+
+    // And again on every later hash change. Following a #q7 link from
+    // elsewhere on the same page is a same-document navigation: nothing
+    // reloads, this file does not run again, and without this the answer the
+    // link points at stays collapsed.
+    if (window.addEventListener) window.addEventListener('hashchange', openFaqFromHash);
+  }
+
+  function openFaqFromHash() {
+    var id = '';
+    try { id = (window.location.hash || '').replace(/^#/, ''); } catch (e) { return; }
+    if (!/^q\d+$/.test(id)) return;
+    var d = document.getElementById(id);
+    if (!d) return;
+    d.open = true;
+    try { d.scrollIntoView(); } catch (e) { /* noop */ }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     «Цифры» — GET /v1/public/stats
+
+     SPEC V1.11 §3. Two rules do the work here:
+
+     — Never show a zero. The block starts from the static fallback below and
+       loadStats() only ever REPLACES it, so a slow or failed request leaves
+       plausible copy on screen rather than an empty <dl> or a row of noughts.
+
+     — While `sites` is under ten, the counts are not drawn at all: only the
+       language count and «работаем с …». A service that advertises "3 sites
+       connected" is arguing against itself, and the honest way to say "we are
+       new" is to say what does not depend on being big.
+     ══════════════════════════════════════════════════════════════════ */
+
+  var STATS_MIN_SITES = 10;
+
+  // What is true regardless of uptake, and what the block falls back to.
+  var STATS_FALLBACK = { sites: 0, consents: 0, languages: 34, since: '2026-08-01' };
+
+  var stats = STATS_FALLBACK;
+
+  /* «1 234» — a thin non-breaking space every three digits, which is the
+     grouping all three languages use and the one that never reads as a decimal
+     point. toLocaleString would follow the BROWSER's locale, not the page's. */
+  function groupDigits(n) {
+    var s = String(Math.max(0, Math.floor(n)));
+    var out = '';
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 === 0) out += ' ';
+      out += s.charAt(i);
+    }
+    return out;
+  }
+
+  /* «август 2026» from an ISO date. The month names are in the dictionary
+     because Russian needs the genitive («с августа»), which no date formatter
+     would produce from a bare month name. */
+  function sinceText(iso) {
+    var months = Array.isArray(I18N.statsMonths) ? I18N.statsMonths : null;
+    var m = /^(\d{4})-(\d{2})/.exec(String(iso || ''));
+    if (!m || !months || months.length !== 12) return '';
+    var name = months[parseInt(m[2], 10) - 1];
+    if (!name) return '';
+    return t('statsSince').replace('{date}', name + ' ' + m[1]);
+  }
+
+  function statRow(host, value, label) {
+    var d = el('div', 'stat');
+    d.appendChild(el('dt', 'stat__num', value));
+    d.appendChild(el('dd', 'stat__label', label));
+    host.appendChild(d);
+  }
+
+  function renderStats() {
+    var host = $('#stats');
+    if (!host) return;
+    host.textContent = '';
+
+    // The threshold rule. Below it the counts are simply absent — not shown as
+    // «—», not shown as 0, and not softened with "already": there is nothing
+    // there to soften.
+    if (isNum(stats.sites) && stats.sites >= STATS_MIN_SITES) {
+      statRow(host, groupDigits(stats.sites), t('statsSites'));
+      if (isNum(stats.consents) && stats.consents > 0) {
+        statRow(host, groupDigits(stats.consents), t('statsConsents'));
+      }
+    }
+
+    statRow(host, groupDigits(isNum(stats.languages) ? stats.languages : 34), t('statsLanguages'));
+
+    var since = sinceText(stats.since);
+    if (since) {
+      var p = el('div', 'stat stat--since');
+      p.appendChild(el('dt', 'stat__since', since));
+      // A <dl> row needs its <dd>; this one carries no second line, and an
+      // empty one would be read out as a blank definition.
+      var dd = el('dd', 'stat__label');
+      dd.hidden = true;
+      p.appendChild(dd);
+      host.appendChild(p);
+    }
+  }
+
+  function loadStats() {
+    if (!$('#stats') || typeof fetch !== 'function') return;
+
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 2000);
+
+    fetch(API_BASE + '/v1/public/stats', {
+      method: 'GET',
+      credentials: 'omit',
+      signal: ctl ? ctl.signal : undefined
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (!data || typeof data !== 'object') return;
+        // Field by field: a payload missing one number must not blank the
+        // others, and a string where a number belongs must not reach the page.
+        var next = {
+          sites:      isNum(data.sites) ? data.sites : stats.sites,
+          consents:   isNum(data.consents) ? data.consents : stats.consents,
+          languages:  isNum(data.languages) ? data.languages : stats.languages,
+          since:      typeof data.since === 'string' ? data.since : stats.since
+        };
+        stats = next;
+        renderStats();
+      })
+      .catch(function () { /* offline, timed out, blocked: keep the fallback */ })
+      .then(function () { clearTimeout(timer); });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     «Проверить сайт» — POST /v1/public/site-check
+
+     One form authored once in site/src/index.template.html, cloned into every
+     [data-check-form] host: the hero and the bottom of each law page. Cloning
+     rather than re-authoring is what keeps the honeypot, the consent wording
+     and the five result states identical everywhere they appear.
+     ══════════════════════════════════════════════════════════════════ */
+
+  var CHECK_PATH = '/v1/public/site-check';
+
+  var checkSeq = 0;
+
+  /* The template carries no id= anywhere — five instances of one id would be
+     invalid, and every label[for] would bind to whichever field parsed first.
+     Ids are stamped here, per instance, and the labels wired to them. */
+  function wireLabels(form) {
+    var n = ++checkSeq;
+    $$('.check__field', form).forEach(function (p, i) {
+      var input = $('input', p);
+      var label = $('label', p);
+      if (!input || !label) return;
+      var id = 'ck-check-' + n + '-' + i;
+      input.id = id;
+      label.htmlFor = id;
+    });
+    // The consent checkbox is already wrapped by its <label>, so it needs no
+    // for= — but the state line is announced for the whole form.
+    var state = $('.check__state', form);
+    if (state) state.id = 'ck-check-state-' + n;
+  }
+
+  function setState(form, key, vars) {
+    var out = $('.check__state', form);
+    if (!out) return;
+    var msg = t(key);
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        msg = msg.split('{' + k + '}').join(vars[k]);
+      });
+    }
+    out.textContent = msg;
+    // ok / warn / bad drive nothing but colour; the text carries the meaning,
+    // which is what a screen reader gets from the aria-live region.
+    out.className = 'check__state check__state--' +
+      (key === 'checkSent' ? 'ok' : (key === 'checkSending' ? 'wait' : 'warn'));
+  }
+
+  /* Trim what people actually paste. "https://Example.MD/pricing?x=1" is the
+     same site as "example.md", and a visitor who copies from the address bar
+     should not be told their own domain is invalid. The server normalises
+     again — this is for the message, not for security. */
+  function cleanDomain(raw) {
+    var s = String(raw || '').trim().toLowerCase();
+    s = s.replace(/^[a-z][a-z0-9+.-]*:\/\//, '');
+    s = s.replace(/^www\./, '');
+    s = s.split('/')[0].split('?')[0].split('#')[0];
+    s = s.replace(/:\d+$/, '');
+    return s;
+  }
+
+  function looksLikeDomain(s) {
+    return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(s);
+  }
+
+  function looksLikeEmail(s) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
+  }
+
+  function submitCheck(form) {
+    var domainEl = $('input[name="domain"]', form);
+    var emailEl = $('input[name="email"]', form);
+    var agreeEl = $('input[name="agree"]', form);
+    var hpEl = $('input[name="hp"]', form);
+    var button = $('button[type="submit"]', form);
+    if (!domainEl || !emailEl || !agreeEl) return;
+
+    var domain = cleanDomain(domainEl.value);
+    var email = String(emailEl.value || '').trim();
+
+    // Checked here rather than left to the browser: novalidate is set so the
+    // three messages are ours, in the page language, in the same aria-live
+    // region as the server's answers.
+    if (!domain || !looksLikeDomain(domain)) { setState(form, 'checkNeedDomain'); domainEl.focus(); return; }
+    if (!email || !looksLikeEmail(email)) { setState(form, 'checkNeedEmail'); emailEl.focus(); return; }
+    if (!agreeEl.checked) { setState(form, 'checkNeedAgree'); agreeEl.focus(); return; }
+
+    if (typeof fetch !== 'function') { setState(form, 'checkError'); return; }
+
+    setState(form, 'checkSending');
+    if (button) button.disabled = true;
+    var done = function () { if (button) button.disabled = false; };
+
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 10000);
+
+    fetch(API_BASE + CHECK_PATH, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domain: domain,
+        email: email,
+        lang: lang,
+        agree: true,
+        // Always sent, always empty for a real visitor: the server decides what
+        // a filled honeypot means, and a missing field would tell it nothing.
+        hp: hpEl ? String(hpEl.value || '') : ''
+      }),
+      signal: ctl ? ctl.signal : undefined
+    })
+      .then(function (res) {
+        return res.json().catch(function () { return null; }).then(function (data) {
+          return { status: res.status, data: data };
+        });
+      })
+      .then(function (r) {
+        // Four documented answers, one branch each. 400 is its own message
+        // rather than the generic error: "check the address and the email" is
+        // actionable, "could not reach us" would send the visitor to look at
+        // their wi-fi over a typo.
+        if (r.status === 202) {
+          setState(form, 'checkSent', { domain: domain, email: email });
+          form.reset();
+        } else if (r.status === 200) {
+          setState(form, 'checkRecent');
+        } else if (r.status === 429) {
+          setState(form, 'checkLimit');
+        } else if (r.status === 400) {
+          setState(form, 'checkInvalid');
+        } else {
+          setState(form, 'checkError');
+        }
+      })
+      .catch(function () { setState(form, 'checkError'); })
+      .then(function () { clearTimeout(timer); done(); });
+  }
+
+  function wireCheckForms() {
+    $$('form[data-check-form]').forEach(function (form) {
+      if (form.getAttribute('data-check-wired')) return;
+      form.setAttribute('data-check-wired', '1');
+      wireLabels(form);
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        submitCheck(form);
+      });
     });
   }
 
@@ -678,6 +975,8 @@
   function renderPage() {
     renderPricing();
     renderFaq();
+    renderStats();
+    wireCheckForms();
     fillLanguageSelect();
     // The demo's cookie table and branding line follow the page language.
     applyDemo();
@@ -749,7 +1048,9 @@
 
   placeFabWhenMounted();
 
-  // After the first paint, and once. The constants are already on screen, so
-  // this only ever replaces them with fresher numbers.
+  // After the first paint, and once each. The constants and the fallback
+  // numbers are already on screen, so these only ever replace them with
+  // fresher values — neither request can leave the page emptier than it was.
   loadPricing();
+  loadStats();
 })();
