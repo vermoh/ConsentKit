@@ -948,6 +948,22 @@ section[id],
   gap: 20px;
 }
 .cards--4 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+/* #features carries ten cards, and the track above resolves to three columns
+   at desktop width — so the tenth lands alone on a fourth row, flush left,
+   reading as a card that lost its neighbours rather than as the end of a list.
+   Centring it is the whole fix. `:last-child:nth-child(3n+1)` fires only when
+   the final card is also the first of its row, i.e. exactly the orphan case;
+   at nine cards, or any other multiple of three, it matches nothing.
+
+   The min-width is what keeps it honest. auto-fit drops to two columns and
+   then to one as the page narrows, and `grid-column: 2` on a single-column
+   grid would conjure an implicit second column and shove the card into it.
+   Three columns need 910px of track inside a .wrap that pads 24px a side, so
+   the rule cannot mislay a card in the 930-957px band either: the grid is two
+   columns wide there and column 2 is where the tenth card already sits. */
+@media (min-width: 930px) {
+  #features .cards > .card:last-child:nth-child(3n+1) { grid-column: 2; }
+}
 .card {
   background: var(--bg);
   border: 1px solid var(--line);

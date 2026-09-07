@@ -420,14 +420,19 @@ test('«How it works» renders four numbered steps in every language', () => {
 
 /* ------------------------------------------------------ «Что умеет» cards */
 
-/* Nine feature cards, which at desktop width is a full 3×3: .cards is
-   `repeat(auto-fit, minmax(290px, 1fr))` with a 20px gap inside 1072px of
-   content, so three columns fit (3×290 + 2×20 = 910) and four do not (1220).
-   Counting the cards alone would pass a section whose ninth card carries the
+/* Ten feature cards. .cards is `repeat(auto-fit, minmax(290px, 1fr))` with a
+   20px gap inside 1072px of content, so three columns fit (3×290 + 2×20 = 910)
+   and four do not (1220) — which makes ten cards a 3+3+3+1, the tenth alone on
+   the last row. That orphan is deliberate and not left flush left: a scoped
+   `#features .cards > .card:last-child:nth-child(3n+1) { grid-column: 2 }` in
+   site/styles.css centres it, above 930px only, so the rule cannot invent a
+   second column on the phone-width single-column grid.
+
+   Counting the cards alone would pass a section whose tenth card carries the
    template's Russian fallback on the EN and RO pages, so assert that each one
    actually renders its own dictionary strings — the same reasoning as the
    «How it works» test above. */
-test('«What it does» renders nine feature cards in every language', () => {
+test('«What it does» renders ten feature cards in every language', () => {
   const template = readTemplate();
 
   for (const { code } of LANGS) {
@@ -436,11 +441,11 @@ test('«What it does» renders nine feature cards in every language', () => {
     assert.ok(section, `the ${code} page has no <section id="features">`);
 
     const cards = [...section[1].matchAll(/<article class="card">[\s\S]*?<\/article>/g)];
-    assert.equal(cards.length, 9,
-      `the ${code} page renders ${cards.length} feature cards, not 9`);
+    assert.equal(cards.length, 10,
+      `the ${code} page renders ${cards.length} feature cards, not 10`);
 
     const dict = readDict(code);
-    for (let n = 1; n <= 9; n++) {
+    for (let n = 1; n <= 10; n++) {
       for (const key of [`feat${n}Title`, `feat${n}Text`]) {
         assert.ok(dict[key] && dict[key].trim(),
           `site/src/i18n/${code}.json has no "${key}"`);
