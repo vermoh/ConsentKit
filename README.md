@@ -1128,12 +1128,12 @@ attribution line; `--no-branding` drops both the code and the config and takes
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 275,509 | 86,249 | 249,096 |
-| `ready/ru-bar.txt` | ru, ro, en | 277,578 | 87,146 | 250,979 |
-| `ready/ru-box.txt` | ru, ro, en | 277,593 | 87,156 | 250,994 |
-| `ready/ru-box-right.txt` | ru, ro, en | 277,602 | 87,161 | 250,997 |
-| `ready/ru-modal.txt` | ru, ro, en | 277,586 | 87,153 | 250,985 |
-| `ready/eu-bar.txt` | 34 languages | 326,232 | 105,534 | 299,653 |
+| `ready/en-bar.txt` | en | 332,104 | 104,904 | 305,691 |
+| `ready/ru-bar.txt` | ru, ro, en | 334,288 | 105,851 | 307,689 |
+| `ready/ru-box.txt` | ru, ro, en | 334,303 | 105,858 | 307,704 |
+| `ready/ru-box-right.txt` | ru, ro, en | 334,312 | 105,858 | 307,707 |
+| `ready/ru-modal.txt` | ru, ro, en | 334,296 | 105,856 | 307,695 |
+| `ready/eu-bar.txt` | 34 languages | 386,222 | 125,252 | 359,643 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources

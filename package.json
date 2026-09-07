@@ -22,7 +22,7 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "build": "node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-bar.txt && node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=box --position=bottom-left --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-box.txt && node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=box --position=bottom-right --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-box-right.txt && node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=modal --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-modal.txt && node tools/build-inline.mjs --langs=en --language=en --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/en-bar.txt && node tools/build-inline.mjs --langs=bg,ca,cs,da,de,el,en,es,et,fi,fr,ga,hr,hu,is,it,lt,lv,mk,mt,nb,nl,no,pl,pt,ro,ru,sk,sl,sq,sr,sv,tr,uk --language=auto --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/eu-bar.txt && node tools/export-hostdb.mjs && node tools/sync-site.mjs && node tools/build-site.mjs && cp -f src/ck-core.js src/ck-locales.js src/ck-ui-branding.js src/ck-ui.js src/ck-debug-loader.js plugins/wordpress/consentkit/assets/"
+    "build": "node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-bar.txt && node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=box --position=bottom-left --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-box.txt && node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=box --position=bottom-right --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-box-right.txt && node tools/build-inline.mjs --langs=ru,ro,en --language=auto --layout=modal --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/ru-modal.txt && node tools/build-inline.mjs --langs=en --language=en --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/en-bar.txt && node tools/build-inline.mjs --langs=bg,ca,cs,da,de,el,en,es,et,fi,fr,ga,hr,hu,is,it,lt,lv,mk,mt,nb,nl,no,pl,pt,ro,ru,sk,sl,sq,sr,sv,tr,uk --language=auto --layout=bar --position=bottom --accent=#2B50D8 --mode=auto --policy=1 --out=ready/eu-bar.txt && node tools/export-hostdb.mjs && node tools/sync-site.mjs && node tools/build-site.mjs && cp -f src/ck-core.js src/ck-locales.js src/ck-ui-branding.js src/ck-ui.js src/ck-debug-loader.js plugins/wordpress/consentkit/assets/ && node tools/build-changelog.mjs"
   },
   "type": "module",
   "sideEffects": true,
@@ -51,6 +51,7 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "CHANGELOG.md",
     "src",
     "npm",
     "README.md"
