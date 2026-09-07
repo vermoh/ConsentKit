@@ -312,6 +312,12 @@
       themeCard: 'карточка',
       themeBtn: 'кнопки',
       themeLink: 'Ссылки',
+      // SPEC V1.16 §1.4 — какой язык получил свои тексты из конфига. Отвечает
+      // на вопрос «почему на баннере не тот текст, который я вписал»: чаще
+      // всего потому, что переопределение записано под другим кодом языка.
+      textsOverride: 'Тексты',
+      textsFor: 'переопределения для ',
+      textsNone: 'нет',
       btnAccept: 'Принять всё',
       btnReject: 'Отклонить всё',
       btnSettings: 'Настроить',
@@ -387,6 +393,9 @@
       themeCard: 'card',
       themeBtn: 'buttons',
       themeLink: 'Links',
+      textsOverride: 'Texts',
+      textsFor: 'overrides for ',
+      textsNone: 'none',
       btnAccept: 'Accept all',
       btnReject: 'Reject all',
       btnSettings: 'Customize',
@@ -463,6 +472,9 @@
       themeCard: 'card',
       themeBtn: 'butoane',
       themeLink: 'Linkuri',
+      textsOverride: 'Texte',
+      textsFor: 'suprascrieri pentru ',
+      textsNone: 'niciuna',
       btnAccept: 'Acceptă tot',
       btnReject: 'Respinge tot',
       btnSettings: 'Personalizează',
@@ -853,6 +865,45 @@
                 : 'inherit (' + T.themeFontInherit + tries + ')';
   }
 
+  /* SPEC V1.16 §1.4 — «Тексты: переопределения для ru» / «нет».
+
+     The question this answers is «I filled the banner text in the cabinet and
+     the banner still shows the standard one». Nine times in ten the answer is
+     that the override is filed under a language code the banner did not resolve
+     to — so the row reports the RESOLVED code, not the configured one, and says
+     which of the two lookups (exact, then two-letter base) actually hit.
+
+     The resolution is asked of ck-ui through _contrast rather than repeated
+     here: «один код — одни числа», the same rule the Appearance section above
+     already follows. With ck-ui absent (a core-only page) there is no banner
+     language to report and the row reads «нет». */
+  function textsRow(T) {
+    var cfg = (CK && CK.config) || {};
+    var texts = (cfg.texts && typeof cfg.texts === 'object' && !Array.isArray(cfg.texts))
+      ? cfg.texts : null;
+    if (!texts) return T.textsNone;
+    var lang = '';
+    try {
+      var C = CK && CK._contrast;
+      if (C && typeof C.resolveLang === 'function' && typeof C.localeTable === 'function') {
+        lang = String(C.resolveLang(cfg.language, C.localeTable()) || '').toLowerCase();
+      }
+    } catch (e) { lang = ''; }
+    if (!lang) return T.textsNone;
+
+    function has(k) {
+      return !!(k && /^[a-z]{2}(-[a-z]{2})?$/.test(k) &&
+        Object.prototype.hasOwnProperty.call(texts, k) &&
+        texts[k] && typeof texts[k] === 'object' && !Array.isArray(texts[k]));
+    }
+    // The exact code first, then its two-letter base — the same order
+    // buildStrings() merges them in, so the row names the key that actually won.
+    if (has(lang)) return T.textsFor + lang;
+    var base = lang.slice(0, 2);
+    if (base !== lang && has(base)) return T.textsFor + base;
+    return T.textsNone;
+  }
+
   // Resolved lazily, not at parse time: this file runs before ConsentKit.init()
   // has merged the site's config, so asking for the language now would always
   // read the built-in default. Re-resolved on every render so a page that
@@ -1076,7 +1127,9 @@
           [T.themeFont, fontRow(built, T)],
           [T.themeRadius, T.themeCard + ' ' + built.radius.card + 'px · ' +
             T.themeBtn + ' ' + built.radius.button + 'px'],
-          [T.themeLink, lkTxt]
+          [T.themeLink, lkTxt],
+          // SPEC V1.16 §1.4 — «Тексты: переопределения для ru» / «нет».
+          [T.textsOverride, textsRow(T)]
         ]));
 
         var labels = { accept: T.btnAccept, reject: T.btnReject, settings: T.btnSettings };

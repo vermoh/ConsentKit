@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.14
+ * Версия ConsentKit: 0.5.15
  * Дата сборки:      2026-09-07
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -2017,7 +2017,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.14',
+    version: '0.5.15',
     config: config,
 
     init: function (userConfig) {
@@ -2315,7 +2315,7 @@
 
 ;
 /* ConsentKit locales (bg, ca, cs, da, de, el, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, sk, sl, sq, sr, sv, tr, uk) — filtered subset of src/ck-locales.js */
-(function(){if(typeof window==="undefined")return;window.__ckLocales=Object.assign(window.__ckLocales||{},{"bg":{"bannerTitle":"Използваме бисквитки","bannerText":"Необходимите бисквитки поддържат сайта работещ. Всичко останало — анализи, маркетинг, допълнителни удобства — се включва само с ваше съгласие. Можете да промените решението си по всяко време.","more":"Научете повече","acceptAll":"Приемам всички","rejectAll":"Отхвърлям всички","customize":"Настройки","bannerLabel":"Съгласие за бисквитки","panelTitle":"Настройки на бисквитките","panelIntro":"Изберете кои бисквитки разрешавате. Нищо по избор не е включено, докато не го включите сами.","save":"Запази избора","close":"Затвори","alwaysOn":"винаги активни","cookiesIn":"Бисквитки в тази група","noCookies":"За тази група не са обявени бисквитки.","colName":"Име","colVendor":"Доставчик","colPurpose":"Цел","colExpiry":"Изтича","floating":"Настройки на бисквитките","cat":{"necessary":{"title":"Необходими","desc":"Нужни са, за да работи сайтът — вход, сигурност, запомняне на съгласието ви. Не могат да се изключат."},"functional":{"title":"Функционални","desc":"Запомнят предпочитанията ви, например език или чат, за да не ги задавате отново."},"analytics":{"title":"Анализи","desc":"Помагат ни да видим кои страници се използват, за да поправим неудобното. Само числа, без имена."},"marketing":{"title":"Маркетинг","desc":"Позволяват да ви показваме реклами в други сайтове и да преценим дали са били от полза."}}},"ca":{"bannerTitle":"Utilitzem galetes","bannerText":"Les galetes necessàries mantenen el lloc en funcionament. Tota la resta — analítica, màrqueting, funcions addicionals — només s’activa si ho permeteu. Podeu canviar d’opinió en qualsevol moment.","more":"Més informació","acceptAll":"Accepta-ho tot","rejectAll":"Rebutja-ho tot","customize":"Personalitza","bannerLabel":"Consentiment de galetes","panelTitle":"Configuració de galetes","panelIntro":"Trieu quines galetes permeteu. Res opcional no està activat fins que no ho activeu vosaltres.","save":"Desa la selecció","close":"Tanca","alwaysOn":"sempre actives","cookiesIn":"Galetes d’aquest grup","noCookies":"No s’ha declarat cap galeta per a aquest grup.","colName":"Nom","colVendor":"Proveïdor","colPurpose":"Finalitat","colExpiry":"Caduca","floating":"Configuració de galetes","cat":{"necessary":{"title":"Necessàries","desc":"Calen perquè el lloc funcioni: inici de sessió, seguretat i memòria del vostre consentiment. No es poden desactivar."},"functional":{"title":"Funcionals","desc":"Recorden les vostres preferències, com l’idioma o el xat, perquè no les hàgiu de tornar a configurar."},"analytics":{"title":"Analítica","desc":"Ens mostren quines pàgines es fan servir per corregir allò que confon. Només xifres, sense noms."},"marketing":{"title":"Màrqueting","desc":"Ens permeten mostrar-vos anuncis en altres llocs i mesurar si han servit d’alguna cosa."}}},"cs":{"bannerTitle":"Používáme cookies","bannerText":"Nezbytné cookies udržují web v chodu. Vše ostatní — analytika, marketing, další vylepšení — se zapne jen s vaším souhlasem. Rozhodnutí můžete kdykoli změnit.","more":"Více informací","acceptAll":"Přijmout vše","rejectAll":"Odmítnout vše","customize":"Nastavit","bannerLabel":"Souhlas s cookies","panelTitle":"Nastavení cookies","panelIntro":"Vyberte, které cookies povolíte. Nic volitelného není zapnuté, dokud to sami nezapnete.","save":"Uložit volbu","close":"Zavřít","alwaysOn":"vždy aktivní","cookiesIn":"Cookies v této skupině","noCookies":"Pro tuto skupinu nejsou uvedeny žádné cookies.","colName":"Název","colVendor":"Poskytovatel","colPurpose":"Účel","colExpiry":"Platnost","floating":"Nastavení cookies","cat":{"necessary":{"title":"Nezbytné","desc":"Bez nich web nefunguje — přihlášení, bezpečnost, uložení vašeho souhlasu. Nelze je vypnout."},"functional":{"title":"Funkční","desc":"Pamatují si vaše předvolby, třeba jazyk nebo chat, abyste je nenastavovali znovu."},"analytics":{"title":"Analytické","desc":"Ukazují nám, které stránky lidé používají, abychom opravili to nepřehledné. Jen čísla, žádná jména."},"marketing":{"title":"Marketingové","desc":"Umožňují nám zobrazovat vám reklamy na jiných webech a měřit, zda byly k něčemu."}}},"da":{"bannerTitle":"Vi bruger cookies","bannerText":"Nødvendige cookies holder siden i gang. Alt andet — statistik, markedsføring, ekstra funktioner — sættes kun til, hvis du tillader det. Du kan altid ombestemme dig.","more":"Læs mere","acceptAll":"Accepter alle","rejectAll":"Afvis alle","customize":"Tilpas","bannerLabel":"Cookiesamtykke","panelTitle":"Cookieindstillinger","panelIntro":"Vælg, hvilke cookies du tillader. Intet valgfrit er slået til, før du selv slår det til.","save":"Gem valg","close":"Luk","alwaysOn":"altid aktive","cookiesIn":"Cookies i denne gruppe","noCookies":"Der er ikke angivet cookies for denne gruppe.","colName":"Navn","colVendor":"Udbyder","colPurpose":"Formål","colExpiry":"Udløber","floating":"Cookieindstillinger","cat":{"necessary":{"title":"Nødvendige","desc":"Nødvendige for at siden virker — login, sikkerhed, hukommelse om dit samtykke. De kan ikke slås fra."},"functional":{"title":"Funktionelle","desc":"Husker dine indstillinger, fx sprog eller chat, så du ikke skal vælge dem igen."},"analytics":{"title":"Statistik","desc":"Viser os, hvilke sider folk bruger, så vi kan rette det, der forvirrer. Kun tal, ingen navne."},"marketing":{"title":"Markedsføring","desc":"Giver os mulighed for at vise dig annoncer på andre sider og måle, om de virkede."}}},"de":{"bannerTitle":"Wir verwenden Cookies","bannerText":"Notwendige Cookies halten die Website am Laufen. Alles Weitere — Statistik, Marketing, zusätzliche Funktionen — läuft nur, wenn Sie es erlauben. Sie können Ihre Entscheidung jederzeit ändern.","more":"Mehr erfahren","acceptAll":"Alle akzeptieren","rejectAll":"Alle ablehnen","customize":"Einstellen","bannerLabel":"Cookie-Einwilligung","panelTitle":"Cookie-Einstellungen","panelIntro":"Wählen Sie, welche Cookies Sie erlauben. Nichts Optionales ist aktiv, bis Sie es einschalten.","save":"Auswahl speichern","close":"Schließen","alwaysOn":"immer aktiv","cookiesIn":"Cookies in dieser Gruppe","noCookies":"Für diese Gruppe sind keine Cookies angegeben.","colName":"Name","colVendor":"Anbieter","colPurpose":"Zweck","colExpiry":"Laufzeit","floating":"Cookie-Einstellungen","cat":{"necessary":{"title":"Notwendig","desc":"Nötig, damit die Website funktioniert — Anmeldung, Sicherheit, Speichern Ihrer Einwilligung. Sie lassen sich nicht abschalten."},"functional":{"title":"Funktional","desc":"Merken sich Ihre Einstellungen, etwa Sprache oder Chat, damit Sie sie nicht erneut wählen müssen."},"analytics":{"title":"Statistik","desc":"Zeigen uns, welche Seiten genutzt werden, damit wir Unklares verbessern. Nur Zahlen, keine Namen."},"marketing":{"title":"Marketing","desc":"Erlauben uns, Ihnen Werbung auf anderen Seiten zu zeigen und zu messen, ob sie etwas gebracht hat."}}},"el":{"bannerTitle":"Χρησιμοποιούμε cookies","bannerText":"Τα απαραίτητα cookies κρατούν τον ιστότοπο σε λειτουργία. Όλα τα υπόλοιπα — στατιστικά, μάρκετινγκ, πρόσθετες ευκολίες — ενεργοποιούνται μόνο με τη συγκατάθεσή σας. Μπορείτε να αλλάξετε γνώμη ανά πάσα στιγμή.","more":"Μάθετε περισσότερα","acceptAll":"Αποδοχή όλων","rejectAll":"Απόρριψη όλων","customize":"Ρυθμίσεις","bannerLabel":"Συγκατάθεση για cookies","panelTitle":"Ρυθμίσεις cookies","panelIntro":"Επιλέξτε ποια cookies επιτρέπετε. Τίποτα προαιρετικό δεν είναι ενεργό μέχρι να το ενεργοποιήσετε εσείς.","save":"Αποθήκευση επιλογών","close":"Κλείσιμο","alwaysOn":"πάντα ενεργά","cookiesIn":"Cookies αυτής της ομάδας","noCookies":"Δεν έχουν δηλωθεί cookies για αυτήν την ομάδα.","colName":"Όνομα","colVendor":"Πάροχος","colPurpose":"Σκοπός","colExpiry":"Λήξη","floating":"Ρυθμίσεις cookies","cat":{"necessary":{"title":"Απαραίτητα","desc":"Χρειάζονται για να λειτουργεί ο ιστότοπος — σύνδεση, ασφάλεια, διατήρηση της επιλογής σας. Δεν απενεργοποιούνται."},"functional":{"title":"Λειτουργικά","desc":"Θυμούνται τις προτιμήσεις σας, όπως γλώσσα ή συνομιλία, ώστε να μην τις ορίζετε ξανά."},"analytics":{"title":"Στατιστικά","desc":"Μας δείχνουν ποιες σελίδες χρησιμοποιούνται, για να διορθώσουμε ό,τι μπερδεύει. Μόνο αριθμοί, χωρίς ονόματα."},"marketing":{"title":"Μάρκετινγκ","desc":"Μας επιτρέπουν να σας δείχνουμε διαφημίσεις σε άλλους ιστότοπους και να μετράμε αν ήταν χρήσιμες."}}},"es":{"bannerTitle":"Usamos cookies","bannerText":"Las cookies necesarias mantienen el sitio en funcionamiento. Todo lo demás — analítica, marketing, funciones adicionales — solo se activa si usted lo permite. Puede cambiar de opinión cuando quiera.","more":"Más información","acceptAll":"Aceptar todo","rejectAll":"Rechazar todo","customize":"Personalizar","bannerLabel":"Consentimiento de cookies","panelTitle":"Configuración de cookies","panelIntro":"Elija qué cookies permite. Nada opcional está activo hasta que usted lo active.","save":"Guardar selección","close":"Cerrar","alwaysOn":"siempre activas","cookiesIn":"Cookies de este grupo","noCookies":"No se han declarado cookies para este grupo.","colName":"Nombre","colVendor":"Proveedor","colPurpose":"Finalidad","colExpiry":"Caduca","floating":"Configuración de cookies","cat":{"necessary":{"title":"Necesarias","desc":"Imprescindibles para que el sitio funcione: inicio de sesión, seguridad y memoria de su consentimiento. No se pueden desactivar."},"functional":{"title":"Funcionales","desc":"Recuerdan sus preferencias, como el idioma o el chat, para que no tenga que configurarlas de nuevo."},"analytics":{"title":"Analítica","desc":"Nos muestran qué páginas se usan para corregir lo que resulta confuso. Solo cifras, sin nombres."},"marketing":{"title":"Marketing","desc":"Nos permiten mostrarle anuncios en otros sitios y medir si han servido de algo."}}},"et":{"bannerTitle":"Kasutame küpsiseid","bannerText":"Vajalikud küpsised hoiavad saidi töös. Kõik muu — statistika, turundus, lisamugavused — lülitub sisse ainult teie nõusolekul. Võite oma otsust igal ajal muuta.","more":"Loe lähemalt","acceptAll":"Nõustu kõigiga","rejectAll":"Keeldu kõigist","customize":"Seadista","bannerLabel":"Küpsiste nõusolek","panelTitle":"Küpsiste seaded","panelIntro":"Valige, milliseid küpsiseid lubate. Miski valikuline ei ole sees, enne kui te selle ise sisse lülitate.","save":"Salvesta valik","close":"Sulge","alwaysOn":"alati aktiivsed","cookiesIn":"Selle rühma küpsised","noCookies":"Selle rühma kohta ei ole küpsiseid deklareeritud.","colName":"Nimi","colVendor":"Pakkuja","colPurpose":"Eesmärk","colExpiry":"Kehtivus","floating":"Küpsiste seaded","cat":{"necessary":{"title":"Vajalikud","desc":"Vajalikud saidi tööks — sisselogimine, turvalisus, teie nõusoleku meelespidamine. Neid ei saa välja lülitada."},"functional":{"title":"Funktsionaalsed","desc":"Jätavad meelde teie eelistused, näiteks keele või vestluse, et te ei peaks neid uuesti valima."},"analytics":{"title":"Statistika","desc":"Näitavad meile, milliseid lehti kasutatakse, et saaksime segadust tekitava korda teha. Ainult numbrid, ilma nimedeta."},"marketing":{"title":"Turundus","desc":"Võimaldavad näidata teile reklaame teistel saitidel ja mõõta, kas neist oli kasu."}}},"fi":{"bannerTitle":"Käytämme evästeitä","bannerText":"Välttämättömät evästeet pitävät sivuston toiminnassa. Kaikki muu — tilastot, markkinointi, lisämukavuudet — otetaan käyttöön vain suostumuksellanne. Voitte muuttaa valintaanne milloin tahansa.","more":"Lue lisää","acceptAll":"Hyväksy kaikki","rejectAll":"Hylkää kaikki","customize":"Muokkaa","bannerLabel":"Evästesuostumus","panelTitle":"Evästeasetukset","panelIntro":"Valitkaa, mitkä evästeet sallitte. Mikään valinnainen ei ole päällä, ennen kuin otatte sen itse käyttöön.","save":"Tallenna valinta","close":"Sulje","alwaysOn":"aina käytössä","cookiesIn":"Tämän ryhmän evästeet","noCookies":"Tälle ryhmälle ei ole ilmoitettu evästeitä.","colName":"Nimi","colVendor":"Toimittaja","colPurpose":"Tarkoitus","colExpiry":"Voimassaolo","floating":"Evästeasetukset","cat":{"necessary":{"title":"Välttämättömät","desc":"Tarvitaan sivuston toimintaan: kirjautuminen, turvallisuus ja suostumuksenne muistaminen. Näitä ei voi poistaa käytöstä."},"functional":{"title":"Toiminnalliset","desc":"Muistavat asetuksenne, kuten kielen tai chatin, jottei niitä tarvitse valita uudelleen."},"analytics":{"title":"Tilastot","desc":"Kertovat meille, mitä sivuja käytetään, jotta voimme korjata sekavat kohdat. Vain lukuja, ei nimiä."},"marketing":{"title":"Markkinointi","desc":"Antavat meidän näyttää teille mainoksia muilla sivustoilla ja mitata, oliko niistä hyötyä."}}},"fr":{"bannerTitle":"Nous utilisons des cookies","bannerText":"Les cookies nécessaires font fonctionner le site. Tout le reste — mesure d’audience, marketing, options de confort — ne s’active que si vous l’autorisez. Vous pouvez changer d’avis à tout moment.","more":"En savoir plus","acceptAll":"Tout accepter","rejectAll":"Tout refuser","customize":"Personnaliser","bannerLabel":"Consentement aux cookies","panelTitle":"Paramètres des cookies","panelIntro":"Choisissez les cookies que vous autorisez. Rien d’optionnel n’est activé tant que vous ne l’activez pas.","save":"Enregistrer","close":"Fermer","alwaysOn":"toujours actifs","cookiesIn":"Cookies de ce groupe","noCookies":"Aucun cookie déclaré pour ce groupe.","colName":"Nom","colVendor":"Fournisseur","colPurpose":"Finalité","colExpiry":"Expiration","floating":"Paramètres des cookies","cat":{"necessary":{"title":"Nécessaires","desc":"Indispensables au fonctionnement du site : connexion, sécurité, mémorisation de votre choix. Ils ne peuvent pas être désactivés."},"functional":{"title":"Fonctionnels","desc":"Retiennent vos préférences, par exemple la langue ou le chat, pour ne pas avoir à les régler de nouveau."},"analytics":{"title":"Mesure d’audience","desc":"Nous montrent quelles pages sont consultées, afin de corriger ce qui prête à confusion. Des chiffres seulement, aucun nom."},"marketing":{"title":"Marketing","desc":"Nous permettent de vous montrer des publicités sur d’autres sites et de mesurer leur utilité."}}},"ga":{"bannerTitle":"Úsáidimid fianáin","bannerText":"Coinníonn fianáin riachtanacha an suíomh ag obair. Gach rud eile — anailísíocht, margaíocht, áiseanna breise — ní ritheann sé ach le do chead. Is féidir leat d’intinn a athrú am ar bith.","more":"Tuilleadh eolais","acceptAll":"Glac le gach ceann","rejectAll":"Diúltaigh do gach ceann","customize":"Saincheap","bannerLabel":"Toiliú fianán","panelTitle":"Socruithe fianán","panelIntro":"Roghnaigh na fianáin a cheadaíonn tú. Níl aon rud roghnach ar siúl go dtí go gcuireann tú féin ar siúl é.","save":"Sábháil an rogha","close":"Dún","alwaysOn":"gníomhach i gcónaí","cookiesIn":"Fianáin sa ghrúpa seo","noCookies":"Níl aon fhianán dearbhaithe don ghrúpa seo.","colName":"Ainm","colVendor":"Soláthraí","colPurpose":"Cuspóir","colExpiry":"Éagann","floating":"Socruithe fianán","cat":{"necessary":{"title":"Riachtanach","desc":"Ag teastáil chun an suíomh a oibriú — logáil isteach, slándáil, do thoiliú a choinneáil. Ní féidir iad a mhúchadh."},"functional":{"title":"Feidhmiúil","desc":"Coinníonn siad do roghanna, mar shampla an teanga nó an comhrá, ionas nach gá duit iad a shocrú arís."},"analytics":{"title":"Anailísíocht","desc":"Taispeánann siad dúinn na leathanaigh a úsáidtear, chun an rud atá mearbhallach a cheartú. Uimhreacha amháin, gan ainmneacha."},"marketing":{"title":"Margaíocht","desc":"Ligeann siad dúinn fógraí a thaispeáint duit ar shuímh eile agus a thomhas an raibh aon mhaith leo."}}},"hr":{"bannerTitle":"Koristimo kolačiće","bannerText":"Nužni kolačići održavaju stranicu u radu. Sve ostalo — analitika, marketing, dodatne pogodnosti — uključuje se samo uz vaš pristanak. Odluku možete promijeniti u svakom trenutku.","more":"Saznajte više","acceptAll":"Prihvati sve","rejectAll":"Odbij sve","customize":"Postavke","bannerLabel":"Privola za kolačiće","panelTitle":"Postavke kolačića","panelIntro":"Odaberite koje kolačiće dopuštate. Ništa neobavezno nije uključeno dok to sami ne uključite.","save":"Spremi odabir","close":"Zatvori","alwaysOn":"uvijek aktivni","cookiesIn":"Kolačići u ovoj skupini","noCookies":"Za ovu skupinu nisu navedeni kolačići.","colName":"Naziv","colVendor":"Pružatelj","colPurpose":"Svrha","colExpiry":"Istječe","floating":"Postavke kolačića","cat":{"necessary":{"title":"Nužni","desc":"Potrebni su za rad stranice — prijava, sigurnost, pamćenje vaše privole. Ne mogu se isključiti."},"functional":{"title":"Funkcionalni","desc":"Pamte vaše postavke, primjerice jezik ili chat, da ih ne morate ponovno birati."},"analytics":{"title":"Analitika","desc":"Pokazuju nam koje se stranice koriste kako bismo ispravili ono što zbunjuje. Samo brojke, bez imena."},"marketing":{"title":"Marketing","desc":"Omogućuju nam da vam prikazujemo oglase na drugim stranicama i izmjerimo jesu li bili od koristi."}}},"hu":{"bannerTitle":"Sütiket használunk","bannerText":"A szükséges sütik tartják működésben az oldalt. Minden más — statisztika, marketing, kényelmi funkciók — csak az Ön hozzájárulásával indul el. Döntését bármikor módosíthatja.","more":"További információ","acceptAll":"Mind elfogadása","rejectAll":"Mind elutasítása","customize":"Beállítás","bannerLabel":"Süti-hozzájárulás","panelTitle":"Sütibeállítások","panelIntro":"Válassza ki, mely sütiket engedélyezi. Semmi választható nincs bekapcsolva, amíg Ön be nem kapcsolja.","save":"Választás mentése","close":"Bezárás","alwaysOn":"mindig aktív","cookiesIn":"A csoport sütijei","noCookies":"Ehhez a csoporthoz nincs süti megadva.","colName":"Név","colVendor":"Szolgáltató","colPurpose":"Cél","colExpiry":"Lejárat","floating":"Sütibeállítások","cat":{"necessary":{"title":"Szükséges","desc":"Az oldal működéséhez kellenek: belépés, biztonság, a hozzájárulása megjegyzése. Nem kapcsolhatók ki."},"functional":{"title":"Funkcionális","desc":"Megjegyzik a beállításait, például a nyelvet vagy a chatet, hogy ne kelljen újra megadnia őket."},"analytics":{"title":"Statisztika","desc":"Megmutatják, mely oldalakat használják, hogy javíthassuk a zavarosat. Csak számok, nevek nélkül."},"marketing":{"title":"Marketing","desc":"Lehetővé teszik, hogy hirdetéseket mutassunk Önnek más oldalakon, és mérjük, volt-e belőlük haszon."}}},"is":{"bannerTitle":"Við notum vefkökur","bannerText":"Nauðsynlegar vefkökur halda vefnum gangandi. Allt annað — tölfræði, markaðssetning, aukaþægindi — fer aðeins í gang ef þú leyfir það. Þú getur skipt um skoðun hvenær sem er.","more":"Nánar","acceptAll":"Samþykkja allt","rejectAll":"Hafna öllu","customize":"Stillingar","bannerLabel":"Samþykki fyrir vefkökum","panelTitle":"Stillingar vefkaka","panelIntro":"Veldu hvaða vefkökur þú leyfir. Ekkert valfrjálst er kveikt fyrr en þú kveikir á því sjálf.","save":"Vista val","close":"Loka","alwaysOn":"alltaf virkar","cookiesIn":"Vefkökur í þessum flokki","noCookies":"Engar vefkökur eru skráðar fyrir þennan flokk.","colName":"Heiti","colVendor":"Þjónustuaðili","colPurpose":"Tilgangur","colExpiry":"Gildistími","floating":"Stillingar vefkaka","cat":{"necessary":{"title":"Nauðsynlegar","desc":"Nauðsynlegar til að vefurinn virki — innskráning, öryggi, að muna samþykki þitt. Ekki er hægt að slökkva á þeim."},"functional":{"title":"Virknivefkökur","desc":"Muna stillingar þínar, til dæmis tungumál eða spjall, svo þú þurfir ekki að velja aftur."},"analytics":{"title":"Tölfræði","desc":"Sýna okkur hvaða síður eru notaðar svo við getum lagað það sem ruglar. Aðeins tölur, engin nöfn."},"marketing":{"title":"Markaðssetning","desc":"Leyfa okkur að sýna þér auglýsingar á öðrum vefjum og mæla hvort þær komu að gagni."}}},"it":{"bannerTitle":"Utilizziamo i cookie","bannerText":"I cookie necessari fanno funzionare il sito. Tutto il resto — statistiche, marketing, funzioni aggiuntive — si attiva solo se lo consente. Può cambiare idea in qualsiasi momento.","more":"Scopri di più","acceptAll":"Accetta tutto","rejectAll":"Rifiuta tutto","customize":"Personalizza","bannerLabel":"Consenso ai cookie","panelTitle":"Impostazioni dei cookie","panelIntro":"Scelga quali cookie autorizzare. Nulla di facoltativo è attivo finché non lo attiva Lei.","save":"Salva le scelte","close":"Chiudi","alwaysOn":"sempre attivi","cookiesIn":"Cookie di questo gruppo","noCookies":"Nessun cookie dichiarato per questo gruppo.","colName":"Nome","colVendor":"Fornitore","colPurpose":"Finalità","colExpiry":"Scadenza","floating":"Impostazioni dei cookie","cat":{"necessary":{"title":"Necessari","desc":"Servono al funzionamento del sito: accesso, sicurezza, memoria del suo consenso. Non possono essere disattivati."},"functional":{"title":"Funzionali","desc":"Ricordano le sue preferenze, come la lingua o la chat, così non deve impostarle di nuovo."},"analytics":{"title":"Statistiche","desc":"Ci mostrano quali pagine vengono usate, per correggere ciò che risulta poco chiaro. Solo numeri, nessun nome."},"marketing":{"title":"Marketing","desc":"Ci permettono di mostrarle annunci su altri siti e di misurare se sono serviti a qualcosa."}}},"lt":{"bannerTitle":"Naudojame slapukus","bannerText":"Būtini slapukai palaiko svetainės veikimą. Visa kita — analitika, rinkodara, papildomi patogumai — įsijungia tik jums sutikus. Sprendimą galite pakeisti bet kada.","more":"Sužinoti daugiau","acceptAll":"Priimti visus","rejectAll":"Atmesti visus","customize":"Tinkinti","bannerLabel":"Sutikimas dėl slapukų","panelTitle":"Slapukų nustatymai","panelIntro":"Pasirinkite, kuriuos slapukus leidžiate. Nieko pasirenkamo nėra įjungta, kol patys neįjungiate.","save":"Įrašyti pasirinkimą","close":"Uždaryti","alwaysOn":"visada aktyvūs","cookiesIn":"Šios grupės slapukai","noCookies":"Šiai grupei slapukų nenurodyta.","colName":"Pavadinimas","colVendor":"Teikėjas","colPurpose":"Paskirtis","colExpiry":"Galiojimas","floating":"Slapukų nustatymai","cat":{"necessary":{"title":"Būtini","desc":"Reikalingi, kad svetainė veiktų: prisijungimas, saugumas, jūsų sutikimo įsiminimas. Jų išjungti negalima."},"functional":{"title":"Funkciniai","desc":"Įsimena jūsų nustatymus, pavyzdžiui, kalbą ar pokalbius, kad jų nereikėtų nurodyti iš naujo."},"analytics":{"title":"Analitika","desc":"Rodo mums, kurie puslapiai naudojami, kad pataisytume tai, kas painu. Tik skaičiai, be vardų."},"marketing":{"title":"Rinkodara","desc":"Leidžia rodyti jums reklamą kitose svetainėse ir įvertinti, ar iš jos buvo naudos."}}},"lv":{"bannerTitle":"Mēs izmantojam sīkdatnes","bannerText":"Nepieciešamās sīkdatnes nodrošina vietnes darbību. Viss pārējais — analītika, mārketings, papildu ērtības — darbojas tikai ar jūsu piekrišanu. Savu izvēli varat mainīt jebkurā brīdī.","more":"Uzzināt vairāk","acceptAll":"Piekrist visām","rejectAll":"Noraidīt visas","customize":"Pielāgot","bannerLabel":"Piekrišana sīkdatnēm","panelTitle":"Sīkdatņu iestatījumi","panelIntro":"Izvēlieties, kuras sīkdatnes atļaujat. Nekas neobligāts nav ieslēgts, kamēr to neieslēdzat pats.","save":"Saglabāt izvēli","close":"Aizvērt","alwaysOn":"vienmēr aktīvas","cookiesIn":"Šīs grupas sīkdatnes","noCookies":"Šai grupai sīkdatnes nav norādītas.","colName":"Nosaukums","colVendor":"Sniedzējs","colPurpose":"Nolūks","colExpiry":"Derīgums","floating":"Sīkdatņu iestatījumi","cat":{"necessary":{"title":"Nepieciešamās","desc":"Vajadzīgas vietnes darbībai — pieteikšanās, drošība, jūsu piekrišanas saglabāšana. Tās nevar izslēgt."},"functional":{"title":"Funkcionālās","desc":"Atceras jūsu iestatījumus, piemēram, valodu vai tērzēšanu, lai tie nebūtu jānorāda atkārtoti."},"analytics":{"title":"Analītika","desc":"Rāda mums, kuras lapas tiek lietotas, lai varam labot neskaidro. Tikai skaitļi, bez vārdiem."},"marketing":{"title":"Mārketings","desc":"Ļauj rādīt jums reklāmas citās vietnēs un novērtēt, vai no tām bija labums."}}},"mk":{"bannerTitle":"Користиме колачиња","bannerText":"Неопходните колачиња ја одржуваат страницата во работа. Сè останато — аналитика, маркетинг, дополнителни погодности — се вклучува само со ваша согласност. Одлуката можете да ја промените во секое време.","more":"Дознајте повеќе","acceptAll":"Прифати сè","rejectAll":"Одбиј сè","customize":"Прилагоди","bannerLabel":"Согласност за колачиња","panelTitle":"Поставки за колачиња","panelIntro":"Изберете кои колачиња ги дозволувате. Ништо изборно не е вклучено додека сами не го вклучите.","save":"Зачувај избор","close":"Затвори","alwaysOn":"секогаш активни","cookiesIn":"Колачиња во оваа група","noCookies":"За оваа група не се наведени колачиња.","colName":"Име","colVendor":"Доставувач","colPurpose":"Цел","colExpiry":"Истекува","floating":"Поставки за колачиња","cat":{"necessary":{"title":"Неопходни","desc":"Потребни се за страницата да работи — најава, безбедност, помнење на вашата согласност. Не можат да се исклучат."},"functional":{"title":"Функционални","desc":"Ги паметат вашите поставки, на пример јазикот или разговорот, за да не ги задавате повторно."},"analytics":{"title":"Аналитика","desc":"Ни покажуваат кои страници се користат за да го поправиме тоа што збунува. Само бројки, без имиња."},"marketing":{"title":"Маркетинг","desc":"Ни овозможуваат да ви прикажуваме реклами на други страници и да измериме дали имало корист од нив."}}},"mt":{"bannerTitle":"Nużaw il-cookies","bannerText":"Il-cookies meħtieġa jżommu s-sit jaħdem. Kollox ieħor — analitika, marketing, faċilitajiet żejda — jitħaddem biss jekk tippermettih. Tista’ tbiddel il-fehma tiegħek f’kull ħin.","more":"Aktar informazzjoni","acceptAll":"Aċċetta kollox","rejectAll":"Irrifjuta kollox","customize":"Ippersonalizza","bannerLabel":"Kunsens għall-cookies","panelTitle":"Issettjar tal-cookies","panelIntro":"Agħżel liema cookies tippermetti. Xejn fakultattiv mhu mixgħul sakemm ma tixgħelux int.","save":"Issejvja l-għażla","close":"Agħlaq","alwaysOn":"dejjem attivi","cookiesIn":"Cookies f’dan il-grupp","noCookies":"Ma ġie ddikjarat l-ebda cookie għal dan il-grupp.","colName":"Isem","colVendor":"Fornitur","colPurpose":"Skop","colExpiry":"Skadenza","floating":"Issettjar tal-cookies","cat":{"necessary":{"title":"Meħtieġa","desc":"Meħtieġa biex is-sit jaħdem — login, sigurtà, tifkira tal-kunsens tiegħek. Ma jistgħux jintfew."},"functional":{"title":"Funzjonali","desc":"Jiftakru l-preferenzi tiegħek, bħal-lingwa jew iċ-chat, biex ma jkollokx terġa’ tissettjahom."},"analytics":{"title":"Analitika","desc":"Juruna liema paġni jintużaw, biex nirranġaw dak li jħawwad. Numri biss, bla ismijiet."},"marketing":{"title":"Marketing","desc":"Jippermettulna nurulek reklami fuq siti oħra u nkejlu jekk kinux ta’ siwi."}}},"nb":{"bannerTitle":"Vi bruker informasjonskapsler","bannerText":"Nødvendige informasjonskapsler holder nettstedet i gang. Alt annet — statistikk, markedsføring, ekstra funksjoner — slås bare på hvis du tillater det. Du kan ombestemme deg når som helst.","more":"Les mer","acceptAll":"Godta alle","rejectAll":"Avvis alle","customize":"Tilpass","bannerLabel":"Samtykke til informasjonskapsler","panelTitle":"Innstillinger for informasjonskapsler","panelIntro":"Velg hvilke informasjonskapsler du tillater. Ingenting valgfritt er på før du slår det på selv.","save":"Lagre valg","close":"Lukk","alwaysOn":"alltid aktive","cookiesIn":"Informasjonskapsler i denne gruppen","noCookies":"Ingen informasjonskapsler er oppgitt for denne gruppen.","colName":"Navn","colVendor":"Leverandør","colPurpose":"Formål","colExpiry":"Utløper","floating":"Innstillinger for informasjonskapsler","cat":{"necessary":{"title":"Nødvendige","desc":"Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av."},"functional":{"title":"Funksjonelle","desc":"Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt."},"analytics":{"title":"Statistikk","desc":"Viser oss hvilke sider som brukes, så vi kan rette opp det som forvirrer. Bare tall, ingen navn."},"marketing":{"title":"Markedsføring","desc":"Lar oss vise deg annonser på andre nettsteder og måle om de var til nytte."}}},"nl":{"bannerTitle":"Wij gebruiken cookies","bannerText":"Noodzakelijke cookies houden de site draaiende. Al het overige — statistieken, marketing, extra gemak — wordt alleen ingeschakeld als u dat toestaat. U kunt uw keuze altijd wijzigen.","more":"Meer informatie","acceptAll":"Alles accepteren","rejectAll":"Alles weigeren","customize":"Instellen","bannerLabel":"Cookietoestemming","panelTitle":"Cookie-instellingen","panelIntro":"Kies welke cookies u toestaat. Niets optioneels staat aan totdat u het zelf aanzet.","save":"Keuze opslaan","close":"Sluiten","alwaysOn":"altijd actief","cookiesIn":"Cookies in deze groep","noCookies":"Voor deze groep zijn geen cookies opgegeven.","colName":"Naam","colVendor":"Aanbieder","colPurpose":"Doel","colExpiry":"Vervalt","floating":"Cookie-instellingen","cat":{"necessary":{"title":"Noodzakelijk","desc":"Nodig om de site te laten werken: inloggen, beveiliging en het onthouden van uw keuze. Ze kunnen niet uit."},"functional":{"title":"Functioneel","desc":"Onthouden uw voorkeuren, zoals taal of chat, zodat u ze niet opnieuw hoeft in te stellen."},"analytics":{"title":"Statistieken","desc":"Laten ons zien welke pagina’s worden gebruikt, zodat we verwarrende dingen kunnen verbeteren. Alleen cijfers, geen namen."},"marketing":{"title":"Marketing","desc":"Stellen ons in staat u advertenties op andere sites te tonen en te meten of ze iets opleverden."}}},"no":{"bannerTitle":"Vi bruker informasjonskapsler","bannerText":"Nødvendige informasjonskapsler holder nettstedet i gang. Alt annet — statistikk, markedsføring, ekstra funksjoner — slås bare på hvis du tillater det. Du kan ombestemme deg når som helst.","more":"Les mer","acceptAll":"Godta alle","rejectAll":"Avvis alle","customize":"Tilpass","bannerLabel":"Samtykke til informasjonskapsler","panelTitle":"Innstillinger for informasjonskapsler","panelIntro":"Velg hvilke informasjonskapsler du tillater. Ingenting valgfritt er på før du slår det på selv.","save":"Lagre valg","close":"Lukk","alwaysOn":"alltid aktive","cookiesIn":"Informasjonskapsler i denne gruppen","noCookies":"Ingen informasjonskapsler er oppgitt for denne gruppen.","colName":"Navn","colVendor":"Leverandør","colPurpose":"Formål","colExpiry":"Utløper","floating":"Innstillinger for informasjonskapsler","cat":{"necessary":{"title":"Nødvendige","desc":"Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av."},"functional":{"title":"Funksjonelle","desc":"Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt."},"analytics":{"title":"Statistikk","desc":"Viser oss hvilke sider som brukes, så vi kan rette opp det som forvirrer. Bare tall, ingen navn."},"marketing":{"title":"Markedsføring","desc":"Lar oss vise deg annonser på andre nettsteder og måle om de var til nytte."}}},"pl":{"bannerTitle":"Używamy plików cookie","bannerText":"Niezbędne pliki cookie utrzymują działanie strony. Cała reszta — analityka, marketing, dodatkowe udogodnienia — działa tylko za Pana/Pani zgodą. Decyzję można zmienić w każdej chwili.","more":"Dowiedz się więcej","acceptAll":"Zaakceptuj wszystkie","rejectAll":"Odrzuć wszystkie","customize":"Dostosuj","bannerLabel":"Zgoda na pliki cookie","panelTitle":"Ustawienia plików cookie","panelIntro":"Proszę wybrać, na które pliki cookie wyrażają Państwo zgodę. Nic opcjonalnego nie jest włączone, dopóki sami tego nie włączycie.","save":"Zapisz wybór","close":"Zamknij","alwaysOn":"zawsze aktywne","cookiesIn":"Pliki cookie w tej grupie","noCookies":"Dla tej grupy nie zadeklarowano plików cookie.","colName":"Nazwa","colVendor":"Dostawca","colPurpose":"Cel","colExpiry":"Wygasa","floating":"Ustawienia plików cookie","cat":{"necessary":{"title":"Niezbędne","desc":"Potrzebne, by strona działała: logowanie, bezpieczeństwo, zapamiętanie zgody. Nie można ich wyłączyć."},"functional":{"title":"Funkcjonalne","desc":"Zapamiętują ustawienia, na przykład język lub czat, żeby nie trzeba było wybierać ich ponownie."},"analytics":{"title":"Analityczne","desc":"Pokazują nam, z których stron korzystają użytkownicy, byśmy poprawili to, co myli. Tylko liczby, bez nazwisk."},"marketing":{"title":"Marketingowe","desc":"Pozwalają pokazywać reklamy na innych stronach i sprawdzać, czy przyniosły efekt."}}},"pt":{"bannerTitle":"Utilizamos cookies","bannerText":"Os cookies necessários mantêm o site a funcionar. Tudo o resto — análise, marketing, funcionalidades extra — só é ativado se o permitir. Pode mudar de ideias a qualquer momento.","more":"Saber mais","acceptAll":"Aceitar tudo","rejectAll":"Recusar tudo","customize":"Personalizar","bannerLabel":"Consentimento de cookies","panelTitle":"Definições de cookies","panelIntro":"Escolha que cookies permite. Nada opcional está ativo até que o ative.","save":"Guardar escolhas","close":"Fechar","alwaysOn":"sempre ativos","cookiesIn":"Cookies deste grupo","noCookies":"Não foram declarados cookies para este grupo.","colName":"Nome","colVendor":"Fornecedor","colPurpose":"Finalidade","colExpiry":"Validade","floating":"Definições de cookies","cat":{"necessary":{"title":"Necessários","desc":"Precisos para o site funcionar: início de sessão, segurança e memória do seu consentimento. Não podem ser desativados."},"functional":{"title":"Funcionais","desc":"Guardam as suas preferências, como o idioma ou o chat, para não ter de as definir outra vez."},"analytics":{"title":"Análise","desc":"Mostram-nos que páginas são usadas, para corrigirmos o que confunde. Apenas números, sem nomes."},"marketing":{"title":"Marketing","desc":"Permitem mostrar-lhe anúncios noutros sites e medir se foram úteis."}}},"ro":{"bannerTitle":"Cookie-uri pe acest site","bannerText":"Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră. Puteți schimba decizia oricând.","more":"Aflați mai multe","acceptAll":"Acceptă tot","rejectAll":"Respinge tot","customize":"Personalizează","bannerLabel":"Consimțământ pentru cookie-uri","panelTitle":"Setări cookie-uri","panelIntro":"Alegeți ce permiteți. Implicit este pornit doar strictul necesar.","save":"Salvează alegerea","close":"Închide","alwaysOn":"mereu active","cookiesIn":"Ce cookie-uri","noCookies":"Nu au fost declarate cookie-uri pentru acest grup.","colName":"Denumire","colVendor":"Cine le pune","colPurpose":"Pentru ce","colExpiry":"Expiră","floating":"Setări cookie-uri","phText":"Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».","phAllow":"Permite și arată","phSettings":"Setări cookie-uri","phLabel":"Conținut blocat","svcCount":["{n} serviciu","{n} servicii","{n} de servicii"],"ckCount":["{n} cookie","{n} cookie-uri","{n} de cookie-uri"],"svcPolicy":"Politica","svcCookies":"Ce cookie-uri pune","svcDetails":"Detalii","svcListLabel":"Servicii și cookie-uri din acest grup","cat":{"necessary":{"title":"Necesare","desc":"Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate."},"functional":{"title":"Funcționale","desc":"Rețin alegerile dumneavoastră: limba, coșul, chatul."},"analytics":{"title":"Analiză","desc":"Ne ajută să înțelegem ce merge bine pe site și ce nu."},"marketing":{"title":"Marketing","desc":"Potrivesc reclamele cu interesele dumneavoastră pe alte site-uri."}}},"sk":{"bannerTitle":"Používame súbory cookie","bannerText":"Nevyhnutné súbory cookie udržiavajú stránku v chode. Všetko ostatné — analytika, marketing, doplnkové pohodlie — sa zapne len s vaším súhlasom. Rozhodnutie môžete kedykoľvek zmeniť.","more":"Viac informácií","acceptAll":"Prijať všetko","rejectAll":"Odmietnuť všetko","customize":"Nastaviť","bannerLabel":"Súhlas so súbormi cookie","panelTitle":"Nastavenia cookies","panelIntro":"Vyberte, ktoré súbory cookie povolíte. Nič voliteľné nie je zapnuté, kým to sami nezapnete.","save":"Uložiť voľbu","close":"Zavrieť","alwaysOn":"vždy aktívne","cookiesIn":"Cookies v tejto skupine","noCookies":"Pre túto skupinu nie sú uvedené žiadne cookies.","colName":"Názov","colVendor":"Poskytovateľ","colPurpose":"Účel","colExpiry":"Platnosť","floating":"Nastavenia cookies","cat":{"necessary":{"title":"Nevyhnutné","desc":"Bez nich stránka nefunguje — prihlásenie, bezpečnosť, zapamätanie vášho súhlasu. Nedajú sa vypnúť."},"functional":{"title":"Funkčné","desc":"Pamätajú si vaše nastavenia, napríklad jazyk alebo chat, aby ste ich nezadávali znova."},"analytics":{"title":"Analytické","desc":"Ukazujú nám, ktoré stránky ľudia používajú, aby sme opravili to nejasné. Len čísla, žiadne mená."},"marketing":{"title":"Marketingové","desc":"Umožňujú nám zobrazovať vám reklamy na iných stránkach a merať, či boli na niečo dobré."}}},"sl":{"bannerTitle":"Uporabljamo piškotke","bannerText":"Nujni piškotki ohranjajo delovanje spletnega mesta. Vse ostalo — analitika, trženje, dodatne ugodnosti — se vklopi le z vašim soglasjem. Odločitev lahko kadar koli spremenite.","more":"Več o tem","acceptAll":"Sprejmi vse","rejectAll":"Zavrni vse","customize":"Nastavi","bannerLabel":"Soglasje za piškotke","panelTitle":"Nastavitve piškotkov","panelIntro":"Izberite, katere piškotke dovolite. Nič neobveznega ni vklopljeno, dokler tega ne vklopite sami.","save":"Shrani izbiro","close":"Zapri","alwaysOn":"vedno aktivni","cookiesIn":"Piškotki v tej skupini","noCookies":"Za to skupino piškotki niso navedeni.","colName":"Ime","colVendor":"Ponudnik","colPurpose":"Namen","colExpiry":"Poteče","floating":"Nastavitve piškotkov","cat":{"necessary":{"title":"Nujni","desc":"Potrebni za delovanje spletnega mesta — prijava, varnost, pomnjenje vašega soglasja. Ni jih mogoče izklopiti."},"functional":{"title":"Funkcionalni","desc":"Zapomnijo si vaše nastavitve, na primer jezik ali klepet, da jih ni treba določati znova."},"analytics":{"title":"Analitika","desc":"Pokažejo nam, katere strani ljudje uporabljajo, da popravimo, kar je nejasno. Samo številke, brez imen."},"marketing":{"title":"Trženje","desc":"Omogočajo nam, da vam prikazujemo oglase na drugih straneh in izmerimo, ali so bili koristni."}}},"sq":{"bannerTitle":"Ne përdorim cookie-t","bannerText":"Cookie-t e nevojshme e mbajnë faqen në punë. Gjithçka tjetër — analitika, marketingu, lehtësirat shtesë — aktivizohet vetëm nëse e lejoni. Mund ta ndryshoni vendimin në çdo kohë.","more":"Mëso më shumë","acceptAll":"Prano të gjitha","rejectAll":"Refuzo të gjitha","customize":"Përshtat","bannerLabel":"Pëlqimi për cookie-t","panelTitle":"Cilësimet e cookie-ve","panelIntro":"Zgjidhni cilat cookie lejoni. Asgjë opsionale nuk është e ndezur derisa ta ndizni vetë.","save":"Ruaj zgjedhjen","close":"Mbyll","alwaysOn":"gjithmonë aktive","cookiesIn":"Cookie-t e këtij grupi","noCookies":"Nuk ka cookie të deklaruara për këtë grup.","colName":"Emri","colVendor":"Ofruesi","colPurpose":"Qëllimi","colExpiry":"Skadon","floating":"Cilësimet e cookie-ve","cat":{"necessary":{"title":"Të nevojshme","desc":"Nevojiten që faqja të funksionojë — hyrja, siguria, ruajtja e pëlqimit tuaj. Nuk mund të fiken."},"functional":{"title":"Funksionale","desc":"Mbajnë mend preferencat tuaja, si gjuha ose biseda, që të mos i vendosni sërish."},"analytics":{"title":"Analitika","desc":"Na tregojnë cilat faqe përdoren, që të rregullojmë atë që ngatërron. Vetëm numra, pa emra."},"marketing":{"title":"Marketingu","desc":"Na lejojnë t’ju shfaqim reklama në faqe të tjera dhe të matim nëse patën ndonjë dobi."}}},"sr":{"bannerTitle":"Користимо колачиће","bannerText":"Неопходни колачићи одржавају сајт у раду. Све остало — аналитика, маркетинг, додатне погодности — укључује се само уз вашу сагласност. Одлуку можете променити у сваком тренутку.","more":"Сазнајте више","acceptAll":"Прихвати све","rejectAll":"Одбиј све","customize":"Подеси","bannerLabel":"Сагласност за колачиће","panelTitle":"Подешавања колачића","panelIntro":"Изаберите које колачиће дозвољавате. Ништа необавезно није укључено док то сами не укључите.","save":"Сачувај избор","close":"Затвори","alwaysOn":"увек активни","cookiesIn":"Колачићи у овој групи","noCookies":"За ову групу нису наведени колачићи.","colName":"Назив","colVendor":"Пружалац","colPurpose":"Сврха","colExpiry":"Истиче","floating":"Подешавања колачића","cat":{"necessary":{"title":"Неопходни","desc":"Потребни су да би сајт радио — пријава, безбедност, памћење ваше сагласности. Не могу се искључити."},"functional":{"title":"Функционални","desc":"Памте ваша подешавања, на пример језик или ћаскање, да их не бисте бирали поново."},"analytics":{"title":"Аналитика","desc":"Показују нам које се странице користе како бисмо исправили оно што збуњује. Само бројеви, без имена."},"marketing":{"title":"Маркетинг","desc":"Омогућавају нам да вам приказујемо огласе на другим сајтовима и измеримо да ли су били од користи."}}},"sv":{"bannerTitle":"Vi använder cookies","bannerText":"Nödvändiga cookies håller webbplatsen igång. Allt annat — statistik, marknadsföring, extra funktioner — startar bara om du tillåter det. Du kan ändra dig när som helst.","more":"Läs mer","acceptAll":"Godkänn alla","rejectAll":"Avvisa alla","customize":"Anpassa","bannerLabel":"Cookiesamtycke","panelTitle":"Cookieinställningar","panelIntro":"Välj vilka cookies du tillåter. Inget valfritt är påslaget förrän du slår på det själv.","save":"Spara val","close":"Stäng","alwaysOn":"alltid aktiva","cookiesIn":"Cookies i denna grupp","noCookies":"Inga cookies har angetts för denna grupp.","colName":"Namn","colVendor":"Leverantör","colPurpose":"Syfte","colExpiry":"Upphör","floating":"Cookieinställningar","cat":{"necessary":{"title":"Nödvändiga","desc":"Krävs för att webbplatsen ska fungera — inloggning, säkerhet, minne av ditt samtycke. De kan inte stängas av."},"functional":{"title":"Funktionella","desc":"Kommer ihåg dina inställningar, till exempel språk eller chatt, så att du slipper välja igen."},"analytics":{"title":"Statistik","desc":"Visar oss vilka sidor som används, så att vi kan rätta till det som förvirrar. Bara siffror, inga namn."},"marketing":{"title":"Marknadsföring","desc":"Låter oss visa dig annonser på andra webbplatser och mäta om de gjorde nytta."}}},"tr":{"bannerTitle":"Çerezleri kullanıyoruz","bannerText":"Zorunlu çerezler sitenin çalışmasını sağlar. Diğer her şey — analiz, pazarlama, ek kolaylıklar — yalnızca siz izin verirseniz çalışır. Kararınızı istediğiniz zaman değiştirebilirsiniz.","more":"Daha fazla bilgi","acceptAll":"Tümünü kabul et","rejectAll":"Tümünü reddet","customize":"Özelleştir","bannerLabel":"Çerez onayı","panelTitle":"Çerez ayarları","panelIntro":"Hangi çerezlere izin verdiğinizi seçin. Siz açmadıkça isteğe bağlı hiçbir şey açık değildir.","save":"Seçimi kaydet","close":"Kapat","alwaysOn":"her zaman etkin","cookiesIn":"Bu gruptaki çerezler","noCookies":"Bu grup için çerez bildirilmemiş.","colName":"Ad","colVendor":"Sağlayıcı","colPurpose":"Amaç","colExpiry":"Süre","floating":"Çerez ayarları","cat":{"necessary":{"title":"Zorunlu","desc":"Sitenin çalışması için gerekli: oturum açma, güvenlik, onayınızın hatırlanması. Kapatılamazlar."},"functional":{"title":"İşlevsel","desc":"Dil veya sohbet gibi tercihlerinizi hatırlar, böylece yeniden ayarlamanız gerekmez."},"analytics":{"title":"Analiz","desc":"Hangi sayfaların kullanıldığını görmemizi sağlar, kafa karıştıranı düzeltiriz. Yalnızca sayılar, isim yok."},"marketing":{"title":"Pazarlama","desc":"Başka sitelerde size reklam göstermemize ve işe yarayıp yaramadığını ölçmemize olanak tanır."}}},"uk":{"bannerTitle":"Ми використовуємо файли cookie","bannerText":"Необхідні файли cookie підтримують роботу сайту. Усе інше — аналітика, маркетинг, додаткові зручності — вмикається лише за вашою згодою. Рішення можна змінити будь-коли.","more":"Докладніше","acceptAll":"Прийняти все","rejectAll":"Відхилити все","customize":"Налаштувати","bannerLabel":"Згода на файли cookie","panelTitle":"Налаштування cookie","panelIntro":"Виберіть, які файли cookie ви дозволяєте. Нічого необов’язкового не ввімкнено, доки ви цього не зробите.","save":"Зберегти вибір","close":"Закрити","alwaysOn":"завжди активні","cookiesIn":"Файли cookie цієї групи","noCookies":"Для цієї групи файли cookie не заявлені.","colName":"Назва","colVendor":"Постачальник","colPurpose":"Мета","colExpiry":"Термін","floating":"Налаштування cookie","cat":{"necessary":{"title":"Необхідні","desc":"Без них сайт не працює: вхід, безпека, пам’ять про ваш вибір. Вимкнути неможливо."},"functional":{"title":"Функціональні","desc":"Запам’ятовують ваші налаштування — наприклад мову або чат, — щоб ви не задавали їх знову."},"analytics":{"title":"Аналітика","desc":"Показують нам, якими сторінками користуються, щоб ми виправили незручне. Лише цифри, без імен."},"marketing":{"title":"Маркетинг","desc":"Дозволяють показувати вам рекламу на інших сайтах і оцінювати, чи була з неї користь."}}}});})();
+(function(){if(typeof window==="undefined")return;window.__ckLocales=Object.assign(window.__ckLocales||{},{"bg":{"bannerTitle":"Използваме бисквитки","bannerText":"Необходимите бисквитки поддържат сайта работещ. Всичко останало — анализи, маркетинг, допълнителни удобства — се включва само с ваше съгласие. Можете да промените решението си по всяко време.","more":"Научете повече","acceptAll":"Приемам всички","rejectAll":"Отхвърлям всички","customize":"Настройки","bannerLabel":"Съгласие за бисквитки","panelTitle":"Настройки на бисквитките","panelIntro":"Изберете кои бисквитки разрешавате. Нищо по избор не е включено, докато не го включите сами.","save":"Запази избора","close":"Затвори","alwaysOn":"винаги активни","cookiesIn":"Бисквитки в тази група","noCookies":"За тази група не са обявени бисквитки.","colName":"Име","colVendor":"Доставчик","colPurpose":"Цел","colExpiry":"Изтича","floating":"Настройки на бисквитките","extraTitle":"Допълнителна информация","cat":{"necessary":{"title":"Необходими","desc":"Нужни са, за да работи сайтът — вход, сигурност, запомняне на съгласието ви. Не могат да се изключат."},"functional":{"title":"Функционални","desc":"Запомнят предпочитанията ви, например език или чат, за да не ги задавате отново."},"analytics":{"title":"Анализи","desc":"Помагат ни да видим кои страници се използват, за да поправим неудобното. Само числа, без имена."},"marketing":{"title":"Маркетинг","desc":"Позволяват да ви показваме реклами в други сайтове и да преценим дали са били от полза."}}},"ca":{"bannerTitle":"Utilitzem galetes","bannerText":"Les galetes necessàries mantenen el lloc en funcionament. Tota la resta — analítica, màrqueting, funcions addicionals — només s’activa si ho permeteu. Podeu canviar d’opinió en qualsevol moment.","more":"Més informació","acceptAll":"Accepta-ho tot","rejectAll":"Rebutja-ho tot","customize":"Personalitza","bannerLabel":"Consentiment de galetes","panelTitle":"Configuració de galetes","panelIntro":"Trieu quines galetes permeteu. Res opcional no està activat fins que no ho activeu vosaltres.","save":"Desa la selecció","close":"Tanca","alwaysOn":"sempre actives","cookiesIn":"Galetes d’aquest grup","noCookies":"No s’ha declarat cap galeta per a aquest grup.","colName":"Nom","colVendor":"Proveïdor","colPurpose":"Finalitat","colExpiry":"Caduca","floating":"Configuració de galetes","extraTitle":"Informació addicional","cat":{"necessary":{"title":"Necessàries","desc":"Calen perquè el lloc funcioni: inici de sessió, seguretat i memòria del vostre consentiment. No es poden desactivar."},"functional":{"title":"Funcionals","desc":"Recorden les vostres preferències, com l’idioma o el xat, perquè no les hàgiu de tornar a configurar."},"analytics":{"title":"Analítica","desc":"Ens mostren quines pàgines es fan servir per corregir allò que confon. Només xifres, sense noms."},"marketing":{"title":"Màrqueting","desc":"Ens permeten mostrar-vos anuncis en altres llocs i mesurar si han servit d’alguna cosa."}}},"cs":{"bannerTitle":"Používáme cookies","bannerText":"Nezbytné cookies udržují web v chodu. Vše ostatní — analytika, marketing, další vylepšení — se zapne jen s vaším souhlasem. Rozhodnutí můžete kdykoli změnit.","more":"Více informací","acceptAll":"Přijmout vše","rejectAll":"Odmítnout vše","customize":"Nastavit","bannerLabel":"Souhlas s cookies","panelTitle":"Nastavení cookies","panelIntro":"Vyberte, které cookies povolíte. Nic volitelného není zapnuté, dokud to sami nezapnete.","save":"Uložit volbu","close":"Zavřít","alwaysOn":"vždy aktivní","cookiesIn":"Cookies v této skupině","noCookies":"Pro tuto skupinu nejsou uvedeny žádné cookies.","colName":"Název","colVendor":"Poskytovatel","colPurpose":"Účel","colExpiry":"Platnost","floating":"Nastavení cookies","extraTitle":"Doplňující informace","cat":{"necessary":{"title":"Nezbytné","desc":"Bez nich web nefunguje — přihlášení, bezpečnost, uložení vašeho souhlasu. Nelze je vypnout."},"functional":{"title":"Funkční","desc":"Pamatují si vaše předvolby, třeba jazyk nebo chat, abyste je nenastavovali znovu."},"analytics":{"title":"Analytické","desc":"Ukazují nám, které stránky lidé používají, abychom opravili to nepřehledné. Jen čísla, žádná jména."},"marketing":{"title":"Marketingové","desc":"Umožňují nám zobrazovat vám reklamy na jiných webech a měřit, zda byly k něčemu."}}},"da":{"bannerTitle":"Vi bruger cookies","bannerText":"Nødvendige cookies holder siden i gang. Alt andet — statistik, markedsføring, ekstra funktioner — sættes kun til, hvis du tillader det. Du kan altid ombestemme dig.","more":"Læs mere","acceptAll":"Accepter alle","rejectAll":"Afvis alle","customize":"Tilpas","bannerLabel":"Cookiesamtykke","panelTitle":"Cookieindstillinger","panelIntro":"Vælg, hvilke cookies du tillader. Intet valgfrit er slået til, før du selv slår det til.","save":"Gem valg","close":"Luk","alwaysOn":"altid aktive","cookiesIn":"Cookies i denne gruppe","noCookies":"Der er ikke angivet cookies for denne gruppe.","colName":"Navn","colVendor":"Udbyder","colPurpose":"Formål","colExpiry":"Udløber","floating":"Cookieindstillinger","extraTitle":"Yderligere oplysninger","cat":{"necessary":{"title":"Nødvendige","desc":"Nødvendige for at siden virker — login, sikkerhed, hukommelse om dit samtykke. De kan ikke slås fra."},"functional":{"title":"Funktionelle","desc":"Husker dine indstillinger, fx sprog eller chat, så du ikke skal vælge dem igen."},"analytics":{"title":"Statistik","desc":"Viser os, hvilke sider folk bruger, så vi kan rette det, der forvirrer. Kun tal, ingen navne."},"marketing":{"title":"Markedsføring","desc":"Giver os mulighed for at vise dig annoncer på andre sider og måle, om de virkede."}}},"de":{"bannerTitle":"Wir verwenden Cookies","bannerText":"Notwendige Cookies halten die Website am Laufen. Alles Weitere — Statistik, Marketing, zusätzliche Funktionen — läuft nur, wenn Sie es erlauben. Sie können Ihre Entscheidung jederzeit ändern.","more":"Mehr erfahren","acceptAll":"Alle akzeptieren","rejectAll":"Alle ablehnen","customize":"Einstellen","bannerLabel":"Cookie-Einwilligung","panelTitle":"Cookie-Einstellungen","panelIntro":"Wählen Sie, welche Cookies Sie erlauben. Nichts Optionales ist aktiv, bis Sie es einschalten.","save":"Auswahl speichern","close":"Schließen","alwaysOn":"immer aktiv","cookiesIn":"Cookies in dieser Gruppe","noCookies":"Für diese Gruppe sind keine Cookies angegeben.","colName":"Name","colVendor":"Anbieter","colPurpose":"Zweck","colExpiry":"Laufzeit","floating":"Cookie-Einstellungen","extraTitle":"Weitere Informationen","cat":{"necessary":{"title":"Notwendig","desc":"Nötig, damit die Website funktioniert — Anmeldung, Sicherheit, Speichern Ihrer Einwilligung. Sie lassen sich nicht abschalten."},"functional":{"title":"Funktional","desc":"Merken sich Ihre Einstellungen, etwa Sprache oder Chat, damit Sie sie nicht erneut wählen müssen."},"analytics":{"title":"Statistik","desc":"Zeigen uns, welche Seiten genutzt werden, damit wir Unklares verbessern. Nur Zahlen, keine Namen."},"marketing":{"title":"Marketing","desc":"Erlauben uns, Ihnen Werbung auf anderen Seiten zu zeigen und zu messen, ob sie etwas gebracht hat."}}},"el":{"bannerTitle":"Χρησιμοποιούμε cookies","bannerText":"Τα απαραίτητα cookies κρατούν τον ιστότοπο σε λειτουργία. Όλα τα υπόλοιπα — στατιστικά, μάρκετινγκ, πρόσθετες ευκολίες — ενεργοποιούνται μόνο με τη συγκατάθεσή σας. Μπορείτε να αλλάξετε γνώμη ανά πάσα στιγμή.","more":"Μάθετε περισσότερα","acceptAll":"Αποδοχή όλων","rejectAll":"Απόρριψη όλων","customize":"Ρυθμίσεις","bannerLabel":"Συγκατάθεση για cookies","panelTitle":"Ρυθμίσεις cookies","panelIntro":"Επιλέξτε ποια cookies επιτρέπετε. Τίποτα προαιρετικό δεν είναι ενεργό μέχρι να το ενεργοποιήσετε εσείς.","save":"Αποθήκευση επιλογών","close":"Κλείσιμο","alwaysOn":"πάντα ενεργά","cookiesIn":"Cookies αυτής της ομάδας","noCookies":"Δεν έχουν δηλωθεί cookies για αυτήν την ομάδα.","colName":"Όνομα","colVendor":"Πάροχος","colPurpose":"Σκοπός","colExpiry":"Λήξη","floating":"Ρυθμίσεις cookies","extraTitle":"Πρόσθετες πληροφορίες","cat":{"necessary":{"title":"Απαραίτητα","desc":"Χρειάζονται για να λειτουργεί ο ιστότοπος — σύνδεση, ασφάλεια, διατήρηση της επιλογής σας. Δεν απενεργοποιούνται."},"functional":{"title":"Λειτουργικά","desc":"Θυμούνται τις προτιμήσεις σας, όπως γλώσσα ή συνομιλία, ώστε να μην τις ορίζετε ξανά."},"analytics":{"title":"Στατιστικά","desc":"Μας δείχνουν ποιες σελίδες χρησιμοποιούνται, για να διορθώσουμε ό,τι μπερδεύει. Μόνο αριθμοί, χωρίς ονόματα."},"marketing":{"title":"Μάρκετινγκ","desc":"Μας επιτρέπουν να σας δείχνουμε διαφημίσεις σε άλλους ιστότοπους και να μετράμε αν ήταν χρήσιμες."}}},"es":{"bannerTitle":"Usamos cookies","bannerText":"Las cookies necesarias mantienen el sitio en funcionamiento. Todo lo demás — analítica, marketing, funciones adicionales — solo se activa si usted lo permite. Puede cambiar de opinión cuando quiera.","more":"Más información","acceptAll":"Aceptar todo","rejectAll":"Rechazar todo","customize":"Personalizar","bannerLabel":"Consentimiento de cookies","panelTitle":"Configuración de cookies","panelIntro":"Elija qué cookies permite. Nada opcional está activo hasta que usted lo active.","save":"Guardar selección","close":"Cerrar","alwaysOn":"siempre activas","cookiesIn":"Cookies de este grupo","noCookies":"No se han declarado cookies para este grupo.","colName":"Nombre","colVendor":"Proveedor","colPurpose":"Finalidad","colExpiry":"Caduca","floating":"Configuración de cookies","extraTitle":"Información adicional","cat":{"necessary":{"title":"Necesarias","desc":"Imprescindibles para que el sitio funcione: inicio de sesión, seguridad y memoria de su consentimiento. No se pueden desactivar."},"functional":{"title":"Funcionales","desc":"Recuerdan sus preferencias, como el idioma o el chat, para que no tenga que configurarlas de nuevo."},"analytics":{"title":"Analítica","desc":"Nos muestran qué páginas se usan para corregir lo que resulta confuso. Solo cifras, sin nombres."},"marketing":{"title":"Marketing","desc":"Nos permiten mostrarle anuncios en otros sitios y medir si han servido de algo."}}},"et":{"bannerTitle":"Kasutame küpsiseid","bannerText":"Vajalikud küpsised hoiavad saidi töös. Kõik muu — statistika, turundus, lisamugavused — lülitub sisse ainult teie nõusolekul. Võite oma otsust igal ajal muuta.","more":"Loe lähemalt","acceptAll":"Nõustu kõigiga","rejectAll":"Keeldu kõigist","customize":"Seadista","bannerLabel":"Küpsiste nõusolek","panelTitle":"Küpsiste seaded","panelIntro":"Valige, milliseid küpsiseid lubate. Miski valikuline ei ole sees, enne kui te selle ise sisse lülitate.","save":"Salvesta valik","close":"Sulge","alwaysOn":"alati aktiivsed","cookiesIn":"Selle rühma küpsised","noCookies":"Selle rühma kohta ei ole küpsiseid deklareeritud.","colName":"Nimi","colVendor":"Pakkuja","colPurpose":"Eesmärk","colExpiry":"Kehtivus","floating":"Küpsiste seaded","extraTitle":"Lisateave","cat":{"necessary":{"title":"Vajalikud","desc":"Vajalikud saidi tööks — sisselogimine, turvalisus, teie nõusoleku meelespidamine. Neid ei saa välja lülitada."},"functional":{"title":"Funktsionaalsed","desc":"Jätavad meelde teie eelistused, näiteks keele või vestluse, et te ei peaks neid uuesti valima."},"analytics":{"title":"Statistika","desc":"Näitavad meile, milliseid lehti kasutatakse, et saaksime segadust tekitava korda teha. Ainult numbrid, ilma nimedeta."},"marketing":{"title":"Turundus","desc":"Võimaldavad näidata teile reklaame teistel saitidel ja mõõta, kas neist oli kasu."}}},"fi":{"bannerTitle":"Käytämme evästeitä","bannerText":"Välttämättömät evästeet pitävät sivuston toiminnassa. Kaikki muu — tilastot, markkinointi, lisämukavuudet — otetaan käyttöön vain suostumuksellanne. Voitte muuttaa valintaanne milloin tahansa.","more":"Lue lisää","acceptAll":"Hyväksy kaikki","rejectAll":"Hylkää kaikki","customize":"Muokkaa","bannerLabel":"Evästesuostumus","panelTitle":"Evästeasetukset","panelIntro":"Valitkaa, mitkä evästeet sallitte. Mikään valinnainen ei ole päällä, ennen kuin otatte sen itse käyttöön.","save":"Tallenna valinta","close":"Sulje","alwaysOn":"aina käytössä","cookiesIn":"Tämän ryhmän evästeet","noCookies":"Tälle ryhmälle ei ole ilmoitettu evästeitä.","colName":"Nimi","colVendor":"Toimittaja","colPurpose":"Tarkoitus","colExpiry":"Voimassaolo","floating":"Evästeasetukset","extraTitle":"Lisätiedot","cat":{"necessary":{"title":"Välttämättömät","desc":"Tarvitaan sivuston toimintaan: kirjautuminen, turvallisuus ja suostumuksenne muistaminen. Näitä ei voi poistaa käytöstä."},"functional":{"title":"Toiminnalliset","desc":"Muistavat asetuksenne, kuten kielen tai chatin, jottei niitä tarvitse valita uudelleen."},"analytics":{"title":"Tilastot","desc":"Kertovat meille, mitä sivuja käytetään, jotta voimme korjata sekavat kohdat. Vain lukuja, ei nimiä."},"marketing":{"title":"Markkinointi","desc":"Antavat meidän näyttää teille mainoksia muilla sivustoilla ja mitata, oliko niistä hyötyä."}}},"fr":{"bannerTitle":"Nous utilisons des cookies","bannerText":"Les cookies nécessaires font fonctionner le site. Tout le reste — mesure d’audience, marketing, options de confort — ne s’active que si vous l’autorisez. Vous pouvez changer d’avis à tout moment.","more":"En savoir plus","acceptAll":"Tout accepter","rejectAll":"Tout refuser","customize":"Personnaliser","bannerLabel":"Consentement aux cookies","panelTitle":"Paramètres des cookies","panelIntro":"Choisissez les cookies que vous autorisez. Rien d’optionnel n’est activé tant que vous ne l’activez pas.","save":"Enregistrer","close":"Fermer","alwaysOn":"toujours actifs","cookiesIn":"Cookies de ce groupe","noCookies":"Aucun cookie déclaré pour ce groupe.","colName":"Nom","colVendor":"Fournisseur","colPurpose":"Finalité","colExpiry":"Expiration","floating":"Paramètres des cookies","extraTitle":"Informations complémentaires","cat":{"necessary":{"title":"Nécessaires","desc":"Indispensables au fonctionnement du site : connexion, sécurité, mémorisation de votre choix. Ils ne peuvent pas être désactivés."},"functional":{"title":"Fonctionnels","desc":"Retiennent vos préférences, par exemple la langue ou le chat, pour ne pas avoir à les régler de nouveau."},"analytics":{"title":"Mesure d’audience","desc":"Nous montrent quelles pages sont consultées, afin de corriger ce qui prête à confusion. Des chiffres seulement, aucun nom."},"marketing":{"title":"Marketing","desc":"Nous permettent de vous montrer des publicités sur d’autres sites et de mesurer leur utilité."}}},"ga":{"bannerTitle":"Úsáidimid fianáin","bannerText":"Coinníonn fianáin riachtanacha an suíomh ag obair. Gach rud eile — anailísíocht, margaíocht, áiseanna breise — ní ritheann sé ach le do chead. Is féidir leat d’intinn a athrú am ar bith.","more":"Tuilleadh eolais","acceptAll":"Glac le gach ceann","rejectAll":"Diúltaigh do gach ceann","customize":"Saincheap","bannerLabel":"Toiliú fianán","panelTitle":"Socruithe fianán","panelIntro":"Roghnaigh na fianáin a cheadaíonn tú. Níl aon rud roghnach ar siúl go dtí go gcuireann tú féin ar siúl é.","save":"Sábháil an rogha","close":"Dún","alwaysOn":"gníomhach i gcónaí","cookiesIn":"Fianáin sa ghrúpa seo","noCookies":"Níl aon fhianán dearbhaithe don ghrúpa seo.","colName":"Ainm","colVendor":"Soláthraí","colPurpose":"Cuspóir","colExpiry":"Éagann","floating":"Socruithe fianán","extraTitle":"Eolas breise","cat":{"necessary":{"title":"Riachtanach","desc":"Ag teastáil chun an suíomh a oibriú — logáil isteach, slándáil, do thoiliú a choinneáil. Ní féidir iad a mhúchadh."},"functional":{"title":"Feidhmiúil","desc":"Coinníonn siad do roghanna, mar shampla an teanga nó an comhrá, ionas nach gá duit iad a shocrú arís."},"analytics":{"title":"Anailísíocht","desc":"Taispeánann siad dúinn na leathanaigh a úsáidtear, chun an rud atá mearbhallach a cheartú. Uimhreacha amháin, gan ainmneacha."},"marketing":{"title":"Margaíocht","desc":"Ligeann siad dúinn fógraí a thaispeáint duit ar shuímh eile agus a thomhas an raibh aon mhaith leo."}}},"hr":{"bannerTitle":"Koristimo kolačiće","bannerText":"Nužni kolačići održavaju stranicu u radu. Sve ostalo — analitika, marketing, dodatne pogodnosti — uključuje se samo uz vaš pristanak. Odluku možete promijeniti u svakom trenutku.","more":"Saznajte više","acceptAll":"Prihvati sve","rejectAll":"Odbij sve","customize":"Postavke","bannerLabel":"Privola za kolačiće","panelTitle":"Postavke kolačića","panelIntro":"Odaberite koje kolačiće dopuštate. Ništa neobavezno nije uključeno dok to sami ne uključite.","save":"Spremi odabir","close":"Zatvori","alwaysOn":"uvijek aktivni","cookiesIn":"Kolačići u ovoj skupini","noCookies":"Za ovu skupinu nisu navedeni kolačići.","colName":"Naziv","colVendor":"Pružatelj","colPurpose":"Svrha","colExpiry":"Istječe","floating":"Postavke kolačića","extraTitle":"Dodatne informacije","cat":{"necessary":{"title":"Nužni","desc":"Potrebni su za rad stranice — prijava, sigurnost, pamćenje vaše privole. Ne mogu se isključiti."},"functional":{"title":"Funkcionalni","desc":"Pamte vaše postavke, primjerice jezik ili chat, da ih ne morate ponovno birati."},"analytics":{"title":"Analitika","desc":"Pokazuju nam koje se stranice koriste kako bismo ispravili ono što zbunjuje. Samo brojke, bez imena."},"marketing":{"title":"Marketing","desc":"Omogućuju nam da vam prikazujemo oglase na drugim stranicama i izmjerimo jesu li bili od koristi."}}},"hu":{"bannerTitle":"Sütiket használunk","bannerText":"A szükséges sütik tartják működésben az oldalt. Minden más — statisztika, marketing, kényelmi funkciók — csak az Ön hozzájárulásával indul el. Döntését bármikor módosíthatja.","more":"További információ","acceptAll":"Mind elfogadása","rejectAll":"Mind elutasítása","customize":"Beállítás","bannerLabel":"Süti-hozzájárulás","panelTitle":"Sütibeállítások","panelIntro":"Válassza ki, mely sütiket engedélyezi. Semmi választható nincs bekapcsolva, amíg Ön be nem kapcsolja.","save":"Választás mentése","close":"Bezárás","alwaysOn":"mindig aktív","cookiesIn":"A csoport sütijei","noCookies":"Ehhez a csoporthoz nincs süti megadva.","colName":"Név","colVendor":"Szolgáltató","colPurpose":"Cél","colExpiry":"Lejárat","floating":"Sütibeállítások","extraTitle":"További információk","cat":{"necessary":{"title":"Szükséges","desc":"Az oldal működéséhez kellenek: belépés, biztonság, a hozzájárulása megjegyzése. Nem kapcsolhatók ki."},"functional":{"title":"Funkcionális","desc":"Megjegyzik a beállításait, például a nyelvet vagy a chatet, hogy ne kelljen újra megadnia őket."},"analytics":{"title":"Statisztika","desc":"Megmutatják, mely oldalakat használják, hogy javíthassuk a zavarosat. Csak számok, nevek nélkül."},"marketing":{"title":"Marketing","desc":"Lehetővé teszik, hogy hirdetéseket mutassunk Önnek más oldalakon, és mérjük, volt-e belőlük haszon."}}},"is":{"bannerTitle":"Við notum vefkökur","bannerText":"Nauðsynlegar vefkökur halda vefnum gangandi. Allt annað — tölfræði, markaðssetning, aukaþægindi — fer aðeins í gang ef þú leyfir það. Þú getur skipt um skoðun hvenær sem er.","more":"Nánar","acceptAll":"Samþykkja allt","rejectAll":"Hafna öllu","customize":"Stillingar","bannerLabel":"Samþykki fyrir vefkökum","panelTitle":"Stillingar vefkaka","panelIntro":"Veldu hvaða vefkökur þú leyfir. Ekkert valfrjálst er kveikt fyrr en þú kveikir á því sjálf.","save":"Vista val","close":"Loka","alwaysOn":"alltaf virkar","cookiesIn":"Vefkökur í þessum flokki","noCookies":"Engar vefkökur eru skráðar fyrir þennan flokk.","colName":"Heiti","colVendor":"Þjónustuaðili","colPurpose":"Tilgangur","colExpiry":"Gildistími","floating":"Stillingar vefkaka","extraTitle":"Viðbótarupplýsingar","cat":{"necessary":{"title":"Nauðsynlegar","desc":"Nauðsynlegar til að vefurinn virki — innskráning, öryggi, að muna samþykki þitt. Ekki er hægt að slökkva á þeim."},"functional":{"title":"Virknivefkökur","desc":"Muna stillingar þínar, til dæmis tungumál eða spjall, svo þú þurfir ekki að velja aftur."},"analytics":{"title":"Tölfræði","desc":"Sýna okkur hvaða síður eru notaðar svo við getum lagað það sem ruglar. Aðeins tölur, engin nöfn."},"marketing":{"title":"Markaðssetning","desc":"Leyfa okkur að sýna þér auglýsingar á öðrum vefjum og mæla hvort þær komu að gagni."}}},"it":{"bannerTitle":"Utilizziamo i cookie","bannerText":"I cookie necessari fanno funzionare il sito. Tutto il resto — statistiche, marketing, funzioni aggiuntive — si attiva solo se lo consente. Può cambiare idea in qualsiasi momento.","more":"Scopri di più","acceptAll":"Accetta tutto","rejectAll":"Rifiuta tutto","customize":"Personalizza","bannerLabel":"Consenso ai cookie","panelTitle":"Impostazioni dei cookie","panelIntro":"Scelga quali cookie autorizzare. Nulla di facoltativo è attivo finché non lo attiva Lei.","save":"Salva le scelte","close":"Chiudi","alwaysOn":"sempre attivi","cookiesIn":"Cookie di questo gruppo","noCookies":"Nessun cookie dichiarato per questo gruppo.","colName":"Nome","colVendor":"Fornitore","colPurpose":"Finalità","colExpiry":"Scadenza","floating":"Impostazioni dei cookie","extraTitle":"Informazioni aggiuntive","cat":{"necessary":{"title":"Necessari","desc":"Servono al funzionamento del sito: accesso, sicurezza, memoria del suo consenso. Non possono essere disattivati."},"functional":{"title":"Funzionali","desc":"Ricordano le sue preferenze, come la lingua o la chat, così non deve impostarle di nuovo."},"analytics":{"title":"Statistiche","desc":"Ci mostrano quali pagine vengono usate, per correggere ciò che risulta poco chiaro. Solo numeri, nessun nome."},"marketing":{"title":"Marketing","desc":"Ci permettono di mostrarle annunci su altri siti e di misurare se sono serviti a qualcosa."}}},"lt":{"bannerTitle":"Naudojame slapukus","bannerText":"Būtini slapukai palaiko svetainės veikimą. Visa kita — analitika, rinkodara, papildomi patogumai — įsijungia tik jums sutikus. Sprendimą galite pakeisti bet kada.","more":"Sužinoti daugiau","acceptAll":"Priimti visus","rejectAll":"Atmesti visus","customize":"Tinkinti","bannerLabel":"Sutikimas dėl slapukų","panelTitle":"Slapukų nustatymai","panelIntro":"Pasirinkite, kuriuos slapukus leidžiate. Nieko pasirenkamo nėra įjungta, kol patys neįjungiate.","save":"Įrašyti pasirinkimą","close":"Uždaryti","alwaysOn":"visada aktyvūs","cookiesIn":"Šios grupės slapukai","noCookies":"Šiai grupei slapukų nenurodyta.","colName":"Pavadinimas","colVendor":"Teikėjas","colPurpose":"Paskirtis","colExpiry":"Galiojimas","floating":"Slapukų nustatymai","extraTitle":"Papildoma informacija","cat":{"necessary":{"title":"Būtini","desc":"Reikalingi, kad svetainė veiktų: prisijungimas, saugumas, jūsų sutikimo įsiminimas. Jų išjungti negalima."},"functional":{"title":"Funkciniai","desc":"Įsimena jūsų nustatymus, pavyzdžiui, kalbą ar pokalbius, kad jų nereikėtų nurodyti iš naujo."},"analytics":{"title":"Analitika","desc":"Rodo mums, kurie puslapiai naudojami, kad pataisytume tai, kas painu. Tik skaičiai, be vardų."},"marketing":{"title":"Rinkodara","desc":"Leidžia rodyti jums reklamą kitose svetainėse ir įvertinti, ar iš jos buvo naudos."}}},"lv":{"bannerTitle":"Mēs izmantojam sīkdatnes","bannerText":"Nepieciešamās sīkdatnes nodrošina vietnes darbību. Viss pārējais — analītika, mārketings, papildu ērtības — darbojas tikai ar jūsu piekrišanu. Savu izvēli varat mainīt jebkurā brīdī.","more":"Uzzināt vairāk","acceptAll":"Piekrist visām","rejectAll":"Noraidīt visas","customize":"Pielāgot","bannerLabel":"Piekrišana sīkdatnēm","panelTitle":"Sīkdatņu iestatījumi","panelIntro":"Izvēlieties, kuras sīkdatnes atļaujat. Nekas neobligāts nav ieslēgts, kamēr to neieslēdzat pats.","save":"Saglabāt izvēli","close":"Aizvērt","alwaysOn":"vienmēr aktīvas","cookiesIn":"Šīs grupas sīkdatnes","noCookies":"Šai grupai sīkdatnes nav norādītas.","colName":"Nosaukums","colVendor":"Sniedzējs","colPurpose":"Nolūks","colExpiry":"Derīgums","floating":"Sīkdatņu iestatījumi","extraTitle":"Papildu informācija","cat":{"necessary":{"title":"Nepieciešamās","desc":"Vajadzīgas vietnes darbībai — pieteikšanās, drošība, jūsu piekrišanas saglabāšana. Tās nevar izslēgt."},"functional":{"title":"Funkcionālās","desc":"Atceras jūsu iestatījumus, piemēram, valodu vai tērzēšanu, lai tie nebūtu jānorāda atkārtoti."},"analytics":{"title":"Analītika","desc":"Rāda mums, kuras lapas tiek lietotas, lai varam labot neskaidro. Tikai skaitļi, bez vārdiem."},"marketing":{"title":"Mārketings","desc":"Ļauj rādīt jums reklāmas citās vietnēs un novērtēt, vai no tām bija labums."}}},"mk":{"bannerTitle":"Користиме колачиња","bannerText":"Неопходните колачиња ја одржуваат страницата во работа. Сè останато — аналитика, маркетинг, дополнителни погодности — се вклучува само со ваша согласност. Одлуката можете да ја промените во секое време.","more":"Дознајте повеќе","acceptAll":"Прифати сè","rejectAll":"Одбиј сè","customize":"Прилагоди","bannerLabel":"Согласност за колачиња","panelTitle":"Поставки за колачиња","panelIntro":"Изберете кои колачиња ги дозволувате. Ништо изборно не е вклучено додека сами не го вклучите.","save":"Зачувај избор","close":"Затвори","alwaysOn":"секогаш активни","cookiesIn":"Колачиња во оваа група","noCookies":"За оваа група не се наведени колачиња.","colName":"Име","colVendor":"Доставувач","colPurpose":"Цел","colExpiry":"Истекува","floating":"Поставки за колачиња","extraTitle":"Дополнителни информации","cat":{"necessary":{"title":"Неопходни","desc":"Потребни се за страницата да работи — најава, безбедност, помнење на вашата согласност. Не можат да се исклучат."},"functional":{"title":"Функционални","desc":"Ги паметат вашите поставки, на пример јазикот или разговорот, за да не ги задавате повторно."},"analytics":{"title":"Аналитика","desc":"Ни покажуваат кои страници се користат за да го поправиме тоа што збунува. Само бројки, без имиња."},"marketing":{"title":"Маркетинг","desc":"Ни овозможуваат да ви прикажуваме реклами на други страници и да измериме дали имало корист од нив."}}},"mt":{"bannerTitle":"Nużaw il-cookies","bannerText":"Il-cookies meħtieġa jżommu s-sit jaħdem. Kollox ieħor — analitika, marketing, faċilitajiet żejda — jitħaddem biss jekk tippermettih. Tista’ tbiddel il-fehma tiegħek f’kull ħin.","more":"Aktar informazzjoni","acceptAll":"Aċċetta kollox","rejectAll":"Irrifjuta kollox","customize":"Ippersonalizza","bannerLabel":"Kunsens għall-cookies","panelTitle":"Issettjar tal-cookies","panelIntro":"Agħżel liema cookies tippermetti. Xejn fakultattiv mhu mixgħul sakemm ma tixgħelux int.","save":"Issejvja l-għażla","close":"Agħlaq","alwaysOn":"dejjem attivi","cookiesIn":"Cookies f’dan il-grupp","noCookies":"Ma ġie ddikjarat l-ebda cookie għal dan il-grupp.","colName":"Isem","colVendor":"Fornitur","colPurpose":"Skop","colExpiry":"Skadenza","floating":"Issettjar tal-cookies","extraTitle":"Informazzjoni addizzjonali","cat":{"necessary":{"title":"Meħtieġa","desc":"Meħtieġa biex is-sit jaħdem — login, sigurtà, tifkira tal-kunsens tiegħek. Ma jistgħux jintfew."},"functional":{"title":"Funzjonali","desc":"Jiftakru l-preferenzi tiegħek, bħal-lingwa jew iċ-chat, biex ma jkollokx terġa’ tissettjahom."},"analytics":{"title":"Analitika","desc":"Juruna liema paġni jintużaw, biex nirranġaw dak li jħawwad. Numri biss, bla ismijiet."},"marketing":{"title":"Marketing","desc":"Jippermettulna nurulek reklami fuq siti oħra u nkejlu jekk kinux ta’ siwi."}}},"nb":{"bannerTitle":"Vi bruker informasjonskapsler","bannerText":"Nødvendige informasjonskapsler holder nettstedet i gang. Alt annet — statistikk, markedsføring, ekstra funksjoner — slås bare på hvis du tillater det. Du kan ombestemme deg når som helst.","more":"Les mer","acceptAll":"Godta alle","rejectAll":"Avvis alle","customize":"Tilpass","bannerLabel":"Samtykke til informasjonskapsler","panelTitle":"Innstillinger for informasjonskapsler","panelIntro":"Velg hvilke informasjonskapsler du tillater. Ingenting valgfritt er på før du slår det på selv.","save":"Lagre valg","close":"Lukk","alwaysOn":"alltid aktive","cookiesIn":"Informasjonskapsler i denne gruppen","noCookies":"Ingen informasjonskapsler er oppgitt for denne gruppen.","colName":"Navn","colVendor":"Leverandør","colPurpose":"Formål","colExpiry":"Utløper","floating":"Innstillinger for informasjonskapsler","extraTitle":"Tilleggsinformasjon","cat":{"necessary":{"title":"Nødvendige","desc":"Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av."},"functional":{"title":"Funksjonelle","desc":"Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt."},"analytics":{"title":"Statistikk","desc":"Viser oss hvilke sider som brukes, så vi kan rette opp det som forvirrer. Bare tall, ingen navn."},"marketing":{"title":"Markedsføring","desc":"Lar oss vise deg annonser på andre nettsteder og måle om de var til nytte."}}},"nl":{"bannerTitle":"Wij gebruiken cookies","bannerText":"Noodzakelijke cookies houden de site draaiende. Al het overige — statistieken, marketing, extra gemak — wordt alleen ingeschakeld als u dat toestaat. U kunt uw keuze altijd wijzigen.","more":"Meer informatie","acceptAll":"Alles accepteren","rejectAll":"Alles weigeren","customize":"Instellen","bannerLabel":"Cookietoestemming","panelTitle":"Cookie-instellingen","panelIntro":"Kies welke cookies u toestaat. Niets optioneels staat aan totdat u het zelf aanzet.","save":"Keuze opslaan","close":"Sluiten","alwaysOn":"altijd actief","cookiesIn":"Cookies in deze groep","noCookies":"Voor deze groep zijn geen cookies opgegeven.","colName":"Naam","colVendor":"Aanbieder","colPurpose":"Doel","colExpiry":"Vervalt","floating":"Cookie-instellingen","extraTitle":"Aanvullende informatie","cat":{"necessary":{"title":"Noodzakelijk","desc":"Nodig om de site te laten werken: inloggen, beveiliging en het onthouden van uw keuze. Ze kunnen niet uit."},"functional":{"title":"Functioneel","desc":"Onthouden uw voorkeuren, zoals taal of chat, zodat u ze niet opnieuw hoeft in te stellen."},"analytics":{"title":"Statistieken","desc":"Laten ons zien welke pagina’s worden gebruikt, zodat we verwarrende dingen kunnen verbeteren. Alleen cijfers, geen namen."},"marketing":{"title":"Marketing","desc":"Stellen ons in staat u advertenties op andere sites te tonen en te meten of ze iets opleverden."}}},"no":{"bannerTitle":"Vi bruker informasjonskapsler","bannerText":"Nødvendige informasjonskapsler holder nettstedet i gang. Alt annet — statistikk, markedsføring, ekstra funksjoner — slås bare på hvis du tillater det. Du kan ombestemme deg når som helst.","more":"Les mer","acceptAll":"Godta alle","rejectAll":"Avvis alle","customize":"Tilpass","bannerLabel":"Samtykke til informasjonskapsler","panelTitle":"Innstillinger for informasjonskapsler","panelIntro":"Velg hvilke informasjonskapsler du tillater. Ingenting valgfritt er på før du slår det på selv.","save":"Lagre valg","close":"Lukk","alwaysOn":"alltid aktive","cookiesIn":"Informasjonskapsler i denne gruppen","noCookies":"Ingen informasjonskapsler er oppgitt for denne gruppen.","colName":"Navn","colVendor":"Leverandør","colPurpose":"Formål","colExpiry":"Utløper","floating":"Innstillinger for informasjonskapsler","extraTitle":"Tilleggsinformasjon","cat":{"necessary":{"title":"Nødvendige","desc":"Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av."},"functional":{"title":"Funksjonelle","desc":"Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt."},"analytics":{"title":"Statistikk","desc":"Viser oss hvilke sider som brukes, så vi kan rette opp det som forvirrer. Bare tall, ingen navn."},"marketing":{"title":"Markedsføring","desc":"Lar oss vise deg annonser på andre nettsteder og måle om de var til nytte."}}},"pl":{"bannerTitle":"Używamy plików cookie","bannerText":"Niezbędne pliki cookie utrzymują działanie strony. Cała reszta — analityka, marketing, dodatkowe udogodnienia — działa tylko za Pana/Pani zgodą. Decyzję można zmienić w każdej chwili.","more":"Dowiedz się więcej","acceptAll":"Zaakceptuj wszystkie","rejectAll":"Odrzuć wszystkie","customize":"Dostosuj","bannerLabel":"Zgoda na pliki cookie","panelTitle":"Ustawienia plików cookie","panelIntro":"Proszę wybrać, na które pliki cookie wyrażają Państwo zgodę. Nic opcjonalnego nie jest włączone, dopóki sami tego nie włączycie.","save":"Zapisz wybór","close":"Zamknij","alwaysOn":"zawsze aktywne","cookiesIn":"Pliki cookie w tej grupie","noCookies":"Dla tej grupy nie zadeklarowano plików cookie.","colName":"Nazwa","colVendor":"Dostawca","colPurpose":"Cel","colExpiry":"Wygasa","floating":"Ustawienia plików cookie","extraTitle":"Informacje dodatkowe","cat":{"necessary":{"title":"Niezbędne","desc":"Potrzebne, by strona działała: logowanie, bezpieczeństwo, zapamiętanie zgody. Nie można ich wyłączyć."},"functional":{"title":"Funkcjonalne","desc":"Zapamiętują ustawienia, na przykład język lub czat, żeby nie trzeba było wybierać ich ponownie."},"analytics":{"title":"Analityczne","desc":"Pokazują nam, z których stron korzystają użytkownicy, byśmy poprawili to, co myli. Tylko liczby, bez nazwisk."},"marketing":{"title":"Marketingowe","desc":"Pozwalają pokazywać reklamy na innych stronach i sprawdzać, czy przyniosły efekt."}}},"pt":{"bannerTitle":"Utilizamos cookies","bannerText":"Os cookies necessários mantêm o site a funcionar. Tudo o resto — análise, marketing, funcionalidades extra — só é ativado se o permitir. Pode mudar de ideias a qualquer momento.","more":"Saber mais","acceptAll":"Aceitar tudo","rejectAll":"Recusar tudo","customize":"Personalizar","bannerLabel":"Consentimento de cookies","panelTitle":"Definições de cookies","panelIntro":"Escolha que cookies permite. Nada opcional está ativo até que o ative.","save":"Guardar escolhas","close":"Fechar","alwaysOn":"sempre ativos","cookiesIn":"Cookies deste grupo","noCookies":"Não foram declarados cookies para este grupo.","colName":"Nome","colVendor":"Fornecedor","colPurpose":"Finalidade","colExpiry":"Validade","floating":"Definições de cookies","extraTitle":"Informações adicionais","cat":{"necessary":{"title":"Necessários","desc":"Precisos para o site funcionar: início de sessão, segurança e memória do seu consentimento. Não podem ser desativados."},"functional":{"title":"Funcionais","desc":"Guardam as suas preferências, como o idioma ou o chat, para não ter de as definir outra vez."},"analytics":{"title":"Análise","desc":"Mostram-nos que páginas são usadas, para corrigirmos o que confunde. Apenas números, sem nomes."},"marketing":{"title":"Marketing","desc":"Permitem mostrar-lhe anúncios noutros sites e medir se foram úteis."}}},"ro":{"bannerTitle":"Cookie-uri pe acest site","bannerText":"Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră. Puteți schimba decizia oricând.","more":"Aflați mai multe","acceptAll":"Acceptă tot","rejectAll":"Respinge tot","customize":"Personalizează","bannerLabel":"Consimțământ pentru cookie-uri","panelTitle":"Setări cookie-uri","panelIntro":"Alegeți ce permiteți. Implicit este pornit doar strictul necesar.","save":"Salvează alegerea","close":"Închide","alwaysOn":"mereu active","cookiesIn":"Ce cookie-uri","noCookies":"Nu au fost declarate cookie-uri pentru acest grup.","colName":"Denumire","colVendor":"Cine le pune","colPurpose":"Pentru ce","colExpiry":"Expiră","floating":"Setări cookie-uri","extraTitle":"Informații suplimentare","phText":"Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».","phAllow":"Permite și arată","phSettings":"Setări cookie-uri","phLabel":"Conținut blocat","svcCount":["{n} serviciu","{n} servicii","{n} de servicii"],"ckCount":["{n} cookie","{n} cookie-uri","{n} de cookie-uri"],"svcPolicy":"Politica","svcCookies":"Ce cookie-uri pune","svcDetails":"Detalii","svcListLabel":"Servicii și cookie-uri din acest grup","cat":{"necessary":{"title":"Necesare","desc":"Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate."},"functional":{"title":"Funcționale","desc":"Rețin alegerile dumneavoastră: limba, coșul, chatul."},"analytics":{"title":"Analiză","desc":"Ne ajută să înțelegem ce merge bine pe site și ce nu."},"marketing":{"title":"Marketing","desc":"Potrivesc reclamele cu interesele dumneavoastră pe alte site-uri."}}},"sk":{"bannerTitle":"Používame súbory cookie","bannerText":"Nevyhnutné súbory cookie udržiavajú stránku v chode. Všetko ostatné — analytika, marketing, doplnkové pohodlie — sa zapne len s vaším súhlasom. Rozhodnutie môžete kedykoľvek zmeniť.","more":"Viac informácií","acceptAll":"Prijať všetko","rejectAll":"Odmietnuť všetko","customize":"Nastaviť","bannerLabel":"Súhlas so súbormi cookie","panelTitle":"Nastavenia cookies","panelIntro":"Vyberte, ktoré súbory cookie povolíte. Nič voliteľné nie je zapnuté, kým to sami nezapnete.","save":"Uložiť voľbu","close":"Zavrieť","alwaysOn":"vždy aktívne","cookiesIn":"Cookies v tejto skupine","noCookies":"Pre túto skupinu nie sú uvedené žiadne cookies.","colName":"Názov","colVendor":"Poskytovateľ","colPurpose":"Účel","colExpiry":"Platnosť","floating":"Nastavenia cookies","extraTitle":"Doplňujúce informácie","cat":{"necessary":{"title":"Nevyhnutné","desc":"Bez nich stránka nefunguje — prihlásenie, bezpečnosť, zapamätanie vášho súhlasu. Nedajú sa vypnúť."},"functional":{"title":"Funkčné","desc":"Pamätajú si vaše nastavenia, napríklad jazyk alebo chat, aby ste ich nezadávali znova."},"analytics":{"title":"Analytické","desc":"Ukazujú nám, ktoré stránky ľudia používajú, aby sme opravili to nejasné. Len čísla, žiadne mená."},"marketing":{"title":"Marketingové","desc":"Umožňujú nám zobrazovať vám reklamy na iných stránkach a merať, či boli na niečo dobré."}}},"sl":{"bannerTitle":"Uporabljamo piškotke","bannerText":"Nujni piškotki ohranjajo delovanje spletnega mesta. Vse ostalo — analitika, trženje, dodatne ugodnosti — se vklopi le z vašim soglasjem. Odločitev lahko kadar koli spremenite.","more":"Več o tem","acceptAll":"Sprejmi vse","rejectAll":"Zavrni vse","customize":"Nastavi","bannerLabel":"Soglasje za piškotke","panelTitle":"Nastavitve piškotkov","panelIntro":"Izberite, katere piškotke dovolite. Nič neobveznega ni vklopljeno, dokler tega ne vklopite sami.","save":"Shrani izbiro","close":"Zapri","alwaysOn":"vedno aktivni","cookiesIn":"Piškotki v tej skupini","noCookies":"Za to skupino piškotki niso navedeni.","colName":"Ime","colVendor":"Ponudnik","colPurpose":"Namen","colExpiry":"Poteče","floating":"Nastavitve piškotkov","extraTitle":"Dodatne informacije","cat":{"necessary":{"title":"Nujni","desc":"Potrebni za delovanje spletnega mesta — prijava, varnost, pomnjenje vašega soglasja. Ni jih mogoče izklopiti."},"functional":{"title":"Funkcionalni","desc":"Zapomnijo si vaše nastavitve, na primer jezik ali klepet, da jih ni treba določati znova."},"analytics":{"title":"Analitika","desc":"Pokažejo nam, katere strani ljudje uporabljajo, da popravimo, kar je nejasno. Samo številke, brez imen."},"marketing":{"title":"Trženje","desc":"Omogočajo nam, da vam prikazujemo oglase na drugih straneh in izmerimo, ali so bili koristni."}}},"sq":{"bannerTitle":"Ne përdorim cookie-t","bannerText":"Cookie-t e nevojshme e mbajnë faqen në punë. Gjithçka tjetër — analitika, marketingu, lehtësirat shtesë — aktivizohet vetëm nëse e lejoni. Mund ta ndryshoni vendimin në çdo kohë.","more":"Mëso më shumë","acceptAll":"Prano të gjitha","rejectAll":"Refuzo të gjitha","customize":"Përshtat","bannerLabel":"Pëlqimi për cookie-t","panelTitle":"Cilësimet e cookie-ve","panelIntro":"Zgjidhni cilat cookie lejoni. Asgjë opsionale nuk është e ndezur derisa ta ndizni vetë.","save":"Ruaj zgjedhjen","close":"Mbyll","alwaysOn":"gjithmonë aktive","cookiesIn":"Cookie-t e këtij grupi","noCookies":"Nuk ka cookie të deklaruara për këtë grup.","colName":"Emri","colVendor":"Ofruesi","colPurpose":"Qëllimi","colExpiry":"Skadon","floating":"Cilësimet e cookie-ve","extraTitle":"Informacione shtesë","cat":{"necessary":{"title":"Të nevojshme","desc":"Nevojiten që faqja të funksionojë — hyrja, siguria, ruajtja e pëlqimit tuaj. Nuk mund të fiken."},"functional":{"title":"Funksionale","desc":"Mbajnë mend preferencat tuaja, si gjuha ose biseda, që të mos i vendosni sërish."},"analytics":{"title":"Analitika","desc":"Na tregojnë cilat faqe përdoren, që të rregullojmë atë që ngatërron. Vetëm numra, pa emra."},"marketing":{"title":"Marketingu","desc":"Na lejojnë t’ju shfaqim reklama në faqe të tjera dhe të matim nëse patën ndonjë dobi."}}},"sr":{"bannerTitle":"Користимо колачиће","bannerText":"Неопходни колачићи одржавају сајт у раду. Све остало — аналитика, маркетинг, додатне погодности — укључује се само уз вашу сагласност. Одлуку можете променити у сваком тренутку.","more":"Сазнајте више","acceptAll":"Прихвати све","rejectAll":"Одбиј све","customize":"Подеси","bannerLabel":"Сагласност за колачиће","panelTitle":"Подешавања колачића","panelIntro":"Изаберите које колачиће дозвољавате. Ништа необавезно није укључено док то сами не укључите.","save":"Сачувај избор","close":"Затвори","alwaysOn":"увек активни","cookiesIn":"Колачићи у овој групи","noCookies":"За ову групу нису наведени колачићи.","colName":"Назив","colVendor":"Пружалац","colPurpose":"Сврха","colExpiry":"Истиче","floating":"Подешавања колачића","extraTitle":"Додатне информације","cat":{"necessary":{"title":"Неопходни","desc":"Потребни су да би сајт радио — пријава, безбедност, памћење ваше сагласности. Не могу се искључити."},"functional":{"title":"Функционални","desc":"Памте ваша подешавања, на пример језик или ћаскање, да их не бисте бирали поново."},"analytics":{"title":"Аналитика","desc":"Показују нам које се странице користе како бисмо исправили оно што збуњује. Само бројеви, без имена."},"marketing":{"title":"Маркетинг","desc":"Омогућавају нам да вам приказујемо огласе на другим сајтовима и измеримо да ли су били од користи."}}},"sv":{"bannerTitle":"Vi använder cookies","bannerText":"Nödvändiga cookies håller webbplatsen igång. Allt annat — statistik, marknadsföring, extra funktioner — startar bara om du tillåter det. Du kan ändra dig när som helst.","more":"Läs mer","acceptAll":"Godkänn alla","rejectAll":"Avvisa alla","customize":"Anpassa","bannerLabel":"Cookiesamtycke","panelTitle":"Cookieinställningar","panelIntro":"Välj vilka cookies du tillåter. Inget valfritt är påslaget förrän du slår på det själv.","save":"Spara val","close":"Stäng","alwaysOn":"alltid aktiva","cookiesIn":"Cookies i denna grupp","noCookies":"Inga cookies har angetts för denna grupp.","colName":"Namn","colVendor":"Leverantör","colPurpose":"Syfte","colExpiry":"Upphör","floating":"Cookieinställningar","extraTitle":"Ytterligare information","cat":{"necessary":{"title":"Nödvändiga","desc":"Krävs för att webbplatsen ska fungera — inloggning, säkerhet, minne av ditt samtycke. De kan inte stängas av."},"functional":{"title":"Funktionella","desc":"Kommer ihåg dina inställningar, till exempel språk eller chatt, så att du slipper välja igen."},"analytics":{"title":"Statistik","desc":"Visar oss vilka sidor som används, så att vi kan rätta till det som förvirrar. Bara siffror, inga namn."},"marketing":{"title":"Marknadsföring","desc":"Låter oss visa dig annonser på andra webbplatser och mäta om de gjorde nytta."}}},"tr":{"bannerTitle":"Çerezleri kullanıyoruz","bannerText":"Zorunlu çerezler sitenin çalışmasını sağlar. Diğer her şey — analiz, pazarlama, ek kolaylıklar — yalnızca siz izin verirseniz çalışır. Kararınızı istediğiniz zaman değiştirebilirsiniz.","more":"Daha fazla bilgi","acceptAll":"Tümünü kabul et","rejectAll":"Tümünü reddet","customize":"Özelleştir","bannerLabel":"Çerez onayı","panelTitle":"Çerez ayarları","panelIntro":"Hangi çerezlere izin verdiğinizi seçin. Siz açmadıkça isteğe bağlı hiçbir şey açık değildir.","save":"Seçimi kaydet","close":"Kapat","alwaysOn":"her zaman etkin","cookiesIn":"Bu gruptaki çerezler","noCookies":"Bu grup için çerez bildirilmemiş.","colName":"Ad","colVendor":"Sağlayıcı","colPurpose":"Amaç","colExpiry":"Süre","floating":"Çerez ayarları","extraTitle":"Ek bilgiler","cat":{"necessary":{"title":"Zorunlu","desc":"Sitenin çalışması için gerekli: oturum açma, güvenlik, onayınızın hatırlanması. Kapatılamazlar."},"functional":{"title":"İşlevsel","desc":"Dil veya sohbet gibi tercihlerinizi hatırlar, böylece yeniden ayarlamanız gerekmez."},"analytics":{"title":"Analiz","desc":"Hangi sayfaların kullanıldığını görmemizi sağlar, kafa karıştıranı düzeltiriz. Yalnızca sayılar, isim yok."},"marketing":{"title":"Pazarlama","desc":"Başka sitelerde size reklam göstermemize ve işe yarayıp yaramadığını ölçmemize olanak tanır."}}},"uk":{"bannerTitle":"Ми використовуємо файли cookie","bannerText":"Необхідні файли cookie підтримують роботу сайту. Усе інше — аналітика, маркетинг, додаткові зручності — вмикається лише за вашою згодою. Рішення можна змінити будь-коли.","more":"Докладніше","acceptAll":"Прийняти все","rejectAll":"Відхилити все","customize":"Налаштувати","bannerLabel":"Згода на файли cookie","panelTitle":"Налаштування cookie","panelIntro":"Виберіть, які файли cookie ви дозволяєте. Нічого необов’язкового не ввімкнено, доки ви цього не зробите.","save":"Зберегти вибір","close":"Закрити","alwaysOn":"завжди активні","cookiesIn":"Файли cookie цієї групи","noCookies":"Для цієї групи файли cookie не заявлені.","colName":"Назва","colVendor":"Постачальник","colPurpose":"Мета","colExpiry":"Термін","floating":"Налаштування cookie","extraTitle":"Додаткова інформація","cat":{"necessary":{"title":"Необхідні","desc":"Без них сайт не працює: вхід, безпека, пам’ять про ваш вибір. Вимкнути неможливо."},"functional":{"title":"Функціональні","desc":"Запам’ятовують ваші налаштування — наприклад мову або чат, — щоб ви не задавали їх знову."},"analytics":{"title":"Аналітика","desc":"Показують нам, якими сторінками користуються, щоб ми виправили незручне. Лише цифри, без імен."},"marketing":{"title":"Маркетинг","desc":"Дозволяють показувати вам рекламу на інших сайтах і оцінювати, чи була з неї користь."}}}});})();
 ;
 /* ConsentKit branding extension — logo + "powered by" line for the banner and panel.
 
@@ -2908,6 +2908,15 @@
       bannerLabel: 'Cookie consent',
       panelTitle: 'Cookie settings',
       panelIntro: 'Choose what to allow. By default only the necessary ones are on.',
+      /* SPEC V1.16 §1.2 — the «Additional information» card at the foot of the
+         panel: who the operator is, where to write, how long an answer takes,
+         where to complain. The HEADING has a real translation in every locale;
+         the BODY is deliberately empty in every dictionary, because the block
+         renders only when the site actually supplies text. A default sentence
+         here would put an empty operator card on every site that never
+         configured one. */
+      extraTitle: 'Additional information',
+      extraText: '',
       save: 'Save choices',
       close: 'Close',
       alwaysOn: 'always on',
@@ -2976,6 +2985,10 @@
       bannerLabel: 'Согласие на cookie',
       panelTitle: 'Настройки cookie',
       panelIntro: 'Выберите, что разрешить. По умолчанию включено только необходимое.',
+      // SPEC V1.16 §1.2. Заголовок переведён везде, тело пустое везде — см.
+      // комментарий у en выше.
+      extraTitle: 'Дополнительно',
+      extraText: '',
       save: 'Сохранить выбор',
       close: 'Закрыть',
       alwaysOn: 'всегда активны',
@@ -3044,7 +3057,16 @@
     // group's own one. Both are plain strings, so they belong here: a key left
     // out of this list is `undefined` for all 32 external locales and renders
     // the literal word "undefined" on the card.
-    'svcDetails', 'svcListLabel'
+    'svcDetails', 'svcListLabel',
+    /* SPEC V1.16 §1.2 — the «Дополнительно» card. Both belong here for the
+       usual reason (a DICT key missing from this list is `undefined` for all 32
+       external locales), but they behave differently on purpose:
+
+         extraTitle — translated everywhere, so every locale has a heading.
+         extraText  — '' in every dictionary. The merge line below keeps '' when
+                      the locale supplies nothing, and the panel treats '' as
+                      «no block». Only config.texts.<lang>.extraText fills it. */
+    'extraTitle', 'extraText'
   ];
 
   // Plural-form keys, filled separately from STR_KEYS (see above).
@@ -3135,13 +3157,74 @@
     return list[idx].replace('{n}', String(n));
   }
 
-  // Deep two-level fill from en: a partial locale must never yield undefined,
-  // which would render the literal string "undefined".
-  function buildStrings(lang, table) {
+  /* SPEC V1.16 §1.1 — per-language dictionary overrides from the CONFIG.
+
+     `config.texts` is a mixed bag: it has carried `policyUrl`, `detailsAction`,
+     `declarationUrl` and `cabinetUrl` since 0.5.0, and 0.5.15 adds `links`. So a
+     key is a language dictionary only when it LOOKS like a language tag — that
+     regex is the whole separation, and it is why no future scalar setting under
+     `texts` can ever be mistaken for one (none of them is two letters).
+
+     Own properties only, and the value must be a plain object: `texts` is
+     author-supplied JSON that may have been merged over a prototype, and
+     reading an inherited key would hand the merge below a function. */
+  var LANG_KEY_RE = /^[a-z]{2}(-[a-z]{2})?$/;
+
+  function configTexts(cfg, code) {
+    var texts = (cfg && cfg.texts && typeof cfg.texts === 'object' && !Array.isArray(cfg.texts))
+      ? cfg.texts : null;
+    if (!texts) return null;
+    var k = String(code || '').toLowerCase();
+    if (!LANG_KEY_RE.test(k)) return null;
+    if (!Object.prototype.hasOwnProperty.call(texts, k)) return null;
+    var v = texts[k];
+    return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null;
+  }
+
+  /* The keys an override may reach. A WHITELIST, not «whatever the object
+     carries»: an operator writing their own banner copy has no business
+     rewriting «Принять всё» (the button labels are what a visitor recognises
+     across sites) or the plural tables (an array here would break plural()).
+     `cat.<name>.title/desc` is handled separately below, one level deeper. */
+  var OVERRIDE_KEYS = [
+    'bannerTitle', 'bannerText', 'panelTitle', 'panelIntro', 'extraTitle', 'extraText'
+  ];
+
+  // A non-empty string wins; empty or missing falls through to the layer below.
+  // That is what makes an empty field in the cabinet mean «take the dictionary»
+  // rather than «render nothing».
+  function pickOverride(src, key) {
+    if (!src) return null;
+    if (!Object.prototype.hasOwnProperty.call(src, key)) return null;
+    var v = src[key];
+    return (typeof v === 'string' && v) ? v : null;
+  }
+
+  /* Deep two-level fill from en: a partial locale must never yield undefined,
+     which would render the literal string "undefined".
+
+     Three layers as of 0.5.15: builtin DICT <- window.__ckLocales (both already
+     folded into `table`) <- config.texts[lang]. `cfg` is OPTIONAL on purpose —
+     placeholderText() and the cabinet's own calls ask for the plain dictionary,
+     and an absent third argument must build exactly what 0.5.14 built. */
+  function buildStrings(lang, table, cfg) {
     var src = table[lang] || {};
     var base = DICT.en;
     var out = {};
     var i, c;
+
+    /* Exact code first, then the two-letter base of the RESOLVED language:
+       a banner that resolved to `pt-br` takes `texts['pt-br']` over
+       `texts['pt']`, and a site that only wrote `texts.pt` still reaches it.
+       Same shape as resolveLang(), so the override follows the banner. */
+    var code = String(lang || '').toLowerCase();
+    var ov = configTexts(cfg, code);
+    var ovBase = (code.length > 2) ? configTexts(cfg, code.slice(0, 2)) : null;
+
+    function override(key) {
+      return pickOverride(ov, key) || pickOverride(ovBase, key);
+    }
+
     for (i = 0; i < STR_KEYS.length; i++) {
       var k = STR_KEYS[i];
       out[k] = (typeof src[k] === 'string' && src[k]) ? src[k] : base[k];
@@ -3165,7 +3248,307 @@
         desc: (typeof e.desc === 'string' && e.desc) ? e.desc : base.cat[c].desc
       };
     }
+
+    /* SPEC V1.16 §1.1 — the config layer, applied LAST so it wins over both the
+       builtin dictionary and __ckLocales. Only the whitelisted keys, and only
+       non-empty strings: an override that is absent, empty or not a string
+       leaves whatever the two lower layers produced.
+
+       Nothing here is ever treated as HTML. These strings go through el()'s
+       textContent and (for extraText) renderRich(), which builds nodes with
+       createElement/createTextNode — an author who writes «<b>» sees the
+       characters «<b>», which is the contract the server's validator mirrors. */
+    if (ov || ovBase) {
+      for (i = 0; i < OVERRIDE_KEYS.length; i++) {
+        var ok = OVERRIDE_KEYS[i];
+        var hit = override(ok);
+        if (hit) out[ok] = hit;
+      }
+      // cat.<name>.title / cat.<name>.desc, one level deeper. Read from a
+      // `cat` object on the override, with the same exact-then-base chain.
+      var ovCat = (ov && ov.cat && typeof ov.cat === 'object') ? ov.cat : null;
+      var ovBaseCat = (ovBase && ovBase.cat && typeof ovBase.cat === 'object') ? ovBase.cat : null;
+      for (i = 0; i < ALL_CATS.length; i++) {
+        c = ALL_CATS[i];
+        var oe = (ovCat && ovCat[c] && typeof ovCat[c] === 'object') ? ovCat[c] : null;
+        var obe = (ovBaseCat && ovBaseCat[c] && typeof ovBaseCat[c] === 'object') ? ovBaseCat[c] : null;
+        var t = pickOverride(oe, 'title') || pickOverride(obe, 'title');
+        var d = pickOverride(oe, 'desc') || pickOverride(obe, 'desc');
+        if (t) out.cat[c].title = t;
+        if (d) out.cat[c].desc = d;
+      }
+    }
     return out;
+  }
+
+  /* ------------------------------------------ rich text (SPEC V1.16 §1.2) */
+
+  /* The tiny markup subset the «Дополнительно» block accepts. It exists because
+     an operator block is genuinely structured text — two or three paragraphs, a
+     bold e-mail address, a link to the supervisory authority — and because the
+     alternative (accepting HTML) would mean sanitising author HTML in the
+     browser, which is a class of bug we are not going to own.
+
+     THE RULES, in the order they are applied. The server's validator mirrors
+     this exactly, so the order is part of the contract, not an implementation
+     detail:
+
+       1. A blank line (two newlines, any surrounding spaces) splits paragraphs.
+          Each paragraph becomes one <p>.
+       2. Inside a paragraph, a single newline becomes <br>.
+       3. LINKS ARE TOKENISED FIRST, before anything else looks at the text:
+            [label](URL)   with URL http(s):// or mailto:
+            a bare https?:// URL
+            a bare e-mail address
+          Link-first is not a preference — it is what stops the bare-URL rule
+          from eating the address inside «[Центр](https://datepersonale.md)»
+          and stops the bare-e-mail rule from firing inside a mailto: label.
+       4. `**bold**` is applied only to the TEXT RUNS BETWEEN links. So bold does
+          not nest inside a link label and a link does not appear inside bold —
+          one pass, no nesting, nothing recursive to get wrong.
+       5. Any other URL scheme in [label](…) — javascript:, data:, file: — is
+          NOT a link. The WHOLE literal «[label](javascript:…)» is rendered as
+          plain text: visibly wrong to whoever wrote it, rather than silently
+          dropping the address and leaving a label that looks like a link.
+       6. There is no HTML. «<b>» is five characters of text, always.
+
+     Returns an ARRAY of nodes, so the caller decides where they go. Pure apart
+     from document.createElement, which is what makes «no innerHTML» mechanical
+     rather than a promise. */
+
+  // [label](url) — the label may not contain brackets, the url may not contain
+  // whitespace or a closing paren. Deliberately strict: an address that needs
+  // an escaped paren is an address that belongs in a plain bare-URL run.
+  var MD_LINK_RE = /\[([^\]\[]+)\]\(([^()\s]+)\)/;
+  var BARE_URL_RE = /https?:\/\/[^\s<>()\[\]"']+[^\s<>()\[\]"'.,;:!?]/;
+  // Simple on purpose: an address that this misses renders as plain text, which
+  // is a worse link, not a security hole. Anything clever here is a false
+  // positive waiting to turn a sentence into a mailto:.
+  var BARE_MAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/;
+
+  // http(s) for an outbound link, mailto: for an address. Everything else is
+  // refused — a javascript: or data: URL in a control the visitor is invited to
+  // click is the XSS vector resolveDetails() already refuses for policyUrl.
+  function richHref(url) {
+    var u = str(url);
+    if (!u) return null;
+    if (/^https?:\/\//i.test(u)) return u;
+    if (/^mailto:[^\s]+@[^\s]+$/i.test(u)) return u;
+    return null;
+  }
+
+  function richLink(label, href) {
+    var a = el('a', 'ck-rich__link', label);
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    return a;
+  }
+
+  /* `**bold**` over a plain run. Non-greedy and never across a newline, so an
+     unclosed «**» is two literal asterisks rather than a bold tail that
+     swallows the rest of the paragraph. */
+  var BOLD_RE = /\*\*([^*\n]+)\*\*/;
+
+  /* PASS 3 — bare addresses inside one run of plain text. Runs LAST, on text
+     that no longer contains any [label](url), so it cannot reach inside one. */
+  function richBare(text, out) {
+    var rest = String(text);
+    while (rest) {
+      var url = BARE_URL_RE.exec(rest);
+      var mail = BARE_MAIL_RE.exec(rest);
+      // Whichever address starts first. A URL wins a tie: «https://a@b.md» is
+      // an address with a userinfo part, not an e-mail sitting after a scheme.
+      var m = null, isMail = false;
+      if (url) { m = url; }
+      if (mail && (!m || mail.index < m.index)) { m = mail; isMail = true; }
+      if (!m) { out.push(document.createTextNode(rest)); return; }
+      if (m.index > 0) out.push(document.createTextNode(rest.slice(0, m.index)));
+      out.push(richLink(m[0], isMail ? ('mailto:' + m[0]) : m[0]));
+      rest = rest.slice(m.index + m[0].length);
+    }
+  }
+
+  /* PASS 2 — `**bold**` over one run of text, then PASS 3 inside each half.
+
+     Bold has to come BEFORE the bare-address rules, not after: «**mail@x.md**»
+     is one bold run containing an address, and a pass that linked the address
+     first would split the run in three and leave BOLD_RE looking at «**» and
+     «**» separately — the asterisks would survive on screen. That is the whole
+     reason these are three ordered passes rather than one left-to-right walk. */
+  function richBold(text, out) {
+    var rest = String(text);
+    var m;
+    while ((m = BOLD_RE.exec(rest))) {
+      if (m.index > 0) richBare(rest.slice(0, m.index), out);
+      var strong = el('strong', null);
+      var inner = [];
+      richBare(m[1], inner);            // an address inside bold is still a link
+      for (var i = 0; i < inner.length; i++) strong.appendChild(inner[i]);
+      out.push(strong);
+      rest = rest.slice(m.index + m[0].length);
+    }
+    if (rest) richBare(rest, out);
+  }
+
+  /* PASS 1 — one line of a paragraph -> nodes.
+
+     `[label](url)` is tokenised first and its pieces never reach passes 2 and 3:
+     that is what stops the bare-URL rule from eating the address inside the
+     parens, stops the bare-e-mail rule from firing inside a mailto: label, and
+     leaves a label's own «**» literal (rule 4 of the contract). The text
+     BETWEEN markdown links goes through richBold(), which then runs richBare()
+     inside and outside each bold span. */
+  function richLine(line, out) {
+    var rest = String(line);
+    var m;
+    while ((m = MD_LINK_RE.exec(rest))) {
+      if (m.index > 0) richBold(rest.slice(0, m.index), out);
+      var href = richHref(m[2]);
+      // Rule 5: a refused scheme is the whole literal, verbatim and unbolded,
+      // so «[x](javascript:alert(1))» reads as exactly what was written.
+      if (href) out.push(richLink(m[1], href));
+      else out.push(document.createTextNode(m[0]));
+      rest = rest.slice(m.index + m[0].length);
+    }
+    if (rest) richBold(rest, out);
+  }
+
+  /* text -> array of <p> nodes. Empty (or non-string) input gives an empty
+     array, which is what lets the caller say «no text, no block» by asking for
+     the length rather than by re-testing the string. */
+  function renderRich(text) {
+    var s = (typeof text === 'string') ? text : '';
+    if (!s.trim()) return [];
+    // \r\n and \r normalised first: a value pasted from Windows or copied out of
+    // a textarea must split into the same paragraphs as one typed here.
+    var paras = s.replace(/\r\n?/g, '\n').split(/\n[ \t]*\n+/);
+    var out = [];
+    for (var i = 0; i < paras.length; i++) {
+      var para = paras[i].replace(/^\n+|\n+$/g, '');
+      if (!para.trim()) continue;
+      var p = el('p', 'ck-rich__p');
+      var lines = para.split('\n');
+      for (var j = 0; j < lines.length; j++) {
+        if (j > 0) p.appendChild(el('br'));       // rule 2: a single newline
+        var nodes = [];
+        richLine(lines[j], nodes);
+        for (var k = 0; k < nodes.length; k++) p.appendChild(nodes[k]);
+      }
+      out.push(p);
+    }
+    return out;
+  }
+
+  /* ------------------------------------------ banner links (SPEC V1.16 §1.3) */
+
+  /* `texts.links` — up to three of the operator's own addresses, rendered under
+     the banner buttons and at the foot of the settings panel. The obvious pair
+     is «Политика конфиденциальности» and «Политика cookie», which a Moldovan
+     site is required to publish and which have nowhere else to go on the card.
+
+     Deliberately NOT tangled with `detailsAction`: «Подробнее» keeps doing
+     exactly what it did in 0.5.14, because a site that gains a link row must
+     not silently lose the link it already had.
+
+     A row is skipped, never faked, when its address is not http(s) or when no
+     label resolves for the banner's language — a link with no words on it is
+     not a link. The cap is applied to the SURVIVORS: one malformed row must not
+     cost a good one its place. */
+  function linkLabel(labels, lang) {
+    if (!labels || typeof labels !== 'object' || Array.isArray(labels)) return null;
+    var code = (typeof lang === 'string') ? lang.toLowerCase() : '';
+    // Own properties only, exactly as branding's pickPoweredByText does it and
+    // for the same reason: `labels` is author-supplied JSON, and an inherited
+    // key would hand str() a function instead of a missing line.
+    function own(k) {
+      return (k && Object.prototype.hasOwnProperty.call(labels, k)) ? str(labels[k]) : null;
+    }
+    var hit = own(code);
+    if (!hit && code.length > 2) hit = own(code.slice(0, 2));       // ru-RU -> ru
+    return hit || own('en');
+  }
+
+  var MAX_LINKS = 3;
+
+  function resolveLinks(cfg, lang) {
+    var texts = (cfg && cfg.texts && typeof cfg.texts === 'object') ? cfg.texts : null;
+    var list = texts && texts.links;
+    if (!list || !Array.isArray(list)) return [];
+    var out = [];
+    for (var i = 0; i < list.length && out.length < MAX_LINKS; i++) {
+      var row = list[i];
+      if (!row || typeof row !== 'object') continue;
+      var url = str(row.url);
+      if (!url || !/^https?:\/\//i.test(url)) continue;
+      var label = linkLabel(row.label, lang);
+      if (!label) continue;
+      out.push({ id: str(row.id) || ('link' + i), url: url, label: label });
+    }
+    return out;
+  }
+
+  /* SPEC V1.16 §1.3, last sentence — the one place where the link row DOES
+     touch «Подробнее»: when the address it would send the visitor to is
+     already one of the rows under the buttons, the banner shows the same
+     address twice. The second copy is not more information, it is noise, so
+     the in-text link is dropped and the banner renders as `detailsAction:
+     'hide'` for that render — the link row keeps the address, with a label the
+     operator wrote, which is the better of the two.
+
+     Only 'policy' and 'declaration' can duplicate anything: 'settings' opens
+     the panel and has no address to collide with, and 'hide' is already gone.
+
+     Comparison is deliberately narrow. Trimming and a trailing slash are
+     typography, not identity — `https://shop.md/cookies` and
+     `…/cookies/` are the same page — and so is the case of the HOST, which
+     DNS does not distinguish. The PATH is left alone: `/Cookies` and
+     `/cookies` are genuinely two addresses on a case-sensitive server, and
+     suppressing a real «Подробнее» link over that guess is the worse error. */
+  function normHref(v) {
+    var s = str(v);
+    if (!s) return null;
+    var m = /^(https?:\/\/[^\/?#]*)([\s\S]*)$/i.exec(s);
+    if (!m) return null;
+    return (m[1].toLowerCase() + m[2]).replace(/\/$/, '');
+  }
+
+  function detailsDuplicatesLink(details, links) {
+    if (!details) return false;
+    if (details.kind !== 'policy' && details.kind !== 'declaration') return false;
+    var href = normHref(details.href);
+    if (!href || !links || !Array.isArray(links)) return false;
+    for (var i = 0; i < links.length; i++) {
+      if (links[i] && normHref(links[i].url) === href) return true;
+    }
+    return false;
+  }
+
+  /* Which of the three shapes the banner will actually draw, duplicate rule
+     applied — so buildBanner() and signature() cannot disagree about it.
+     `lang` is the code the banner resolved to; signature() passes the config's
+     own so both sides of a comparison are read in the same language. */
+  function detailsKind(cfg, lang) {
+    var det = resolveDetails(cfg);
+    var code = (typeof lang === 'string' && lang) ? lang :
+      resolveLang(cfg && cfg.language, localeTable());
+    return detailsDuplicatesLink(det, resolveLinks(cfg, code)) ? 'hide' : det.kind;
+  }
+
+  // The row itself, or null when there is nothing to draw — so both call sites
+  // (banner and panel) are one `if` rather than two.
+  function buildLinksRow(cfg, cls) {
+    var links = resolveLinks(cfg, LANG);
+    if (!links.length) return null;
+    var row = el('div', 'ck-links' + (cls ? ' ' + cls : ''));
+    for (var i = 0; i < links.length; i++) {
+      var a = el('a', 'ck-links__a', links[i].label);
+      a.href = links[i].url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      row.appendChild(a);
+    }
+    return row;
   }
 
   /* ------------------------------------------- blocked-embed placeholder (§2) */
@@ -3412,6 +3795,40 @@
        >= 4.5:1 rule as «Подробнее» — see the note on the `a{}` rule above. */
     '.ck-svc__policy{display:inline-block;margin-top:4px;font-size:12.5px;color:var(--ck-link)}',
 
+    /* ---- «Дополнительно» card (SPEC V1.16 §1.2) ---- */
+    /* A card, not another category row: it carries no switch and answers a
+       different question — who the operator is and how to reach them. So it
+       gets the soft fill and the rounded border the cookie table wears, which
+       reads as «a panel of reference text» rather than «a fifth thing you can
+       turn off».
+
+       It is appended AFTER the categories, which means the last .ck-cat is no
+       longer `:last-child` and keeps its bottom rule — that is wanted here: the
+       rule is what separates the last category from this block. The rule below
+       restores the old look for the category above it only in the sense that
+       the separator now belongs to the boundary rather than to the group. */
+    '.ck-extra{margin:16px 0 4px;padding:14px 16px;background:var(--ck-soft);',
+    'border:1px solid var(--ck-line);border-radius:var(--ck-radius-card)}',
+    '.ck-extra__title{margin:0 0 6px;font-size:15px;font-weight:600}',
+    /* Same size and colour as .ck-cat__desc: this is secondary reference text,
+       and it is measured for AA against the card by the same rule. */
+    '.ck-extra__body p{margin:0 0 8px;font-size:13.5px;color:var(--ck-muted);line-height:1.5}',
+    '.ck-extra__body p:last-child{margin-bottom:0}',
+    /* --ck-link, not --ck-accent — accent-coloured TEXT answers to 4.5:1
+       against the card; see the note on the `a{}` rule above. */
+    '.ck-extra__body a{color:var(--ck-link)}',
+
+    /* ---- link row under the buttons (SPEC V1.16 §1.3) ---- */
+    /* One row, wrapping. `width:100%` matters in the bar layout, whose banner is
+       a flex row: without it the row would try to sit BESIDE the buttons on a
+       wide screen instead of under them. */
+    '.ck-links{display:flex;gap:14px;flex-wrap:wrap;width:100%;margin-top:12px;font-size:13px}',
+    '.ck-links__a{color:var(--ck-link)}',
+    /* The panel foot is a flex row of buttons that each take `flex:1 1 150px`;
+       a full-width row forced onto its own line keeps the links under the
+       buttons rather than wedged between two of them. */
+    '.ck-links--panel{flex-basis:100%;margin-top:2px}',
+
     /* ---- switch ---- */
     '.ck-switch{flex:none;width:46px;height:27px;padding:0;border-radius:999px;',
     'border:1px solid var(--ck-line);background:var(--ck-soft);position:relative}',
@@ -3460,6 +3877,9 @@
     '.ck-banner--bar .ck-banner__body{display:contents}',
     '.ck-banner--bar .ck-banner__body>*{order:1}',
     '.ck-banner--bar .ck-actions{order:2}',
+    // SPEC V1.16 §1.3 — the link row is `order:3` so it stays under the buttons
+    // in the bar's mobile column, where every child's position is explicit.
+    '.ck-banner--bar .ck-links{order:3}',
     /* Reference: the box's button row becomes a column under 560px. */
     '.ck-banner--box .ck-actions{flex-direction:column}',
     '.ck-banner--box .ck-btn{flex:1 1 auto;width:100%}}',
@@ -4963,6 +5383,14 @@
 
     var p = el('p');
     var det = resolveDetails(cfg);
+    /* SPEC V1.16 §1.3 — «Подробнее» and one of the link rows point at the same
+       page: drop the in-text copy rather than print the address twice. Asked
+       through detailsKind() so the shape drawn here is the same one signature()
+       watches for changes. The links are resolved for THIS render's language,
+       exactly as buildLinksRow does below, so a row that no visitor of this
+       banner can see (no label in their language) never silences the link
+       they can. */
+    if (detailsKind(cfg, LANG) === 'hide') det = { kind: 'hide', href: null };
     if (det.kind === 'hide') {
       p.appendChild(document.createTextNode(T.bannerText));
     } else {
@@ -5023,6 +5451,18 @@
     actions.appendChild(custom);
     b.appendChild(actions);
 
+    /* SPEC V1.16 §1.3 — the link row, under the buttons in all three layouts.
+       Appended to the BANNER rather than to the body, so it sits after the
+       actions in DOM (and reading) order everywhere: box and modal stack, and
+       the bar's `width:100%` on .ck-links forces it onto its own line under
+       the row instead of squeezing in beside the buttons.
+
+       The bar's mobile media query re-orders its children explicitly (body
+       contents `order:1`, actions `order:2`); the row carries `order:3` there
+       so it stays below the buttons rather than jumping above them. */
+    var blinks = buildLinksRow(cfg, 'ck-links--banner');
+    if (blinks) b.appendChild(blinks);
+
     // box/modal: the foot follows the buttons (see the note above).
     if (foot && lay.type !== 'bar') b.appendChild(foot);
 
@@ -5032,6 +5472,21 @@
     nodes.bannerModal = isModal;
     root.appendChild(scrim);
     root.appendChild(b);
+  }
+
+  /* SPEC V1.16 §1.2 — the «Дополнительно» card, or null when the site supplied
+     no text for this language. T.extraText has already been through the whole
+     merge (dictionary '' <- __ckLocales <- config.texts[lang] <- [base]), so
+     the only question left here is whether anything survived it. */
+  function buildExtra() {
+    var nodes = renderRich(T.extraText);
+    if (!nodes.length) return null;
+    var box = el('div', 'ck-extra');
+    box.appendChild(el('h3', 'ck-extra__title', T.extraTitle));
+    var bodyEl = el('div', 'ck-extra__body');
+    for (var i = 0; i < nodes.length; i++) bodyEl.appendChild(nodes[i]);
+    box.appendChild(bodyEl);
+    return box;
   }
 
   function buildPanel(cfg) {
@@ -5061,6 +5516,18 @@
     var body = el('div', 'ck-panel__body');
     var cats = ['necessary'].concat(activeOptIn(cfg));
     for (var i = 0; i < cats.length; i++) body.appendChild(buildCategory(cfg, cats[i]));
+
+    /* SPEC V1.16 §1.2 — «Дополнительно», after the categories and their service
+       lists, before the buttons. INSIDE .ck-panel__body, which is the scrolling
+       region: an operator block runs to a paragraph or three, and put between
+       the body and the foot it would be clipped on a short viewport with no way
+       to reach the end of it.
+
+       Rendered only when the resolved extraText is a non-empty string — every
+       dictionary ships '', so a site that never configured one draws nothing
+       and the panel is byte-for-byte what 0.5.14 drew. */
+    var extra = buildExtra();
+    if (extra) body.appendChild(extra);
     p.appendChild(body);
 
     var foot = el('div', 'ck-panel__foot');
@@ -5088,6 +5555,11 @@
     foot.appendChild(save);
     foot.appendChild(acc);
     foot.appendChild(rej);
+    // SPEC V1.16 §1.3 — the operator's own addresses, under the panel's buttons
+    // and above the attribution, so the bottom of the panel reads: what you can
+    // do, then where to read more, then who made this.
+    var plinks = buildLinksRow(cfg, 'ck-links--panel');
+    if (plinks) foot.appendChild(plinks);
     // Same attribution foot as the banner: mark and credit sign the bottom,
     // below the action buttons, never the panel heading.
     var pfoot = buildPoweredBy(cfg);
@@ -5644,7 +6116,14 @@
       // Structural: link / button / nothing are three different DOM shapes,
       // and mount() is one-shot. Buttons and colours are deliberately NOT
       // here — they are token values and restyle in place.
-      resolveDetails(c).kind,
+      /* SPEC V1.16 §1.3 — the EFFECTIVE kind, not the configured one: a config
+         whose policyUrl grows into (or out of) one of its own link rows flips
+         the shape between link and nothing while resolveDetails still answers
+         'policy'. Without the fold, a SaaS config arriving after the first
+         mount would leave the duplicate on screen. The language is the config's
+         own, resolved the way mount() resolves it, so the two sides of a
+         comparison are always read in the same language. */
+      detailsKind(c),
       /* SPEC V1.12 §3 — services are STRUCTURAL: each one adds a row with its
          own switch to the panel, and mount() is one-shot. Without this a SaaS
          config that arrives after the first mount (the second, idempotent
@@ -5657,8 +6136,41 @@
          `purpose` is text inside an existing row and does not justify tearing
          the panel down. */
       serviceSignature(c),
+      /* SPEC V1.16 §1 — custom texts are STRUCTURAL for the same reason
+         services are: the «Дополнительно» card and the link row are DOM nodes
+         that appear and disappear, and mount() is one-shot. A SaaS config that
+         arrives after the first render (the second, idempotent init()) would
+         otherwise leave a panel with no operator block on a site that has one.
+
+         Not the texts themselves, which can be long: the LANGUAGE KEYS that
+         carry overrides, whether an extra block would render, and the links'
+         identity. A reworded sentence inside a block that is already on screen
+         does not justify tearing the panel down mid-decision. */
+      textsSignature(c),
       brandSignature(c)
     ].join('|');
+  }
+
+  function textsSignature(cfg) {
+    var texts = (cfg && cfg.texts && typeof cfg.texts === 'object' && !Array.isArray(cfg.texts))
+      ? cfg.texts : null;
+    if (!texts) return '0';
+    var langs = [];
+    for (var k in texts) {
+      if (!Object.prototype.hasOwnProperty.call(texts, k)) continue;
+      if (LANG_KEY_RE.test(String(k).toLowerCase())) langs.push(String(k).toLowerCase());
+    }
+    langs.sort();
+    var list = texts.links;
+    var ids = [];
+    if (Array.isArray(list)) {
+      for (var i = 0; i < list.length; i++) {
+        var row = list[i];
+        if (row && typeof row === 'object') ids.push(String(row.id || i) + ':' + String(row.url || ''));
+      }
+    }
+    if (!langs.length && !ids.length) return '0';
+    return langs.join(',') + '/' + ids.join(',');
   }
 
   function serviceSignature(cfg) {
@@ -5703,7 +6215,10 @@
 
     var table = localeTable();                       // read at render time
     LANG = resolveLang(cfg && cfg.language, table);
-    T = buildStrings(LANG, table);
+    // SPEC V1.16 §1.1 — the config is the third merge layer, so it must be
+    // handed in here: this is the only place that knows which language the
+    // banner actually resolved to, which is what the override is keyed by.
+    T = buildStrings(LANG, table, cfg);
 
     host = document.getElementById('ck-root');
     if (!host) {
@@ -5839,6 +6354,22 @@
       servicePurpose: servicePurpose,
       groupCountLabel: groupCountLabel,
       serviceSignature: serviceSignature,
+      /* SPEC V1.16 §1 — the pure halves of the custom-text feature, so the
+         cabinet's live preview quotes the same rules the banner paints and the
+         server's validator can be tested against the same contract.
+
+         renderRich() is the exception to «nothing here touches the DOM»: it
+         BUILDS nodes, so it needs document.createElement. That is deliberate —
+         the whole point of the function is that there is no innerHTML anywhere
+         in it, and a version that returned a string could not promise that. It
+         is still pure in every other sense: same input, same nodes, no reads of
+         module state. In a context with no `document` it is simply not called. */
+      renderRich: renderRich,
+      resolveLinks: resolveLinks,
+      linkLabel: linkLabel,
+      detailsDuplicatesLink: detailsDuplicatesLink,
+      detailsKind: detailsKind,
+      textsSignature: textsSignature,
       signature: signature
     };
     // The page-font probe reads the DOM, so it is not part of the pure block —

@@ -802,8 +802,17 @@ test('detailsAction is structural and therefore part of the mount signature', ()
   // one-shot, so a change here must force a remount. Colours must NOT be here.
   const sig = UI_SRC.slice(UI_SRC.indexOf('function signature(cfg)'));
   const body = sig.slice(0, sig.indexOf('\n  }'));
-  assert.match(body, /resolveDetails\(c\)\.kind/,
+  /* Asserted on the BEHAVIOUR rather than on the spelling: since 0.5.15 the
+     signature reads detailsKind(), which is resolveDetails() with §1.3's
+     duplicate-address rule folded in — strictly more sensitive than the raw
+     kind, and the three DOM shapes still have to move it. */
+  assert.match(body, /detailsKind\(c\)/,
     'signature() ignores detailsAction — a later change would never render');
+  const shape = (texts) => C.signature({ texts });
+  assert.notEqual(shape({ policyUrl: 'https://a.md/p' }), shape({ detailsAction: 'settings' }),
+    'link and button are different DOM shapes');
+  assert.notEqual(shape({ detailsAction: 'settings' }), shape({ detailsAction: 'hide' }),
+    'button and nothing are different DOM shapes');
   assert.ok(!/buttons/.test(body),
     'signature() reacts to theme.buttons; those are token values and must restyle in place');
 });

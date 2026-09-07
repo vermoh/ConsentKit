@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.14).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.15).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -193,6 +193,8 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `texts.policyUrl` | `string` | — | v0.5.0. Cookie policy address. `http(s)` only; anything else is ignored |
 | `texts.detailsAction` | `"policy" \| "settings" \| "hide" \| "declaration"` | see notes | v0.5.0, `declaration` in v0.5.7. What «Learn more» does. Defaults to `policy` when `policyUrl` is set, `settings` when it is not. `policy` or `declaration` without a usable URL falls back to `settings` rather than rendering a dead link |
 | `texts.declarationUrl` | `string` | — | v0.5.7. Address of the cookie declaration page, used by `detailsAction: "declaration"`. `http(s)` only. Filled by the hosted service; the client only reads it |
+| `texts.<lang>` | `object` | — | v0.5.15. Per-language dictionary overrides, keyed by a language tag (`ru`, `ro`, `en`, `pt-br`, …). Overridable keys: `bannerTitle`, `bannerText`, `panelTitle`, `panelIntro`, `extraTitle`, `extraText`, and `cat.<necessary\|functional\|analytics\|marketing>.title` / `.desc`. An empty string falls through to the standard text; every other key is ignored — see [Custom texts and links](#custom-texts-and-links) |
+| `texts.links` | `object[]` | `[]` | v0.5.15. Up to 3 links under the banner buttons and at the foot of the settings panel: `{ id, url, label: { ru, ro, en, … } }`. `url` is `http(s)` only; a row with no resolvable label or an unusable address is skipped. Does not affect `detailsAction`, except that «Learn more» is hidden when its `policy` / `declaration` URL repeats one of these links — see [Custom texts and links](#custom-texts-and-links) |
 | `categories.*.enabled` | `boolean` | `true` | Per category: `functional`, `analytics`, `marketing`. Hides the toggle when `false` |
 | `consentTtlDays` | `number` | `365` | Lifetime of the stored decision |
 | `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2 signals |
@@ -363,9 +365,160 @@ Both link forms accept `http(s)` addresses only. A `javascript:` or `data:` URL
 in a control the visitor is invited to click is an XSS vector, so anything else
 is refused and the link degrades to `settings`.
 
+Since 0.5.15 both link forms are also dropped for a render whose `texts.links`
+already show the same address, so the banner never links one page twice — see
+[`texts.links`](#textslinks--your-own-links).
+
 > Before 0.5.0 this control was rendered as `<a href="#">` with no handler at
 > all: clicking it jumped to the top of the page and nothing else. Any site
 > running 0.4.x or earlier has a dead «Learn more» link.
+
+### Custom texts and links
+
+Since 0.5.15 the banner and the panel can carry your own words, per language,
+and up to three of your own links. This exists because a cookie banner in some
+jurisdictions has to name the operator and say where a data subject may
+complain — that is a legal requirement, not decoration, and it does not fit in
+any of the built-in sentences.
+
+#### `texts.<lang>` — dictionary overrides
+
+A key under `texts` is treated as a language dictionary when — and only when —
+it looks like a language tag, matching `/^[a-z]{2}(-[a-z]{2})?$/`. That is what
+keeps `policyUrl`, `detailsAction`, `declarationUrl` and `links` out of it; no
+scalar setting under `texts` is ever two letters.
+
+Overridable keys, and nothing else:
+
+| Key | Where it shows |
+|---|---|
+| `bannerTitle` | The banner's heading |
+| `bannerText` | The banner's paragraph |
+| `panelTitle` | The settings panel's heading |
+| `panelIntro` | The line under it |
+| `extraTitle` | Heading of the «Additional information» block (defaults to a translated «Additional information» in all 32 languages) |
+| `extraText` | Body of that block. **Empty in every dictionary** — the block renders only when you supply text |
+| `cat.<name>.title` / `.desc` | One category's name and description, for `necessary`, `functional`, `analytics`, `marketing` |
+
+Anything else — `acceptAll`, `more`, `save`, an unknown key — is ignored. The
+button labels are what a visitor recognises across sites, and the plural tables
+are arrays that a string override would break.
+
+Values are merged in three layers, in this order, each winning over the one
+before it:
+
+```
+built-in dictionary  ←  window.__ckLocales  ←  config.texts[lang]
+```
+
+For the last layer the exact resolved code is tried first, then its two-letter
+base: a banner that resolved to `pt-br` reads `texts['pt-br']`, then
+`texts['pt']`. **A non-empty string wins; an empty string, a missing key or a
+non-string falls through to the layer below.** That is what makes an empty field
+in an editor mean «use the standard text» rather than «show nothing».
+
+Every value is treated as **text, never as HTML**, everywhere.
+
+#### The markup subset for `extraText`
+
+`extraText` is the one field with structure, because an operator block genuinely
+is two or three paragraphs with an address and a link in them. The rules below
+are the whole contract — the hosted service's validator mirrors them exactly,
+so what the cabinet previews is what the banner paints:
+
+1. **Paragraphs.** A blank line (two newlines) starts a new paragraph. Each
+   paragraph becomes one `<p>`.
+2. **Line breaks.** A single newline inside a paragraph becomes a `<br>`.
+3. **Three passes, in this exact order.** The order is part of the contract,
+   not an implementation detail:
+   1. **`[label](url)` links.** Tokenised first, and their pieces are never
+      seen by the later passes. This is what stops the bare-URL rule from
+      eating the address inside `[label](https://…)`, stops the bare-e-mail
+      rule from firing inside a `mailto:` label, and leaves a `**` inside a
+      link label literal.
+   2. **`**bold**`**, over the text between those links.
+   3. **Bare addresses**, inside each bold and each plain span: a bare
+      `https://` or `http://` URL, and a bare e-mail address, each becoming its
+      own label.
+   Bold must come *before* the bare addresses, not after: `**mail@example.md**`
+   is one bold run that happens to contain an address, and linking the address
+   first would split the run and leave the asterisks visible on screen.
+4. **What the passes produce.** Every link — `[label](https://…)`,
+   `[label](mailto:…)`, a bare URL, a bare e-mail — is rendered with
+   `target="_blank" rel="noopener"`. `**bold**` becomes `<strong>`, and an
+   address inside it is bold *and* clickable. There is no nesting the other
+   way: `**` inside a `[label](…)` stays literal, because pass 1 removed the
+   whole link before pass 2 ran. An unclosed `**` is two literal asterisks,
+   never a bold tail that swallows the paragraph.
+5. **Any other scheme is not a link.** `[x](javascript:…)`, `data:`, `file:` —
+   the *whole literal* `[x](javascript:…)` is rendered as plain text, so a
+   mistake is visible to whoever wrote it rather than silently swallowed.
+6. **No HTML.** `<b>` is four characters of text. Nothing in this path goes
+   through `innerHTML`; the block is built with `createElement` and
+   `createTextNode` only. The hosted service refuses `<` in these fields
+   outright, at validation time.
+
+The block is drawn after the categories and their service lists, before the
+panel's buttons, and only when `extraText` resolves to a non-empty string.
+
+#### `texts.links` — your own links
+
+Up to three, rendered as a row under the banner's buttons (in all three
+layouts) and at the foot of the settings panel:
+
+```js
+texts: {
+  links: [
+    { id: 'privacy', url: 'https://shop.md/privacy',
+      label: { ru: 'Политика конфиденциальности', ro: 'Politica de confidențialitate', en: 'Privacy policy' } },
+    { id: 'cookies', url: 'https://shop.md/cookies',
+      label: { ru: 'Политика cookie', ro: 'Politica cookie', en: 'Cookie policy' } }
+  ]
+}
+```
+
+`url` must be `http(s)`; anything else is skipped. `label` is resolved with the
+same fallback chain as `branding.poweredBy.texts` — exact code, then the
+two-letter base, then `en` — and a row whose label resolves to nothing is
+skipped rather than rendered blank. The cap of three is applied to the rows that
+*survive* those checks, so one malformed entry never costs a good one its place.
+
+This does not touch `detailsAction`, with one exception that keeps the banner
+from printing the same address twice: when `detailsAction` resolves to `policy`
+or `declaration` and its URL matches one of the links on screen — compared
+trimmed, with a case-insensitive host and any trailing slash ignored — the
+in-text «Learn more» link is not rendered and the banner behaves as
+`detailsAction: "hide"` for that render, leaving the address to the link row,
+which also carries your own label for it. An explicit `detailsAction:
+"settings"` is unaffected: it opens the panel and has no address to duplicate.
+
+#### A worked example
+
+```json
+{
+  "language": "auto",
+  "texts": {
+    "policyUrl": "https://shop.md/privacy",
+    "ru": {
+      "bannerTitle": "Cookie на сайте INTERSTEPCOM",
+      "extraText": "Оператор: «FIRM» SRL, IDNO 1234567890123, мун. Кишинёв, ул. Примерная 1.\n\nПо вопросам обработки персональных данных пишите на **office@firm.md** — отвечаем не позднее одного месяца (ст. 12 ч. (3) Закона № 195/2024).\n\nВы вправе подать жалобу в [Национальный центр по защите персональных данных](https://datepersonale.md)."
+    },
+    "links": [
+      { "id": "privacy", "url": "https://shop.md/privacy",
+        "label": { "ru": "Политика конфиденциальности", "ro": "Politica de confidențialitate" } },
+      { "id": "cookies", "url": "https://shop.md/cookies",
+        "label": { "ru": "Политика cookie", "ro": "Politica cookie" } }
+    ]
+  }
+}
+```
+
+A Russian visitor sees the custom banner title, and a panel whose «Дополнительно»
+card carries three paragraphs: the operator's details, a bold auto-linked
+address with the statutory answering period, and a link to the supervisory
+authority. A Romanian visitor sees the standard Romanian banner title (nothing
+was overridden for `ro`), no «Informații suplimentare» card (no `ro.extraText`),
+and both links under the buttons in Romanian.
 
 ### Reopening the settings
 
@@ -819,7 +972,7 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.14, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
+ConsentKit 0.5.15, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
@@ -1023,6 +1176,30 @@ Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
 
+### 0.5.15
+
+- **Your own texts, per language.** `texts.<lang>` overrides the banner title
+  and copy, the panel title and intro, and any category's title or description,
+  for one language at a time. An empty field means «take the standard text», so
+  a partly filled form is not a partly blank banner — see
+  [Custom texts and links](#custom-texts-and-links).
+- **An «Additional information» block in the settings panel.** `texts.<lang>.extraText`
+  renders as a card under the categories: who the operator is, where to write,
+  how long an answer takes, where to complain. It accepts a small, precisely
+  defined markup subset — paragraphs, `**bold**`, links and auto-linked e-mail
+  addresses — and no HTML at all: the block is built with `createElement` and
+  `createTextNode`, never `innerHTML`.
+- **Up to three of your own links under the banner buttons** and at the foot of
+  the settings panel, via `texts.links`. Each carries a per-language label, is
+  `http(s)`-only, and opens with `target="_blank" rel="noopener"`. «Learn more»
+  is unaffected: a site that adds links keeps whatever `detailsAction` already
+  did — except that the in-text link is dropped when it would repeat an address
+  already on screen in the link row, so the same page is never linked twice.
+- **The debug panel reports which language got overrides**, so «I filled in the
+  text and the banner still shows the standard one» has an answer on screen —
+  usually that the override is filed under a language code the banner did not
+  resolve to.
+
 ### 0.5.14
 
 - **The loader tolerates a second snippet with a dead site id.** A page that
@@ -1160,7 +1337,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.14), not a released product.** It is honest about
+**This is a prototype (v0.5.15), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

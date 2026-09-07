@@ -8,7 +8,11 @@
                  + uk tr no nb is sr ca sq mk
 
    Key set mirrors the builtin en dictionary of ck-ui.js exactly:
-   19 flat strings + cat.{necessary,functional,analytics,marketing}.{title,desc}.
+   19 flat strings + cat.{necessary,functional,analytics,marketing}.{title,desc},
+   plus `extraTitle` (SPEC V1.16 §1.2 — the heading of the «Дополнительно» card
+   in the settings panel). Its BODY, `extraText`, is deliberately not here: the
+   block renders only from what the site itself supplies, so a translated body
+   would put an empty operator card on every site that never configured one.
 
    NOTE: these translations are drafts produced for the prototype. They MUST be reviewed
    by native speakers before production use — legal wording (refusal, "always on") is the
@@ -40,6 +44,7 @@
     colPurpose: 'Цел',
     colExpiry: 'Изтича',
     floating: 'Настройки на бисквитките',
+    extraTitle: 'Допълнителна информация',
     cat: {
       necessary: { title: 'Необходими', desc: 'Нужни са, за да работи сайтът — вход, сигурност, запомняне на съгласието ви. Не могат да се изключат.' },
       functional: { title: 'Функционални', desc: 'Запомнят предпочитанията ви, например език или чат, за да не ги задавате отново.' },
@@ -68,6 +73,7 @@
     colPurpose: 'Účel',
     colExpiry: 'Platnost',
     floating: 'Nastavení cookies',
+    extraTitle: 'Doplňující informace',
     cat: {
       necessary: { title: 'Nezbytné', desc: 'Bez nich web nefunguje — přihlášení, bezpečnost, uložení vašeho souhlasu. Nelze je vypnout.' },
       functional: { title: 'Funkční', desc: 'Pamatují si vaše předvolby, třeba jazyk nebo chat, abyste je nenastavovali znovu.' },
@@ -96,6 +102,7 @@
     colPurpose: 'Formål',
     colExpiry: 'Udløber',
     floating: 'Cookieindstillinger',
+    extraTitle: 'Yderligere oplysninger',
     cat: {
       necessary: { title: 'Nødvendige', desc: 'Nødvendige for at siden virker — login, sikkerhed, hukommelse om dit samtykke. De kan ikke slås fra.' },
       functional: { title: 'Funktionelle', desc: 'Husker dine indstillinger, fx sprog eller chat, så du ikke skal vælge dem igen.' },
@@ -124,6 +131,7 @@
     colPurpose: 'Zweck',
     colExpiry: 'Laufzeit',
     floating: 'Cookie-Einstellungen',
+    extraTitle: 'Weitere Informationen',
     cat: {
       necessary: { title: 'Notwendig', desc: 'Nötig, damit die Website funktioniert — Anmeldung, Sicherheit, Speichern Ihrer Einwilligung. Sie lassen sich nicht abschalten.' },
       functional: { title: 'Funktional', desc: 'Merken sich Ihre Einstellungen, etwa Sprache oder Chat, damit Sie sie nicht erneut wählen müssen.' },
@@ -152,6 +160,7 @@
     colPurpose: 'Σκοπός',
     colExpiry: 'Λήξη',
     floating: 'Ρυθμίσεις cookies',
+    extraTitle: 'Πρόσθετες πληροφορίες',
     cat: {
       necessary: { title: 'Απαραίτητα', desc: 'Χρειάζονται για να λειτουργεί ο ιστότοπος — σύνδεση, ασφάλεια, διατήρηση της επιλογής σας. Δεν απενεργοποιούνται.' },
       functional: { title: 'Λειτουργικά', desc: 'Θυμούνται τις προτιμήσεις σας, όπως γλώσσα ή συνομιλία, ώστε να μην τις ορίζετε ξανά.' },
@@ -180,6 +189,7 @@
     colPurpose: 'Finalidad',
     colExpiry: 'Caduca',
     floating: 'Configuración de cookies',
+    extraTitle: 'Información adicional',
     cat: {
       necessary: { title: 'Necesarias', desc: 'Imprescindibles para que el sitio funcione: inicio de sesión, seguridad y memoria de su consentimiento. No se pueden desactivar.' },
       functional: { title: 'Funcionales', desc: 'Recuerdan sus preferencias, como el idioma o el chat, para que no tenga que configurarlas de nuevo.' },
@@ -208,6 +218,7 @@
     colPurpose: 'Eesmärk',
     colExpiry: 'Kehtivus',
     floating: 'Küpsiste seaded',
+    extraTitle: 'Lisateave',
     cat: {
       necessary: { title: 'Vajalikud', desc: 'Vajalikud saidi tööks — sisselogimine, turvalisus, teie nõusoleku meelespidamine. Neid ei saa välja lülitada.' },
       functional: { title: 'Funktsionaalsed', desc: 'Jätavad meelde teie eelistused, näiteks keele või vestluse, et te ei peaks neid uuesti valima.' },
@@ -236,6 +247,7 @@
     colPurpose: 'Tarkoitus',
     colExpiry: 'Voimassaolo',
     floating: 'Evästeasetukset',
+    extraTitle: 'Lisätiedot',
     cat: {
       necessary: { title: 'Välttämättömät', desc: 'Tarvitaan sivuston toimintaan: kirjautuminen, turvallisuus ja suostumuksenne muistaminen. Näitä ei voi poistaa käytöstä.' },
       functional: { title: 'Toiminnalliset', desc: 'Muistavat asetuksenne, kuten kielen tai chatin, jottei niitä tarvitse valita uudelleen.' },
@@ -264,6 +276,7 @@
     colPurpose: 'Finalité',
     colExpiry: 'Expiration',
     floating: 'Paramètres des cookies',
+    extraTitle: 'Informations complémentaires',
     cat: {
       necessary: { title: 'Nécessaires', desc: 'Indispensables au fonctionnement du site : connexion, sécurité, mémorisation de votre choix. Ils ne peuvent pas être désactivés.' },
       functional: { title: 'Fonctionnels', desc: 'Retiennent vos préférences, par exemple la langue ou le chat, pour ne pas avoir à les régler de nouveau.' },
@@ -292,6 +305,7 @@
     colPurpose: 'Cuspóir',
     colExpiry: 'Éagann',
     floating: 'Socruithe fianán',
+    extraTitle: 'Eolas breise',
     cat: {
       necessary: { title: 'Riachtanach', desc: 'Ag teastáil chun an suíomh a oibriú — logáil isteach, slándáil, do thoiliú a choinneáil. Ní féidir iad a mhúchadh.' },
       functional: { title: 'Feidhmiúil', desc: 'Coinníonn siad do roghanna, mar shampla an teanga nó an comhrá, ionas nach gá duit iad a shocrú arís.' },
@@ -320,6 +334,7 @@
     colPurpose: 'Svrha',
     colExpiry: 'Istječe',
     floating: 'Postavke kolačića',
+    extraTitle: 'Dodatne informacije',
     cat: {
       necessary: { title: 'Nužni', desc: 'Potrebni su za rad stranice — prijava, sigurnost, pamćenje vaše privole. Ne mogu se isključiti.' },
       functional: { title: 'Funkcionalni', desc: 'Pamte vaše postavke, primjerice jezik ili chat, da ih ne morate ponovno birati.' },
@@ -348,6 +363,7 @@
     colPurpose: 'Cél',
     colExpiry: 'Lejárat',
     floating: 'Sütibeállítások',
+    extraTitle: 'További információk',
     cat: {
       necessary: { title: 'Szükséges', desc: 'Az oldal működéséhez kellenek: belépés, biztonság, a hozzájárulása megjegyzése. Nem kapcsolhatók ki.' },
       functional: { title: 'Funkcionális', desc: 'Megjegyzik a beállításait, például a nyelvet vagy a chatet, hogy ne kelljen újra megadnia őket.' },
@@ -376,6 +392,7 @@
     colPurpose: 'Finalità',
     colExpiry: 'Scadenza',
     floating: 'Impostazioni dei cookie',
+    extraTitle: 'Informazioni aggiuntive',
     cat: {
       necessary: { title: 'Necessari', desc: 'Servono al funzionamento del sito: accesso, sicurezza, memoria del suo consenso. Non possono essere disattivati.' },
       functional: { title: 'Funzionali', desc: 'Ricordano le sue preferenze, come la lingua o la chat, così non deve impostarle di nuovo.' },
@@ -404,6 +421,7 @@
     colPurpose: 'Paskirtis',
     colExpiry: 'Galiojimas',
     floating: 'Slapukų nustatymai',
+    extraTitle: 'Papildoma informacija',
     cat: {
       necessary: { title: 'Būtini', desc: 'Reikalingi, kad svetainė veiktų: prisijungimas, saugumas, jūsų sutikimo įsiminimas. Jų išjungti negalima.' },
       functional: { title: 'Funkciniai', desc: 'Įsimena jūsų nustatymus, pavyzdžiui, kalbą ar pokalbius, kad jų nereikėtų nurodyti iš naujo.' },
@@ -432,6 +450,7 @@
     colPurpose: 'Nolūks',
     colExpiry: 'Derīgums',
     floating: 'Sīkdatņu iestatījumi',
+    extraTitle: 'Papildu informācija',
     cat: {
       necessary: { title: 'Nepieciešamās', desc: 'Vajadzīgas vietnes darbībai — pieteikšanās, drošība, jūsu piekrišanas saglabāšana. Tās nevar izslēgt.' },
       functional: { title: 'Funkcionālās', desc: 'Atceras jūsu iestatījumus, piemēram, valodu vai tērzēšanu, lai tie nebūtu jānorāda atkārtoti.' },
@@ -460,6 +479,7 @@
     colPurpose: 'Skop',
     colExpiry: 'Skadenza',
     floating: 'Issettjar tal-cookies',
+    extraTitle: 'Informazzjoni addizzjonali',
     cat: {
       necessary: { title: 'Meħtieġa', desc: 'Meħtieġa biex is-sit jaħdem — login, sigurtà, tifkira tal-kunsens tiegħek. Ma jistgħux jintfew.' },
       functional: { title: 'Funzjonali', desc: 'Jiftakru l-preferenzi tiegħek, bħal-lingwa jew iċ-chat, biex ma jkollokx terġa’ tissettjahom.' },
@@ -488,6 +508,7 @@
     colPurpose: 'Doel',
     colExpiry: 'Vervalt',
     floating: 'Cookie-instellingen',
+    extraTitle: 'Aanvullende informatie',
     cat: {
       necessary: { title: 'Noodzakelijk', desc: 'Nodig om de site te laten werken: inloggen, beveiliging en het onthouden van uw keuze. Ze kunnen niet uit.' },
       functional: { title: 'Functioneel', desc: 'Onthouden uw voorkeuren, zoals taal of chat, zodat u ze niet opnieuw hoeft in te stellen.' },
@@ -516,6 +537,7 @@
     colPurpose: 'Cel',
     colExpiry: 'Wygasa',
     floating: 'Ustawienia plików cookie',
+    extraTitle: 'Informacje dodatkowe',
     cat: {
       necessary: { title: 'Niezbędne', desc: 'Potrzebne, by strona działała: logowanie, bezpieczeństwo, zapamiętanie zgody. Nie można ich wyłączyć.' },
       functional: { title: 'Funkcjonalne', desc: 'Zapamiętują ustawienia, na przykład język lub czat, żeby nie trzeba było wybierać ich ponownie.' },
@@ -544,6 +566,7 @@
     colPurpose: 'Finalidade',
     colExpiry: 'Validade',
     floating: 'Definições de cookies',
+    extraTitle: 'Informações adicionais',
     cat: {
       necessary: { title: 'Necessários', desc: 'Precisos para o site funcionar: início de sessão, segurança e memória do seu consentimento. Não podem ser desativados.' },
       functional: { title: 'Funcionais', desc: 'Guardam as suas preferências, como o idioma ou o chat, para não ter de as definir outra vez.' },
@@ -572,6 +595,7 @@
     colPurpose: 'Pentru ce',
     colExpiry: 'Expiră',
     floating: 'Setări cookie-uri',
+    extraTitle: 'Informații suplimentare',
     // SPEC V1.10 §2 — заглушка встраивания. Only ro carries these here: en and
     // ru are builtin in ck-ui.js, and every other locale falls back to en.
     phText: 'Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».',
@@ -616,6 +640,7 @@
     colPurpose: 'Účel',
     colExpiry: 'Platnosť',
     floating: 'Nastavenia cookies',
+    extraTitle: 'Doplňujúce informácie',
     cat: {
       necessary: { title: 'Nevyhnutné', desc: 'Bez nich stránka nefunguje — prihlásenie, bezpečnosť, zapamätanie vášho súhlasu. Nedajú sa vypnúť.' },
       functional: { title: 'Funkčné', desc: 'Pamätajú si vaše nastavenia, napríklad jazyk alebo chat, aby ste ich nezadávali znova.' },
@@ -644,6 +669,7 @@
     colPurpose: 'Namen',
     colExpiry: 'Poteče',
     floating: 'Nastavitve piškotkov',
+    extraTitle: 'Dodatne informacije',
     cat: {
       necessary: { title: 'Nujni', desc: 'Potrebni za delovanje spletnega mesta — prijava, varnost, pomnjenje vašega soglasja. Ni jih mogoče izklopiti.' },
       functional: { title: 'Funkcionalni', desc: 'Zapomnijo si vaše nastavitve, na primer jezik ali klepet, da jih ni treba določati znova.' },
@@ -672,6 +698,7 @@
     colPurpose: 'Syfte',
     colExpiry: 'Upphör',
     floating: 'Cookieinställningar',
+    extraTitle: 'Ytterligare information',
     cat: {
       necessary: { title: 'Nödvändiga', desc: 'Krävs för att webbplatsen ska fungera — inloggning, säkerhet, minne av ditt samtycke. De kan inte stängas av.' },
       functional: { title: 'Funktionella', desc: 'Kommer ihåg dina inställningar, till exempel språk eller chatt, så att du slipper välja igen.' },
@@ -700,6 +727,7 @@
     colPurpose: 'Мета',
     colExpiry: 'Термін',
     floating: 'Налаштування cookie',
+    extraTitle: 'Додаткова інформація',
     cat: {
       necessary: { title: 'Необхідні', desc: 'Без них сайт не працює: вхід, безпека, пам’ять про ваш вибір. Вимкнути неможливо.' },
       functional: { title: 'Функціональні', desc: 'Запам’ятовують ваші налаштування — наприклад мову або чат, — щоб ви не задавали їх знову.' },
@@ -728,6 +756,7 @@
     colPurpose: 'Amaç',
     colExpiry: 'Süre',
     floating: 'Çerez ayarları',
+    extraTitle: 'Ek bilgiler',
     cat: {
       necessary: { title: 'Zorunlu', desc: 'Sitenin çalışması için gerekli: oturum açma, güvenlik, onayınızın hatırlanması. Kapatılamazlar.' },
       functional: { title: 'İşlevsel', desc: 'Dil veya sohbet gibi tercihlerinizi hatırlar, böylece yeniden ayarlamanız gerekmez.' },
@@ -756,6 +785,7 @@
     colPurpose: 'Formål',
     colExpiry: 'Utløper',
     floating: 'Innstillinger for informasjonskapsler',
+    extraTitle: 'Tilleggsinformasjon',
     cat: {
       necessary: { title: 'Nødvendige', desc: 'Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av.' },
       functional: { title: 'Funksjonelle', desc: 'Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt.' },
@@ -788,6 +818,7 @@
     colPurpose: 'Tilgangur',
     colExpiry: 'Gildistími',
     floating: 'Stillingar vefkaka',
+    extraTitle: 'Viðbótarupplýsingar',
     cat: {
       necessary: { title: 'Nauðsynlegar', desc: 'Nauðsynlegar til að vefurinn virki — innskráning, öryggi, að muna samþykki þitt. Ekki er hægt að slökkva á þeim.' },
       functional: { title: 'Virknivefkökur', desc: 'Muna stillingar þínar, til dæmis tungumál eða spjall, svo þú þurfir ekki að velja aftur.' },
@@ -817,6 +848,7 @@
     colPurpose: 'Сврха',
     colExpiry: 'Истиче',
     floating: 'Подешавања колачића',
+    extraTitle: 'Додатне информације',
     cat: {
       necessary: { title: 'Неопходни', desc: 'Потребни су да би сајт радио — пријава, безбедност, памћење ваше сагласности. Не могу се искључити.' },
       functional: { title: 'Функционални', desc: 'Памте ваша подешавања, на пример језик или ћаскање, да их не бисте бирали поново.' },
@@ -845,6 +877,7 @@
     colPurpose: 'Finalitat',
     colExpiry: 'Caduca',
     floating: 'Configuració de galetes',
+    extraTitle: 'Informació addicional',
     cat: {
       necessary: { title: 'Necessàries', desc: 'Calen perquè el lloc funcioni: inici de sessió, seguretat i memòria del vostre consentiment. No es poden desactivar.' },
       functional: { title: 'Funcionals', desc: 'Recorden les vostres preferències, com l’idioma o el xat, perquè no les hàgiu de tornar a configurar.' },
@@ -873,6 +906,7 @@
     colPurpose: 'Qëllimi',
     colExpiry: 'Skadon',
     floating: 'Cilësimet e cookie-ve',
+    extraTitle: 'Informacione shtesë',
     cat: {
       necessary: { title: 'Të nevojshme', desc: 'Nevojiten që faqja të funksionojë — hyrja, siguria, ruajtja e pëlqimit tuaj. Nuk mund të fiken.' },
       functional: { title: 'Funksionale', desc: 'Mbajnë mend preferencat tuaja, si gjuha ose biseda, që të mos i vendosni sërish.' },
@@ -901,6 +935,7 @@
     colPurpose: 'Цел',
     colExpiry: 'Истекува',
     floating: 'Поставки за колачиња',
+    extraTitle: 'Дополнителни информации',
     cat: {
       necessary: { title: 'Неопходни', desc: 'Потребни се за страницата да работи — најава, безбедност, помнење на вашата согласност. Не можат да се исклучат.' },
       functional: { title: 'Функционални', desc: 'Ги паметат вашите поставки, на пример јазикот или разговорот, за да не ги задавате повторно.' },

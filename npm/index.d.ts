@@ -168,6 +168,40 @@ export interface CkTextsConfig {
    * service; the client only reads it.
    */
   declarationUrl?: string;
+  /**
+   * v0.5.15. Up to three links rendered under the banner buttons and at the
+   * bottom of the preferences panel. `url` is `http(s)` only; `label` is
+   * resolved per language the way `branding.poweredBy.texts` is. A link whose
+   * address equals the «Learn more» target hides the in-text link.
+   */
+  links?: CkTextLink[];
+  /**
+   * v0.5.15. Per-language overrides of the built-in dictionary, keyed by a
+   * language code (`ru`, `ro`, `en`, `pt-br`, …). An empty string means «use
+   * the dictionary». `extraText` accepts the rich-text subset documented in
+   * the README («Custom texts and links»); it is never interpreted as HTML.
+   */
+  [lang: string]: CkTextOverrides | CkTextLink[] | string | undefined;
+}
+
+/** v0.5.15. One link under the banner buttons. */
+export interface CkTextLink {
+  id: string;
+  url: string;
+  label: Record<string, string>;
+}
+
+/** v0.5.15. The dictionary keys a site may override for one language. */
+export interface CkTextOverrides {
+  bannerTitle?: string;
+  bannerText?: string;
+  panelTitle?: string;
+  panelIntro?: string;
+  /** Heading of the «Additional information» block in the preferences panel. */
+  extraTitle?: string;
+  /** Body of that block; rendered only when non-empty. Rich-text subset. */
+  extraText?: string;
+  cat?: Partial<Record<'necessary' | 'functional' | 'analytics' | 'marketing', { title?: string; desc?: string }>>;
 }
 
 /** Whether a category is offered in the preferences panel at all. */
@@ -421,7 +455,7 @@ export interface CkContrastApi {
   resolveFont(theme: CkThemeConfig): string;
   /** Takes the whole config, not just `texts`. */
   resolveDetails(config: CkConfig):
-    { kind: 'policy' | 'settings' | 'hide'; href: string | null };
+    { kind: 'policy' | 'settings' | 'hide' | 'declaration'; href: string | null };
   /** Takes the whole config. Returns the generated stylesheet and both palettes. */
   buildThemeCss(config: CkConfig): {
     css: string;
