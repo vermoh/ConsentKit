@@ -62,6 +62,12 @@
   "feat5Text": "A refusal does not switch Google off entirely: it counts without cookies and without identifying the visitor.",
   "feat6Title": "Installs on any site",
   "feat6Text": "A site builder, WordPress, a shop, a tag manager or plain HTML.",
+  "feat7Title": "Your words, your company",
+  "feat7Text": "Your company details, the address for requests and the links to your policies — in the banner and in the settings window. Your own text in any of the 34 languages.",
+  "feat8Title": "The dashboard in three languages",
+  "feat8Text": "Russian, Romanian and English — the interface, the mail and the scanner's hints. Your visitor sees the cookies in their own language.",
+  "feat9Title": "A team with roles",
+  "feat9Text": "Colleagues and contractors work on the site under their own addresses: an editor configures, an observer only looks.",
   "priceTitle": "Pricing",
   "priceLede": "A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.",
   "priceFoot": "Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Moldova.",
@@ -129,7 +135,7 @@
   "who2Title": "WordPress and WooCommerce",
   "who2Text": "The plugin installs by copying a folder and is configured in the admin. It works with caching plugins too: the banner does not depend on PHP.",
   "who4Title": "Agencies and your own sites",
-  "who4Text": "Many sites in one dashboard, scheduled scans and alerts about new trackers. Terms by agreement.",
+  "who4Text": "Many sites in one dashboard, access for colleagues with roles, scheduled scans and alerts about new trackers. Terms by agreement.",
   "faqTitle": "Frequently asked questions",
   "faq": [
     [

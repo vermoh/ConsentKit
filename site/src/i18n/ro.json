@@ -62,6 +62,12 @@
   "feat5Text": "Un refuz nu oprește Google de tot: numără fără cookie-uri și fără a identifica vizitatorul.",
   "feat6Title": "Se instalează pe orice site",
   "feat6Text": "Un constructor, WordPress, un magazin, un manager de etichete sau HTML obișnuit.",
+  "feat7Title": "Textele sunt ale dumneavoastră, operatorul la fel",
+  "feat7Text": "Datele firmei, adresa pentru cereri și linkurile către politici — în banner și în fereastra de setări. Textul dumneavoastră în oricare dintre cele 34 de limbi.",
+  "feat8Title": "Cabinetul în trei limbi",
+  "feat8Text": "Rusă, română și engleză — interfața, mesajele și explicațiile scanerului. Vizitatorul vede cookie-urile în limba lui.",
+  "feat9Title": "Echipă cu roluri",
+  "feat9Text": "Colegii și colaboratorii lucrează cu site-ul de pe adresele lor: editorul configurează, observatorul doar se uită.",
   "priceTitle": "Tarife",
   "priceLede": "Planul se aplică organizației, nu unui singur site. Dacă treceți la un plan mai ieftin, site-ul continuă să funcționeze: bannerul rămâne, scanările automate se opresc, iar jos reapare linia despre dezvoltator.",
   "priceFoot": "Prețuri în euro, fără TVA. Persoană juridică: E-COM CONSULT PLUS, Republica Moldova.",
@@ -129,7 +135,7 @@
   "who2Title": "WordPress și WooCommerce",
   "who2Text": "Pluginul se instalează copiind un folder, iar setările sunt în panoul de administrare. Funcționează și cu pluginurile de cache: bannerul nu depinde de PHP.",
   "who4Title": "Agenții și site-uri proprii",
-  "who4Text": "Multe site-uri într-un singur cabinet, scanări programate și alerte despre urmăritori noi. Condiții pe bază de contract.",
+  "who4Text": "Multe site-uri într-un singur cabinet, acces pentru colegi cu roluri, scanări programate și alerte despre urmăritori noi. Condiții pe bază de contract.",
   "faqTitle": "Întrebări frecvente",
   "faq": [
     [

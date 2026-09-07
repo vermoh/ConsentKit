@@ -418,6 +418,40 @@ test('«How it works» renders four numbered steps in every language', () => {
   }
 });
 
+/* ------------------------------------------------------ «Что умеет» cards */
+
+/* Nine feature cards, which at desktop width is a full 3×3: .cards is
+   `repeat(auto-fit, minmax(290px, 1fr))` with a 20px gap inside 1072px of
+   content, so three columns fit (3×290 + 2×20 = 910) and four do not (1220).
+   Counting the cards alone would pass a section whose ninth card carries the
+   template's Russian fallback on the EN and RO pages, so assert that each one
+   actually renders its own dictionary strings — the same reasoning as the
+   «How it works» test above. */
+test('«What it does» renders nine feature cards in every language', () => {
+  const template = readTemplate();
+
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    const section = html.match(/<section id="features">([\s\S]*?)<\/section>/);
+    assert.ok(section, `the ${code} page has no <section id="features">`);
+
+    const cards = [...section[1].matchAll(/<article class="card">[\s\S]*?<\/article>/g)];
+    assert.equal(cards.length, 9,
+      `the ${code} page renders ${cards.length} feature cards, not 9`);
+
+    const dict = readDict(code);
+    for (let n = 1; n <= 9; n++) {
+      for (const key of [`feat${n}Title`, `feat${n}Text`]) {
+        assert.ok(dict[key] && dict[key].trim(),
+          `site/src/i18n/${code}.json has no "${key}"`);
+        assert.ok(section[1].includes(dict[key].replace(/</g, '&lt;').replace(/>/g, '&gt;')) ||
+                  section[1].includes(dict[key]),
+          `the ${code} page's feature ${n} does not carry "${key}" from ${code}.json`);
+      }
+    }
+  }
+});
+
 /* The vocabulary at the top of SPEC V1.7: everything the visitor is asked to
    paste is «строка баннера», never «сниппет» — the dashboard, the onboarding
    mail and this page have to say the same word or the instructions stop
