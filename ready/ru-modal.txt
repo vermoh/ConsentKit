@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.15
+ * Версия ConsentKit: 0.5.16
  * Дата сборки:      2026-09-07
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -2017,7 +2017,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.15',
+    version: '0.5.16',
     config: config,
 
     init: function (userConfig) {
@@ -2315,7 +2315,7 @@
 
 ;
 /* ConsentKit locales (ro) — filtered subset of src/ck-locales.js */
-(function(){if(typeof window==="undefined")return;window.__ckLocales=Object.assign(window.__ckLocales||{},{"ro":{"bannerTitle":"Cookie-uri pe acest site","bannerText":"Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră. Puteți schimba decizia oricând.","more":"Aflați mai multe","acceptAll":"Acceptă tot","rejectAll":"Respinge tot","customize":"Personalizează","bannerLabel":"Consimțământ pentru cookie-uri","panelTitle":"Setări cookie-uri","panelIntro":"Alegeți ce permiteți. Implicit este pornit doar strictul necesar.","save":"Salvează alegerea","close":"Închide","alwaysOn":"mereu active","cookiesIn":"Ce cookie-uri","noCookies":"Nu au fost declarate cookie-uri pentru acest grup.","colName":"Denumire","colVendor":"Cine le pune","colPurpose":"Pentru ce","colExpiry":"Expiră","floating":"Setări cookie-uri","extraTitle":"Informații suplimentare","phText":"Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».","phAllow":"Permite și arată","phSettings":"Setări cookie-uri","phLabel":"Conținut blocat","svcCount":["{n} serviciu","{n} servicii","{n} de servicii"],"ckCount":["{n} cookie","{n} cookie-uri","{n} de cookie-uri"],"svcPolicy":"Politica","svcCookies":"Ce cookie-uri pune","svcDetails":"Detalii","svcListLabel":"Servicii și cookie-uri din acest grup","cat":{"necessary":{"title":"Necesare","desc":"Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate."},"functional":{"title":"Funcționale","desc":"Rețin alegerile dumneavoastră: limba, coșul, chatul."},"analytics":{"title":"Analiză","desc":"Ne ajută să înțelegem ce merge bine pe site și ce nu."},"marketing":{"title":"Marketing","desc":"Potrivesc reclamele cu interesele dumneavoastră pe alte site-uri."}}}});})();
+(function(){if(typeof window==="undefined")return;window.__ckLocales=Object.assign(window.__ckLocales||{},{"ro":{"bannerTitle":"Cookie-uri pe acest site","bannerText":"Cookie-urile necesare mențin site-ul în funcțiune. Restul pornesc doar cu acordul dumneavoastră. Puteți schimba decizia oricând.","more":"Aflați mai multe","acceptAll":"Acceptă tot","rejectAll":"Respinge tot","customize":"Personalizează","bannerLabel":"Consimțământ pentru cookie-uri","panelTitle":"Setări cookie-uri","panelIntro":"Alegeți ce permiteți. Implicit este pornit doar strictul necesar.","save":"Salvează alegerea","close":"Închide","alwaysOn":"mereu active","cookiesIn":"Ce cookie-uri","noCookies":"Nu au fost declarate cookie-uri pentru acest grup.","colName":"Denumire","colVendor":"Cine le pune","colPurpose":"Pentru ce","colExpiry":"Expiră","floating":"Setări cookie-uri","extraTitle":"Informații suplimentare","expirySession":"sesiune","expiryDays":["{n} zi","{n} zile","{n} de zile"],"phText":"Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».","phAllow":"Permite și arată","phSettings":"Setări cookie-uri","phLabel":"Conținut blocat","svcCount":["{n} serviciu","{n} servicii","{n} de servicii"],"ckCount":["{n} cookie","{n} cookie-uri","{n} de cookie-uri"],"svcPolicy":"Politica","svcCookies":"Ce cookie-uri pune","svcDetails":"Detalii","svcListLabel":"Servicii și cookie-uri din acest grup","cat":{"necessary":{"title":"Necesare","desc":"Sunt necesare pentru funcționarea site-ului: autentificare, securitate, reținerea alegerii dumneavoastră. Nu pot fi dezactivate."},"functional":{"title":"Funcționale","desc":"Rețin alegerile dumneavoastră: limba, coșul, chatul."},"analytics":{"title":"Analiză","desc":"Ne ajută să înțelegem ce merge bine pe site și ce nu."},"marketing":{"title":"Marketing","desc":"Potrivesc reclamele cu interesele dumneavoastră pe alte site-uri."}}}});})();
 ;
 /* ConsentKit branding extension — logo + "powered by" line for the banner and panel.
 
@@ -2926,6 +2926,16 @@
       colVendor: 'Who sets it',
       colPurpose: 'What for',
       colExpiry: 'Expires',
+      /* SPEC V1.18.1 §1.2 — the «Expires» cell, computed rather than quoted.
+         `cookieTable[].expiryDays` is a NUMBER, so the cell can be written in
+         the banner's language instead of carrying whatever single string the
+         config was filled with (which, before 0.5.16, was Russian on every
+         site the scanner had touched).
+
+         `expirySession` is the word for a cookie that dies with the tab;
+         `expiryDays` is a PLURAL table like svcCount/ckCount below. */
+      expirySession: 'session',
+      expiryDays: ['{n} day', '{n} days'],
       floating: 'Cookie settings',
       poweredBy: 'Powered by ConsentKit',
       // SPEC V1.12 §3 — services inside a category group.
@@ -2998,6 +3008,12 @@
       colVendor: 'Кто ставит',
       colPurpose: 'Зачем',
       colExpiry: 'Срок',
+      /* SPEC V1.18.1 §1.2. Одна форма намеренно: «{n} дн.» — это сокращение,
+         которое кабинет уже показывает владельцу, и оно верно для 1, 2 и 5.
+         plural() зажимает индекс по длине массива, поэтому один элемент —
+         честный ответ «в этом языке здесь одна форма», а не недосмотр. */
+      expirySession: 'сессия',
+      expiryDays: ['{n} дн.'],
       floating: 'Настройки cookie',
       poweredBy: 'Работает на ConsentKit',
       // SPEC V1.12 §3. Три формы: 1 сервис, 2 сервиса, 5 сервисов.
@@ -3066,11 +3082,15 @@
          extraText  — '' in every dictionary. The merge line below keeps '' when
                       the locale supplies nothing, and the panel treats '' as
                       «no block». Only config.texts.<lang>.extraText fills it. */
-    'extraTitle', 'extraText'
+    'extraTitle', 'extraText',
+    /* SPEC V1.18.1 §1.2 — the word for a session cookie. A plain string, so it
+       belongs here; its companion `expiryDays` is an ARRAY of plural forms and
+       belongs in PLURAL_KEYS below, for the same reason svcCount does. */
+    'expirySession'
   ];
 
   // Plural-form keys, filled separately from STR_KEYS (see above).
-  var PLURAL_KEYS = ['svcCount', 'ckCount'];
+  var PLURAL_KEYS = ['svcCount', 'ckCount', 'expiryDays'];
 
   // builtin(en,ru) <- window.__ckLocales, read at render time so the locales
   // file may load in any order relative to this one.
@@ -3467,6 +3487,94 @@
     var hit = own(code);
     if (!hit && code.length > 2) hit = own(code.slice(0, 2));       // ru-RU -> ru
     return hit || own('en');
+  }
+
+  /* ------------------------------------------- cookie rows (SPEC V1.18.1 §1) */
+
+  /* §1.1 — `cookieTable[].purpose` as `{ ru?, ro?, en?, <lang>? }`.
+
+     The reason this exists: before 0.5.16 a purpose was ONE string, and the
+     server's scanner wrote it in Russian. A Romanian visitor to a Moldovan
+     shop therefore read a Russian sentence in the «Pentru ce» column. The
+     object form lets the server ship all three at once and the banner pick.
+
+     Deliberately its OWN function rather than a call into linkLabel():
+
+       - linkLabel() stops at `en` and returns null, and that null is load-
+         bearing there — §1.3 SKIPS a link with no label for this language,
+         because a link with no words on it is not a link. A cookie row is not
+         skippable: the visitor is being told which cookies the site sets, and
+         dropping the row because the purpose is only in German would hide the
+         cookie itself. So this chain has a fourth step — FIRST NON-EMPTY —
+         and shows the operator's own words in whatever language they exist,
+         which is more honest than an empty cell.
+
+       - servicePurpose() is a third chain again (base code only, then en) and
+         is about a SERVICE's description, not a cookie row. Left alone.
+
+     Own properties only, same reason as everywhere else in this file: `purpose`
+     is author-supplied JSON that may have been merged over a prototype, and an
+     inherited key would hand str() a function instead of a missing line.
+
+     Returns '' — never null — for absent, malformed (a number, an array, a
+     string of spaces) or empty-in-every-language input, so the one caller has
+     one thing to test. The RENDERER decides what an empty cell looks like. */
+  function cookiePurpose(purpose, lang) {
+    if (typeof purpose === 'string') return str(purpose) || '';
+    if (!purpose || typeof purpose !== 'object' || Array.isArray(purpose)) return '';
+    var code = (typeof lang === 'string') ? lang.toLowerCase() : '';
+
+    function own(k) {
+      return (k && Object.prototype.hasOwnProperty.call(purpose, k)) ? str(purpose[k]) : null;
+    }
+
+    var hit = own(code);
+    if (!hit && code.length > 2) hit = own(code.slice(0, 2));       // pt-br -> pt
+    if (!hit) hit = own('en');
+    if (hit) return hit;
+
+    /* Last resort: the first language the object actually carries. Key order is
+       insertion order for the string keys the server writes, so this is stable
+       for a given config rather than arbitrary. */
+    for (var k in purpose) {
+      if (!Object.prototype.hasOwnProperty.call(purpose, k)) continue;
+      var v = str(purpose[k]);
+      if (v) return v;
+    }
+    return '';
+  }
+
+  /* §1.2 — the «Expires» cell.
+
+     `expiryDays` is a NUMBER of days, so the cell is WRITTEN here in the
+     banner's language rather than quoted from a config string the scanner
+     filled in Russian. The contract, in precedence order:
+
+       null | 0        -> T.expirySession   («сессия» / «sesiune» / «session»)
+       integer > 0     -> plural(T.expiryDays, n, lang)
+       absent          -> the legacy `expiry` string, exactly as 0.5.15 rendered it
+       anything else   -> treated as absent
+
+     The last line is the defensive one. The server validates «целое ≥ 0 или
+     null» (§2.1), so a negative, fractional, NaN or non-numeric value can only
+     arrive from a hand-written config — and falling through to `expiry` shows
+     the operator's own words instead of «-3 дн.» or «NaN дн.».
+
+     `expiryDays` WINS over `expiry` when both are present, which is the live
+     migration case: §2.2 has the server keep writing `expiry` as a ru string
+     for older clients inlined in WordPress, so from 0.5.16 on every row will
+     carry both and the localised one must be the one that shows.
+
+     Returns '' when there is nothing to say, like cookiePurpose(). */
+  function cookieExpiry(row, T2, lang) {
+    if (!row || typeof row !== 'object') return '';
+    var d = row.expiryDays;
+    if (d === null) return (T2 && T2.expirySession) || '';
+    if (typeof d === 'number' && isFinite(d) && Math.floor(d) === d && d >= 0) {
+      if (d === 0) return (T2 && T2.expirySession) || '';
+      return plural(T2 && T2.expiryDays, d, lang);
+    }
+    return str(row.expiry) || '';
   }
 
   var MAX_LINKS = 3;
@@ -5178,8 +5286,14 @@
       var tr = el('tr');
       tr.appendChild(el('td', 'ck-mono', String(row.name == null ? '—' : row.name)));
       tr.appendChild(el('td', null, String(row.vendor == null ? '—' : row.vendor)));
-      tr.appendChild(el('td', null, String(row.purpose == null ? '—' : row.purpose)));
-      tr.appendChild(el('td', null, String(row.expiry == null ? '—' : row.expiry)));
+      /* SPEC V1.18.1 §1 — both cells are RESOLVED, not quoted: `purpose` may be
+         a per-language object and the expiry may be a number of days. The
+         em dash stays the empty-cell mark it has been since 0.5.0, so a config
+         written before 0.5.16 renders byte for byte what it rendered then:
+         a plain-string purpose comes back unchanged, and a row with no
+         `expiryDays` falls through to its `expiry` string. */
+      tr.appendChild(el('td', null, cookiePurpose(row.purpose, LANG) || '—'));
+      tr.appendChild(el('td', null, cookieExpiry(row, T, LANG) || '—'));
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
@@ -6351,6 +6465,12 @@
       resolveLang: resolveLang,
       cookieRowsForService: cookieRowsForService,
       looseCookies: looseCookies,
+      /* SPEC V1.18.1 §1 — the two cells the cookie table computes rather than
+         quotes. Pure, so the cabinet's cookie-table editor can show the visitor
+         exactly what the banner will paint for a given language and a given
+         number of days, without rebuilding either rule. */
+      cookiePurpose: cookiePurpose,
+      cookieExpiry: cookieExpiry,
       servicePurpose: servicePurpose,
       groupCountLabel: groupCountLabel,
       serviceSignature: serviceSignature,

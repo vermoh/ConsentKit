@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.15).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.16).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -203,7 +203,7 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `blocking.allow` | `string[]` | `[]` | Hosts strict mode must never intercept. Matched by suffix, so `partner.com` also covers `cdn.partner.com` |
 | `blocking.placeholders` | `boolean` | `true` | v0.5.7. Draw a card in place of an embed held back before consent — see [Placeholders for blocked embeds](#placeholders-for-blocked-embeds). `false` restores the pre-0.5.7 behaviour: the frame is still blocked, just invisible |
 | `hostdb` | `Record<string, Category>` | — | Extra `host: category` pairs merged into the tracker database, applied before the initial scan. SaaS mode fills this from the service; `ConsentKit._extendHostDb()` does the same at any later point |
-| `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel |
+| `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel. v0.5.16: `purpose` may be a per-language object and `expiryDays` a number of days — see below |
 | `services` | `CkService[]` | `[]` | v0.5.8. Third-party services the site declares. Each gets its own toggle inside its category group in the panel, and can be refused individually — see [Services](#services). At most 50 |
 | `branding` | `object` | absent | v0.3.5. The attribution line (and optional logo) at the foot of the banner, rendered by `src/ck-ui-branding.js`. Absent from the defaults: omit the key and nothing renders — see [Branding](#branding) |
 
@@ -212,6 +212,50 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 ```js
 { name: '_ga', category: 'analytics', vendor: 'Google', purpose: 'Visit statistics', expiry: '2 years' }
 ```
+
+**Since v0.5.16** two fields on that row can carry the visitor's language
+instead of one fixed string:
+
+```js
+{
+  name: '_ga',
+  category: 'analytics',
+  vendor: 'Google',
+  // A string still works exactly as before. An object is resolved per language.
+  purpose: { ru: 'Статистика посещений', ro: 'Statistici de vizitare', en: 'Visit statistics' },
+  // Days, as a number. `null` or `0` means a session cookie.
+  expiryDays: 730,
+  // Kept for clients older than 0.5.16; ignored when `expiryDays` is present.
+  expiry: '2 года'
+}
+```
+
+- **`purpose: string | { ru?, ro?, en?, <lang>? }`.** An object is resolved with
+  the same chain `branding.poweredBy.texts` and `texts.links[].label` use, plus
+  one extra step: **banner language → its two-letter base (`pt-BR` → `pt`) →
+  `en` → the first non-empty value in the object.** That last step is why a
+  cookie row differs from a link: a link with no label for this language is
+  skipped, but a cookie must still be declared, so the operator's own words are
+  shown in whatever language they exist rather than nothing at all. A plain
+  string renders as it always did; a number, an array or an object that is empty
+  in every language renders an empty cell (`—`).
+
+- **`expiryDays?: number | null`.** A whole number of days. `null` or `0`
+  renders the localised word for a session cookie (`сессия` / `sesiune` /
+  `session`); a positive number renders localised plural forms (`2 дн.` /
+  `2 zile` / `2 days`). When `expiryDays` is **absent** the old `expiry` string
+  is shown; when both are present `expiryDays` wins. Anything that is not a
+  whole number ≥ 0 is treated as absent.
+
+A row written before 0.5.16 renders as it did, with one deliberate exception: a
+cell that resolves to nothing now shows the same `—` an absent field has always
+shown. So `purpose: ''`, `expiry: ''` and a non-string `expiry` (a bare number,
+say) draw an em dash where 0.5.15 drew a blank or a raw value.
+
+Both keys are translated in all 34 languages. The hosted service writes
+`purpose` objects and `expiryDays` into generated configs from 0.5.16 onwards,
+and keeps writing `expiry` as well so that an older inline copy of the client
+still shows something.
 
 ### Services
 
@@ -972,7 +1016,7 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.15, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
+ConsentKit 0.5.16, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
@@ -1176,6 +1220,21 @@ Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
 
+### 0.5.16
+
+- **Cookie purposes in the visitor's language.** `cookieTable[].purpose` now
+  accepts `{ ru, ro, en, … }` as well as a plain string, resolved with the same
+  chain the banner links use — language, base code, `en` — and then, unlike a
+  link, falling back to the first language the object actually carries, because
+  a declared cookie must not vanish for want of a translation.
+- **Cookie lifetimes as a number.** `cookieTable[].expiryDays` is a count of
+  days, so the «Expires» column is now written in the banner's language instead
+  of quoting one fixed string: `null` or `0` reads «session», a positive number
+  takes the right plural form («1 дн.», «2 zile», «20 de zile», «5 days»). The
+  old `expiry` string still renders for rows that have no `expiryDays`.
+- Two new dictionary keys, `expirySession` and `expiryDays`, translated in all
+  34 languages.
+
 ### 0.5.15
 
 - **Your own texts, per language.** `texts.<lang>` overrides the banner title
@@ -1337,7 +1396,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.15), not a released product.** It is honest about
+**This is a prototype (v0.5.16), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

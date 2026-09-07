@@ -242,13 +242,47 @@ export interface CkBlockingConfig {
   placeholders?: boolean;
 }
 
+/**
+ * A per-language map for a cookie's purpose (v0.5.16, SPEC V1.18.1 §1.1).
+ *
+ * Keyed by a language tag: `ru`, `ro`, `en`, `pt-br`, … The banner resolves it
+ * by its own language, then that language's two-letter base, then `en`, and
+ * finally by the first non-empty value in the object — unlike a banner link,
+ * which is skipped when no label resolves, because a declared cookie must not
+ * disappear from the table for want of a translation.
+ */
+export interface CkCookiePurpose {
+  ru?: string;
+  ro?: string;
+  en?: string;
+  [lang: string]: string | undefined;
+}
+
 /** One declared cookie, shown under its category in the preferences panel. */
 export interface CkCookieTableEntry {
   name: string;
   category: CkCategory;
   vendor?: string;
-  purpose?: string;
+  /**
+   * What the cookie is for. A plain string renders as written; v0.5.16 also
+   * accepts a per-language object — see {@link CkCookiePurpose}. A value that
+   * is neither renders an empty cell.
+   */
+  purpose?: string | CkCookiePurpose;
+  /**
+   * How long the cookie lives, as free text. Rendered only when `expiryDays`
+   * is absent; kept so that a config read by a client older than 0.5.16 still
+   * shows something.
+   */
   expiry?: string;
+  /**
+   * v0.5.16 (SPEC V1.18.1 §1.2). Lifetime in whole days, rendered in the
+   * banner's language. `null` or `0` renders the word for a session cookie;
+   * a positive number takes that language's plural form. Wins over `expiry`
+   * when both are present; anything that is not a whole number >= 0 is
+   * treated as absent.
+   */
+  expiryDays?: number | null;
 }
 
 /**

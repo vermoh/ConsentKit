@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.15
+Stable tag: 0.5.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,17 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.16 =
+* Cookie purposes in the visitor's language: cookieTable[].purpose accepts
+  { ru, ro, en, ... } as well as a plain string. Resolved by banner language,
+  then its two-letter base, then en, then the first language present — a
+  declared cookie is never hidden for want of a translation.
+* Cookie lifetimes as a number: cookieTable[].expiryDays is a count of days, so
+  the "Expires" column is written in the banner's language. null or 0 reads
+  "session"; a positive number takes the right plural form. Rows with no
+  expiryDays still show their old expiry string.
+* Two new dictionary keys, expirySession and expiryDays, in all 34 languages.
 
 = 0.5.15 =
 * Your own texts per language: texts.<lang> overrides the banner title and copy,

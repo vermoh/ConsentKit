@@ -14,6 +14,29 @@
    block renders only from what the site itself supplies, so a translated body
    would put an empty operator card on every site that never configured one.
 
+   0.5.16 adds two more to every locale (SPEC V1.18.1 §1.2), for the «Expires»
+   column of the cookie table, which is now COMPUTED from a number of days
+   instead of quoted from whatever single string the scanner wrote:
+
+     expirySession — a plain string, the word for a cookie that dies with the tab.
+     expiryDays    — an ARRAY of plural forms, read by ck-ui's plural(); as many
+                     forms as the language actually needs, and no more. plural()
+                     clamps its index to the array length, so a shorter table is
+                     an honest «this language has fewer forms here», not a hole.
+
+                     Three families, matching ck-ui's pluralIndex():
+                       ro                  — three (1 zi / 2 zile / 20 de zile),
+                                             the «de» above 19 being the whole
+                                             reason V1.18.1 exists.
+                       cs sk pl hr sr      — three, the Slavic 1 / 2-4 / 5+ rule.
+                                             These are INFLECTED words, so a
+                                             single form would print «1 dní».
+                       ru uk               — ONE, and deliberately: «дн.» is an
+                                             abbreviation, it does not decline,
+                                             and it is the wording the cabinet
+                                             already shows the site's owner.
+                       everything else     — two, the ordinary 1 / many rule.
+
    NOTE: these translations are drafts produced for the prototype. They MUST be reviewed
    by native speakers before production use — legal wording (refusal, "always on") is the
    part most likely to need a lawyer's eye per jurisdiction. */
@@ -45,6 +68,9 @@
     colExpiry: 'Изтича',
     floating: 'Настройки на бисквитките',
     extraTitle: 'Допълнителна информация',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'сесия',
+    expiryDays: ['{n} ден', '{n} дни'],
     cat: {
       necessary: { title: 'Необходими', desc: 'Нужни са, за да работи сайтът — вход, сигурност, запомняне на съгласието ви. Не могат да се изключат.' },
       functional: { title: 'Функционални', desc: 'Запомнят предпочитанията ви, например език или чат, за да не ги задавате отново.' },
@@ -74,6 +100,9 @@
     colExpiry: 'Platnost',
     floating: 'Nastavení cookies',
     extraTitle: 'Doplňující informace',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'relace',
+    expiryDays: ['{n} den', '{n} dny', '{n} dní'],
     cat: {
       necessary: { title: 'Nezbytné', desc: 'Bez nich web nefunguje — přihlášení, bezpečnost, uložení vašeho souhlasu. Nelze je vypnout.' },
       functional: { title: 'Funkční', desc: 'Pamatují si vaše předvolby, třeba jazyk nebo chat, abyste je nenastavovali znovu.' },
@@ -103,6 +132,9 @@
     colExpiry: 'Udløber',
     floating: 'Cookieindstillinger',
     extraTitle: 'Yderligere oplysninger',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'session',
+    expiryDays: ['{n} dag', '{n} dage'],
     cat: {
       necessary: { title: 'Nødvendige', desc: 'Nødvendige for at siden virker — login, sikkerhed, hukommelse om dit samtykke. De kan ikke slås fra.' },
       functional: { title: 'Funktionelle', desc: 'Husker dine indstillinger, fx sprog eller chat, så du ikke skal vælge dem igen.' },
@@ -132,6 +164,9 @@
     colExpiry: 'Laufzeit',
     floating: 'Cookie-Einstellungen',
     extraTitle: 'Weitere Informationen',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'Sitzung',
+    expiryDays: ['{n} Tag', '{n} Tage'],
     cat: {
       necessary: { title: 'Notwendig', desc: 'Nötig, damit die Website funktioniert — Anmeldung, Sicherheit, Speichern Ihrer Einwilligung. Sie lassen sich nicht abschalten.' },
       functional: { title: 'Funktional', desc: 'Merken sich Ihre Einstellungen, etwa Sprache oder Chat, damit Sie sie nicht erneut wählen müssen.' },
@@ -161,6 +196,9 @@
     colExpiry: 'Λήξη',
     floating: 'Ρυθμίσεις cookies',
     extraTitle: 'Πρόσθετες πληροφορίες',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'συνεδρία',
+    expiryDays: ['{n} ημέρα', '{n} ημέρες'],
     cat: {
       necessary: { title: 'Απαραίτητα', desc: 'Χρειάζονται για να λειτουργεί ο ιστότοπος — σύνδεση, ασφάλεια, διατήρηση της επιλογής σας. Δεν απενεργοποιούνται.' },
       functional: { title: 'Λειτουργικά', desc: 'Θυμούνται τις προτιμήσεις σας, όπως γλώσσα ή συνομιλία, ώστε να μην τις ορίζετε ξανά.' },
@@ -190,6 +228,9 @@
     colExpiry: 'Caduca',
     floating: 'Configuración de cookies',
     extraTitle: 'Información adicional',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sesión',
+    expiryDays: ['{n} día', '{n} días'],
     cat: {
       necessary: { title: 'Necesarias', desc: 'Imprescindibles para que el sitio funcione: inicio de sesión, seguridad y memoria de su consentimiento. No se pueden desactivar.' },
       functional: { title: 'Funcionales', desc: 'Recuerdan sus preferencias, como el idioma o el chat, para que no tenga que configurarlas de nuevo.' },
@@ -219,6 +260,9 @@
     colExpiry: 'Kehtivus',
     floating: 'Küpsiste seaded',
     extraTitle: 'Lisateave',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'seanss',
+    expiryDays: ['{n} päev', '{n} päeva'],
     cat: {
       necessary: { title: 'Vajalikud', desc: 'Vajalikud saidi tööks — sisselogimine, turvalisus, teie nõusoleku meelespidamine. Neid ei saa välja lülitada.' },
       functional: { title: 'Funktsionaalsed', desc: 'Jätavad meelde teie eelistused, näiteks keele või vestluse, et te ei peaks neid uuesti valima.' },
@@ -248,6 +292,9 @@
     colExpiry: 'Voimassaolo',
     floating: 'Evästeasetukset',
     extraTitle: 'Lisätiedot',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'istunto',
+    expiryDays: ['{n} päivä', '{n} päivää'],
     cat: {
       necessary: { title: 'Välttämättömät', desc: 'Tarvitaan sivuston toimintaan: kirjautuminen, turvallisuus ja suostumuksenne muistaminen. Näitä ei voi poistaa käytöstä.' },
       functional: { title: 'Toiminnalliset', desc: 'Muistavat asetuksenne, kuten kielen tai chatin, jottei niitä tarvitse valita uudelleen.' },
@@ -277,6 +324,9 @@
     colExpiry: 'Expiration',
     floating: 'Paramètres des cookies',
     extraTitle: 'Informations complémentaires',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'session',
+    expiryDays: ['{n} jour', '{n} jours'],
     cat: {
       necessary: { title: 'Nécessaires', desc: 'Indispensables au fonctionnement du site : connexion, sécurité, mémorisation de votre choix. Ils ne peuvent pas être désactivés.' },
       functional: { title: 'Fonctionnels', desc: 'Retiennent vos préférences, par exemple la langue ou le chat, pour ne pas avoir à les régler de nouveau.' },
@@ -306,6 +356,9 @@
     colExpiry: 'Éagann',
     floating: 'Socruithe fianán',
     extraTitle: 'Eolas breise',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'seisiún',
+    expiryDays: ['{n} lá', '{n} lá'],
     cat: {
       necessary: { title: 'Riachtanach', desc: 'Ag teastáil chun an suíomh a oibriú — logáil isteach, slándáil, do thoiliú a choinneáil. Ní féidir iad a mhúchadh.' },
       functional: { title: 'Feidhmiúil', desc: 'Coinníonn siad do roghanna, mar shampla an teanga nó an comhrá, ionas nach gá duit iad a shocrú arís.' },
@@ -335,6 +388,9 @@
     colExpiry: 'Istječe',
     floating: 'Postavke kolačića',
     extraTitle: 'Dodatne informacije',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sesija',
+    expiryDays: ['{n} dan', '{n} dana', '{n} dana'],
     cat: {
       necessary: { title: 'Nužni', desc: 'Potrebni su za rad stranice — prijava, sigurnost, pamćenje vaše privole. Ne mogu se isključiti.' },
       functional: { title: 'Funkcionalni', desc: 'Pamte vaše postavke, primjerice jezik ili chat, da ih ne morate ponovno birati.' },
@@ -364,6 +420,9 @@
     colExpiry: 'Lejárat',
     floating: 'Sütibeállítások',
     extraTitle: 'További információk',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'munkamenet',
+    expiryDays: ['{n} nap', '{n} nap'],
     cat: {
       necessary: { title: 'Szükséges', desc: 'Az oldal működéséhez kellenek: belépés, biztonság, a hozzájárulása megjegyzése. Nem kapcsolhatók ki.' },
       functional: { title: 'Funkcionális', desc: 'Megjegyzik a beállításait, például a nyelvet vagy a chatet, hogy ne kelljen újra megadnia őket.' },
@@ -393,6 +452,9 @@
     colExpiry: 'Scadenza',
     floating: 'Impostazioni dei cookie',
     extraTitle: 'Informazioni aggiuntive',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sessione',
+    expiryDays: ['{n} giorno', '{n} giorni'],
     cat: {
       necessary: { title: 'Necessari', desc: 'Servono al funzionamento del sito: accesso, sicurezza, memoria del suo consenso. Non possono essere disattivati.' },
       functional: { title: 'Funzionali', desc: 'Ricordano le sue preferenze, come la lingua o la chat, così non deve impostarle di nuovo.' },
@@ -422,6 +484,9 @@
     colExpiry: 'Galiojimas',
     floating: 'Slapukų nustatymai',
     extraTitle: 'Papildoma informacija',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'seansas',
+    expiryDays: ['{n} diena', '{n} d.'],
     cat: {
       necessary: { title: 'Būtini', desc: 'Reikalingi, kad svetainė veiktų: prisijungimas, saugumas, jūsų sutikimo įsiminimas. Jų išjungti negalima.' },
       functional: { title: 'Funkciniai', desc: 'Įsimena jūsų nustatymus, pavyzdžiui, kalbą ar pokalbius, kad jų nereikėtų nurodyti iš naujo.' },
@@ -451,6 +516,9 @@
     colExpiry: 'Derīgums',
     floating: 'Sīkdatņu iestatījumi',
     extraTitle: 'Papildu informācija',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sesija',
+    expiryDays: ['{n} diena', '{n} dienas'],
     cat: {
       necessary: { title: 'Nepieciešamās', desc: 'Vajadzīgas vietnes darbībai — pieteikšanās, drošība, jūsu piekrišanas saglabāšana. Tās nevar izslēgt.' },
       functional: { title: 'Funkcionālās', desc: 'Atceras jūsu iestatījumus, piemēram, valodu vai tērzēšanu, lai tie nebūtu jānorāda atkārtoti.' },
@@ -480,6 +548,9 @@
     colExpiry: 'Skadenza',
     floating: 'Issettjar tal-cookies',
     extraTitle: 'Informazzjoni addizzjonali',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sessjoni',
+    expiryDays: ['{n} jum', '{n} ijiem'],
     cat: {
       necessary: { title: 'Meħtieġa', desc: 'Meħtieġa biex is-sit jaħdem — login, sigurtà, tifkira tal-kunsens tiegħek. Ma jistgħux jintfew.' },
       functional: { title: 'Funzjonali', desc: 'Jiftakru l-preferenzi tiegħek, bħal-lingwa jew iċ-chat, biex ma jkollokx terġa’ tissettjahom.' },
@@ -509,6 +580,9 @@
     colExpiry: 'Vervalt',
     floating: 'Cookie-instellingen',
     extraTitle: 'Aanvullende informatie',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sessie',
+    expiryDays: ['{n} dag', '{n} dagen'],
     cat: {
       necessary: { title: 'Noodzakelijk', desc: 'Nodig om de site te laten werken: inloggen, beveiliging en het onthouden van uw keuze. Ze kunnen niet uit.' },
       functional: { title: 'Functioneel', desc: 'Onthouden uw voorkeuren, zoals taal of chat, zodat u ze niet opnieuw hoeft in te stellen.' },
@@ -538,6 +612,9 @@
     colExpiry: 'Wygasa',
     floating: 'Ustawienia plików cookie',
     extraTitle: 'Informacje dodatkowe',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sesja',
+    expiryDays: ['{n} dzień', '{n} dni', '{n} dni'],
     cat: {
       necessary: { title: 'Niezbędne', desc: 'Potrzebne, by strona działała: logowanie, bezpieczeństwo, zapamiętanie zgody. Nie można ich wyłączyć.' },
       functional: { title: 'Funkcjonalne', desc: 'Zapamiętują ustawienia, na przykład język lub czat, żeby nie trzeba było wybierać ich ponownie.' },
@@ -567,6 +644,9 @@
     colExpiry: 'Validade',
     floating: 'Definições de cookies',
     extraTitle: 'Informações adicionais',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sessão',
+    expiryDays: ['{n} dia', '{n} dias'],
     cat: {
       necessary: { title: 'Necessários', desc: 'Precisos para o site funcionar: início de sessão, segurança e memória do seu consentimento. Não podem ser desativados.' },
       functional: { title: 'Funcionais', desc: 'Guardam as suas preferências, como o idioma ou o chat, para não ter de as definir outra vez.' },
@@ -596,6 +676,9 @@
     colExpiry: 'Expiră',
     floating: 'Setări cookie-uri',
     extraTitle: 'Informații suplimentare',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sesiune',
+    expiryDays: ['{n} zi', '{n} zile', '{n} de zile'],
     // SPEC V1.10 §2 — заглушка встраивания. Only ro carries these here: en and
     // ru are builtin in ck-ui.js, and every other locale falls back to en.
     phText: 'Aici este conținut de la {host}. Se va încărca după acordul pentru «{cat}».',
@@ -641,6 +724,9 @@
     colExpiry: 'Platnosť',
     floating: 'Nastavenia cookies',
     extraTitle: 'Doplňujúce informácie',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'relácia',
+    expiryDays: ['{n} deň', '{n} dni', '{n} dní'],
     cat: {
       necessary: { title: 'Nevyhnutné', desc: 'Bez nich stránka nefunguje — prihlásenie, bezpečnosť, zapamätanie vášho súhlasu. Nedajú sa vypnúť.' },
       functional: { title: 'Funkčné', desc: 'Pamätajú si vaše nastavenia, napríklad jazyk alebo chat, aby ste ich nezadávali znova.' },
@@ -670,6 +756,9 @@
     colExpiry: 'Poteče',
     floating: 'Nastavitve piškotkov',
     extraTitle: 'Dodatne informacije',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'seja',
+    expiryDays: ['{n} dan', '{n} dni'],
     cat: {
       necessary: { title: 'Nujni', desc: 'Potrebni za delovanje spletnega mesta — prijava, varnost, pomnjenje vašega soglasja. Ni jih mogoče izklopiti.' },
       functional: { title: 'Funkcionalni', desc: 'Zapomnijo si vaše nastavitve, na primer jezik ali klepet, da jih ni treba določati znova.' },
@@ -699,6 +788,9 @@
     colExpiry: 'Upphör',
     floating: 'Cookieinställningar',
     extraTitle: 'Ytterligare information',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'session',
+    expiryDays: ['{n} dag', '{n} dagar'],
     cat: {
       necessary: { title: 'Nödvändiga', desc: 'Krävs för att webbplatsen ska fungera — inloggning, säkerhet, minne av ditt samtycke. De kan inte stängas av.' },
       functional: { title: 'Funktionella', desc: 'Kommer ihåg dina inställningar, till exempel språk eller chatt, så att du slipper välja igen.' },
@@ -728,6 +820,9 @@
     colExpiry: 'Термін',
     floating: 'Налаштування cookie',
     extraTitle: 'Додаткова інформація',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'сесія',
+    expiryDays: ['{n} дн.'],
     cat: {
       necessary: { title: 'Необхідні', desc: 'Без них сайт не працює: вхід, безпека, пам’ять про ваш вибір. Вимкнути неможливо.' },
       functional: { title: 'Функціональні', desc: 'Запам’ятовують ваші налаштування — наприклад мову або чат, — щоб ви не задавали їх знову.' },
@@ -757,6 +852,9 @@
     colExpiry: 'Süre',
     floating: 'Çerez ayarları',
     extraTitle: 'Ek bilgiler',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'oturum',
+    expiryDays: ['{n} gün', '{n} gün'],
     cat: {
       necessary: { title: 'Zorunlu', desc: 'Sitenin çalışması için gerekli: oturum açma, güvenlik, onayınızın hatırlanması. Kapatılamazlar.' },
       functional: { title: 'İşlevsel', desc: 'Dil veya sohbet gibi tercihlerinizi hatırlar, böylece yeniden ayarlamanız gerekmez.' },
@@ -786,6 +884,9 @@
     colExpiry: 'Utløper',
     floating: 'Innstillinger for informasjonskapsler',
     extraTitle: 'Tilleggsinformasjon',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'økt',
+    expiryDays: ['{n} dag', '{n} dager'],
     cat: {
       necessary: { title: 'Nødvendige', desc: 'Kreves for at nettstedet skal virke — innlogging, sikkerhet, minne om samtykket ditt. De kan ikke slås av.' },
       functional: { title: 'Funksjonelle', desc: 'Husker innstillingene dine, som språk eller chat, så du slipper å velge på nytt.' },
@@ -819,6 +920,9 @@
     colExpiry: 'Gildistími',
     floating: 'Stillingar vefkaka',
     extraTitle: 'Viðbótarupplýsingar',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'seta',
+    expiryDays: ['{n} dagur', '{n} dagar'],
     cat: {
       necessary: { title: 'Nauðsynlegar', desc: 'Nauðsynlegar til að vefurinn virki — innskráning, öryggi, að muna samþykki þitt. Ekki er hægt að slökkva á þeim.' },
       functional: { title: 'Virknivefkökur', desc: 'Muna stillingar þínar, til dæmis tungumál eða spjall, svo þú þurfir ekki að velja aftur.' },
@@ -849,6 +953,9 @@
     colExpiry: 'Истиче',
     floating: 'Подешавања колачића',
     extraTitle: 'Додатне информације',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'сесија',
+    expiryDays: ['{n} дан', '{n} дана', '{n} дана'],
     cat: {
       necessary: { title: 'Неопходни', desc: 'Потребни су да би сајт радио — пријава, безбедност, памћење ваше сагласности. Не могу се искључити.' },
       functional: { title: 'Функционални', desc: 'Памте ваша подешавања, на пример језик или ћаскање, да их не бисте бирали поново.' },
@@ -878,6 +985,9 @@
     colExpiry: 'Caduca',
     floating: 'Configuració de galetes',
     extraTitle: 'Informació addicional',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sessió',
+    expiryDays: ['{n} dia', '{n} dies'],
     cat: {
       necessary: { title: 'Necessàries', desc: 'Calen perquè el lloc funcioni: inici de sessió, seguretat i memòria del vostre consentiment. No es poden desactivar.' },
       functional: { title: 'Funcionals', desc: 'Recorden les vostres preferències, com l’idioma o el xat, perquè no les hàgiu de tornar a configurar.' },
@@ -907,6 +1017,9 @@
     colExpiry: 'Skadon',
     floating: 'Cilësimet e cookie-ve',
     extraTitle: 'Informacione shtesë',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'sesion',
+    expiryDays: ['{n} ditë', '{n} ditë'],
     cat: {
       necessary: { title: 'Të nevojshme', desc: 'Nevojiten që faqja të funksionojë — hyrja, siguria, ruajtja e pëlqimit tuaj. Nuk mund të fiken.' },
       functional: { title: 'Funksionale', desc: 'Mbajnë mend preferencat tuaja, si gjuha ose biseda, që të mos i vendosni sërish.' },
@@ -936,6 +1049,9 @@
     colExpiry: 'Истекува',
     floating: 'Поставки за колачиња',
     extraTitle: 'Дополнителни информации',
+    // SPEC V1.18.1 §1.2 — срок жизни cookie из `expiryDays`.
+    expirySession: 'сесија',
+    expiryDays: ['{n} ден', '{n} дена'],
     cat: {
       necessary: { title: 'Неопходни', desc: 'Потребни се за страницата да работи — најава, безбедност, помнење на вашата согласност. Не можат да се исклучат.' },
       functional: { title: 'Функционални', desc: 'Ги паметат вашите поставки, на пример јазикот или разговорот, за да не ги задавате повторно.' },
