@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.17).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.18).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -627,14 +627,17 @@ of host — readable as `ConsentKit._infra()`, tested per URL or hostname with
 `ConsentKit._isInfra(url)` — covering the CDNs of Tilda, Wix, Shopify,
 Squarespace and Webflow, the general asset CDNs (`cdn.jsdelivr.net`,
 `unpkg.com`, `cdnjs.cloudflare.com`, `code.jquery.com`, `ajax.googleapis.com`),
-Google Fonts and hCaptcha. Strict mode never intercepts them, because blocking a
+Google Fonts, hCaptcha and the endpoint a Google-hosted frame posts its
+Content-Security-Policy violation reports to (`csp.withgoogle.com` — a policy
+report carries no visitor, so there is nothing to consent to). Strict mode never
+intercepts them, because blocking a
 builder's own CDN breaks the page without protecting anyone; the hosted service
 also leaves them out of scan reports, since there is nothing for a site owner to
 decide. Membership is a claim that a host delivers the site's own assets, not
 that it is harmless in general — anything that *measures* keeps a real consent
 category instead, which is why `static.cloudflareinsights.com` (Cloudflare Web
 Analytics) is classified as `analytics` and blocked before consent even though
-the rest of Cloudflare's CDN is infrastructure. The list holds **37 entries**.
+the rest of Cloudflare's CDN is infrastructure. The list holds **40 entries**.
 Both lists are matched by suffix and returned as copies, so reading them cannot
 widen what strict mode allows.
 
@@ -692,7 +695,7 @@ of them returns a copy, so reading can never widen what the engine allows.
 | `_serviceForUrl(url)` | `object \| null` | Which declared service a URL belongs to |
 | `_deniedServices()` | `string[]` | Ids the visitor refused individually |
 | `_extendHostDb(map)` | `number` | Merge extra `host: category` pairs; returns how many were accepted — see [Extending the tracker database](#extending-the-tracker-database) |
-| `_infra()` | `string[]` | The 37 infrastructure hosts, as a copy |
+| `_infra()` | `string[]` | The 40 infrastructure hosts, as a copy |
 | `_isInfra(url)` | `boolean` | Is this URL or hostname infrastructure? |
 | `_baseAllow` | `object` | The built-in strict-mode allowlist (hosts plus path-scoped entries), as a copy |
 
@@ -798,15 +801,15 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **116 hosts** and **11 path rules**, matched by suffix (a
+The database ships **122 hosts** and **11 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 116 | 40 `functional`, 32 `marketing`, 31 `analytics`, 13 `necessary` |
+| `HOST_DB` | 122 | 42 `functional`, 34 `marketing`, 31 `analytics`, 15 `necessary` |
 | `PATH_DB` | 11 | 4 `marketing`, 3 `functional`, 2 `analytics`, 2 `necessary` |
-| `INFRA_DB` | 37 | not a category — see [Infrastructure](#infrastructure) |
+| `INFRA_DB` | 40 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
 TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
@@ -1121,19 +1124,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.17, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
+ConsentKit 0.5.18, rebuilt 2026-09-08, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 332,104 | 104,904 | 305,691 |
-| `ready/ru-bar.txt` | ru, ro, en | 334,288 | 105,851 | 307,689 |
-| `ready/ru-box.txt` | ru, ro, en | 334,303 | 105,858 | 307,704 |
-| `ready/ru-box-right.txt` | ru, ro, en | 334,312 | 105,858 | 307,707 |
-| `ready/ru-modal.txt` | ru, ro, en | 334,296 | 105,856 | 307,695 |
-| `ready/eu-bar.txt` | 34 languages | 386,222 | 125,252 | 359,643 |
+| `ready/en-bar.txt` | en | 334,435 | 105,701 | 308,141 |
+| `ready/ru-bar.txt` | ru, ro, en | 336,619 | 106,651 | 310,139 |
+| `ready/ru-box.txt` | ru, ro, en | 336,634 | 106,655 | 310,154 |
+| `ready/ru-box-right.txt` | ru, ro, en | 336,643 | 106,662 | 310,163 |
+| `ready/ru-modal.txt` | ru, ro, en | 336,627 | 106,656 | 310,147 |
+| `ready/eu-bar.txt` | 34 languages | 388,553 | 126,074 | 362,093 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1324,6 +1327,20 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.18
+
+- Tracker database: **GrowthBook, Simpals ID, a self-hosted Sentry, Google CSP
+  reports.** `growthbook.io` → functional — the SDK fetches a flag payload and
+  the page renders one variant rather than another, which tailors what the
+  visitor sees without building an ad profile. `simpalsid.com` → necessary
+  (Simpals ID, the sign-in service of the Simpals group) and
+  `newsentry.simpals.md` → necessary, the **exact host only**: it is a
+  self-hosted Sentry, while `simpals.md` itself carries the group's consumer
+  sites and stays unclassified — `999.md` keeps its own `functional`.
+  `csp.withgoogle.com` → infrastructure, never held: it receives
+  Content-Security-Policy violation reports from Google-hosted frames, which
+  carry a policy, not a visitor.
 
 ### 0.5.17
 
@@ -1527,7 +1544,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.17), not a released product.** It is honest about
+**This is a prototype (v0.5.18), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

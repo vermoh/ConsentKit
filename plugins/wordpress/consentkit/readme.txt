@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.17
+Stable tag: 0.5.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (116 hosts, 11 path rules) and matches by
+* The tracker database is a snapshot (122 hosts, 11 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,17 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.18 =
+* Tracker database: growthbook.io -> functional (GrowthBook feature flags and
+  A/B testing; the flag fetch decides which variant the page renders, and builds
+  no advertising profile). simpalsid.com -> necessary (Simpals ID, the sign-in
+  service of the Simpals group). newsentry.simpals.md -> necessary, the exact
+  host only (a self-hosted Sentry; simpals.md itself carries the group's
+  consumer sites and stays unclassified, and 999.md stays functional).
+  csp.withgoogle.com -> infrastructure, never held (Content-Security-Policy
+  violation reports from Google-hosted frames; not a visitor, so not a consent
+  decision).
 
 = 0.5.17 =
 * Geo rules: geo = { mode: 'list', countries: ['MD','DE'] } shows the banner

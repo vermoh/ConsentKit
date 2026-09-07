@@ -5,6 +5,20 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.18
+
+- Tracker database: **GrowthBook, Simpals ID, a self-hosted Sentry, Google CSP
+  reports.** `growthbook.io` → functional — the SDK fetches a flag payload and
+  the page renders one variant rather than another, which tailors what the
+  visitor sees without building an ad profile. `simpalsid.com` → necessary
+  (Simpals ID, the sign-in service of the Simpals group) and
+  `newsentry.simpals.md` → necessary, the **exact host only**: it is a
+  self-hosted Sentry, while `simpals.md` itself carries the group's consumer
+  sites and stays unclassified — `999.md` keeps its own `functional`.
+  `csp.withgoogle.com` → infrastructure, never held: it receives
+  Content-Security-Policy violation reports from Google-hosted frames, which
+  carry a policy, not a visitor.
+
 ## 0.5.17
 
 - **Geo rules.** `geo: { mode: 'list', countries: ['MD', 'DE'] }` shows the

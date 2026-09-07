@@ -78,6 +78,9 @@ const CASES = [
   ['https://embed.typeform.com/next/embed.js', 'functional'],
   ['https://999.md/js/widget.js', 'functional'],
   ['https://ex.simpalsmedia.com/banner/loader.js', 'functional'],
+  // Owner's finding 08.09.2026 (audit): GrowthBook's SDK fetches the flag
+  // payload that decides which variant of the page the visitor is shown.
+  ['https://cdn.growthbook.io/api/features/sdk-AbC123XyZ', 'functional'],
 
   // --- necessary: named, never held ----------------------------------------
   ['https://browser.sentry-cdn.com/7.0.0/bundle.min.js', 'necessary'],
@@ -92,6 +95,10 @@ const CASES = [
   ['https://api.stripe.com/v1/tokens', 'necessary'],
   ['https://m.stripe.network/inner.html', 'necessary'],
   ['https://my-site.elementor.com/assets/js/frontend.js', 'necessary'],
+  // Owner's findings 08.09.2026 (audit): the Simpals group's sign-in service
+  // and its self-hosted Sentry, both plumbing rather than a decision.
+  ['https://v2.simpalsid.com/graphql', 'necessary'],
+  ['https://newsentry.simpals.md/api/13/envelope/', 'necessary'],
 
   // --- analytics ------------------------------------------------------------
   ['https://vercel-insights.com/v1/vitals', 'analytics']
@@ -137,4 +144,39 @@ test('Vercel Web Analytics is analytics, and the platform around it is not', () 
   assert.ok(!CK._infra().includes('vercel-insights.com'));
   assert.equal(CK._categoryForUrl('https://my-app.vercel.app/main.js'), null,
     'the hosting platform itself carries no category');
+});
+
+/* --------------------------------------------------- 08.09.2026 additions */
+
+test('the Simpals necessary hosts do not leak onto the rest of the group', () => {
+  /* hostMatches is plain suffix matching, so the EXACT host newsentry.simpals.md
+     cannot match simpals.md — and that is the whole point of naming it that way:
+     the group runs consumer sites on the parent domain, and calling those
+     `necessary` would wave a real decision through unseen. 999.md is the group's
+     classifieds platform and must keep the `functional` it has carried since
+     0.5.9, not inherit `necessary` from a sibling entry. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://simpals.md/'), null,
+    'the parent domain of the self-hosted Sentry must stay unclassified');
+  assert.equal(CK._categoryForUrl('https://www.simpals.md/news/'), null,
+    'a sibling subdomain must stay unclassified too');
+  assert.equal(CK._categoryForUrl('https://newsentry.simpals.md/api/13/envelope/'), 'necessary',
+    '…while the exact Sentry host is still named');
+  assert.equal(CK._categoryForUrl('https://999.md/js/widget.js'), 'functional',
+    '999.md keeps its own category and does not become necessary');
+  assert.ok(!CK._isInfra('simpals.md'), 'simpals.md must not be waved through either');
+});
+
+test('the 08.09.2026 infrastructure host carries no category and is waved through', () => {
+  /* csp.withgoogle.com receives Content-Security-Policy violation reports from
+     Google-hosted frames. Named as the exact subdomain, because withgoogle.com
+     carries a long tail of unrelated Google microsites. */
+  const CK = loadCore();
+  assert.ok(CK._infra().includes('csp.withgoogle.com'),
+    'csp.withgoogle.com is missing from _infra()');
+  assert.equal(CK._categoryForUrl('https://csp.withgoogle.com/csp/frame-ancestors/1234'), null,
+    'a CSP report endpoint is infrastructure and must carry no category');
+  assert.ok(CK._isInfra('csp.withgoogle.com'), '_isInfra(csp.withgoogle.com) should be true');
+  assert.ok(!CK._isInfra('withgoogle.com'),
+    'the bare parent must not be waved through — it hosts unrelated Google sites');
 });

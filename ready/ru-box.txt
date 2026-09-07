@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.17
+ * Версия ConsentKit: 0.5.18
  * Дата сборки:      2026-09-07
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -250,6 +250,14 @@
     // widgets; simpalsmedia.com is the group's asset host that serves them.
     '999.md': 'functional',
     'simpalsmedia.com': 'functional',
+    // GrowthBook — feature flags and A/B testing. The SDK fetches a flag
+    // payload (cdn.growthbook.io /api/features/sdk-…) and the page renders one
+    // variant rather than another: that TAILORS what the visitor sees, which is
+    // functional, not measurement. It builds no advertising profile, so it is
+    // not marketing; and a visitor who declines functional loses the variant,
+    // not the page. Where the experiment's RESULTS are counted — GA4, Mixpanel —
+    // those hosts are classified on their own and stay analytics.
+    'growthbook.io': 'functional',
 
     // --- necessary -----------------------------------------------------
     // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
@@ -270,6 +278,21 @@
                                               // because the DSN host is what an owner
                                               // actually sees in a report
     'sentry-cdn.com': 'necessary',
+    // Simpals group (999.md, Point.md and the rest). Two hosts of theirs are
+    // plumbing, and both are named at the narrowest scope that is true:
+    //   v2.simpalsid.com /graphql is Simpals ID, the group's sign-in service —
+    //   authentication, so `necessary`. simpalsid.com is dedicated to it, so the
+    //   whole registrable domain is the right scope, the way recaptcha.net is.
+    //   newsentry.simpals.md /api/13/envelope/ is a SELF-HOSTED Sentry, i.e.
+    //   the same crash reporting as sentry.io above, on the group's own domain.
+    //   Only the EXACT host may be named: simpals.md carries the group's
+    //   consumer sites, and hostMatches is plain suffix matching, so a bare
+    //   'simpals.md' here would rule `necessary` on every one of them at once.
+    //   For the same reason nothing broader than this may ever be inserted
+    //   ABOVE it — lookupHostMap returns the FIRST match, not the longest.
+    //   999.md stays `functional` in its own block above, unaffected by either.
+    'simpalsid.com': 'necessary',
+    'newsentry.simpals.md': 'necessary',
     'paypal.com': 'necessary',
     'paypalobjects.com': 'necessary',         // PayPal button assets
     'paynet.md': 'necessary',                 // Moldovan payment gateway
@@ -542,6 +565,15 @@
     // Google-hosted halves are path-scoped in BASE_ALLOW_PATH below, since
     // www.google.com and www.gstatic.com cannot be waved through wholesale.
     'hcaptcha.com',
+    // --- CSP violation reports -------------------------------------------
+    // csp.withgoogle.com/csp/frame-ancestors/… is the reporting endpoint a
+    // Google-hosted iframe posts its Content-Security-Policy violations to. It
+    // carries a policy report, never a visitor: nothing about it is a consent
+    // decision, so it is uncategorised rather than `necessary`. Named as the
+    // EXACT subdomain on purpose — withgoogle.com hosts a long tail of Google
+    // microsites, and a bare suffix here would be a claim about all of them.
+    // Same shape of split as maps.gstatic.com against gstatic.com above.
+    'csp.withgoogle.com',
     // --- hosting platforms (continued) -----------------------------------
     // Vercel and Netlify serve the site's own build output. Vercel's MEASUREMENT
     // product is vercel-insights.com, a separate registrable domain filed above
@@ -2410,7 +2442,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.17',
+    version: '0.5.18',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.
