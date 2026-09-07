@@ -194,6 +194,13 @@
     return out;
   }
 
+  function linkedCount(cfg) {
+    try {
+      var l = cfg && cfg.consent && cfg.consent.linkedDomains;
+      return (l && typeof l.length === 'number') ? l.length : 0;
+    } catch (e) { return 0; }
+  }
+
   function buildReport(input) {
     var d = input || {};
     var st = d.state || {};
@@ -205,7 +212,17 @@
         source: d.siteId ? 'saas' : 'inline',
         siteId: d.siteId || null,
         policyVersion: st.policyVersion || (d.config && d.config.policyVersion) || null,
-        etag: d.etag || null
+        etag: d.etag || null,
+        /* SPEC V1.19 §1.4 — why there is (or is not) a banner on this page.
+           `country` is the ISO2 the service reported via x-ck-country, null when
+           it is unknown; `inScope` is the core's decision. Both null on a client
+           that predates 0.5.17, which renders as no row at all rather than as a
+           confident «показан». */
+        country: (d.geo && d.geo.country) || null,
+        geoInScope: (d.geo && typeof d.geo.inScope === 'boolean') ? d.geo.inScope : null,
+        // SPEC V1.19 §2.2 — how many domains this consent travels to. A count,
+        // not the list: the list is in the config and the panel is narrow.
+        linkedDomains: linkedCount(d.config)
       },
       consent: {
         status: !st.decided ? 'none'
@@ -273,6 +290,12 @@
       srcSaas: 'SaaS',
       srcInline: 'инлайн',
       twoSnippets: 'два снипета',
+      country: 'Страна',
+      countryUnknown: 'неизвестна',
+      banner: 'баннер',
+      bannerShown: 'показан',
+      bannerHiddenGeo: 'скрыт по гео',
+      linked: 'Связанные домены',
       secConsent: 'Согласие',
       decidedAt: 'решение',
       method: 'способ',
@@ -356,6 +379,12 @@
       srcSaas: 'SaaS',
       srcInline: 'inline',
       twoSnippets: 'two snippets',
+      country: 'Country',
+      countryUnknown: 'unknown',
+      banner: 'banner',
+      bannerShown: 'shown',
+      bannerHiddenGeo: 'hidden by geo',
+      linked: 'Linked domains',
       secConsent: 'Consent',
       decidedAt: 'decided',
       method: 'method',
@@ -435,6 +464,12 @@
       srcSaas: 'SaaS',
       srcInline: 'inline',
       twoSnippets: 'două fragmente',
+      country: 'Țara',
+      countryUnknown: 'necunoscută',
+      banner: 'banner',
+      bannerShown: 'afișat',
+      bannerHiddenGeo: 'ascuns după geo',
+      linked: 'Domenii conectate',
       secConsent: 'Consimțământ',
       decidedAt: 'decizie',
       method: 'mod',
@@ -749,6 +784,7 @@
       version: CK ? CK.version : null,
       state: CK && CK.getState ? CK.getState() : {},
       config: cfg,
+      geo: (CK && CK._geo) || null,
       siteId: s.siteId,
       etag: s.etag,
       ttlDays: cfg.consentTtlDays == null ? null : cfg.consentTtlDays,
@@ -983,6 +1019,18 @@
     if (siteIds) { rows1.push([T.twoSnippets, siteIds]); }
     rows1.push(['policyVersion', r.client.policyVersion]);
     rows1.push(['ETag', r.client.etag]);
+    /* SPEC V1.19 §1.4 — «Страна: MD · баннер: показан/скрыт по гео».
+       Only when something is actually known: a client with no country and no
+       geo decision (a standalone page, or a CORS setup that does not expose the
+       header) says nothing rather than claiming a default. */
+    if (r.client.country || r.client.geoInScope === false) {
+      rows1.push([T.country,
+        (r.client.country || T.countryUnknown) + ' · ' + T.banner + ': ' +
+        (r.client.geoInScope === false ? T.bannerHiddenGeo : T.bannerShown)]);
+    }
+    // §2.2 — shown only when the feature is configured; a plain «0» on every
+    // site would be a row that never says anything.
+    if (r.client.linkedDomains) { rows1.push([T.linked, String(r.client.linkedDomains)]); }
     s1.appendChild(defs(rows1));
     body.appendChild(s1);
 

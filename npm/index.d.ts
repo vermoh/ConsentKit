@@ -20,8 +20,17 @@ export interface CkCategories {
   marketing: boolean;
 }
 
-/** How the current decision was made. `null` while undecided. */
-export type CkMethod = 'accept_all' | 'reject_all' | 'custom' | null;
+/**
+ * How the current decision was made. `null` while undecided.
+ *
+ * v0.5.17 adds two the visitor did not click:
+ *  - `'linked'` — adopted from a `#ck_consent=` fragment on a link from one of
+ *    the site's own `consent.linkedDomains`. A normal, persisted decision.
+ *  - `'geo'`    — this visitor is outside `geo.countries`, so every category is
+ *    granted for THIS PAGE LOAD and nothing is stored. `decided` stays `false`
+ *    and `id` / `ts` stay `null`, because no record was written.
+ */
+export type CkMethod = 'accept_all' | 'reject_all' | 'custom' | 'linked' | 'geo' | null;
 
 /** Public consent state, as returned by `getState()`. */
 export interface CkState {
@@ -345,6 +354,54 @@ export interface CkConfig {
    * into the block map under the row's own category.
    */
   services?: CkService[];
+  /** v0.5.17 (SPEC V1.19 §2). How one consent travels between your domains. */
+  consent?: CkConsentConfig;
+  /** v0.5.17 (SPEC V1.19 §1). Which visitors are shown the banner. */
+  geo?: CkGeoConfig;
+}
+
+/** v0.5.17 (SPEC V1.19 §2). */
+export interface CkConsentConfig {
+  /**
+   * §2.1. Write the consent cookie on the registrable domain rather than the
+   * exact host, so sibling subdomains share one decision. The domain is found
+   * by probing candidate parents shortest-first and keeping the first the
+   * browser accepts; `localhost` and IP literals get no `domain=`. Default
+   * `false`, and with it `false` the cookie is written exactly as before.
+   */
+  shareSubdomains?: boolean;
+  /**
+   * §2.2. Hosts (no scheme) that belong to you. A click on a link to one of
+   * them — or to any of its subdomains — appends the current decision as a
+   * `#ck_consent=` fragment, which the receiving page adopts as
+   * `method: 'linked'` when it is under 10 minutes old, validates, and comes
+   * from a linked referrer (or none). At most 10 are honoured.
+   */
+  linkedDomains?: string[];
+}
+
+/** v0.5.17 (SPEC V1.19 §1). */
+export interface CkGeoConfig {
+  /**
+   * `'all'` (default) shows the banner to everyone. `'list'` shows it only to
+   * visitors from `countries`; the rest get an all-granted page load that is
+   * deliberately not persisted, so a later visit from a listed country still
+   * asks. An unknown country is always in scope.
+   */
+  mode?: 'all' | 'list';
+  /** ISO-3166-1 alpha-2 codes, matched case-insensitively. */
+  countries?: string[];
+}
+
+/**
+ * v0.5.17. The geo decision for this page load, published on
+ * `ConsentKit._geo`. `country` is the ISO2 from the service's `x-ck-country`
+ * response header (`null` when unknown); `inScope` is what `init()` concluded.
+ * `null` before `init()` has run.
+ */
+export interface CkGeoState {
+  country: string | null;
+  inScope: boolean;
 }
 
 /** Detail payload of `ck:init`. */
@@ -401,6 +458,14 @@ export interface ConsentKitApi {
    * later insertion is classified against the extended map.
    */
   _extendHostDb(map: Record<string, CkCategory>): number;
+
+  /**
+   * v0.5.17 (SPEC V1.19 §1.4). The geo decision for this page load. `null`
+   * until `init()` has run. Read it to find out why a banner is (or is not)
+   * on the page: `inScope === false` is the one case where there is no banner
+   * and no stored decision.
+   */
+  _geo: CkGeoState | null;
 
   /**
    * v0.4.0 (§2). The built-in strict-mode allowlist, as hosts plus a few

@@ -175,18 +175,48 @@
     return null;
   }
 
-  function writeCache(etag, config) {
+  // SPEC V1.19 §1.4 — the cache entry gains `country`, so a warm load knows
+  // where the visitor is without waiting for a network round trip. It is the
+  // country of the LAST SUCCESSFUL fetch; background revalidation refreshes it,
+  // which is what makes a visitor who crossed a border see the banner on their
+  // second page rather than never.
+  function writeCache(etag, config, country) {
     try {
-      lsSet(cacheKey, JSON.stringify({ etag: etag || null, savedAt: new Date().toISOString(), config: config }));
+      lsSet(cacheKey, JSON.stringify({
+        etag: etag || null,
+        savedAt: new Date().toISOString(),
+        config: config,
+        country: country || null
+      }));
     } catch (e) { /* noop */ }
   }
 
-  // x-ck-country -> ConsentKit._geo. Informational in V1.0; nothing reads it.
+  /* x-ck-country -> ConsentKit._geo.country. Read by the core's init() to decide
+     whether this visitor is in scope (§1.4), so it MUST be set before initWith.
+
+     A MERGE, not a replacement: on a warm cache the core has already run and
+     written `{ country, inScope }`, and the background revalidation lands here
+     afterwards. Overwriting the object would blank `inScope`, and `undefined`
+     reads as "not false" to ck-ui and the debug panel — the banner would appear
+     for an out-of-scope visitor on exactly the loads that are supposed to be
+     the fast ones. Returns the country so the caller can cache it. */
   function storeGeo(res) {
+    var c = null;
     try {
-      var c = res && res.headers && res.headers.get ? res.headers.get('x-ck-country') : null;
-      if (c) { CK._geo = { country: String(c) }; }
+      c = res && res.headers && res.headers.get ? res.headers.get('x-ck-country') : null;
     } catch (e) { /* header not exposed by CORS */ }
+    if (!c) { return null; }
+    c = String(c);
+    setGeoCountry(c);
+    return c;
+  }
+
+  function setGeoCountry(c) {
+    try {
+      var g = (CK._geo && typeof CK._geo === 'object') ? CK._geo : {};
+      g.country = c;
+      CK._geo = g;
+    } catch (e) { /* noop */ }
   }
 
   function configUrl() { return apiBase + '/v1/config/' + encodeURIComponent(siteId) + '.json'; }
@@ -233,7 +263,60 @@
     activeConfig = config;
     applyHostDb(config);
     try { CK.init(config); } catch (e) { error('init() failed: ' + (e && e.message)); }
+    /* Deferred to a microtask, and that is not cosmetic: on the CACHED path
+       initWith() runs while this file is still executing its top level, so the
+       journal's own `pending` array and `seen` map further down are hoisted but
+       still undefined — recording inline would throw into the catch inside
+       record() and silently post nothing. A microtask resolves after the file
+       finishes and before any network could, so the beacon still leaves on this
+       page load. A page without Promise (nothing modern lacks it) simply loses
+       the geo row rather than the page. */
+    try { global.Promise.resolve().then(recordInitDecision); }
+    catch (e) { /* no Promise: skip the record rather than break the page */ }
     if (why) { /* reserved for diagnostics */ }
+  }
+
+  /* SPEC V1.19 §1.1 / §2.2 — the two decisions the CORE makes inside init(),
+     rather than the visitor making them by clicking.
+
+     They cannot be left to the ck:consent listener at the bottom of this file,
+     because on the CACHED path that listener is not attached yet: the boot block
+     runs `initWith()` synchronously while the file is still executing, so any
+     event dispatched from inside init() lands on a document nobody is listening
+     to. The cold path does reach the listener (initWith runs from a promise
+     callback, long after), which is why the bug would only ever show up for
+     returning visitors. Recording explicitly here covers both paths, and
+     record()'s own `seen` map — keyed on id|ts|method — makes the double call on
+     the cold path a no-op instead of a duplicate row.
+
+     'geo' is once per SESSION, not per page load: a visitor outside the banner's
+     scope browsing ten pages is one fact about one visit, and ten identical rows
+     would be noise the site owner pays to store. 'linked' is a real decision and
+     goes through the normal id/ts idempotency instead. */
+  function recordInitDecision() {
+    try {
+      if (!logTarget()) { return; }
+      var s = CK.getState ? CK.getState() : null;
+      if (!s || !s.method) { return; }
+      if (s.method === 'linked') { record(s, false); return; }
+      if (s.method !== 'geo') { return; }
+      if (ssGet(GEO_FLAG)) { return; }
+      ssSet(GEO_FLAG, '1');
+      record(s, false);
+    } catch (e) { /* never break the host page */ }
+  }
+
+  var GEO_FLAG = 'ck_geo_logged';
+
+  // sessionStorage throws outright in some privacy modes and is simply absent in
+  // a non-browser harness. A visitor whose browser refuses it gets one beacon
+  // per page load instead of one per session — the degradation is duplicate
+  // rows, never a thrown error on someone's site.
+  function ssGet(k) {
+    try { return global.sessionStorage ? global.sessionStorage.getItem(k) : null; } catch (e) { return null; }
+  }
+  function ssSet(k, v) {
+    try { global.sessionStorage && global.sessionStorage.setItem(k, v); } catch (e) { /* noop */ }
   }
 
   /* SPEC §1.4 — one loader's config failed. What follows depends entirely on
@@ -325,15 +408,15 @@
     }
 
     global.fetch(configUrl(), opts).then(function (res) {
-      storeGeo(res);
-      if (res.status === 304) { finish(onOk, { notModified: true }); return; }
+      var country = storeGeo(res);
+      if (res.status === 304) { finish(onOk, { notModified: true, country: country }); return; }
       if (res.status === 404) { finish(onFail, 'site not found (404)'); return; }
       if (!res.ok) { finish(onFail, 'HTTP ' + res.status); return; }
       var newEtag = null;
       try { newEtag = res.headers && res.headers.get ? res.headers.get('etag') : null; } catch (e) { /* noop */ }
       res.json().then(function (cfg) {
         if (!cfg || typeof cfg !== 'object') { finish(onFail, 'malformed config body'); return; }
-        finish(onOk, { config: cfg, etag: newEtag });
+        finish(onOk, { config: cfg, etag: newEtag, country: country });
       }, function () { finish(onFail, 'config is not valid JSON'); });
     }, function (err) {
       var aborted = err && (err.name === 'AbortError');
@@ -343,6 +426,12 @@
 
   var cached = readCache();
   if (cached) {
+    // SPEC V1.19 §1.4 — the cached country, published BEFORE initWith so the
+    // core's geo decision on this warm load is made against it. An entry written
+    // by 0.5.16 has no `country` key at all; that reads as "unknown", which the
+    // core treats as in scope (banner shown) until the revalidation below fills
+    // it in for the next load.
+    if (cached.country) { setGeoCountry(String(cached.country)); }
     // Cache hit: init synchronously, then revalidate in the background.
     initWith(cached.config, 'cache');
     // cache:'no-cache' is REQUIRED here and deliberately differs from the cold
@@ -355,11 +444,22 @@
     // Do not "unify" the two modes: on the cold path the HTTP cache is a
     // legitimate saving, because there is nothing cached to go stale against.
     fetchConfig(cached.etag, 'no-cache', function (r) {
-      if (r.notModified) { return; }
+      /* SPEC V1.19 §1.4 — a 304 still carried a fresh x-ck-country header, and
+         that is the whole point of revalidating for geo: the config did not
+         change, but the visitor may have crossed a border since the entry was
+         written. Re-cache the country against the config already in the entry.
+         The DECISION is not revisited on this page load — init() has run and
+         re-deciding would swap the banner in mid-view — it applies next load. */
+      if (r.notModified) {
+        if (r.country && r.country !== cached.country) {
+          writeCache(cached.etag, cached.config, r.country);
+        }
+        return;
+      }
       // Fresh config is cached but NOT applied now: init() is idempotent and
       // re-initialising would swap ConsentKit.config identity mid-session.
       // It takes effect on the next page load.
-      writeCache(r.etag, r.config);
+      writeCache(r.etag, r.config, r.country || cached.country);
       // `hostdb` is the deliberate exception. Extending the map has exactly the
       // semantics _extendHostDb documents for a call after init(): nothing
       // already inserted is re-evaluated, but everything inserted from now on
@@ -378,7 +478,9 @@
       // and now goes through the same arbitration: another snippet may still be
       // holding a usable config.
       if (r.notModified || !r.config) { settleFail('empty response without cache'); return; }
-      writeCache(r.etag, r.config);
+      // Cold path: storeGeo() has already published the country on
+      // ConsentKit._geo, so the core's init() below decides against it.
+      writeCache(r.etag, r.config, r.country);
       initWith(r.config, 'network');
     }, settleFail);
   }

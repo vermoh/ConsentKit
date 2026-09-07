@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.16
+Stable tag: 0.5.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,22 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.17 =
+* Geo rules: geo = { mode: 'list', countries: ['MD','DE'] } shows the banner
+  only to visitors from those countries. Everyone else gets an all-granted page
+  load that is deliberately NOT saved — no cookie, no localStorage — so the same
+  person visiting later from a listed country is asked properly. An unknown
+  country always sees the banner. One journal record per session, method 'geo'.
+* One consent across subdomains: consent.shareSubdomains writes the consent
+  cookie on the registrable domain, so shop.example.com and blog.example.com
+  share a decision. Off by default; with it off the cookie is written exactly as
+  0.5.16 wrote it.
+* One consent across separate domains: consent.linkedDomains (up to 10 hosts)
+  carries the decision in the link the visitor clicks and adopts it on arrival
+  as method 'linked' — only when it is under 10 minutes old, validates, and
+  comes from a linked referrer or none. Anything else is ignored silently.
+* Debug panel: a country / banner-decision row and a linked-domains count.
 
 = 0.5.16 =
 * Cookie purposes in the visitor's language: cookieTable[].purpose accepts

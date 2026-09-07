@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.16).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.17).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -202,6 +202,10 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `blocking.mode` | `"known" \| "strict"` | `"known"` | `strict` also holds back unknown third-party scripts and iframes — see [Strict mode](#strict-mode) |
 | `blocking.allow` | `string[]` | `[]` | Hosts strict mode must never intercept. Matched by suffix, so `partner.com` also covers `cdn.partner.com` |
 | `blocking.placeholders` | `boolean` | `true` | v0.5.7. Draw a card in place of an embed held back before consent — see [Placeholders for blocked embeds](#placeholders-for-blocked-embeds). `false` restores the pre-0.5.7 behaviour: the frame is still blocked, just invisible |
+| `consent.shareSubdomains` | `boolean` | `false` | v0.5.17. Write the consent cookie on the registrable domain, so `shop.example.com` and `blog.example.com` share one decision — see [One consent across domains](#one-consent-across-domains) |
+| `consent.linkedDomains` | `string[]` | `[]` | v0.5.17. Up to 10 hosts (no scheme) that belong to you. A click on a link to one of them carries the visitor's decision across in the URL fragment — see [One consent across domains](#one-consent-across-domains) |
+| `geo.mode` | `"all" \| "list"` | `"all"` | v0.5.17. `list` shows the banner only to visitors from `geo.countries`; everyone else gets an unsaved all-granted page load — see [Geo rules](#geo-rules) |
+| `geo.countries` | `string[]` | `[]` | v0.5.17. ISO-3166-1 alpha-2 codes, matched case-insensitively. Only read when `geo.mode` is `"list"` |
 | `hostdb` | `Record<string, Category>` | — | Extra `host: category` pairs merged into the tracker database, applied before the initial scan. SaaS mode fills this from the service; `ConsentKit._extendHostDb()` does the same at any later point |
 | `cookieTable` | `CkCookieTableEntry[]` | `[]` | Declared cookies, listed per category in the panel. v0.5.16: `purpose` may be a per-language object and `expiryDays` a number of days — see below |
 | `services` | `CkService[]` | `[]` | v0.5.8. Third-party services the site declares. Each gets its own toggle inside its category group in the panel, and can be refused individually — see [Services](#services). At most 50 |
@@ -664,7 +668,7 @@ All methods are safe to call at any time and never throw.
   policyVersion: '1',
   categories: { necessary: true, functional: false, analytics: false, marketing: false },
   services: {},            // v0.5.8. Per-service refusals ONLY: { hotjar: false }
-  method: null             // 'accept_all' | 'reject_all' | 'custom'
+  method: null             // 'accept_all' | 'reject_all' | 'custom' | 'linked' | 'geo'
 }
 ```
 
@@ -978,6 +982,107 @@ The decision is stored in a `ck_consent` cookie (base64 JSON, `path=/`,
 discarded — and the banner shown again — when `policyVersion` changes or the TTL
 expires.
 
+## Geo rules
+
+*Since v0.5.17.* By default every visitor sees the banner. `geo` narrows that to
+a list of countries:
+
+```js
+ConsentKit.init({
+  geo: { mode: 'list', countries: ['MD', 'RO', 'DE', 'FR'] }
+});
+```
+
+The country comes from the `x-ck-country` response header the hosted service
+sets on the config request, and is read **before** the banner would render, so
+nothing flashes. `ConsentKit._geo` holds `{ country, inScope }` for the page.
+
+For a visitor **outside** the list:
+
+- the banner does not appear (the floating «cookie settings» button still does,
+  so they can open the panel and decide for themselves at any time);
+- every category is granted **for this page load only** — trackers run and
+  Consent Mode receives granted signals;
+- **nothing is written down.** No cookie, no `localStorage`. `getState()` keeps
+  reporting `decided: false` with `method: 'geo'`, so the same person visiting
+  later from a country on the list gets a real banner rather than a consent they
+  never gave;
+- the journal receives one record with `method: 'geo'` per session, not per page.
+
+If the country is **unknown** — a standalone page with no hosted config, a CORS
+setup that does not expose the header — the visitor is treated as in scope and
+the banner is shown. Showing a banner to someone who did not need one costs a
+click; hiding it from someone who did is a compliance failure, so the default
+falls that way deliberately. The same applies to `mode: 'list'` with an empty
+`countries` array.
+
+A stored decision always wins: geo never overrides a choice the visitor has
+already made.
+
+> Geo rules decide **who is asked**, not what the law requires. Picking a short
+> list is a decision for you and your lawyer, not for this library.
+
+## One consent across domains
+
+*Since v0.5.17.* Two independent switches, both off by default.
+
+### Subdomains
+
+```js
+ConsentKit.init({ consent: { shareSubdomains: true } });
+```
+
+The consent cookie is written on the registrable domain (`.example.com`) instead
+of the exact host, so `shop.example.com` and `blog.example.com` read the same
+decision and the visitor is asked once.
+
+The registrable domain is found by probing: candidate parent domains are tried
+**shortest first** and the first one the browser actually accepts is kept. That
+matters for multi-label suffixes — on `a.b.example.co.uk` the browser silently
+refuses `.co.uk`, so the first candidate that sticks is `.example.co.uk`, which
+is the right answer. `localhost` and IP addresses get no `domain=` at all.
+
+Because a sibling subdomain can now write the cookie, reading changes too: when
+the cookie and `localStorage` disagree, the record with the newer `ts` wins.
+With the switch off, the old cookie-first order is kept exactly.
+
+### Separate domains
+
+```js
+ConsentKit.init({
+  consent: { linkedDomains: ['example.ro', 'example-shop.com'] }
+});
+```
+
+Different registrable domains cannot share a cookie, so the decision travels in
+the link the visitor clicks. On a click on an `<a href>` pointing at a linked
+host (or any of its subdomains), ConsentKit appends
+`#ck_consent=<base64url payload>` to the href just before the navigation. The
+payload carries a version, a timestamp and the categories plus any per-service
+refusals — no id, no personal data.
+
+On the receiving page the fragment is adopted as the visitor's decision — no
+banner, a normal stored record, `method: 'linked'`, one journal row — but only
+when **all** of these hold:
+
+- the timestamp is within 10 minutes (in either direction);
+- the payload validates: version `1`, all three categories present as booleans,
+  services as a denial map;
+- `document.referrer` is one of the linked hosts, **or** empty (a strict
+  `Referrer-Policy` legitimately sends none).
+
+Anything else is ignored silently and the banner shows as usual. The fragment is
+then removed with `history.replaceState`, leaving the rest of the fragment
+intact.
+
+At most 10 hosts are honoured, written without a scheme. Only `http`/`https`
+links are touched; `mailto:`, `tel:` and the like are left exactly as authored.
+
+Worth being clear about the threat model: a forged fragment can only ever
+**grant** consent on the page the visitor is already looking at — the same thing
+the «Accept all» button does. It cannot read anything, and it is validated
+against the schema above regardless.
+
 ## Branding
 
 By default the banner shows a small "Made by E-COM Consult" attribution line,
@@ -1016,7 +1121,7 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.16, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
+ConsentKit 0.5.17, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
@@ -1196,9 +1301,9 @@ the server as a 400:
 |---|---|---|
 | `siteId`, `key` | yes | The site id and the log key from the config |
 | `cfg` | yes | Version of the config the decision was made under |
-| `id`, `ts` | yes | uuid and ISO timestamp of the record. A withdrawal gets a fresh pair |
+| `id`, `ts` | yes | uuid and ISO timestamp of the record. A withdrawal gets a fresh pair, and so does a `geo` record — nothing was stored, so there is no id to reuse |
 | `categories` | yes | Exactly three booleans: `functional`, `analytics`, `marketing`. `necessary` is not part of the schema |
-| `method` | yes | `accept_all` \| `reject_all` \| `custom` \| `withdraw` |
+| `method` | yes | `accept_all` \| `reject_all` \| `custom` \| `withdraw` \| `linked` \| `geo`. v0.5.17: `linked` is a decision adopted from a link on one of your other domains; `geo` is the one-per-session record that a visitor was outside the banner's geo scope — see [Geo rules](#geo-rules) and [One consent across domains](#one-consent-across-domains) |
 | `lang`, `layout` | when resolved | The language and layout the visitor actually saw |
 | `services` | only on `custom` | v0.5.8. The ids the visitor refused, sent only when the list is non-empty. Capped at 50 ids of at most 64 characters |
 
@@ -1219,6 +1324,32 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.17
+
+- **Geo rules.** `geo: { mode: 'list', countries: ['MD', 'DE'] }` shows the
+  banner only to visitors from those countries. Everyone else gets an
+  all-granted page load that is deliberately **not saved** — no cookie, no
+  `localStorage`, `decided: false` — so the same person visiting later from a
+  country on the list is asked properly. The country comes from the
+  `x-ck-country` header of the config request, read before the banner would
+  render and cached alongside the config, and an unknown country always shows
+  the banner. The journal gets one `method: 'geo'` record per session.
+  `ConsentKit._geo` reports `{ country, inScope }`.
+- **One consent across subdomains.** `consent.shareSubdomains: true` writes the
+  consent cookie on the registrable domain, found by probing candidate parents
+  shortest-first and keeping the first the browser accepts — which is what gets
+  `.example.co.uk` right instead of stopping at the unusable `.co.uk`. Cookie
+  and `localStorage` are then reconciled by the newer `ts`. Off by default, and
+  with it off the cookie is written exactly as 0.5.16 wrote it.
+- **One consent across separate domains.** `consent.linkedDomains: [...]` (up to
+  10 hosts) appends the decision to links pointing at your other domains as a
+  `#ck_consent=` fragment, and adopts one on arrival as `method: 'linked'` when
+  the timestamp is within 10 minutes, the payload validates and the referrer is
+  a linked host (or empty). Anything else is ignored silently; the fragment is
+  stripped with `history.replaceState`, leaving the rest of the hash alone.
+- The debug panel gained a country / banner-decision row and a linked-domains
+  count, in all three languages.
 
 ### 0.5.16
 
@@ -1396,7 +1527,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.16), not a released product.** It is honest about
+**This is a prototype (v0.5.17), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

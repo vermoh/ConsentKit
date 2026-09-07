@@ -2998,10 +2998,29 @@
   }
 
   // Idempotent: safe to call from ck:init, ck:change and right after our own API calls.
+  /* SPEC V1.19 §1.1 — this visitor's country is outside the list the owner
+     chose, so the banner must not appear.
+
+     Read from the core rather than from the state: `decided` deliberately stays
+     FALSE out of scope (the visitor made no choice and none was saved), so the
+     banner/FAB visibility cannot be derived from it. `inScope === false` is
+     tested explicitly — an absent or half-written _geo must read as "in scope"
+     and show the banner, which is the safe direction. */
+  function geoSilent() {
+    try {
+      var g = api() && api()._geo;
+      return !!(g && g.inScope === false);
+    } catch (e) { return false; }
+  }
+
   function syncFromState(state) {
     if (!mounted) return;
     var s = state || safeState();
-    var decided = !!s.decided;
+    // Out of scope the banner is hidden and the floating button IS shown: the
+    // visitor is never asked, but «изменить выбор cookie» must still be one
+    // click away, so they can open the panel and make a real (persisted)
+    // decision if they want one.
+    var decided = !!s.decided || geoSilent();
 
     if (nodes.banner) nodes.banner.classList.toggle('ck-hidden', decided);
     if (nodes.scrim) nodes.scrim.classList.toggle('ck-hidden', decided || !nodes.bannerModal);
