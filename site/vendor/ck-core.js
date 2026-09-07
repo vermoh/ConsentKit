@@ -9,6 +9,29 @@
   'use strict';
 
   if (!global) { return; }
+
+  /* SPEC §1.9 — a second copy of ck.js on the page stands down.
+     A page can carry two snippets: an old page-level block with a dead site id
+     that nobody ever removed, plus the site-wide one. Each <script> loads the
+     WHOLE bundle, so this file runs twice — and without this guard the second
+     run would publish a fresh, uninitialised engine over `window.ConsentKit`.
+     Everything the first engine did stays behind on an object nothing points at
+     any more: its consent state, and the loader that is mid-fetch holding a
+     `CK` reference to it. The page would then end on the default config with a
+     banner drawn from default texts, while the real config was applied to the
+     orphan.
+     Standing down here is also what the two loaders' arbitration in ck-saas.js
+     assumes: `__ckSaas` coordinates them on the premise that both are talking
+     to the SAME core, so `shared.done` genuinely means "this page is
+     initialised" rather than "some object was initialised".
+     The patches, the MutationObserver and the initial scan are already live
+     from the first run; re-installing them would double every interception.
+     `init` is the test rather than mere presence, because ck-ui-branding.js
+     pre-creates a bare `window.ConsentKit = {}` when it happens to load first.
+     That object has no `init`, so we fall through and publish over it exactly
+     as before. */
+  if (global.ConsentKit && typeof global.ConsentKit.init === 'function') { return; }
+
   var doc = global.document;
 
   // ---------------------------------------------------------------------------
@@ -1978,7 +2001,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.13',
+    version: '0.5.14',
     config: config,
 
     init: function (userConfig) {

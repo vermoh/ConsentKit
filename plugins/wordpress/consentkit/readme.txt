@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.13
+Stable tag: 0.5.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,16 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.14 =
+* The loader tolerates a second snippet with a dead site id: the page is
+  driven by the snippet whose config loads; strict fallback only when every
+  snippet fails.
+* A second copy of the script on the same page no longer replaces the first:
+  the second core kept overwriting window.ConsentKit with a fresh, uninitialised
+  engine and the second UI layer mounted a second banner from the built-in
+  defaults. The second copy now stands down and the page mounts exactly one
+  banner, driven by the config the first engine was given.
 
 = 0.5.13 =
 * Host database: fbcdn.net (Facebook SDK chunks and plugin images) is marketing,

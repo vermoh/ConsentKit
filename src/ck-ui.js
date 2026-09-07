@@ -5,6 +5,18 @@
 (function () {
   'use strict';
 
+  /* SPEC §1.9 — the second copy of ck.js on the page draws nothing.
+     Two snippets each load the whole bundle, so this file runs twice. Every
+     copy is its own IIFE with its own `mounted` flag, so a second copy would
+     register a second set of ck:* listeners and mount a second banner into the
+     same #ck-root — the first copy's, which it cannot see. ck-core.js stands
+     down for the same reason; this is the UI half of it.
+     SSR-safe: with no window we behave exactly as before and fall through. The
+     flag is claimed further down, after the `typeof document` guard, so a copy
+     that only ever published the pure `_contrast` helpers into a DOM-less
+     context does not lock out a later copy that could actually render. */
+  if (typeof window !== 'undefined' && window.__ckUiLoaded) { return; }
+
   var OPT_IN = ['functional', 'analytics', 'marketing'];
   var ALL_CATS = ['necessary'].concat(OPT_IN);
 
@@ -2970,6 +2982,11 @@
   // SSR-safe: with no DOM there is nothing to render or listen to, so importing
   // this file in Node is a no-op rather than a throw (mirrors the core).
   if (typeof document === 'undefined') return;
+
+  // Claim the page for this copy (SPEC §1.9, guard at the top of the file).
+  // Here rather than at the top: only now does this copy take ownership of the
+  // listeners and the mount, and only that ownership is worth locking.
+  try { if (typeof window !== 'undefined') { window.__ckUiLoaded = true; } } catch (e) { /* noop */ }
 
   document.addEventListener('ck:init', function (e) {
     var d = (e && e.detail) || {};

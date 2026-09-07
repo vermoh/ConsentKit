@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.13).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.14).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -819,19 +819,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.13, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
+ConsentKit 0.5.14, rebuilt 2026-09-07, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 264,816 | 82,798 | 238,438 |
-| `ready/ru-bar.txt` | ru, ro, en | 266,806 | 83,673 | 240,242 |
-| `ready/ru-box.txt` | ru, ro, en | 266,821 | 83,682 | 240,257 |
-| `ready/ru-box-right.txt` | ru, ro, en | 266,830 | 83,687 | 240,266 |
-| `ready/ru-modal.txt` | ru, ro, en | 266,814 | 83,679 | 240,250 |
-| `ready/eu-bar.txt` | 34 languages | 315,460 | 101,998 | 288,916 |
+| `ready/en-bar.txt` | en | 275,509 | 86,249 | 249,096 |
+| `ready/ru-bar.txt` | ru, ro, en | 277,578 | 87,146 | 250,979 |
+| `ready/ru-box.txt` | ru, ro, en | 277,593 | 87,156 | 250,994 |
+| `ready/ru-box-right.txt` | ru, ro, en | 277,602 | 87,161 | 250,997 |
+| `ready/ru-modal.txt` | ru, ro, en | 277,586 | 87,153 | 250,985 |
+| `ready/eu-bar.txt` | 34 languages | 326,232 | 105,534 | 299,653 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1023,6 +1023,23 @@ Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
 
+### 0.5.14
+
+- **The loader tolerates a second snippet with a dead site id.** A page that
+  carries two `data-ck-id` blocks — a migration that left the old one in place —
+  is driven by the snippet whose config loads; the failing one only warns. The
+  strict fallback is raised solely when *every* snippet fails, never while
+  another is still in flight. The same id twice (Tilda duplicates the head
+  block) initialises once and warns about nothing.
+- **A second copy of the script on the same page no longer replaces the first.**
+  Each snippet loads the whole bundle, so a two-snippet page ran the client
+  twice: the second core published a fresh, uninitialised engine over
+  `window.ConsentKit` and the second UI layer mounted its own banner, leaving
+  the real config applied to an engine nothing pointed at any more — a banner
+  drawn from the built-in defaults. The second copy now stands down: the first
+  engine keeps its state, its DOM patches and its observer, and the page mounts
+  exactly one banner.
+
 ### 0.5.13
 
 - Host database: `fbcdn.net` → marketing (Facebook SDK chunks and plugin images); `aichat.md`, `bubble.aichat.md` → functional (chat widget); `challenges.cloudflare.com` (Cloudflare challenge / Turnstile) and `i.imgur.com` → infrastructure, never held.
@@ -1143,7 +1160,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.13), not a released product.** It is honest about
+**This is a prototype (v0.5.14), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

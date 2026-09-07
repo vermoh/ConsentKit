@@ -272,6 +272,7 @@
       source: 'источник',
       srcSaas: 'SaaS',
       srcInline: 'инлайн',
+      twoSnippets: 'два снипета',
       secConsent: 'Согласие',
       decidedAt: 'решение',
       method: 'способ',
@@ -348,6 +349,7 @@
       source: 'source',
       srcSaas: 'SaaS',
       srcInline: 'inline',
+      twoSnippets: 'two snippets',
       secConsent: 'Consent',
       decidedAt: 'decided',
       method: 'method',
@@ -423,6 +425,7 @@
       source: 'sursă',
       srcSaas: 'SaaS',
       srcInline: 'inline',
+      twoSnippets: 'două fragmente',
       secConsent: 'Consimțământ',
       decidedAt: 'decizie',
       method: 'mod',
@@ -910,14 +913,26 @@
     body.textContent = '';
 
     // 1. Client
+    /* Read straight off _saas rather than through buildReport(): more than one
+       snippet on a page is a fact about the page, not about the report, and it
+       is worth surfacing because the symptom it explains — a banner configured
+       by an id the owner did not expect — is otherwise invisible. */
+    var siteIds = null;
+    try {
+      var ids = CK && CK._saas && CK._saas.siteIds;
+      if (ids && ids.length > 1) { siteIds = ids.join(', '); }
+    } catch (e) { siteIds = null; }
+
     var s1 = section(T.secClient);
-    s1.appendChild(defs([
+    var rows1 = [
       [T.version, r.client.version],
       [T.source, r.client.source === 'saas' ? T.srcSaas : T.srcInline],
-      ['siteId', r.client.siteId],
-      ['policyVersion', r.client.policyVersion],
-      ['ETag', r.client.etag]
-    ]));
+      ['siteId', r.client.siteId]
+    ];
+    if (siteIds) { rows1.push([T.twoSnippets, siteIds]); }
+    rows1.push(['policyVersion', r.client.policyVersion]);
+    rows1.push(['ETag', r.client.etag]);
+    s1.appendChild(defs(rows1));
     body.appendChild(s1);
 
     // 2. Consent

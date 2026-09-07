@@ -64,9 +64,33 @@
       // document.currentScript is correct while this file is executing.
       var cur = doc.currentScript;
       if (cur && cur.getAttribute && cur.getAttribute('data-ck-id')) { return cur; }
+      // Fallback for the exotic case where currentScript is unavailable (an
+      // async injection, an old browser). With two snippets on the page both
+      // loaders would pick the same last tag — which the §1.2 stand-down below
+      // turns into "the second one goes quiet" rather than a double init. Not
+      // ideal, but it degrades in the safe direction, and every real snippet is
+      // a plain synchronous <script> where currentScript is set.
       var all = doc.querySelectorAll('script[data-ck-id]');
       return all && all.length ? all[all.length - 1] : null;
     } catch (e) { return null; }
+  }
+
+  // Every distinct data-ck-id on the page, in document order. Read from the DOM
+  // rather than accumulated across loaders, because on a real page the second
+  // snippet's tag may not be parsed yet when the first loader runs — the last
+  // loader to execute sees them all, and it is the one that matters.
+  function tagIds() {
+    var out = [];
+    try {
+      var all = doc.querySelectorAll('script[data-ck-id]');
+      if (!all) { return out; }
+      for (var i = 0; i < all.length; i++) {
+        var id = '';
+        try { id = String(all[i].getAttribute('data-ck-id') || '').trim(); } catch (e2) { id = ''; }
+        if (id && out.indexOf(id) === -1) { out.push(id); }
+      }
+    } catch (e) { /* noop */ }
+    return out;
   }
 
   var tag = findOwnTag();
@@ -85,6 +109,54 @@
   if (!CK || typeof CK.init !== 'function') {
     error('ConsentKit core not found on the page. Load ck-core.js before ck-saas.js.');
     return;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shared state across every loader on the page (SPEC §1.1)
+  // ---------------------------------------------------------------------------
+  /* A page can carry more than one snippet: a site migrated between two ids and
+     the old block was never removed, an agency pasted its own on top of the
+     client's. Each copy of this file is a separate IIFE with its own closure, so
+     the only thing they can agree on is a global.
+
+     `pending` here counts CONFIG FETCHES still in flight — deliberately not the
+     same thing as the beacon queue further down, which is also called `pending`
+     but lives in this file's closure and is what _saas.pending() reports.
+
+     `warnedDup` and `activeId` are not in the spec's field list, but the once-
+     only duplicate warning and the "driven by snippet X" message have nowhere
+     else to live: whichever loader speaks last would otherwise repeat the
+     warning, and the loser needs the winner's id. */
+  var shared = global.__ckSaas;
+  if (!shared || typeof shared !== 'object') {
+    shared = global.__ckSaas = { pending: 0, done: false, ids: [], failures: [] };
+  }
+  if (!shared.ids || typeof shared.ids.length !== 'number') { shared.ids = []; }
+  if (!shared.failures || typeof shared.failures.length !== 'number') { shared.failures = []; }
+
+  /* SPEC §1.2 — the same id twice is Tilda duplicating the head block, not two
+     snippets. It is not a misconfiguration, so it must not warn; but it must
+     also not fetch or initialise a second time, or the page would pay for two
+     config requests and CK.init() would run twice. Stand down silently, and
+     BEFORE pending++ so the vanished loader cannot hold the strict fallback
+     hostage in §1.4. */
+  if (shared.ids.indexOf(siteId) !== -1) { return; }
+  shared.ids.push(siteId);
+  shared.pending++;
+
+  var allIds = tagIds();
+  // A tag whose loader has not executed yet is still a snippet on this page.
+  for (var ai = 0; ai < shared.ids.length; ai++) {
+    if (allIds.indexOf(shared.ids[ai]) === -1) { allIds.push(shared.ids[ai]); }
+  }
+  if (allIds.length > 1 && !shared.warnedDup) {
+    shared.warnedDup = true;
+    var others = [];
+    for (var oi = 0; oi < allIds.length; oi++) {
+      if (allIds[oi] !== siteId) { others.push(allIds[oi]); }
+    }
+    warn('another ConsentKit snippet on this page uses site id ' + others.join(', ') +
+      '; keep one snippet per site');
   }
 
   var cacheKey = CACHE_PREFIX + siteId;
@@ -142,11 +214,62 @@
     } catch (e) { return 0; }
   }
 
+  /* This loader's own config attempt resolves exactly once. Both the cold path
+     and the cached path run through here, and the cached path is the reason the
+     guard exists at all: it settles SUCCESSFULLY the moment the cache is read,
+     and then starts a background revalidation whose failure must not decrement
+     `pending` a second time or push a failure the page never suffered. */
+  var settled = false;
+  function settleOk() {
+    if (settled) { return; }
+    settled = true;
+    shared.done = true;
+    shared.activeId = shared.activeId || siteId;
+    shared.pending--;
+  }
+
   function initWith(config, why) {
+    settleOk();
     activeConfig = config;
     applyHostDb(config);
     try { CK.init(config); } catch (e) { error('init() failed: ' + (e && e.message)); }
     if (why) { /* reserved for diagnostics */ }
+  }
+
+  /* SPEC §1.4 — one loader's config failed. What follows depends entirely on
+     what the OTHER loaders are doing, which is why none of this can be decided
+     locally.
+
+     The case that motivates the whole section: a site has a live snippet and a
+     dead one (an id that was deleted from the account). Before 0.5.14 the dead
+     one's 404 raised the strict fallback and re-initialised the core with
+     everything denied — a working banner replaced by a broken one because of a
+     block nobody had noticed in years. Now the dead snippet only fails; the
+     live snippet still drives the page. */
+  function settleFail(reason) {
+    if (settled) { return; }
+    settled = true;
+    shared.pending--;
+    shared.failures.push(siteId + ': ' + reason);
+
+    if (shared.done) {
+      // Someone else already initialised the page. Touching CK.init() now would
+      // swap ConsentKit.config identity out from under a banner the visitor may
+      // already be looking at.
+      warn('config for ' + siteId + ' unavailable (' + reason + '); the page is driven by snippet ' +
+        (shared.activeId || 'unknown'));
+      return;
+    }
+    if (shared.pending > 0) {
+      // SPEC §1.5: the strict fallback is a last resort, and it is not the last
+      // resort while another snippet may still succeed. CFG_TIMEOUT_MS bounds
+      // that wait — every in-flight fetch aborts by then, so this cannot hang.
+      warn('config for ' + siteId + ' unavailable (' + reason + '); waiting for the other snippet');
+      return;
+    }
+    // Every snippet on the page failed. This is the 0.5.13 behaviour, and for a
+    // single tag the joined list is exactly one entry.
+    initStrict(shared.failures.join('; '));
   }
 
   // Strict FALLBACK: banner shows, every opt-in category stays off, no journal.
@@ -161,13 +284,28 @@
   // Known trackers are still blocked, as always.
   function initStrict(reason) {
     warn('config unavailable (' + reason + ') — strict fallback: banner shown, all opt-in categories denied, journal disabled.');
+    shared.strictFallback = true;
+    // A _saas already published by another loader must learn this too: the
+    // object below is a plain assignment and the last loader to run wins, so a
+    // late publisher would otherwise report strictFallback: false.
+    try { if (CK._saas) { CK._saas.strictFallback = true; } } catch (e) { /* noop */ }
     initWith({ policyVersion: 'strict-fallback' });
   }
 
   // cacheMode: 'default' lets the HTTP cache answer (cold load); 'no-cache'
   // forces a conditional request to the origin (background revalidation).
   function fetchConfig(etag, cacheMode, onOk, onFail) {
-    if (typeof global.fetch !== 'function') { onFail('fetch unsupported'); return; }
+    if (typeof global.fetch !== 'function') {
+      /* Deferred to a microtask rather than called inline. Every other failure
+         path here is already asynchronous, so a synchronous one would be the
+         single case where this loader could reach the strict fallback before a
+         later snippet on the page had a chance to register itself in
+         __ckSaas.pending. A microtask, not a timer: it still resolves before
+         any network could. */
+      try { global.Promise.resolve().then(function () { onFail('fetch unsupported'); }); }
+      catch (e) { onFail('fetch unsupported'); }
+      return;
+    }
     var ctrl = null, timer = null;
     try { ctrl = new global.AbortController(); } catch (e) { ctrl = null; }
     var opts = { method: 'GET', credentials: 'omit', mode: 'cors' };
@@ -236,12 +374,13 @@
     // Cold path: no cached config exists, so the HTTP cache cannot serve a
     // stale one. Default caching is the right economy here.
     fetchConfig(null, null, function (r) {
-      if (r.notModified || !r.config) { initStrict('empty response without cache'); return; }
+      // An empty 304 without a cache to satisfy it is a failure like any other,
+      // and now goes through the same arbitration: another snippet may still be
+      // holding a usable config.
+      if (r.notModified || !r.config) { settleFail('empty response without cache'); return; }
       writeCache(r.etag, r.config);
       initWith(r.config, 'network');
-    }, function (reason) {
-      initStrict(reason);
-    });
+    }, settleFail);
   }
 
   // ---------------------------------------------------------------------------
@@ -421,10 +560,19 @@
     global.addEventListener && global.addEventListener('pagehide', flush, false);
   } catch (e) { /* noop */ }
 
-  // Minimal surface for the demo status panel; not a public API.
+  /* Minimal surface for the demo status panel; not a public API.
+
+     With two loaders this is assigned twice and the last one wins, so nothing
+     that must survive may be read out of this closure: `siteIds` comes from the
+     DOM and `strictFallback` from the shared object, both of which every loader
+     agrees on. `pending()` still reports the BEACON queue — a different counter
+     from __ckSaas.pending, and the one the demo page and the panel already
+     read. */
   CK._saas = {
     siteId: siteId,
     api: apiBase,
+    siteIds: allIds.slice(),
+    strictFallback: shared.strictFallback === true,
     pending: function () { return pending.length; },
     config: function () { return activeConfig; }
   };
