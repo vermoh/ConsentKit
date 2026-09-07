@@ -212,7 +212,7 @@ test('the pricing table has its labels in all three dictionaries', () => {
    render an empty <th> rather than throw. */
 test('every pricing row and plan still has a label in all three dictionaries', () => {
   const ROW_KEYS = ['rowSites', 'rowBranding', 'rowScans', 'rowLog',
-                    'rowAlerts', 'rowLangs', 'rowSupport'];
+                    'rowAlerts', 'rowTeam', 'rowLangs', 'rowSupport'];
   const PLANS = ['Free', 'Starter', 'Business', 'Agency'];
 
   for (const { code } of LANGS) {

@@ -51,10 +51,10 @@
   var PRICE_UNITS = { free: 'month', starter: 'site_month', business: 'month', agency: 'month' };
 
   var PLAN_LIMITS = {
-    free:     { scansManualPerDay: 1,  scheduledScans: false, alerts: false, brandingOff: false, journalCsv: false, journalRetentionDays: 30 },
-    starter:  { scansManualPerDay: 5,  scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 365 },
-    business: { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 730 },
-    agency:   { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 1095 }
+    free:     { scansManualPerDay: 1,  scheduledScans: false, alerts: false, brandingOff: false, journalCsv: false, journalRetentionDays: 30,   team: { members: 1 } },
+    starter:  { scansManualPerDay: 5,  scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 365,  team: { members: 1 } },
+    business: { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 730,  team: { members: 5 } },
+    agency:   { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 1095, team: { members: null } }
   };
 
   /* ══════════════════════════════════════════════════════════════════
@@ -182,7 +182,8 @@
           alerts: limits.alerts,
           brandingOff: limits.brandingOff,
           journalCsv: limits.journalCsv,
-          journalRetentionDays: limits.journalRetentionDays
+          journalRetentionDays: limits.journalRetentionDays,
+          team: limits.team
         }
       );
     });
@@ -221,7 +222,12 @@
         alerts: l.alerts,
         brandingOff: l.brandingOff,
         journalCsv: l.journalCsv,
-        journalRetentionDays: l.journalRetentionDays
+        journalRetentionDays: l.journalRetentionDays,
+        // V1.17: optional — an API older than the team wave sends none, and
+        // teamText() reads a missing key as «only you». Anything but an object
+        // with a null-or-number `members` is dropped rather than trusted.
+        team: (l.team && typeof l.team === 'object' && (l.team.members === null || isNum(l.team.members)))
+          ? { members: l.team.members } : undefined
       });
     }
 
@@ -290,10 +296,22 @@
     ['rowScans',    scansText],
     ['rowLog',      logText],
     ['rowAlerts',   function (d) { return t(d.limits.alerts ? 'yes' : 'no'); }],
+    // SPEC-V1.17: colleagues in the cabinet. `members` counts the owner too,
+    // so 1 means «only you»; null is the agency's «no limit». A payload from
+    // an API older than V1.17 has no `team` at all and reads as «only you».
+    ['rowTeam',     teamText],
     // Not in the payload — the same for every plan, so it stays dictionary-only.
     ['rowLangs',    function () { return t('langsAll'); }],
     ['rowSupport',  function (d) { return t('support' + cap(d.plan)); }]
   ];
+
+  function teamText(d) {
+    var team = d.limits && d.limits.team;
+    var members = team && typeof team === 'object' ? team.members : 1;
+    if (members === null) return t('teamUnlimited');
+    if (typeof members === 'number' && members > 1) return t('teamUpTo').replace('{n}', String(members));
+    return t('no');
+  }
 
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
