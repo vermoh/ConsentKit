@@ -647,7 +647,10 @@
            does; loadStats() replaces the third and fourth tiles when — and
            only when — the live counts have earned their place (sites >= 10,
            consents >= 1000). Never a zero, never an empty <dl>. -->
-      <dl class="stats" id="stats">
+      <!-- data-services carries the catalogue count the build read from
+           site/src/stats.json, so app.js (renderStarter) shows the SAME number
+           in «Коротко о продукте» — it used to be a second literal there. -->
+      <dl class="stats" id="stats" data-services="{{SERVICES}}">
         <div class="stat">
           <dt class="stat__num">34</dt>
           <dd class="stat__label" data-i18n="statsLanguages">языка баннера</dd>

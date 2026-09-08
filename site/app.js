@@ -419,11 +419,17 @@
     var facts = el('div', 'starter__facts');
     facts.appendChild(el('h3', 'starter__facts-head', t('factsTitle')));
 
+    // The services count comes from the «Цифры» block's data-services, which
+    // the build filled from site/src/stats.json — never a literal here: the
+    // literal «64» this replaces was two releases behind the tile above it.
+    var statsHost = $('#stats');
+    var services = statsHost && statsHost.getAttribute('data-services');
     [
       ['34', t('statsLanguages')],
-      ['64', t('statsServices')],
+      [services || '', t('statsServices')],
       [t('factCheckFreeNum'), t('factCheckFree')]
     ].forEach(function (row) {
+      if (!row[0]) return;
       var f = el('div', 'starter__fact');
       f.appendChild(el('span', 'starter__fact-num', row[0]));
       f.appendChild(el('span', 'starter__fact-label', row[1]));

@@ -110,7 +110,7 @@
   "sitesUnlimited": "без лимита",
   "brandingRequired": "обязательна",
   "brandingOptional": "отключается",
-  "scansScheduled": "сами каждую неделю + {n} в день по кнопке",
+  "scansScheduled": "автоматически каждую неделю + {n} в день по кнопке",
   "scansManualOnly": "{n} в день по кнопке",
   "unitScanOne": "{n}",
   "unitScanFew": "{n}",
