@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.18
- * Дата сборки:      2026-09-07
+ * Версия ConsentKit: 0.5.19
+ * Дата сборки:      2026-09-08
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
  * Вид:              box / bottom-right, тема auto, акцент #2B50D8
@@ -131,6 +131,19 @@
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
+    // Meta's client-side «CAPI Parameter Builder»
+    // (/public/client_js/capiParamBuilder/clientParamBuilder.bundle.js). It
+    // reads fbclid, _fbp and _fbc off the page and hands them to the server-side
+    // Conversions API, so it feeds exactly the advertising profile the Meta
+    // Pixel above does — it is merely delivered from an S3 bucket instead of
+    // connect.facebook.net.
+    //
+    // The EXACT bucket host, and nothing shorter. 'amazonaws.com' must never
+    // appear as a bare entry here: it hosts half the internet's OWN assets, and
+    // a bare suffix would rule `marketing` on every one of them at once. For the
+    // same reason nothing broader than this may ever be inserted ABOVE it —
+    // lookupHostMap returns the FIRST match, not the longest.
+    'capi-automation.s3.us-east-2.amazonaws.com': 'marketing',
     'fbcdn.net': 'marketing',                 // Facebook CDN: SDK chunks (static.xx) and plugin images (scontent.*)
     'facebook.net': 'marketing',              // connect.facebook.net covered above
     'analytics.tiktok.com': 'marketing',
@@ -166,6 +179,36 @@
     'facebook.com': 'marketing',              // like/page/comments plugins and iframes
     'instagram.com': 'marketing',             // post and profile embeds
     'cdninstagram.com': 'marketing',          // the embed's own asset host
+    // TikTok's video embed. www.tiktok.com/embed.js pulls in an iframe at
+    // /embed/v2/<id>, and rendering it sets TikTok's own advertising cookies
+    // before anything is played — the same decision as youtube.com above, so
+    // the same category. 'analytics.tiktok.com' higher up is now redundant
+    // under this bare entry and is kept named anyway, the way ingest.sentry.io
+    // is: the Pixel host is what an owner recognises in a report. It matches
+    // first and answers 'marketing' either way, so the order costs nothing.
+    //
+    // The rest of the block is the embed's own infrastructure, and every
+    // regional twin is written out in full — hostMatches is plain suffix
+    // matching with no pattern form, so tiktokcdn-eu.com is not covered by
+    // tiktokcdn.com, the same reasoning as the bitrix24.ru/.com/.eu block
+    // below. None of these hosts serves a shop's own assets, so the bare
+    // registrable domain is the right scope for each:
+    //   *cdn*   assets and the video file itself — p16-common-sign.,
+    //           sf16-website-login.neutral., v45. …/mp4/main.mp4
+    //   *v*     the embed's monitoring endpoint — mon16-….tiktokv.eu
+    //           /monitor_web/settings/browser-settings
+    //   *w*     TikTok's web security SDK — webmssdk16-….tiktokw.eu
+    //           /web/resource, shipped as part of the embed
+    //   ttwstatic.com  the embed library itself, embed_lib_v*.js
+    'tiktok.com': 'marketing',
+    'tiktokcdn.com': 'marketing',
+    'tiktokcdn-eu.com': 'marketing',
+    'tiktokcdn-us.com': 'marketing',
+    'tiktokv.eu': 'marketing',
+    'tiktokv.com': 'marketing',
+    'tiktokw.eu': 'marketing',
+    'tiktokw.com': 'marketing',
+    'ttwstatic.com': 'marketing',
     'sendpulse.com': 'marketing',             // email/push marketing automation
 
     // --- functional ----------------------------------------------------
@@ -371,7 +414,27 @@
     '/ads/ga-audiences': 'marketing',
     '/trackers/ga.js': 'analytics',
     '/trackers/pixel.js': 'marketing',
-    '/trackers/chat.js': 'functional'
+    '/trackers/chat.js': 'functional',
+    // A SELF-HOSTED Bitrix24 serving the same CRM web form that the cloud
+    // bitrix24.* hosts serve in HOST_DB above — but from the company's own
+    // domain (the finding: rdp.ecosanteh.md /bitrix/js/crm/site/form/dist
+    // /app.bundle.min.js and /upload/crm/form/loader_7_vrx27s.js). No host
+    // entry can name that: the domain is the site's own. The path can, and the
+    // claim is identical to the one the bitrix24.* block makes — a lead form
+    // the owner chose, held until the visitor accepts functional.
+    //
+    // Like '/gtag/js' above, these are leading fragments, so they match every
+    // host INCLUDING the site's own — and here that is precisely the point: a
+    // Bitrix form on the site's own domain is the same form. Both keys are
+    // specific to Bitrix's own layout, so an unrelated first-party route is not
+    // going to land on them by accident. The third key is the form's runtime
+    // that the generated loader pulls in (/upload/crm/form/app.js), named as
+    // the exact file rather than a bare '/upload/crm/form/': /upload/ is
+    // where a Bitrix site keeps ALL its media, and only these three files in
+    // it are the CRM form.
+    '/bitrix/js/crm/site/form/': 'functional',
+    '/upload/crm/form/loader_': 'functional',
+    '/upload/crm/form/app.js': 'functional'
   };
 
   // Cookie masks cleared on reject/withdraw, grouped by the category that owns
@@ -2442,7 +2505,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.18',
+    version: '0.5.19',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

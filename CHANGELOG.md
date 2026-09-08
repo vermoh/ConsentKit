@@ -5,6 +5,30 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.19
+
+- Tracker database: **the TikTok embed, Meta's CAPI parameter builder, a
+  self-hosted Bitrix24 form.** `tiktok.com` → marketing, alongside the embed's
+  own hosts — `tiktokcdn.com`, `tiktokcdn-eu.com`, `tiktokcdn-us.com` (assets
+  and the video file), `tiktokv.eu`/`tiktokv.com` (the monitoring endpoint),
+  `tiktokw.eu`/`tiktokw.com` (the web security SDK) and `ttwstatic.com` (the
+  embed library). Rendering `www.tiktok.com/embed.js` sets TikTok's own
+  advertising cookies before anything is played, which is the same decision a
+  YouTube player asks for; every regional twin is written out in full because
+  matching is plain suffix matching with no pattern form.
+  `capi-automation.s3.us-east-2.amazonaws.com` → marketing, the **exact bucket
+  host only**: it is Meta's client-side «CAPI Parameter Builder», which reads
+  `fbclid`, `_fbp` and `_fbc` off the page for the server-side Conversions API —
+  the same advertising profile as the Meta Pixel, delivered from S3.
+  `amazonaws.com` is never named, because it serves ordinary site assets
+  everywhere.
+- Tracker database, **by path**: `/bitrix/js/crm/site/form/`,
+  `/upload/crm/form/loader_` and `/upload/crm/form/app.js` → functional. An
+  on-premise Bitrix24 serves the
+  same CRM lead form the `bitrix24.*` cloud hosts serve, but from the company's
+  own domain, where no host entry can reach it — so it is named by path, which
+  matches every host including the site's own.
+
 ## 0.5.18
 
 - Tracker database: **GrowthBook, Simpals ID, a self-hosted Sentry, Google CSP

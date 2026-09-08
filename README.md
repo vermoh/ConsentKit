@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.18).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.19).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -801,14 +801,14 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **122 hosts** and **11 path rules**, matched by suffix (a
+The database ships **132 hosts** and **14 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 122 | 42 `functional`, 34 `marketing`, 31 `analytics`, 15 `necessary` |
-| `PATH_DB` | 11 | 4 `marketing`, 3 `functional`, 2 `analytics`, 2 `necessary` |
+| `HOST_DB` | 132 | 44 `marketing`, 42 `functional`, 31 `analytics`, 15 `necessary` |
+| `PATH_DB` | 14 | 6 `functional`, 4 `marketing`, 2 `analytics`, 2 `necessary` |
 | `INFRA_DB` | 40 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
@@ -1124,19 +1124,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.18, rebuilt 2026-09-08, uncompressed — gzip on the server cuts
+ConsentKit 0.5.19, rebuilt 2026-09-08, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 334,435 | 105,701 | 308,141 |
-| `ready/ru-bar.txt` | ru, ro, en | 336,619 | 106,651 | 310,139 |
-| `ready/ru-box.txt` | ru, ro, en | 336,634 | 106,655 | 310,154 |
-| `ready/ru-box-right.txt` | ru, ro, en | 336,643 | 106,662 | 310,163 |
-| `ready/ru-modal.txt` | ru, ro, en | 336,627 | 106,656 | 310,147 |
-| `ready/eu-bar.txt` | 34 languages | 388,553 | 126,074 | 362,093 |
+| `ready/en-bar.txt` | en | 338,026 | 106,820 | 311,727 |
+| `ready/ru-bar.txt` | ru, ro, en | 340,210 | 107,776 | 313,725 |
+| `ready/ru-box.txt` | ru, ro, en | 340,225 | 107,782 | 313,740 |
+| `ready/ru-box-right.txt` | ru, ro, en | 340,234 | 107,789 | 313,749 |
+| `ready/ru-modal.txt` | ru, ro, en | 340,218 | 107,783 | 313,733 |
+| `ready/eu-bar.txt` | 34 languages | 392,144 | 127,252 | 365,679 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1327,6 +1327,30 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.19
+
+- Tracker database: **the TikTok embed, Meta's CAPI parameter builder, a
+  self-hosted Bitrix24 form.** `tiktok.com` → marketing, alongside the embed's
+  own hosts — `tiktokcdn.com`, `tiktokcdn-eu.com`, `tiktokcdn-us.com` (assets
+  and the video file), `tiktokv.eu`/`tiktokv.com` (the monitoring endpoint),
+  `tiktokw.eu`/`tiktokw.com` (the web security SDK) and `ttwstatic.com` (the
+  embed library). Rendering `www.tiktok.com/embed.js` sets TikTok's own
+  advertising cookies before anything is played, which is the same decision a
+  YouTube player asks for; every regional twin is written out in full because
+  matching is plain suffix matching with no pattern form.
+  `capi-automation.s3.us-east-2.amazonaws.com` → marketing, the **exact bucket
+  host only**: it is Meta's client-side «CAPI Parameter Builder», which reads
+  `fbclid`, `_fbp` and `_fbc` off the page for the server-side Conversions API —
+  the same advertising profile as the Meta Pixel, delivered from S3.
+  `amazonaws.com` is never named, because it serves ordinary site assets
+  everywhere.
+- Tracker database, **by path**: `/bitrix/js/crm/site/form/`,
+  `/upload/crm/form/loader_` and `/upload/crm/form/app.js` → functional. An
+  on-premise Bitrix24 serves the
+  same CRM lead form the `bitrix24.*` cloud hosts serve, but from the company's
+  own domain, where no host entry can reach it — so it is named by path, which
+  matches every host including the site's own.
 
 ### 0.5.18
 
@@ -1544,7 +1568,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.18), not a released product.** It is honest about
+**This is a prototype (v0.5.19), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.18
+Stable tag: 0.5.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,8 +27,8 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers 116 known tracker hosts and
-  11 path rules.
+  requests them. This is on by default and covers 132 known tracker hosts and
+  14 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
   Analytics, Facebook, Yandex Metrica, Hotjar, TikTok, chat widgets).
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (122 hosts, 11 path rules) and matches by
+* The tracker database is a snapshot (132 hosts, 14 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,22 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.19 =
+* Tracker database: the TikTok video embed -> marketing, host by host
+  (tiktok.com plus the tiktokcdn/tiktokcdn-eu/tiktokcdn-us asset and video
+  hosts, tiktokv.eu/.com monitoring, tiktokw.eu/.com security SDK and
+  ttwstatic.com). Rendering the embed sets TikTok's own advertising cookies,
+  the same decision as a YouTube player; each regional twin is named in full
+  because matching is by suffix with no pattern form.
+  capi-automation.s3.us-east-2.amazonaws.com -> marketing, the exact bucket host
+  only (Meta's client-side CAPI Parameter Builder, which reads fbclid/_fbp/_fbc
+  and feeds the server-side Conversions API; amazonaws.com itself must never be
+  named, as it serves ordinary site assets everywhere).
+* Tracker database, by path: /bitrix/js/crm/site/form/ and
+  /upload/crm/form/loader_ -> functional. A self-hosted Bitrix24 serves the same
+  CRM lead form as the bitrix24.* cloud, but from the company's own domain,
+  where no host entry can reach it.
 
 = 0.5.18 =
 * Tracker database: growthbook.io -> functional (GrowthBook feature flags and
