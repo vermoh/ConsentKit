@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.19).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.20).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -801,15 +801,15 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **132 hosts** and **14 path rules**, matched by suffix (a
+The database ships **140 hosts** and **14 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 132 | 44 `marketing`, 42 `functional`, 31 `analytics`, 15 `necessary` |
+| `HOST_DB` | 140 | 50 `marketing`, 43 `functional`, 31 `analytics`, 16 `necessary` |
 | `PATH_DB` | 14 | 6 `functional`, 4 `marketing`, 2 `analytics`, 2 `necessary` |
-| `INFRA_DB` | 40 | not a category — see [Infrastructure](#infrastructure) |
+| `INFRA_DB` | 43 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
 TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
@@ -1124,19 +1124,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.19, rebuilt 2026-09-08, uncompressed — gzip on the server cuts
+ConsentKit 0.5.20, rebuilt 2026-09-08, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 338,026 | 106,820 | 311,727 |
-| `ready/ru-bar.txt` | ru, ro, en | 340,210 | 107,776 | 313,725 |
-| `ready/ru-box.txt` | ru, ro, en | 340,225 | 107,782 | 313,740 |
-| `ready/ru-box-right.txt` | ru, ro, en | 340,234 | 107,789 | 313,749 |
-| `ready/ru-modal.txt` | ru, ro, en | 340,218 | 107,783 | 313,733 |
-| `ready/eu-bar.txt` | 34 languages | 392,144 | 127,252 | 365,679 |
+| `ready/en-bar.txt` | en | 342,325 | 108,023 | 316,034 |
+| `ready/ru-bar.txt` | ru, ro, en | 344,509 | 108,975 | 318,032 |
+| `ready/ru-box.txt` | ru, ro, en | 344,524 | 108,981 | 318,047 |
+| `ready/ru-box-right.txt` | ru, ro, en | 344,533 | 108,987 | 318,056 |
+| `ready/ru-modal.txt` | ru, ro, en | 344,517 | 108,981 | 318,040 |
+| `ready/eu-bar.txt` | 34 languages | 396,443 | 128,479 | 369,986 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1327,6 +1327,35 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.20
+
+- Tracker database: **Maestra/Mindbox, the SoundCloud player, Trustindex, a
+  second self-hosted Sentry.** `maestra.io` and `maestra-static.io` → marketing,
+  with `mindbox.ru` and `mindbox.cloud` beside them: Maestra is the
+  international brand of Mindbox, a customer-data platform whose
+  `/scripts/v1/tracker.js` and `/v1.1/customer/track-visit` build a visitor
+  profile for personalised offers and mailings, while `/geo/` and
+  `/client-stats` are the same product's plumbing. `maestra-static.io` is the
+  tracker's own script and asset host and is a separate registrable domain, so
+  it is named in full — matching is plain suffix matching with no pattern form,
+  which is also why both Mindbox TLDs are written out.
+  `w.soundcloud.com` and `api-widget.soundcloud.com` → marketing, **subdomains
+  only**: rendering the embedded player sets SoundCloud's own anonymous-id
+  cookie, which its privacy policy ties to advertising measurement, so it is
+  the YouTube decision rather than the Vimeo one — while `soundcloud.com`
+  itself stays unclassified, because a link to a track is not an embed.
+  `trustindex.io` → functional: `cdn.trustindex.io/loader.js` is the reviews
+  widget an owner puts on the shop's page, and a visitor who declines
+  functional loses the reviews block and nothing else.
+  `sentry.asbis.io` → necessary, the **exact host only** — a self-hosted Sentry
+  belonging to the ASBIS group, carrying crash reports and never a visitor
+  profile. `asbis.io` is never named, because it carries the group's own sites.
+- Infrastructure (§8): `code.iconify.design` and `api.iconify.design` (the icon
+  CDN and its on-demand icon API — the page's own icons, the same class of asset
+  as a font CDN), and `prod-cdn.prod.asbis.io`, the ASBIS group's image and
+  asset CDN. None of them is a decision the visitor makes, so none carries a
+  category.
 
 ### 0.5.19
 
@@ -1568,7 +1597,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.19), not a released product.** It is honest about
+**This is a prototype (v0.5.20), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

@@ -5,6 +5,35 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.20
+
+- Tracker database: **Maestra/Mindbox, the SoundCloud player, Trustindex, a
+  second self-hosted Sentry.** `maestra.io` and `maestra-static.io` → marketing,
+  with `mindbox.ru` and `mindbox.cloud` beside them: Maestra is the
+  international brand of Mindbox, a customer-data platform whose
+  `/scripts/v1/tracker.js` and `/v1.1/customer/track-visit` build a visitor
+  profile for personalised offers and mailings, while `/geo/` and
+  `/client-stats` are the same product's plumbing. `maestra-static.io` is the
+  tracker's own script and asset host and is a separate registrable domain, so
+  it is named in full — matching is plain suffix matching with no pattern form,
+  which is also why both Mindbox TLDs are written out.
+  `w.soundcloud.com` and `api-widget.soundcloud.com` → marketing, **subdomains
+  only**: rendering the embedded player sets SoundCloud's own anonymous-id
+  cookie, which its privacy policy ties to advertising measurement, so it is
+  the YouTube decision rather than the Vimeo one — while `soundcloud.com`
+  itself stays unclassified, because a link to a track is not an embed.
+  `trustindex.io` → functional: `cdn.trustindex.io/loader.js` is the reviews
+  widget an owner puts on the shop's page, and a visitor who declines
+  functional loses the reviews block and nothing else.
+  `sentry.asbis.io` → necessary, the **exact host only** — a self-hosted Sentry
+  belonging to the ASBIS group, carrying crash reports and never a visitor
+  profile. `asbis.io` is never named, because it carries the group's own sites.
+- Infrastructure (§8): `code.iconify.design` and `api.iconify.design` (the icon
+  CDN and its on-demand icon API — the page's own icons, the same class of asset
+  as a font CDN), and `prod-cdn.prod.asbis.io`, the ASBIS group's image and
+  asset CDN. None of them is a decision the visitor makes, so none carries a
+  category.
+
 ## 0.5.19
 
 - Tracker database: **the TikTok embed, Meta's CAPI parameter builder, a

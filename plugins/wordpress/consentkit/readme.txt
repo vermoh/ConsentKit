@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.19
+Stable tag: 0.5.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers 132 known tracker hosts and
+  requests them. This is on by default and covers 140 known tracker hosts and
   14 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (132 hosts, 14 path rules) and matches by
+* The tracker database is a snapshot (140 hosts, 14 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,30 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.20 =
+* Tracker database: maestra.io and maestra-static.io -> marketing, with
+  mindbox.ru and mindbox.cloud beside them. Maestra is the international brand
+  of Mindbox, a customer-data platform: its tracker.js and
+  /v1.1/customer/track-visit build a visitor profile for personalised offers and
+  mailings, and /geo/ and /client-stats are the same product's plumbing. The
+  static host and both Mindbox TLDs are named in full, because matching is by
+  suffix with no pattern form.
+* Tracker database: w.soundcloud.com and api-widget.soundcloud.com -> marketing,
+  subdomains only. The embedded player sets SoundCloud's own anonymous-id cookie
+  on render, which its privacy policy ties to advertising measurement — the same
+  decision a YouTube player asks for. soundcloud.com itself stays unclassified:
+  a link to a track is not an embed.
+* Tracker database: trustindex.io -> functional (the reviews widget rendered on
+  the shop's own page; declining functional costs the visitor the reviews block
+  and nothing else, and it builds no advertising profile).
+* Tracker database: sentry.asbis.io -> necessary, the exact host only. A
+  self-hosted Sentry belonging to the ASBIS group — crash reports, never a
+  visitor profile. asbis.io itself must never be named, as it carries the
+  group's own sites.
+* Infrastructure: code.iconify.design and api.iconify.design (the icon CDN and
+  its on-demand icon API, the page's own icons) and prod-cdn.prod.asbis.io (the
+  ASBIS group's image and asset CDN). Not consent decisions, so no category.
 
 = 0.5.19 =
 * Tracker database: the TikTok video embed -> marketing, host by host

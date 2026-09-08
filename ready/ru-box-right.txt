@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.19
+ * Версия ConsentKit: 0.5.20
  * Дата сборки:      2026-09-08
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -209,7 +209,39 @@
     'tiktokw.eu': 'marketing',
     'tiktokw.com': 'marketing',
     'ttwstatic.com': 'marketing',
+    // SoundCloud's embedded player. w.soundcloud.com serves the widget iframe
+    // and its /player/api.js control script; api-widget.soundcloud.com is the
+    // API that widget talks to. Rendering the player sets SoundCloud's own
+    // anonymous-id cookie before anything is played, and SoundCloud's privacy
+    // policy ties that id to advertising measurement on SoundCloud — so this is
+    // the youtube.com decision above, not the vimeo.com one.
+    //
+    // Subdomains ONLY. soundcloud.com is a normal site an owner may simply link
+    // to, and a bare entry would rule `marketing` on every such link at once.
+    'w.soundcloud.com': 'marketing',
+    'api-widget.soundcloud.com': 'marketing',
     'sendpulse.com': 'marketing',             // email/push marketing automation
+    // Maestra — the international brand of Mindbox: a customer-data platform
+    // and marketing automation tracker. /scripts/v1/tracker.js and
+    // /v1.1/customer/track-visit build a visitor profile that feeds personalised
+    // offers and mailings; /geo/ and /client-stats are the same product's
+    // plumbing, serving the same profile. That is advertising, so `marketing`.
+    //
+    // maestra.io is bare because the domain is dedicated to the product — it
+    // covers api.maestra.io, api.omega.maestra.io and
+    // personalization-speedtest.omega.maestra.io alike. maestra-static.io is a
+    // SEPARATE registrable domain and is not covered by it: it is the tracker's
+    // own script and asset host (/js/byendpoint/<site>.website.js), named for
+    // the same reason fbcdn.net is named beside connect.facebook.net.
+    //
+    // mindbox.ru and mindbox.cloud are the same product under its original
+    // brand (api.mindbox.ru, web.mindbox.ru). Each is written out in full
+    // because hostMatches is plain suffix matching with no pattern form, the
+    // same reasoning as the bitrix24.ru/.com/.eu block below.
+    'maestra.io': 'marketing',
+    'maestra-static.io': 'marketing',
+    'mindbox.ru': 'marketing',
+    'mindbox.cloud': 'marketing',
 
     // --- functional ----------------------------------------------------
     'intercom.io': 'functional',
@@ -301,6 +333,14 @@
     // not the page. Where the experiment's RESULTS are counted — GA4, Mixpanel —
     // those hosts are classified on their own and stay analytics.
     'growthbook.io': 'functional',
+    // Trustindex — the reviews widget a shop puts on its own pages
+    // (cdn.trustindex.io /loader.js renders collected Google and Facebook
+    // reviews). A feature the owner chose, exactly like the 999.md listing
+    // widget above: a visitor who declines functional loses the reviews block
+    // and nothing else. It counts nothing about the visitor and builds no
+    // advertising profile, so it is neither analytics nor marketing. The domain
+    // is dedicated to the product, so the bare entry is the right scope.
+    'trustindex.io': 'functional',
 
     // --- necessary -----------------------------------------------------
     // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
@@ -336,6 +376,16 @@
     //   999.md stays `functional` in its own block above, unaffected by either.
     'simpalsid.com': 'necessary',
     'newsentry.simpals.md': 'necessary',
+    // ASBIS group (ispace.md and its sibling shops). sentry.asbis.io
+    // /api/32/envelope/ is a SELF-HOSTED Sentry — the same crash reporting as
+    // sentry.io above, on the group's own domain, carrying a stack trace and
+    // never a visitor profile. The reasoning is the newsentry.simpals.md one,
+    // host for host: only the EXACT host may be named, because asbis.io carries
+    // the group's own sites and hostMatches is plain suffix matching, so a bare
+    // 'asbis.io' here would rule `necessary` on every one of them at once. For
+    // the same reason nothing broader than this may ever be inserted ABOVE it —
+    // lookupHostMap returns the FIRST match, not the longest.
+    'sentry.asbis.io': 'necessary',
     'paypal.com': 'necessary',
     'paypalobjects.com': 'necessary',         // PayPal button assets
     'paynet.md': 'necessary',                 // Moldovan payment gateway
@@ -609,6 +659,17 @@
     'akamaihd.net',                        // Akamai
     'fastly.net',
     'b-cdn.net',                           // bunny.net
+    // Iconify — the icon CDN (code.iconify.design serves the runtime, e.g.
+    // /2/2.0.0-rc.2/iconify.min.js) and the API it fetches individual icon sets
+    // from on demand (api.iconify.design). These are the PAGE'S OWN icons, the
+    // same class of asset as a font CDN, and nothing a visitor decides.
+    'code.iconify.design',
+    'api.iconify.design',
+    // The ASBIS group's own image and asset CDN, serving its shops' product
+    // photos and CMS media (/s3/cms/site/…svg, /s3size/…webp). The EXACT host:
+    // asbis.io carries the group's own sites, and its self-hosted Sentry is
+    // named separately in HOST_DB as `necessary`.
+    'prod-cdn.prod.asbis.io',
     // --- fonts ----------------------------------------------------------
     'fonts.googleapis.com',
     'fonts.google.com',                    // the catalogue host; some embeds and
@@ -2505,7 +2566,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.19',
+    version: '0.5.20',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.
