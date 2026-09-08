@@ -146,7 +146,11 @@ test('no dictionary key is unused', () => {
   const BUILD_KEYS = ['htmlLang', 'docTitle', 'docDesc', 'pageLanguage',
                       'pages', 'lawIndexTitle', 'lawIndexDesc', 'lawIndexLede', 'lawDated',
                       'statsUpdated', 'statsMonths',
-                      'mockText', 'mockSettings'];
+                      /* The marquee's own-language replica cards (renderMarqueeCard in
+                         build-site.mjs) read all five mock* keys. Until 08.09.2026 the
+                         before/after slider's template used three of them too, which is
+                         why only two were listed here; the slider is gone. */
+                      'mockTitle', 'mockText', 'mockAccept', 'mockReject', 'mockSettings'];
 
   const used = new Set(BUILD_KEYS);
   for (const m of template.matchAll(/\bdata-i18n="([^"]+)"/g)) used.add(m[1]);
@@ -1298,38 +1302,8 @@ test('the marquee stops for prefers-reduced-motion and pauses on hover', () => {
   assert.match(css, /\.marquee-viewport \{[\s\S]*?overflow-x:\s*auto/);
 });
 
-/* ---------------------------------------------------- §2.2 before/after */
-
-test('the before/after handle is a real range input', () => {
-  const template = readTemplate();
-  const html = renderPage(template, DEFAULT_LANG);
-  const ba = html.match(/<section id="before-after"[\s\S]*?<\/section>/)[0];
-
-  // §2.2 asks for keyboard support and aria-valuenow. A range input has both
-  // by construction; a div with listeners would have to reimplement them.
-  assert.match(ba, /<input class="ba__range" type="range"[^>]*min="0"[^>]*max="100"/);
-  assert.match(ba, /aria-label="[^"]+"/, 'the handle has no accessible name');
-
-  assert.match(ba, /ba__pane--before/);
-  assert.match(ba, /ba__pane--after/);
-
-  const dict = readDict(DEFAULT_LANG);
-  for (const k of ['baPillBefore1', 'baPillBefore2', 'baPillAfter1', 'baPillAfter2']) {
-    assert.ok(ba.includes(dict[k]), `the slider is missing the ${k} pill`);
-  }
-  assert.ok(ba.includes(dict.baLede), 'the slider has lost its caption');
-
-  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
-  // Clipped, not resized: the mock inside must not reflow as the handle moves.
-  assert.match(css, /\.ba__pane--before \{[\s\S]*?clip-path:\s*inset\(0 calc\(100% - var\(--ba-pos\)\)/);
-  // The invisible input must stay focusable — display:none would not be.
-  assert.match(css, /\.ba__range \{[\s\S]*?opacity:\s*0/);
-  assert.doesNotMatch(css, /\.ba__range \{[^}]*display:\s*none/);
-
-  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
-  assert.match(app, /wireBeforeAfter/, 'app.js never wires the slider');
-  assert.match(app, /--ba-pos/, 'app.js never moves the handle');
-});
+/* §2.2's before/after slider was removed on 08.09.2026 (owner: after V1.24's
+   product screens it no longer added anything the hero does not show). */
 
 /* ------------------------------------------------------- §2.3/§2.4 CTAs */
 
@@ -1721,7 +1695,6 @@ test('§2: the elements that stopped being red have not become red again', () =>
     '.brand-mark',            // the logo shield: its red lives inside the SVG (the brand, 08.09.2026), never from the accent token
     '.chip',                  // §2: sand fill, dark text
     '.btn--ghost',            // §2: white fill, dark 1px outline
-    '.ba__grip',              // §2: «ручка чёрная»
     '.plan-flag',             // §2: «чёрный с белым текстом»
     '.starter__fact-num'
   ]) {

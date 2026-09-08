@@ -440,38 +440,6 @@
     host.appendChild(facts);
   }
 
-  /* ══════════════════════════════════════════════════════════════════
-     SPEC V1.14 §2.2 — the before / after handle
-
-     All the real work is the <input type=range> in the markup: it brings
-     keyboard support (arrows, Home/End), a focus ring and aria-valuenow with
-     it, which is exactly what §2.2 asks for. This function does one thing —
-     mirror its value onto the --ba-pos custom property that clips the top
-     pane and positions the visible handle. Mouse, touch and pen drags are the
-     input's own behaviour, so there is no pointer code here at all.
-     ══════════════════════════════════════════════════════════════════ */
-
-  function wireBeforeAfter() {
-    var stages = document.querySelectorAll('[data-ba]');
-    for (var i = 0; i < stages.length; i++) {
-      (function (root) {
-        var range = root.querySelector('[data-ba-range]');
-        var stage = root.querySelector('.ba__stage');
-        if (!range || !stage) return;
-
-        function sync() {
-          stage.style.setProperty('--ba-pos', range.value + '%');
-          // aria-valuenow is maintained by the input itself; what a screen
-          // reader still needs is the value in words rather than "50".
-          range.setAttribute('aria-valuetext', range.value + '%');
-        }
-
-        range.addEventListener('input', sync);
-        range.addEventListener('change', sync);
-        sync();
-      }(stages[i]));
-    }
-  }
 
   /* P3-8: one comparison table instead of four cards, so a reader compares
      along a row instead of re-reading four columns for the same seven labels.
@@ -1669,7 +1637,6 @@
   wireTheme();
   wireMenu();
   wireDemo();
-  wireBeforeAfter();
 
   // First init before the UI's setTimeout(...,0) fallback mount, so the very
   // first render already uses the demo layout and language.
