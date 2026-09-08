@@ -71,7 +71,7 @@
   "feat10Title": "Pregătirea pentru lege, punct cu punct",
   "feat10Text": "36 de verificări în cabinet: o parte le confirmă scanerul, restul este o listă scurtă de sarcini cu indicații.",
   "priceTitle": "Tarife",
-  "priceLede": "Planul se aplică organizației, nu unui singur site. Dacă treceți la un plan mai ieftin, site-ul continuă să funcționeze: bannerul rămâne, scanările automate se opresc, iar jos reapare linia despre dezvoltator.",
+  "priceLede": "Planul se aplică contului, nu unui singur site. Business se vinde în pachete de câte 10 site-uri. Dacă treceți la un plan mai ieftin, site-ul continuă să funcționeze: bannerul rămâne, scanările automate se opresc, iar jos reapare linia despre dezvoltator.",
   "priceFoot": "Prețuri în euro, fără TVA. Persoană juridică: E-COM CONSULT PLUS, Republica Moldova.",
   "perMonth": "/ lună",
   "perSitePerMonth": "per site / lună",
@@ -82,7 +82,7 @@
   "planAgency": "Agenție",
   "planFreeNote": "Pentru totdeauna",
   "planStarterNote": "Pentru un singur site",
-  "planBusinessNote": "Pentru agenții și rețele de site-uri",
+  "planBusinessNote": "10 site-uri într-un pachet, apoi pe pachete",
   "planAgencyNote": "Fără limită de site-uri",
   "planCtaFree": "Începeți gratuit",
   "planCtaPaid": "Deschide panoul de control",
@@ -97,6 +97,7 @@
   "rowBranding": "Linia „Made by E-COM Consult”",
   "rowScans": "Scanări",
   "rowLog": "Registru de consimțăminte",
+  "rowAutoUpdate": "Declarația cookie din banner se actualizează singură după scanare",
   "rowAlerts": "E-mail când apare un contor nou",
   "rowLangs": "Limbile bannerului",
   "rowTeam": "Echipă: acces pentru colegi",
@@ -424,5 +425,7 @@
         "Primul punct de pe listă durează aproximativ un minut — introduceți site-ul mai jos și vă trimitem pe e-mail ce am găsit."
       ]
     }
-  ]
+  ],
+  "sitesPack": "10 într-un pachet, pachetele se pot adăuga",
+  "perPackPerMonth": "per 10 site-uri / lună"
 }

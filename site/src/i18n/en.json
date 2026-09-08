@@ -71,7 +71,7 @@
   "feat10Title": "Ready for the law, point by point",
   "feat10Text": "36 checks in the dashboard: the scanner confirms some of them, the rest is a short to-do list with hints.",
   "priceTitle": "Pricing",
-  "priceLede": "A plan covers your organisation, not a single site. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.",
+  "priceLede": "A plan covers your account, not a single site. Business is sold in packs of 10 sites. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.",
   "priceFoot": "Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Moldova.",
   "perMonth": "/ mo",
   "perSitePerMonth": "per site / mo",
@@ -82,7 +82,7 @@
   "planAgency": "Agency",
   "planFreeNote": "Free forever",
   "planStarterNote": "For a single site",
-  "planBusinessNote": "For agencies and site networks",
+  "planBusinessNote": "10 sites per pack, then by the pack",
   "planAgencyNote": "No site limit",
   "planCtaFree": "Start free",
   "planCtaPaid": "Open the dashboard",
@@ -97,6 +97,7 @@
   "rowBranding": "“Made by E-COM Consult” line",
   "rowScans": "Scans",
   "rowLog": "Consent log",
+  "rowAutoUpdate": "Cookie declaration in the banner updates itself after a scan",
   "rowAlerts": "Email when a new tracker appears",
   "rowLangs": "Banner languages",
   "rowTeam": "Team: access for colleagues",
@@ -424,5 +425,7 @@
         "The first step on that list takes about a minute — enter your site below and we will email you what we find."
       ]
     }
-  ]
+  ],
+  "sitesPack": "10 per pack, and you can add packs",
+  "perPackPerMonth": "per 10 sites / mo"
 }

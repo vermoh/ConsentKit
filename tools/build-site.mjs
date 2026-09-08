@@ -140,7 +140,40 @@ export const BUILD_DATE = (() => {
   const env = process.env.CK_BUILD_DATE;
   if (env && /^\d{4}-\d{2}-\d{2}$/.test(env)) return env;
   if (env) throw new Error(`CK_BUILD_DATE must be YYYY-MM-DD, got "${env}"`);
-  return '2026-09-06';
+  /* The default used to be a literal here, and it stayed at 2026-09-06 through
+     two releases while the version tile above it moved on — the site said
+     «0.5.19, обновлено 6 сентября» for a build made on the 8th. The one date
+     that IS maintained per release is the README's size table, whose heading
+     («ConsentKit 0.5.19, rebuilt 2026-09-08») test/readme-sizes.test.mjs
+     forces to be re-measured on every version bump. So the build reads it
+     from there, and insists the line names the CURRENT version: a README
+     still describing the previous release is a release routine with a step
+     missing, which should fail the build rather than ship a stale date. */
+  const readme = readFileSync(join(REPO, 'README.md'), 'utf8');
+  const m = new RegExp(
+    'ConsentKit ' + VERSION.replace(/\./g, '\\.') + ', rebuilt (\\d{4}-\\d{2}-\\d{2})'
+  ).exec(readme);
+  if (!m) {
+    throw new Error(
+      `README.md has no "ConsentKit ${VERSION}, rebuilt YYYY-MM-DD" size-table line — re-measure the size tables for this version first`
+    );
+  }
+  return m[1];
+})();
+
+/* The «N сервисов в базе с готовыми описаниями» tile. The catalogue lives in
+   the private server repository (src/domain/services/cards/*), which this
+   build cannot import; the number arrives through site/src/stats.json, written
+   by the server's `npm run gen:site-stats` from the catalogue itself and
+   guarded there by a parity test. Hand-editing the JSON is the same mistake as
+   the literal «64» this replaces — the tile then counts a release that has
+   already passed. */
+export const SITE_STATS = (() => {
+  const raw = JSON.parse(readFileSync(join(REPO, 'site', 'src', 'stats.json'), 'utf8'));
+  if (!Number.isInteger(raw.services) || raw.services <= 0) {
+    throw new Error('site/src/stats.json: "services" must be a positive integer');
+  }
+  return raw;
 })();
 
 /* «обновлено 6 сентября 2026» — from the dictionary's own pattern and its own
@@ -862,6 +895,7 @@ export function renderPage(template, lang) {
     THEME_BOOT,
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
     VERSION: escapeHtml(VERSION),
+    SERVICES: String(SITE_STATS.services),
     BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
     MARQUEE: renderMarquee(dict, lang),

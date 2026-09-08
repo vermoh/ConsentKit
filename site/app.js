@@ -252,8 +252,13 @@
     box.appendChild(el('span', 'plan-price__num', '€' + d.priceEur));
     // Free carries no unit: «€0 / мес» reads like a bill.
     if (d.priceEur !== 0) {
+      // V1.23 §4: Business's figure is the price of ONE PACK, so «/ мес» alone
+      // would read as the price of the whole plan however many packs are
+      // bought. Same id branch and same reason as sitesText(): the payload has
+      // no pack unit to key on.
       box.appendChild(el('span', 'plan-price__unit',
-        d.priceUnit === 'site_month' ? t('perSitePerMonth') : t('perMonth')));
+        d.plan === 'business' ? t('perPackPerMonth')
+          : d.priceUnit === 'site_month' ? t('perSitePerMonth') : t('perMonth')));
     }
     return box;
   }
@@ -264,6 +269,17 @@
     // so the per-site unit must be read BEFORE null is taken as "unlimited" —
     // otherwise the card would promise unlimited sites at a per-site price.
     if (d.priceUnit === 'site_month') return t('sitesOneEach');
+    // SPEC-V1.23 §4: Business is sold in packs of ten and «до 10» is now
+    // wrong — the ceiling moves in tens, up to a hundred.
+    //
+    // Branched on the plan ID and not on a unit, deliberately. There is no
+    // pack unit to read: `priceUnit` is a stored enum with exactly two values
+    // ('month' | 'site_month'), pinned by the zod schema on PUT
+    // /v1/admin/plans and by the all-or-nothing reject in normalisePayload
+    // above, and adding a third would need a migration that V1.23 §7 rules
+    // out. The id also covers the fallbackPlans() path, where there is no API
+    // answer to carry a unit at all.
+    if (d.plan === 'business') return t('sitesPack');
     if (d.limits.sites === null) return t('sitesUnlimited');
     if (d.limits.sites === 1) return t('sitesOne');
     return fill('sitesUpTo', d.limits.sites);
@@ -295,6 +311,10 @@
     ['rowBranding', function (d) { return t(d.limits.brandingOff ? 'brandingOptional' : 'brandingRequired'); }],
     ['rowScans',    scansText],
     ['rowLog',      logText],
+    // V1.8-C: on every plan with scheduled scans the scanner appends the cookies
+    // it finds to the PUBLISHED banner and switches the category on — the same
+    // gate as the scans row above, and a bigger deal than the letter below it.
+    ['rowAutoUpdate', function (d) { return t(d.limits.scheduledScans ? 'yes' : 'no'); }],
     ['rowAlerts',   function (d) { return t(d.limits.alerts ? 'yes' : 'no'); }],
     // SPEC-V1.17: colleagues in the cabinet. `members` counts the owner too,
     // so 1 means «only you»; null is the agency's «no limit». A payload from
