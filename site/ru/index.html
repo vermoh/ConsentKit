@@ -25,7 +25,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script>(function(){try{var t=localStorage.getItem('ck-site-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<link rel="stylesheet" href="/styles.css?v=20a1cdbe">
+<link rel="stylesheet" href="/styles.css?v=720a09bc">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Что такое согласие на cookie и зачем оно нужно?","acceptedAnswer":{"@type":"Answer","text":"Cookie — это небольшая пометка, которую сайт оставляет в браузере посетителя. По правилам ЕС всё, что не нужно для работы самого сайта, включается только после согласия посетителя, и согласие нужно уметь подтвердить. ConsentKit спрашивает, ждёт ответа и сохраняет решение за вас."}},{"@type":"Question","name":"Правда ли ConsentKit блокирует всё до согласия?","acceptedAnswer":{"@type":"Answer","text":"Почти всё и сразу: официальные коды Google Analytics, Яндекс Метрики, Meta, TikTok и Hotjar останавливаются автоматически, а Google получает сигналы Consent Mode v2 ещё до загрузки тегов. Реже встречаются счётчики, вписанные в страницу вручную обычным тегом \u003cscript src\u003e: их браузер успевает начать загружать, поэтому такой тег нужно один раз пометить атрибутом type=\"text/plain\". Кабинет сам показывает, какие именно, и объясняет, что сделать."}},{"@type":"Question","name":"Где хранятся данные?","acceptedAnswer":{"@type":"Answer","text":"На серверах в Литве, в Европейском союзе. Компания — E-COM CONSULT PLUS, Молдова. Мы храним сам факт согласия и что именно человек выбрал, а не сведения о посетителе."}},{"@type":"Question","name":"Можно ли пользоваться без кабинета?","acceptedAnswer":{"@type":"Answer","text":"Да, и это бесплатно. Программа открыта по лицензии MIT: скачайте файлы, положите к себе на сайт и настройте вручную, без регистрации. Кабинет нужен тем, кому удобнее нажимать кнопки, а не править файлы."}},{"@type":"Question","name":"Как отключить строку «Сделано в E-COM Consult»?","acceptedAnswer":{"@type":"Answer","text":"На платных тарифах строка выключается переключателем в настройках сайта, на бесплатном остаётся. Если вы поставили баннер сами, без кабинета, строку можно убрать в настройках вашей копии. Мы берём деньги за кабинет, сканы и хранение журнала, а не за скрытие строки."}},{"@type":"Question","name":"Что со сканированием чужих сайтов?","acceptedAnswer":{"@type":"Answer","text":"Сканировать можно только свои сайты или сайты клиентов, которые вам это поручили. Поэтому до первого скана сайт нужно подтвердить в кабинете. Сканер ходит бережно и не создаёт нагрузку."}},{"@type":"Question","name":"Что считается одним сайтом?","acceptedAnswer":{"@type":"Answer","text":"Один сайт — это один домен со всем, что на нём есть: example.com и все его страницы. Другой домен — это другой сайт, даже если он ваш и выглядит так же."}},{"@type":"Question","name":"А поддомены?","acceptedAnswer":{"@type":"Answer","text":"Поддомены подключённого домена — shop.example.com, blog.example.com — входят в тот же сайт и лимит не тратят. У них общий баннер и общий журнал согласий с основным доменом."}},{"@type":"Question","name":"Как со счётом и НДС?","acceptedAnswer":{"@type":"Answer","text":"Оплата идёт через Creem: он выставляет счёт и сам считает НДС по вашей стране. Цены на этой странице — без НДС, итоговая сумма видна при оплате, а счёт приходит на почту."}},{"@type":"Question","name":"Можно ли отменить?","acceptedAnswer":{"@type":"Answer","text":"Да, в кабинете и в любой момент. Тариф действует до конца уже оплаченного периода, дальше списаний не будет."}},{"@type":"Question","name":"Что ломается при переходе на тариф дешевле?","acceptedAnswer":{"@type":"Answer","text":"Ничего. Баннер продолжает работать как работал: прекращаются автоматические сканы, возвращается строка о разработчике, а журнал согласий хранится столько, сколько положено новому тарифу. Сайт при этом не выключается."}}]}</script>
 </head>
 <body>
@@ -159,51 +159,60 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
-        <!-- SPEC V1.14 §2.3: a red promise chip instead of the grey eyebrow.
-             It says what the visitor gets and what it costs, which is what the
-             eyebrow's «Открытый код · MIT» never did. -->
-        <p class="chip" data-i18n="heroChip">10 минут · бесплатный тариф навсегда</p>
+        <!-- SPEC V1.24 §2 and §5: the single grey chip becomes two fact pills.
+             The chip said «10 минут · бесплатный тариф навсегда» as one grey
+             line and the two facts inside it read as one soft claim; split
+             into a number and its caption each, they read as two facts. Both
+             numbers already exist elsewhere on the page — «10 минут» is the
+             «Цифры» tile, «€0» is the Starter price — so nothing new is being
+             promised here. The `.chip` rule itself stays in styles.css: it is
+             pinned by the §2 red-dosage test, which asserts the chip is sand
+             and not red. -->
+        <p class="pills">
+          <span class="fact-pill">
+            <span class="fact-pill__num" data-i18n="heroPill1Num">10 минут</span>
+            <span class="fact-pill__label" data-i18n="heroPill1Label">установка</span>
+          </span>
+          <span class="fact-pill">
+            <span class="fact-pill__num" data-i18n="heroPill2Num">€0</span>
+            <span class="fact-pill__label" data-i18n="heroPill2Label">навсегда</span>
+          </span>
+        </p>
         <!-- One accented word, at the end, where the sentence turns: the
              promise is that the ads and analytics keep WORKING. Split into two
              keys so each language can put its own word under the accent —
              the accented word is not the last one in every grammar. -->
         <h1><span data-i18n="heroTitleLead">Сайт соответствует правилам ЕС, а реклама и аналитика продолжают</span> <em class="h1-accent" data-i18n="heroTitleAccent">работать</em></h1>
         <p class="lede" data-i18n="heroLine1">Баннер ставится за десять минут на любой сайт. Посетитель отвечает — и только потом включаются счётчики.</p>
+        <!-- SPEC V1.24 §5: one button, not two. «Посмотреть демо» sent the
+             visitor sideways at the exact moment the page had earned a
+             decision, and it is still reachable — #demo is a section below and
+             a link in the menu panel. -->
         <p class="hero-cta">
           <a class="btn btn--primary" href="#check" data-i18n="ctaCheck">Проверить сайт бесплатно</a>
-          <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">Посмотреть демо</a>
         </p>
         <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.</p>
       </div>
 
-      <!-- Hero mockup: a framed page with a STATIC replica of the default box
-           banner. The real client cannot live here — ck-ui.js mounts one
-           position:fixed shadow root on <body> and can exist only once per
-           page, so the interactive instance stays in «Живое демо» below. The
-           replica copies that banner's own default strings, its 20/700
-           heading, 14px body and three equal 44px buttons, in the same accent.
-           Inert by construction: aria-hidden, and every control is a <span>,
-           so a screen reader hears one banner and the tab order gains nothing. -->
-      <div class="hero-shot" aria-hidden="true">
+      <!-- SPEC V1.24 §5: the grey skeleton replica is replaced by a photograph
+           of the thing itself — the banner running on flufi.pet, a live client
+           site (RUNBOOK). The window frame and its three dots stay, so the
+           picture still reads as «a browser showing someone's site» rather
+           than as a floating rectangle; only the fake page inside it is gone.
+
+           NOT aria-hidden any more. The replica was decoration a screen reader
+           gained nothing from; a real screenshot is content, and it carries
+           its own alt through data-i18n-alt (applyDict cannot reach into a
+           void element with data-i18n). eager + fetchpriority="high": it is
+           the first screen's own image, so lazy-loading it would only delay
+           the largest paint. -->
+      <div class="hero-shot">
         <div class="shot-frame">
-          <div class="shot-bar"><span></span><span></span><span></span></div>
-          <div class="shot-page">
-            <span class="shot-line shot-line--title"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line shot-line--short"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line shot-line--short"></span>
-          </div>
-          <div class="shot-banner">
-            <p class="shot-banner__title" data-i18n="mockTitle">Cookie на этом сайте</p>
-            <p class="shot-banner__text" data-i18n="mockText">Необходимые cookie нужны, чтобы сайт работал. Остальные включаются только с вашего согласия.</p>
-            <div class="shot-banner__actions">
-              <span class="shot-btn shot-btn--accept" data-i18n="mockAccept">Принять всё</span>
-              <span class="shot-btn shot-btn--reject" data-i18n="mockReject">Отклонить всё</span>
-              <span class="shot-btn shot-btn--settings" data-i18n="mockSettings">Настроить</span>
-            </div>
-          </div>
+          <div class="shot-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+          <img class="shot-img" src="/img/hero-site.webp"
+               width="1600" height="1031"
+               loading="eager" decoding="async" fetchpriority="high"
+               alt="Баннер ConsentKit на сайте клиента" data-i18n-alt="heroShotAlt">
         </div>
       </div>
     </div>
@@ -1181,55 +1190,194 @@
   </section>
 
   <!-- ── features ──────────────────────────────────────────────────── -->
-  <!-- Ten benefits, one line each. The mechanics they used to spell out
-       (type="text/plain", dataLayer, Consent Mode signal names) now live in
-       the FAQ blocking answer and in «Для разработчиков» below.
-       Ten cards is 3+3+3+1 at desktop width; the lone last card is centred by
-       a scoped rule in site/styles.css rather than left flush left. -->
+  <!-- SPEC V1.24 §1: ten one-line text cards become six product cards that
+       SHOW the thing, plus a compact «И ещё» row for the four facts that have
+       no screen of their own.
+
+       The ten cards were true and unmemorable: a visitor read «Сканер находит
+       cookie сам» and had no idea what that looked like. Each of the six now
+       carries a fact pill, a heading, a sentence and a real screenshot of the
+       dashboard, tilted so its bottom edge runs under the card's own — the
+       card is `overflow: hidden`, so the picture reads as a window onto
+       something larger rather than as a framed thumbnail.
+
+       Tones cycle cream / sand / dark from the tokens the page already has;
+       §1 forbids introducing a colour, and there is no red in this section. -->
   <section id="features">
     <div class="wrap">
       <h2 data-i18n="featTitle">Что умеет</h2>
-      <div class="cards">
-        <article class="card">
+      <div class="pcards">
+        <article class="pcard pcard--cream">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard1Num">36</span>
+            <span class="fact-pill__label" data-i18n="pcard1Label">пунктов</span>
+          </p>
+          <h3 data-i18n="feat10Title">Готовность к закону по пунктам</h3>
+          <p data-i18n="feat10Text">36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/cabinet-readiness.webp" width="1600" height="1202"
+                 loading="lazy" decoding="async"
+                 alt="Карточка «Готовность к GDPR» в кабинете: семь зон и список пунктов" data-i18n-alt="pshot1Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--sand">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard2Num">каждую неделю</span>
+            <span class="fact-pill__label" data-i18n="pcard2Label">автоскан</span>
+          </p>
+          <h3 data-i18n="feat2Title">Сканер сам находит cookie и обновляет декларацию</h3>
+          <p data-i18n="feat2Text">Обходим страницы сайта, собираем список cookie и трекеров и обновляем его каждую неделю. Новый сервис на сайте — вы узнаёте о нём из кабинета.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/cabinet-scan.webp" width="1600" height="763"
+                 loading="lazy" decoding="async"
+                 alt="Подключение сайта: сканер идёт по фазам и показывает найденное" data-i18n-alt="pshot2Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--dark">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard3Num">каждый ответ</span>
+            <span class="fact-pill__label" data-i18n="pcard3Label">в журнале</span>
+          </p>
+          <h3 data-i18n="feat3Title">Согласие можно доказать</h3>
+          <p data-i18n="feat3Text">Каждый ответ посетителя сохраняется на случай проверки.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/cabinet-stats.webp" width="1600" height="714"
+                 loading="lazy" decoding="async"
+                 alt="Как отвечают посетители: доли ответов, полосы и график по дням" data-i18n-alt="pshot3Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--cream">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard4Num">34</span>
+            <span class="fact-pill__label" data-i18n="pcard4Label">языка</span>
+          </p>
+          <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
+          <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков, остальные посетитель видит на своём.</p>
+          <div class="pcard__shot">
+            <img src="/img/cabinet-texts.webp" width="1114" height="1240"
+                 loading="lazy" decoding="async"
+                 alt="Тексты баннера в кабинете: выбор языка и поля заголовка и описания" data-i18n-alt="pshot4Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--sand">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard5Num">1</span>
+            <span class="fact-pill__label" data-i18n="pcard5Label">страница</span>
+          </p>
+          <h3 data-i18n="pcard5Title">Декларация cookie — своя публичная страница</h3>
+          <p data-i18n="pcard5Text">Список cookie с назначением и сроком хранения живёт на отдельной странице. Ссылку ставят в подвал сайта и в окно настроек баннера.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/declaration.webp" width="1600" height="1017"
+                 loading="lazy" decoding="async"
+                 alt="Публичная страница «Cookie на этом сайте» со списком cookie" data-i18n-alt="pshot5Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--dark">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard6Num">10 минут</span>
+            <span class="fact-pill__label" data-i18n="pcard6Label">установка</span>
+          </p>
+          <h3 data-i18n="feat6Title">Ставится на любой сайт за 10 минут</h3>
+          <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML. В кабинете сразу видно, как баннер увидит посетитель.</p>
+          <div class="pcard__shot">
+            <img src="/img/cabinet-preview.webp" width="1114" height="1410"
+                 loading="lazy" decoding="async"
+                 alt="Предпросмотр «Как увидит посетитель»: живой баннер в редакторе" data-i18n-alt="pshot6Alt">
+          </div>
+        </article>
+      </div>
+
+      <!-- The four facts that have no screen: they are true, they are short,
+           and giving each a screenshot would mean inventing one. A text row
+           under the grid, with its own subheading, is what §1 asks for. -->
+      <h3 class="feat-more__head" data-i18n="featMoreTitle">И ещё</h3>
+      <div class="feat-more">
+        <article class="feat">
           <h3 data-i18n="feat1Title">Счётчики молчат до ответа</h3>
           <p data-i18n="feat1Text">Аналитика и реклама не запускаются, пока посетитель не нажал кнопку.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="feat2Title">Сканер находит cookie сам</h3>
-          <p data-i18n="feat2Text">Мы обойдём страницы сайта и составим готовый список для баннера.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat3Title">Согласие можно доказать</h3>
-          <p data-i18n="feat3Text">Каждый ответ посетителя сохраняется на случай проверки.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat4Title">Баннер знает 34 языка</h3>
-          <p data-i18n="feat4Text">Посетитель видит свой язык, а вы ничего не переводите.</p>
-        </article>
-        <article class="card">
+        <article class="feat">
           <h3 data-i18n="feat5Title">Реклама продолжает работать</h3>
           <p data-i18n="feat5Text">Отказ не выключает Google целиком: он считает без cookie и без опознавания посетителя.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="feat6Title">Ставится на любой сайт</h3>
-          <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
-          <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков.</p>
-        </article>
-        <article class="card">
+        <article class="feat">
           <h3 data-i18n="feat8Title">Кабинет на трёх языках</h3>
           <p data-i18n="feat8Text">Русский, румынский и английский — интерфейс, письма и подсказки сканера. Посетитель видит cookie на своём языке.</p>
         </article>
-        <article class="card">
+        <article class="feat">
           <h3 data-i18n="feat9Title">Команда с ролями</h3>
           <p data-i18n="feat9Text">Коллеги и подрядчики работают с сайтом под своими адресами: редактор настраивает, наблюдатель только смотрит.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="feat10Title">Готовность к закону по пунктам</h3>
-          <p data-i18n="feat10Text">36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.</p>
-        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── compare: on your own / ConsentKit ─────────────────────────── -->
+  <!-- SPEC V1.24 §4. Every row is a fact about US — what we install, how many
+       languages, what the scanner does — set beside the WORK the same result
+       costs by hand. No competitor is named and no other product is graded:
+       the left column describes a job, not a rival, and its tone stays
+       neutral because doing it yourself is a legitimate choice.
+
+       The right column reuses the pricing table's own highlight — sand fill,
+       1px dark border — through a rule of its own rather than by joining
+       `.plan-table .is-featured`'s selector list, which the §2 red test reads
+       by name.
+
+       Deliberately NOT in the menu: the panel holds exactly seven section
+       links and this section is read on the way past, not navigated to. -->
+  <section id="compare">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 data-i18n="compareTitle">Сделать самому или взять готовое</h2>
+        <p class="section-lede" data-i18n="compareLede">Одно и то же можно собрать руками. Ниже — что при этом придётся делать и что уже сделано за вас.</p>
+      </div>
+
+      <!-- Same scroll wrapper the pricing table uses: the table is wider than
+           a phone, and it is the WRAPPER that scrolls, never the page. -->
+      <div class="cmp-scroll">
+        <table class="cmp-table">
+          <caption class="cmp-table__caption" data-i18n="cmpTableCaption">Сделать самому или взять готовое</caption>
+          <thead>
+            <tr>
+              <td class="cmp-table__corner"></td>
+              <th scope="col" data-i18n="cmpColSelf">Своими силами</th>
+              <th scope="col" class="is-featured" data-i18n="cmpColUs">ConsentKit</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <th scope="row" data-i18n="cmpRow1">Установка баннера</th>
+            <td data-i18n="cmpRow1Self">Вёрстка, скрипт блокировки, проверка</td>
+            <td class="is-featured" data-i18n="cmpRow1Us">Одна строка в head, 10 минут</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow2">Языки баннера</th>
+            <td data-i18n="cmpRow2Self">Переводить каждый текст</td>
+            <td class="is-featured" data-i18n="cmpRow2Us">34 языка сразу</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow3">Список cookie</th>
+            <td data-i18n="cmpRow3Self">Собирать и обновлять вручную</td>
+            <td class="is-featured" data-i18n="cmpRow3Us">Сканер находит и обновляет сам</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow4">Журнал согласий</th>
+            <td data-i18n="cmpRow4Self">Своя база и выгрузка</td>
+            <td class="is-featured" data-i18n="cmpRow4Us">Каждый ответ, выгрузка в CSV</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow5">Готовность к закону</th>
+            <td data-i18n="cmpRow5Self">Сверять с текстом закона</td>
+            <td class="is-featured" data-i18n="cmpRow5Us">36 пунктов в кабинете, часть проверяет сканер</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow6">Обновления</th>
+            <td data-i18n="cmpRow6Self">Следить за изменениями самим</td>
+            <td class="is-featured" data-i18n="cmpRow6Us">Приходят с сервера</td>
+          </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -1342,7 +1490,7 @@
 <script src="/vendor/ck-ui.js?v=699de868"></script>
 <!-- Debug panel: inert unless the page is opened with ?ck_debug=1 -->
 <script src="/vendor/ck-debug.js?v=8ac3fba3"></script>
-<script>window.__CK_SITE_I18N={"htmlLang":"ru","docTitle":"ConsentKit — баннер согласия на cookie для сайта","docDesc":"Баннер согласия на cookie, который ставится за десять минут. Спрашивает посетителя до того, как включатся счётчики. 34 языка, Google Consent Mode v2, сканер cookie и журнал согласий. Открытый код MIT.","skip":"К основному содержанию","navSections":"Разделы","navMenu":"Меню","pageLanguage":"Язык страницы","siteThemeLabel":"Тема","siteThemeSystem":"Как в системе","siteThemeLight":"Светлая","siteThemeDark":"Тёмная","navDemo":"Демо","navHow":"Как работает","navFeatures":"Что умеет","navPricing":"Тарифы","navFaq":"Вопросы","navDev":"Разработчикам","ctaCabinet":"Открыть кабинет","ctaCabinetShort":"Кабинет","ctaDemo":"Посмотреть демо","heroLine1":"Баннер ставится за десять минут на любой сайт. Посетитель отвечает — и только потом включаются счётчики.","mockTitle":"Cookie на этом сайте","mockText":"Необходимые cookie нужны, чтобы сайт работал. Остальные включаются только с вашего согласия.","mockAccept":"Принять всё","mockReject":"Отклонить всё","mockSettings":"Настроить","heroNote":"Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.","demoTitle":"Живое демо","demoLede":"Это настоящий баннер, а не картинка. Меняйте вид, положение, тему, цвет и язык — баннер меняется сразу.","fieldLayout":"Вид","layoutBar":"Полоса","layoutBox":"Уголок","layoutModal":"Окно по центру","fieldBannerLang":"Язык баннера","langAuto":"Как на странице","btnShowAgain":"Показать снова","demoHint":"Сбрасывает сохранённый выбор и показывает баннер заново.","statusUndecided":"Выбор: посетитель ещё не ответил.","statusDecided":"Выбор: {cats}.","statusNone":"ничего сверх необходимого","statusBroken":"Демо не запустилось — обновите страницу.","howTitle":"Как это работает","how1Title":"Вставьте строку баннера","how1Text":"Одна строка в head — в настройках конструктора, в шаблоне сайта или через диспетчер тегов. Без сборки и зависимостей.","how2Title":"Нажмите «Проверить»","how2Text":"Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки.","how3Title":"Запустите скан","how3Text":"Сканер обойдёт сайт, найдёт сторонние сервисы и cookie и предложит готовую таблицу для баннера.","how4Title":"Настройте баннер","how4Text":"Первая версия публикуется сама. При желании поправьте цвета, тексты и таблицу в кабинете.","featTitle":"Что умеет","feat1Title":"Счётчики молчат до ответа","feat1Text":"Аналитика и реклама не запускаются, пока посетитель не нажал кнопку.","feat2Title":"Сканер находит cookie сам","feat2Text":"Мы обойдём страницы сайта и составим готовый список для баннера.","feat3Title":"Согласие можно доказать","feat3Text":"Каждый ответ посетителя сохраняется на случай проверки.","feat4Title":"Баннер знает 34 языка","feat4Text":"Посетитель видит свой язык, а вы ничего не переводите.","feat5Title":"Реклама продолжает работать","feat5Text":"Отказ не выключает Google целиком: он считает без cookie и без опознавания посетителя.","feat6Title":"Ставится на любой сайт","feat6Text":"Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML.","feat7Title":"Тексты ваши, оператор ваш","feat7Text":"Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков.","feat8Title":"Кабинет на трёх языках","feat8Text":"Русский, румынский и английский — интерфейс, письма и подсказки сканера. Посетитель видит cookie на своём языке.","feat9Title":"Команда с ролями","feat9Text":"Коллеги и подрядчики работают с сайтом под своими адресами: редактор настраивает, наблюдатель только смотрит.","feat10Title":"Готовность к закону по пунктам","feat10Text":"36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.","priceTitle":"Тарифы","priceLede":"Тариф оформляется на аккаунт, а не на сайт. Business продаётся пакетами по 10 сайтов. Если перейти на тариф дешевле, сайт продолжит работать: баннер остаётся, автоматические сканы прекращаются, внизу снова появляется строка о разработчике.","priceFoot":"Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS, Молдова.","perMonth":"/ мес","perSitePerMonth":"за сайт / мес","byAgreement":"по договору","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Бесплатно навсегда","planStarterNote":"Для одного сайта","planBusinessNote":"10 сайтов в пакете, дальше — по пакетам","planAgencyNote":"Без лимита сайтов","planCtaFree":"Начать бесплатно","planCtaPaid":"Открыть кабинет","planCtaAgency":"Написать","recommended":"Чаще всего берут","priceTableCaption":"Сравнение тарифов ConsentKit: цена, сайты, сканы, журнал согласий, оповещения, языки и поддержка на каждом тарифе.","priceScrollHint":"Таблица прокручивается вбок — так видно все тарифы.","rowPlan":"Тариф","rowPrice":"Цена","rowCta":"Подключение","rowSites":"Сайтов","rowBranding":"Строка «Сделано в E-COM Consult»","rowScans":"Сканы","rowLog":"Журнал согласий","rowAutoUpdate":"Декларация cookie в баннере обновляется сама после скана","rowAlerts":"Письмо, если на сайте появился новый счётчик","rowLangs":"Языки баннера","rowTeam":"Команда: доступ для коллег","teamUnlimited":"без ограничения","teamUpTo":"до {n} человек","rowSupport":"Поддержка","sitesOne":"1","sitesOneEach":"1 (каждый отдельно)","sitesUpTo":"до {n}","sitesUnlimited":"без лимита","brandingRequired":"обязательна","brandingOptional":"отключается","scansScheduled":"автоматически каждую неделю + {n} в день по кнопке","scansManualOnly":"{n} в день по кнопке","unitScanOne":"{n}","unitScanFew":"{n}","unitScanMany":"{n}","logDays":"{n}, без выгрузки","logDaysCsv":"{n}, с выгрузкой в файл","logMonths":"{n}, без выгрузки","logMonthsCsv":"{n}, с выгрузкой в файл","unitDayOne":"{n} день","unitDayFew":"{n} дня","unitDayMany":"{n} дней","unitMonthOne":"{n} месяц","unitMonthFew":"{n} месяца","unitMonthMany":"{n} месяцев","yes":"да","no":"нет","langsAll":"все 34","supportFree":"документация","supportStarter":"почта","supportBusiness":"почта, ответ за 1 рабочий день","supportAgency":"персональный менеджер","whoTitle":"Для кого","who1Title":"Сайты на конструкторах","who1Text":"Файлы загружать некуда — берите самодостаточный блок и вставляйте в поле для кода в head. Одна вставка, никаких плагинов.","who2Title":"WordPress и WooCommerce","who2Text":"Плагин ставится копированием папки, настройки — в админке. Работает и с кэширующими плагинами: баннер не зависит от PHP.","who4Title":"Агентства и свои сайты","who4Text":"Много сайтов в одном кабинете, доступ для коллег с ролями, сканы по расписанию и оповещения о новых трекерах. Условия — по договору.","faqTitle":"Частые вопросы","faq":[["Что такое согласие на cookie и зачем оно нужно?","Cookie — это небольшая пометка, которую сайт оставляет в браузере посетителя. По правилам ЕС всё, что не нужно для работы самого сайта, включается только после согласия посетителя, и согласие нужно уметь подтвердить. ConsentKit спрашивает, ждёт ответа и сохраняет решение за вас."],["Правда ли ConsentKit блокирует всё до согласия?","Почти всё и сразу: официальные коды Google Analytics, Яндекс Метрики, Meta, TikTok и Hotjar останавливаются автоматически, а Google получает сигналы Consent Mode v2 ещё до загрузки тегов. Реже встречаются счётчики, вписанные в страницу вручную обычным тегом \u003cscript src\u003e: их браузер успевает начать загружать, поэтому такой тег нужно один раз пометить атрибутом type=\"text/plain\". Кабинет сам показывает, какие именно, и объясняет, что сделать."],["Где хранятся данные?","На серверах в Литве, в Европейском союзе. Компания — E-COM CONSULT PLUS, Молдова. Мы храним сам факт согласия и что именно человек выбрал, а не сведения о посетителе."],["Можно ли пользоваться без кабинета?","Да, и это бесплатно. Программа открыта по лицензии MIT: скачайте файлы, положите к себе на сайт и настройте вручную, без регистрации. Кабинет нужен тем, кому удобнее нажимать кнопки, а не править файлы."],["Как отключить строку «Сделано в E-COM Consult»?","На платных тарифах строка выключается переключателем в настройках сайта, на бесплатном остаётся. Если вы поставили баннер сами, без кабинета, строку можно убрать в настройках вашей копии. Мы берём деньги за кабинет, сканы и хранение журнала, а не за скрытие строки."],["Что со сканированием чужих сайтов?","Сканировать можно только свои сайты или сайты клиентов, которые вам это поручили. Поэтому до первого скана сайт нужно подтвердить в кабинете. Сканер ходит бережно и не создаёт нагрузку."],["Что считается одним сайтом?","Один сайт — это один домен со всем, что на нём есть: example.com и все его страницы. Другой домен — это другой сайт, даже если он ваш и выглядит так же."],["А поддомены?","Поддомены подключённого домена — shop.example.com, blog.example.com — входят в тот же сайт и лимит не тратят. У них общий баннер и общий журнал согласий с основным доменом."],["Как со счётом и НДС?","Оплата идёт через Creem: он выставляет счёт и сам считает НДС по вашей стране. Цены на этой странице — без НДС, итоговая сумма видна при оплате, а счёт приходит на почту."],["Можно ли отменить?","Да, в кабинете и в любой момент. Тариф действует до конца уже оплаченного периода, дальше списаний не будет."],["Что ломается при переходе на тариф дешевле?","Ничего. Баннер продолжает работать как работал: прекращаются автоматические сканы, возвращается строка о разработчике, а журнал согласий хранится столько, сколько положено новому тарифу. Сайт при этом не выключается."]],"footLegal":"E-COM CONSULT PLUS, Молдова. ConsentKit — открытый код под лицензией MIT.","footLinksLabel":"Ссылки","footWrite":"Написать нам","footCabinet":"Кабинет","devTitle":"Для разработчиков","devLede":"Клиент подключается тремя тегами и настраивается одним вызовом — без сборки и без кабинета.","devFacts":"Открытый код под лицензией MIT, ноль зависимостей, 34 языка, Google Consent Mode v2.","devDocs":"Инструкция по установке","navLaw":"Правила","lawDated":"По состоянию на сентябрь 2026 года. Это общая информация, а не юридическая консультация.","lawIndexTitle":"Правила и cookie","lawIndexDesc":"Простым языком о правилах для сайтов из Молдовы и Румынии: согласие на cookie, GDPR, Google Consent Mode v2 и что бывает без баннера.","lawIndexLede":"Четыре короткие статьи о том, с чем владелец сайта сталкивается на самом деле. Написано для тех, у кого есть сайт, а не для юристов.","checkCaption":"Бесплатная проверка","checkTitle":"Проверьте свой сайт бесплатно","checkLede":"Посмотрим, какие сервисы и cookie загружаются у вас до согласия. Только открытые страницы.","checkDomainLabel":"Адрес сайта","checkDomainPlaceholder":"example.com","checkEmailLabel":"Ваша почта","checkEmailPlaceholder":"you@example.com","checkAgree":"Это мой сайт или я работаю с ним по договору","checkSubmit":"Проверить","checkNote":"Проверяем только открытые страницы. Результат покажем здесь, подробности пришлём на почту.","checkRecent":"Этот сайт сегодня уже проверяли.","checkLimit":"Слишком много проверок с вашего адреса, попробуйте завтра.","checkError":"Не удалось связаться с нами. Проверьте соединение и попробуйте ещё раз.","checkInvalid":"Проверьте адрес сайта.","checkNeedDomain":"Введите адрес вашего сайта.","checkNeedEmail":"Введите почту, куда прислать результат.","checkNeedAgree":"Поставьте галочку, чтобы продолжить.","checkSending":"Отправляем…","statsTitle":"Цифры","statsSites":"сайтов подключено","statsConsents":"согласий записано","statsLanguages":"языка баннера","statsVersion":"версия баннера","statsUpdated":"обновлено {day} {month} {year}","statsMonths":["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"],"priceCheaper":"Дешевле одного письма от юриста.","checkRunning":"Проверяем {domain}…","checkRunningNote":"Обычно занимает пару минут. Страницу можно не закрывать.","checkDone":"Готово: {services} сторонних сервисов, {before} из них до согласия, {cookies} cookie.","checkAskEmail":"Куда прислать подробный результат?","checkEmailSubmit":"Прислать","checkMailQueued":"Письмо придёт в течение нескольких минут.","checkRecentMailed":"Этот сайт сегодня уже проверяли — подробный результат уже отправлен.","checkMailLimit":"Слишком много запросов на эту почту, попробуйте завтра.","checkMailed":"Подробный результат по этому сайту уже отправлен.","checkScanError":"Не удалось проверить сайт. Попробуйте позже.","fitTitle":"Подходит любому сайту","fit1Title":"Конструкторы","fit1Text":"Tilda, Wix, Squarespace, Webflow и другие — одна строка в настройках сайта.","fit2Title":"WordPress и WooCommerce","fit2Text":"Плагин или одна строка в head.","fit3Title":"Интернет-магазины","fit3Text":"Shopify, OpenCart, PrestaShop и другие — одна строка в шаблоне.","fit4Title":"Свой сайт или агентство","fit4Text":"Одна строка в шаблоне, много сайтов в одном кабинете.","fieldPosition":"Положение","posBottom":"Снизу","posTop":"Сверху","posBottomLeft":"Снизу слева","posBottomRight":"Снизу справа","posCenter":"По центру","fieldTheme":"Тема","themeAuto":"Как в браузере","themeLight":"Светлая","themeDark":"Тёмная","fieldAccent":"Цвет","accentBlue":"Синий","accentGreen":"Зелёный","accentViolet":"Фиолетовый","accentOrange":"Оранжевый","gcmLine":"Что увидит Google: analytics_storage — {analytics}, ad_storage — {ads}.","gcmDenied":"denied","gcmGranted":"granted","gcmNote":"В режиме Consent Mode сервисы Google до согласия работают без cookie и без опознавания посетителя.","statsServices":"сервиса в базе с готовыми описаниями","statsMinutes":"минут на установку","checkRegistered":"Этот сайт уже подключён к ConsentKit — откройте кабинет.","heroChip":"10 минут · бесплатный тариф навсегда","heroTitleLead":"Сайт соответствует правилам ЕС, а реклама и аналитика продолжают","heroTitleAccent":"работать","ctaCheck":"Проверить сайт бесплатно","ctaCheckShort":"Проверить сайт","marqueeTitle":"Как это выглядит на разных сайтах","marqueeLede":"Один и тот же баннер: полоса, окно или модальное, светлая и тёмная тема, язык посетителя и цвет вашего сайта.","marqueeLabel":"Примеры баннера на разных сайтах","baTitle":"До и после установки","baLede":"Так выглядит результат проверки до и после установки.","baHandle":"Показать больше «до» или «после»","baBefore":"Без баннера","baAfter":"С ConsentKit","baPillBefore1":"5 сервисов до согласия","baPillBefore2":"3 cookie","baPillAfter1":"0 до согласия","baPillAfter2":"баннер спрашивает","starterTitle":"Starter","starterPriceUnit":"за сайт в месяц","starterPoint1":"Отменить в любой момент","starterPoint2":"Строка «Сделано в…» отключается","starterPoint3":"Расписание сканов и оповещения","factsTitle":"Коротко о продукте","factCheckFree":"проверка сайта бесплатно","factCheckFreeNum":"Всегда","accentRed":"Красный","sitesPack":"10 в пакете, пакеты можно добавлять","perPackPerMonth":"за 10 сайтов / мес"};</script>
+<script>window.__CK_SITE_I18N={"htmlLang":"ru","docTitle":"ConsentKit — баннер согласия на cookie для сайта","docDesc":"Баннер согласия на cookie, который ставится за десять минут. Спрашивает посетителя до того, как включатся счётчики. 34 языка, Google Consent Mode v2, сканер cookie и журнал согласий. Открытый код MIT.","skip":"К основному содержанию","navSections":"Разделы","navMenu":"Меню","pageLanguage":"Язык страницы","siteThemeLabel":"Тема","siteThemeSystem":"Как в системе","siteThemeLight":"Светлая","siteThemeDark":"Тёмная","navDemo":"Демо","navHow":"Как работает","navFeatures":"Что умеет","navPricing":"Тарифы","navFaq":"Вопросы","navDev":"Разработчикам","ctaCabinet":"Открыть кабинет","ctaCabinetShort":"Кабинет","heroLine1":"Баннер ставится за десять минут на любой сайт. Посетитель отвечает — и только потом включаются счётчики.","mockTitle":"Cookie на этом сайте","mockText":"Необходимые cookie нужны, чтобы сайт работал. Остальные включаются только с вашего согласия.","mockAccept":"Принять всё","mockReject":"Отклонить всё","mockSettings":"Настроить","heroNote":"Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.","demoTitle":"Живое демо","demoLede":"Это настоящий баннер, а не картинка. Меняйте вид, положение, тему, цвет и язык — баннер меняется сразу.","fieldLayout":"Вид","layoutBar":"Полоса","layoutBox":"Уголок","layoutModal":"Окно по центру","fieldBannerLang":"Язык баннера","langAuto":"Как на странице","btnShowAgain":"Показать снова","demoHint":"Сбрасывает сохранённый выбор и показывает баннер заново.","statusUndecided":"Выбор: посетитель ещё не ответил.","statusDecided":"Выбор: {cats}.","statusNone":"ничего сверх необходимого","statusBroken":"Демо не запустилось — обновите страницу.","howTitle":"Как это работает","how1Title":"Вставьте строку баннера","how1Text":"Одна строка в head — в настройках конструктора, в шаблоне сайта или через диспетчер тегов. Без сборки и зависимостей.","how2Title":"Нажмите «Проверить»","how2Text":"Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки.","how3Title":"Запустите скан","how3Text":"Сканер обойдёт сайт, найдёт сторонние сервисы и cookie и предложит готовую таблицу для баннера.","how4Title":"Настройте баннер","how4Text":"Первая версия публикуется сама. При желании поправьте цвета, тексты и таблицу в кабинете.","featTitle":"Что умеет","feat1Title":"Счётчики молчат до ответа","feat1Text":"Аналитика и реклама не запускаются, пока посетитель не нажал кнопку.","feat2Title":"Сканер сам находит cookie и обновляет декларацию","feat2Text":"Обходим страницы сайта, собираем список cookie и трекеров и обновляем его каждую неделю. Новый сервис на сайте — вы узнаёте о нём из кабинета.","feat3Title":"Согласие можно доказать","feat3Text":"Каждый ответ посетителя сохраняется на случай проверки.","feat5Title":"Реклама продолжает работать","feat5Text":"Отказ не выключает Google целиком: он считает без cookie и без опознавания посетителя.","feat6Title":"Ставится на любой сайт за 10 минут","feat6Text":"Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML. В кабинете сразу видно, как баннер увидит посетитель.","feat7Title":"Тексты ваши, оператор ваш","feat7Text":"Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков, остальные посетитель видит на своём.","feat8Title":"Кабинет на трёх языках","feat8Text":"Русский, румынский и английский — интерфейс, письма и подсказки сканера. Посетитель видит cookie на своём языке.","feat9Title":"Команда с ролями","feat9Text":"Коллеги и подрядчики работают с сайтом под своими адресами: редактор настраивает, наблюдатель только смотрит.","feat10Title":"Готовность к закону по пунктам","feat10Text":"36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.","priceTitle":"Тарифы","priceLede":"Тариф оформляется на аккаунт, а не на сайт. Business продаётся пакетами по 10 сайтов. Если перейти на тариф дешевле, сайт продолжит работать: баннер остаётся, автоматические сканы прекращаются, внизу снова появляется строка о разработчике.","priceFoot":"Цены в евро, без НДС. Юридическое лицо — E-COM CONSULT PLUS, Молдова.","perMonth":"/ мес","perSitePerMonth":"за сайт / мес","byAgreement":"по договору","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Бесплатно навсегда","planStarterNote":"Для одного сайта","planBusinessNote":"10 сайтов в пакете, дальше — по пакетам","planAgencyNote":"Без лимита сайтов","planCtaFree":"Начать бесплатно","planCtaPaid":"Открыть кабинет","planCtaAgency":"Написать","recommended":"Чаще всего берут","priceTableCaption":"Сравнение тарифов ConsentKit: цена, сайты, сканы, журнал согласий, оповещения, языки и поддержка на каждом тарифе.","priceScrollHint":"Таблица прокручивается вбок — так видно все тарифы.","rowPlan":"Тариф","rowPrice":"Цена","rowCta":"Подключение","rowSites":"Сайтов","rowBranding":"Строка «Сделано в E-COM Consult»","rowScans":"Сканы","rowLog":"Журнал согласий","rowAutoUpdate":"Декларация cookie в баннере обновляется сама после скана","rowAlerts":"Письмо, если на сайте появился новый счётчик","rowLangs":"Языки баннера","rowTeam":"Команда: доступ для коллег","teamUnlimited":"без ограничения","teamUpTo":"до {n} человек","rowSupport":"Поддержка","sitesOne":"1","sitesOneEach":"1 (каждый отдельно)","sitesUpTo":"до {n}","sitesUnlimited":"без лимита","brandingRequired":"обязательна","brandingOptional":"отключается","scansScheduled":"автоматически каждую неделю + {n} в день по кнопке","scansManualOnly":"{n} в день по кнопке","unitScanOne":"{n}","unitScanFew":"{n}","unitScanMany":"{n}","logDays":"{n}, без выгрузки","logDaysCsv":"{n}, с выгрузкой в файл","logMonths":"{n}, без выгрузки","logMonthsCsv":"{n}, с выгрузкой в файл","unitDayOne":"{n} день","unitDayFew":"{n} дня","unitDayMany":"{n} дней","unitMonthOne":"{n} месяц","unitMonthFew":"{n} месяца","unitMonthMany":"{n} месяцев","yes":"да","no":"нет","langsAll":"все 34","supportFree":"документация","supportStarter":"почта","supportBusiness":"почта, ответ за 1 рабочий день","supportAgency":"персональный менеджер","whoTitle":"Для кого","who1Title":"Сайты на конструкторах","who1Text":"Файлы загружать некуда — берите самодостаточный блок и вставляйте в поле для кода в head. Одна вставка, никаких плагинов.","who2Title":"WordPress и WooCommerce","who2Text":"Плагин ставится копированием папки, настройки — в админке. Работает и с кэширующими плагинами: баннер не зависит от PHP.","who4Title":"Агентства и свои сайты","who4Text":"Много сайтов в одном кабинете, доступ для коллег с ролями, сканы по расписанию и оповещения о новых трекерах. Условия — по договору.","faqTitle":"Частые вопросы","faq":[["Что такое согласие на cookie и зачем оно нужно?","Cookie — это небольшая пометка, которую сайт оставляет в браузере посетителя. По правилам ЕС всё, что не нужно для работы самого сайта, включается только после согласия посетителя, и согласие нужно уметь подтвердить. ConsentKit спрашивает, ждёт ответа и сохраняет решение за вас."],["Правда ли ConsentKit блокирует всё до согласия?","Почти всё и сразу: официальные коды Google Analytics, Яндекс Метрики, Meta, TikTok и Hotjar останавливаются автоматически, а Google получает сигналы Consent Mode v2 ещё до загрузки тегов. Реже встречаются счётчики, вписанные в страницу вручную обычным тегом \u003cscript src\u003e: их браузер успевает начать загружать, поэтому такой тег нужно один раз пометить атрибутом type=\"text/plain\". Кабинет сам показывает, какие именно, и объясняет, что сделать."],["Где хранятся данные?","На серверах в Литве, в Европейском союзе. Компания — E-COM CONSULT PLUS, Молдова. Мы храним сам факт согласия и что именно человек выбрал, а не сведения о посетителе."],["Можно ли пользоваться без кабинета?","Да, и это бесплатно. Программа открыта по лицензии MIT: скачайте файлы, положите к себе на сайт и настройте вручную, без регистрации. Кабинет нужен тем, кому удобнее нажимать кнопки, а не править файлы."],["Как отключить строку «Сделано в E-COM Consult»?","На платных тарифах строка выключается переключателем в настройках сайта, на бесплатном остаётся. Если вы поставили баннер сами, без кабинета, строку можно убрать в настройках вашей копии. Мы берём деньги за кабинет, сканы и хранение журнала, а не за скрытие строки."],["Что со сканированием чужих сайтов?","Сканировать можно только свои сайты или сайты клиентов, которые вам это поручили. Поэтому до первого скана сайт нужно подтвердить в кабинете. Сканер ходит бережно и не создаёт нагрузку."],["Что считается одним сайтом?","Один сайт — это один домен со всем, что на нём есть: example.com и все его страницы. Другой домен — это другой сайт, даже если он ваш и выглядит так же."],["А поддомены?","Поддомены подключённого домена — shop.example.com, blog.example.com — входят в тот же сайт и лимит не тратят. У них общий баннер и общий журнал согласий с основным доменом."],["Как со счётом и НДС?","Оплата идёт через Creem: он выставляет счёт и сам считает НДС по вашей стране. Цены на этой странице — без НДС, итоговая сумма видна при оплате, а счёт приходит на почту."],["Можно ли отменить?","Да, в кабинете и в любой момент. Тариф действует до конца уже оплаченного периода, дальше списаний не будет."],["Что ломается при переходе на тариф дешевле?","Ничего. Баннер продолжает работать как работал: прекращаются автоматические сканы, возвращается строка о разработчике, а журнал согласий хранится столько, сколько положено новому тарифу. Сайт при этом не выключается."]],"footLegal":"E-COM CONSULT PLUS, Молдова. ConsentKit — открытый код под лицензией MIT.","footLinksLabel":"Ссылки","footWrite":"Написать нам","footCabinet":"Кабинет","devTitle":"Для разработчиков","devLede":"Клиент подключается тремя тегами и настраивается одним вызовом — без сборки и без кабинета.","devFacts":"Открытый код под лицензией MIT, ноль зависимостей, 34 языка, Google Consent Mode v2.","devDocs":"Инструкция по установке","navLaw":"Правила","lawDated":"По состоянию на сентябрь 2026 года. Это общая информация, а не юридическая консультация.","lawIndexTitle":"Правила и cookie","lawIndexDesc":"Простым языком о правилах для сайтов из Молдовы и Румынии: согласие на cookie, GDPR, Google Consent Mode v2 и что бывает без баннера.","lawIndexLede":"Четыре короткие статьи о том, с чем владелец сайта сталкивается на самом деле. Написано для тех, у кого есть сайт, а не для юристов.","checkCaption":"Бесплатная проверка","checkTitle":"Проверьте свой сайт бесплатно","checkLede":"Посмотрим, какие сервисы и cookie загружаются у вас до согласия. Только открытые страницы.","checkDomainLabel":"Адрес сайта","checkDomainPlaceholder":"example.com","checkEmailLabel":"Ваша почта","checkEmailPlaceholder":"you@example.com","checkAgree":"Это мой сайт или я работаю с ним по договору","checkSubmit":"Проверить","checkNote":"Проверяем только открытые страницы. Результат покажем здесь, подробности пришлём на почту.","checkRecent":"Этот сайт сегодня уже проверяли.","checkLimit":"Слишком много проверок с вашего адреса, попробуйте завтра.","checkError":"Не удалось связаться с нами. Проверьте соединение и попробуйте ещё раз.","checkInvalid":"Проверьте адрес сайта.","checkNeedDomain":"Введите адрес вашего сайта.","checkNeedEmail":"Введите почту, куда прислать результат.","checkNeedAgree":"Поставьте галочку, чтобы продолжить.","checkSending":"Отправляем…","statsTitle":"Цифры","statsSites":"сайтов подключено","statsConsents":"согласий записано","statsLanguages":"языка баннера","statsVersion":"версия баннера","statsUpdated":"обновлено {day} {month} {year}","statsMonths":["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"],"priceCheaper":"Дешевле одного письма от юриста.","checkRunning":"Проверяем {domain}…","checkRunningNote":"Обычно занимает пару минут. Страницу можно не закрывать.","checkDone":"Готово: {services} сторонних сервисов, {before} из них до согласия, {cookies} cookie.","checkAskEmail":"Куда прислать подробный результат?","checkEmailSubmit":"Прислать","checkMailQueued":"Письмо придёт в течение нескольких минут.","checkRecentMailed":"Этот сайт сегодня уже проверяли — подробный результат уже отправлен.","checkMailLimit":"Слишком много запросов на эту почту, попробуйте завтра.","checkMailed":"Подробный результат по этому сайту уже отправлен.","checkScanError":"Не удалось проверить сайт. Попробуйте позже.","fitTitle":"Подходит любому сайту","fit1Title":"Конструкторы","fit1Text":"Tilda, Wix, Squarespace, Webflow и другие — одна строка в настройках сайта.","fit2Title":"WordPress и WooCommerce","fit2Text":"Плагин или одна строка в head.","fit3Title":"Интернет-магазины","fit3Text":"Shopify, OpenCart, PrestaShop и другие — одна строка в шаблоне.","fit4Title":"Свой сайт или агентство","fit4Text":"Одна строка в шаблоне, много сайтов в одном кабинете.","fieldPosition":"Положение","posBottom":"Снизу","posTop":"Сверху","posBottomLeft":"Снизу слева","posBottomRight":"Снизу справа","posCenter":"По центру","fieldTheme":"Тема","themeAuto":"Как в браузере","themeLight":"Светлая","themeDark":"Тёмная","fieldAccent":"Цвет","accentBlue":"Синий","accentGreen":"Зелёный","accentViolet":"Фиолетовый","accentOrange":"Оранжевый","gcmLine":"Что увидит Google: analytics_storage — {analytics}, ad_storage — {ads}.","gcmDenied":"denied","gcmGranted":"granted","gcmNote":"В режиме Consent Mode сервисы Google до согласия работают без cookie и без опознавания посетителя.","statsServices":"сервиса в базе с готовыми описаниями","statsMinutes":"минут на установку","checkRegistered":"Этот сайт уже подключён к ConsentKit — откройте кабинет.","heroTitleLead":"Сайт соответствует правилам ЕС, а реклама и аналитика продолжают","heroTitleAccent":"работать","ctaCheck":"Проверить сайт бесплатно","ctaCheckShort":"Проверить сайт","marqueeTitle":"Как это выглядит на разных сайтах","marqueeLede":"Один и тот же баннер: полоса, окно или модальное, светлая и тёмная тема, язык посетителя и цвет вашего сайта.","marqueeLabel":"Примеры баннера на разных сайтах","baTitle":"До и после установки","baLede":"Так выглядит результат проверки до и после установки.","baHandle":"Показать больше «до» или «после»","baBefore":"Без баннера","baAfter":"С ConsentKit","baPillBefore1":"5 сервисов до согласия","baPillBefore2":"3 cookie","baPillAfter1":"0 до согласия","baPillAfter2":"баннер спрашивает","starterTitle":"Starter","starterPriceUnit":"за сайт в месяц","starterPoint1":"Отменить в любой момент","starterPoint2":"Строка «Сделано в…» отключается","starterPoint3":"Расписание сканов и оповещения","factsTitle":"Коротко о продукте","factCheckFree":"проверка сайта бесплатно","factCheckFreeNum":"Всегда","accentRed":"Красный","sitesPack":"10 в пакете, пакеты можно добавлять","perPackPerMonth":"за 10 сайтов / мес","heroPill1Num":"10 минут","heroPill1Label":"установка","heroPill2Num":"€0","heroPill2Label":"навсегда","heroShotAlt":"Баннер ConsentKit на сайте клиента","pcard1Num":"36","pcard1Label":"пунктов","pcard2Num":"каждую неделю","pcard2Label":"автоскан","pcard3Num":"каждый ответ","pcard3Label":"в журнале","pcard4Num":"34","pcard4Label":"языка","pcard5Num":"1","pcard5Label":"страница","pcard6Num":"10 минут","pcard6Label":"установка","pcard5Title":"Декларация cookie — своя публичная страница","pcard5Text":"Список cookie с назначением и сроком хранения живёт на отдельной странице. Ссылку ставят в подвал сайта и в окно настроек баннера.","pshot1Alt":"Карточка «Готовность к GDPR» в кабинете: семь зон и список пунктов","pshot2Alt":"Подключение сайта: сканер идёт по фазам и показывает найденное","pshot3Alt":"Как отвечают посетители: доли ответов, полосы и график по дням","pshot4Alt":"Тексты баннера в кабинете: выбор языка и поля заголовка и описания","pshot5Alt":"Публичная страница «Cookie на этом сайте» со списком cookie","pshot6Alt":"Предпросмотр «Как увидит посетитель»: живой баннер в редакторе","featMoreTitle":"И ещё","compareTitle":"Сделать самому или взять готовое","compareLede":"Одно и то же можно собрать руками. Ниже — что при этом придётся делать и что уже сделано за вас.","cmpColSelf":"Своими силами","cmpColUs":"ConsentKit","cmpTableCaption":"Сделать самому или взять готовое","cmpRow1":"Установка баннера","cmpRow1Self":"Вёрстка, скрипт блокировки, проверка","cmpRow1Us":"Одна строка в head, 10 минут","cmpRow2":"Языки баннера","cmpRow2Self":"Переводить каждый текст","cmpRow2Us":"34 языка сразу","cmpRow3":"Список cookie","cmpRow3Self":"Собирать и обновлять вручную","cmpRow3Us":"Сканер находит и обновляет сам","cmpRow4":"Журнал согласий","cmpRow4Self":"Своя база и выгрузка","cmpRow4Us":"Каждый ответ, выгрузка в CSV","cmpRow5":"Готовность к закону","cmpRow5Self":"Сверять с текстом закона","cmpRow5Us":"36 пунктов в кабинете, часть проверяет сканер","cmpRow6":"Обновления","cmpRow6Self":"Следить за изменениями самим","cmpRow6Us":"Приходят с сервера"};</script>
 <script src="/app.js?v=8d8796de"></script>
 </body>
 </html>

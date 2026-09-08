@@ -136,9 +136,17 @@ test('no dictionary key is unused', () => {
   // build composes «обновлено 6 сентября 2026» from the pattern and the month
   // names and renders it into {{BUILD_DATE}}, so neither key is ever read at
   // runtime and neither appears in the template as a data-i18n attribute.
+  // SPEC V1.24 §5 replaced the hero's skeleton replica with a real screenshot,
+  // and with it went the last data-i18n on `mockText` and `mockSettings`. Both
+  // keys are still read — by renderMarquee() in build-site.mjs, which composes
+  // every marquee card from d.mockTitle/mockText/mockAccept/mockReject/
+  // mockSettings, and the marquee test below now asserts both of them reach
+  // the page. This scanner only reads the template and app.js, so a
+  // build-consumed key belongs in this list, exactly like the head keys above.
   const BUILD_KEYS = ['htmlLang', 'docTitle', 'docDesc', 'pageLanguage',
                       'pages', 'lawIndexTitle', 'lawIndexDesc', 'lawIndexLede', 'lawDated',
-                      'statsUpdated', 'statsMonths'];
+                      'statsUpdated', 'statsMonths',
+                      'mockText', 'mockSettings'];
 
   const used = new Set(BUILD_KEYS);
   for (const m of template.matchAll(/\bdata-i18n="([^"]+)"/g)) used.add(m[1]);
@@ -432,27 +440,49 @@ test('«How it works» renders four numbered steps in every language', () => {
    template's Russian fallback on the EN and RO pages, so assert that each one
    actually renders its own dictionary strings — the same reasoning as the
    «How it works» test above. */
-test('«What it does» renders ten feature cards in every language', () => {
+/* UPDATED for SPEC V1.24 §1 — this used to count the ten `.card` articles the
+   section held before the rewrite. The section is now six `.pcard` product
+   cards (each with a screenshot) plus a four-card «И ещё» row, so the old
+   count of ten and the old `feat1..feat10` sweep describe a layout that no
+   longer exists. Everything else the test cared about is kept and tightened:
+   every feature card still has to carry its OWN dictionary strings rather than
+   the template's Russian fallback, in all three languages. The card structure
+   itself (pill, h3, img) is asserted in test/site-product.test.mjs. */
+test('«What it does» renders six product cards and four more, in every language', () => {
   const template = readTemplate();
+
+  // The six keys the product cards carry, in the order §1 lists them, and the
+  // four the «И ещё» row keeps. feat4 is gone: §1 folds «34 языка» into feat7.
+  const PCARD_TEXT = ['feat10', 'feat2', 'feat3', 'feat7', 'pcard5', 'feat6'];
+  const MORE = ['feat1', 'feat5', 'feat8', 'feat9'];
 
   for (const { code } of LANGS) {
     const html = renderPage(template, code);
-    const section = html.match(/<section id="features">([\s\S]*?)<\/section>/);
+    const section = html.match(/<section id="features">([\s\S]*?)\n  <\/section>/);
     assert.ok(section, `the ${code} page has no <section id="features">`);
 
-    const cards = [...section[1].matchAll(/<article class="card">[\s\S]*?<\/article>/g)];
-    assert.equal(cards.length, 10,
-      `the ${code} page renders ${cards.length} feature cards, not 10`);
+    const pcards = [...section[1].matchAll(/<article class="pcard [^"]*">[\s\S]*?<\/article>/g)];
+    assert.equal(pcards.length, 6,
+      `the ${code} page renders ${pcards.length} product cards, not 6`);
+    const more = [...section[1].matchAll(/<article class="feat">[\s\S]*?<\/article>/g)];
+    assert.equal(more.length, 4,
+      `the ${code} page's «И ещё» row has ${more.length} cards, not 4`);
 
     const dict = readDict(code);
-    for (let n = 1; n <= 10; n++) {
-      for (const key of [`feat${n}Title`, `feat${n}Text`]) {
+    for (const base of [...PCARD_TEXT, ...MORE]) {
+      for (const key of [`${base}Title`, `${base}Text`]) {
         assert.ok(dict[key] && dict[key].trim(),
           `site/src/i18n/${code}.json has no "${key}"`);
         assert.ok(section[1].includes(dict[key].replace(/</g, '&lt;').replace(/>/g, '&gt;')) ||
                   section[1].includes(dict[key]),
-          `the ${code} page's feature ${n} does not carry "${key}" from ${code}.json`);
+          `the ${code} «Что умеет» does not carry "${key}" from ${code}.json`);
       }
+    }
+
+    // feat4 was folded into feat7 — its keys must be gone, not merely unused.
+    for (const key of ['feat4Title', 'feat4Text']) {
+      assert.ok(!Object.prototype.hasOwnProperty.call(dict, key),
+        `${code}.json still carries "${key}" — §1 folds it into feat7`);
     }
   }
 });
@@ -1235,6 +1265,15 @@ test('the marquee cards say what the real client says, in each language', () => 
     const dict = readDict(code);
     assert.ok(strip.includes(dict.mockAccept),
       `the ${code} marquee has no card in the page's own language`);
+    /* V1.24 §5: the hero's replica is now a screenshot, so the marquee is the
+       ONLY consumer left of mockText and mockSettings. Asserted here so that
+       the exemption those two keys were given in the unused-key scanner above
+       is backed by a real check rather than by a promise. */
+    for (const key of ['mockText', 'mockSettings']) {
+      const want = dict[key].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      assert.ok(strip.includes(want),
+        `the ${code} marquee lost «${dict[key]}» — ${key} would then be a dead key`);
+    }
   }
 });
 
@@ -1327,14 +1366,23 @@ test('the page has one primary button, and it is the free check', () => {
   }
 });
 
-test('the hero leads with the promise chip and one accented word', () => {
+/* UPDATED for SPEC V1.24 §2/§5 — the single `heroChip` is now two `.fact-pill`
+   facts, so the `heroChip` half of this assertion describes copy that no longer
+   exists. The accented-word half is untouched: §5 explicitly leaves the
+   headline and the lede alone. */
+test('the hero leads with two fact pills and one accented word', () => {
   const template = readTemplate();
   for (const { code } of LANGS) {
     const dict = readDict(code);
     const html = renderPage(template, code);
-    const hero = html.match(/<section class="hero">[\s\S]*?<\/section>/)[0];
+    const hero = html.match(/<section class="hero">[\s\S]*?\n  <\/section>/)[0];
 
-    assert.ok(hero.includes(dict.heroChip), `the ${code} hero has no promise chip`);
+    assert.ok(!Object.prototype.hasOwnProperty.call(dict, 'heroChip'),
+      `${code}.json still carries "heroChip" — §2 replaces it with two pills`);
+    for (const n of [1, 2]) {
+      assert.ok(hero.includes(dict[`heroPill${n}Num`]) && hero.includes(dict[`heroPill${n}Label`]),
+        `the ${code} hero is missing fact pill ${n}`);
+    }
     // Two keys, so each language can put its own word under the accent.
     assert.ok(hero.includes(dict.heroTitleLead) && hero.includes(dict.heroTitleAccent),
       `the ${code} headline is not split into lead + accent`);
@@ -1784,12 +1832,13 @@ test('§1.3: the chip is short and only refuses to wrap from 560 up', () => {
   assert.match(css, /@media \(min-width: 560px\) \{\s*\.chip \{ white-space: nowrap; \}/,
     '§1.3: nowrap applies only from 560 up');
 
-  // §1.3 also shortens the copy itself: «Баннер за» is dropped.
-  for (const { code } of LANGS) {
-    const chipText = readDict(code).heroChip;
-    assert.ok(chipText.length <= 46,
-      `the ${code} chip is ${chipText.length} chars — §1.3 asks for a shorter one`);
-  }
+  /* UPDATED for SPEC V1.24 §2 — the copy half of this test (heroChip is at
+     most 46 characters) is gone with the key: §2 replaces the chip with two
+     `.fact-pill` facts, whose own length is checked in
+     test/site-product.test.mjs. The CSS half above stays, and stays load-
+     bearing: `.chip` is one of the six rules the §2 red-dosage test reads by
+     name to prove it is sand rather than red, so the rule must survive in
+     styles.css whether or not the hero is still the thing using it. */
 });
 
 /* ────────────────────────────── the manual theme switch (owner, 07.09.2026) */

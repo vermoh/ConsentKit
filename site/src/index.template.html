@@ -151,51 +151,60 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
-        <!-- SPEC V1.14 §2.3: a red promise chip instead of the grey eyebrow.
-             It says what the visitor gets and what it costs, which is what the
-             eyebrow's «Открытый код · MIT» never did. -->
-        <p class="chip" data-i18n="heroChip">Баннер за 10 минут · бесплатный тариф навсегда</p>
+        <!-- SPEC V1.24 §2 and §5: the single grey chip becomes two fact pills.
+             The chip said «10 минут · бесплатный тариф навсегда» as one grey
+             line and the two facts inside it read as one soft claim; split
+             into a number and its caption each, they read as two facts. Both
+             numbers already exist elsewhere on the page — «10 минут» is the
+             «Цифры» tile, «€0» is the Starter price — so nothing new is being
+             promised here. The `.chip` rule itself stays in styles.css: it is
+             pinned by the §2 red-dosage test, which asserts the chip is sand
+             and not red. -->
+        <p class="pills">
+          <span class="fact-pill">
+            <span class="fact-pill__num" data-i18n="heroPill1Num">10 минут</span>
+            <span class="fact-pill__label" data-i18n="heroPill1Label">установка</span>
+          </span>
+          <span class="fact-pill">
+            <span class="fact-pill__num" data-i18n="heroPill2Num">€0</span>
+            <span class="fact-pill__label" data-i18n="heroPill2Label">навсегда</span>
+          </span>
+        </p>
         <!-- One accented word, at the end, where the sentence turns: the
              promise is that the ads and analytics keep WORKING. Split into two
              keys so each language can put its own word under the accent —
              the accented word is not the last one in every grammar. -->
         <h1><span data-i18n="heroTitleLead">Сайт соответствует правилам ЕС, а реклама и аналитика продолжают</span> <em class="h1-accent" data-i18n="heroTitleAccent">работать</em></h1>
         <p class="lede" data-i18n="heroLine1">Ставится за десять минут на любой сайт. Реклама и аналитика продолжают работать.</p>
+        <!-- SPEC V1.24 §5: one button, not two. «Посмотреть демо» sent the
+             visitor sideways at the exact moment the page had earned a
+             decision, and it is still reachable — #demo is a section below and
+             a link in the menu panel. -->
         <p class="hero-cta">
           <a class="btn btn--primary" href="#check" data-i18n="ctaCheck">Проверить сайт бесплатно</a>
-          <a class="btn btn--ghost" href="#demo" data-i18n="ctaDemo">Посмотреть демо</a>
         </p>
         <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.</p>
       </div>
 
-      <!-- Hero mockup: a framed page with a STATIC replica of the default box
-           banner. The real client cannot live here — ck-ui.js mounts one
-           position:fixed shadow root on <body> and can exist only once per
-           page, so the interactive instance stays in «Живое демо» below. The
-           replica copies that banner's own default strings, its 20/700
-           heading, 14px body and three equal 44px buttons, in the same accent.
-           Inert by construction: aria-hidden, and every control is a <span>,
-           so a screen reader hears one banner and the tab order gains nothing. -->
-      <div class="hero-shot" aria-hidden="true">
+      <!-- SPEC V1.24 §5: the grey skeleton replica is replaced by a photograph
+           of the thing itself — the banner running on flufi.pet, a live client
+           site (RUNBOOK). The window frame and its three dots stay, so the
+           picture still reads as «a browser showing someone's site» rather
+           than as a floating rectangle; only the fake page inside it is gone.
+
+           NOT aria-hidden any more. The replica was decoration a screen reader
+           gained nothing from; a real screenshot is content, and it carries
+           its own alt through data-i18n-alt (applyDict cannot reach into a
+           void element with data-i18n). eager + fetchpriority="high": it is
+           the first screen's own image, so lazy-loading it would only delay
+           the largest paint. -->
+      <div class="hero-shot">
         <div class="shot-frame">
-          <div class="shot-bar"><span></span><span></span><span></span></div>
-          <div class="shot-page">
-            <span class="shot-line shot-line--title"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line shot-line--short"></span>
-            <span class="shot-line"></span>
-            <span class="shot-line shot-line--short"></span>
-          </div>
-          <div class="shot-banner">
-            <p class="shot-banner__title" data-i18n="mockTitle">Cookie на этом сайте</p>
-            <p class="shot-banner__text" data-i18n="mockText">Необходимые cookie нужны, чтобы сайт работал. Остальные включаются только с вашего согласия.</p>
-            <div class="shot-banner__actions">
-              <span class="shot-btn shot-btn--accept" data-i18n="mockAccept">Принять всё</span>
-              <span class="shot-btn shot-btn--reject" data-i18n="mockReject">Отклонить всё</span>
-              <span class="shot-btn shot-btn--settings" data-i18n="mockSettings">Настроить</span>
-            </div>
-          </div>
+          <div class="shot-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+          <img class="shot-img" src="/img/hero-site.webp"
+               width="1600" height="1031"
+               loading="eager" decoding="async" fetchpriority="high"
+               alt="Баннер ConsentKit на сайте клиента" data-i18n-alt="heroShotAlt">
         </div>
       </div>
     </div>
@@ -728,55 +737,194 @@
   </section>
 
   <!-- ── features ──────────────────────────────────────────────────── -->
-  <!-- Ten benefits, one line each. The mechanics they used to spell out
-       (type="text/plain", dataLayer, Consent Mode signal names) now live in
-       the FAQ blocking answer and in «Для разработчиков» below.
-       Ten cards is 3+3+3+1 at desktop width; the lone last card is centred by
-       a scoped rule in site/styles.css rather than left flush left. -->
+  <!-- SPEC V1.24 §1: ten one-line text cards become six product cards that
+       SHOW the thing, plus a compact «И ещё» row for the four facts that have
+       no screen of their own.
+
+       The ten cards were true and unmemorable: a visitor read «Сканер находит
+       cookie сам» and had no idea what that looked like. Each of the six now
+       carries a fact pill, a heading, a sentence and a real screenshot of the
+       dashboard, tilted so its bottom edge runs under the card's own — the
+       card is `overflow: hidden`, so the picture reads as a window onto
+       something larger rather than as a framed thumbnail.
+
+       Tones cycle cream / sand / dark from the tokens the page already has;
+       §1 forbids introducing a colour, and there is no red in this section. -->
   <section id="features">
     <div class="wrap">
       <h2 data-i18n="featTitle">Что умеет</h2>
-      <div class="cards">
-        <article class="card">
+      <div class="pcards">
+        <article class="pcard pcard--cream">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard1Num">36</span>
+            <span class="fact-pill__label" data-i18n="pcard1Label">пунктов</span>
+          </p>
+          <h3 data-i18n="feat10Title">Готовность к закону по пунктам</h3>
+          <p data-i18n="feat10Text">36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/cabinet-readiness.webp" width="1600" height="1202"
+                 loading="lazy" decoding="async"
+                 alt="Карточка «Готовность к GDPR» в кабинете: семь зон и список пунктов" data-i18n-alt="pshot1Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--sand">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard2Num">каждую неделю</span>
+            <span class="fact-pill__label" data-i18n="pcard2Label">автоскан</span>
+          </p>
+          <h3 data-i18n="feat2Title">Сканер сам находит cookie и обновляет декларацию</h3>
+          <p data-i18n="feat2Text">Обходим страницы сайта, собираем список cookie и трекеров и обновляем его каждую неделю. Новый сервис на сайте — вы узнаёте о нём из кабинета.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/cabinet-scan.webp" width="1600" height="763"
+                 loading="lazy" decoding="async"
+                 alt="Подключение сайта: сканер идёт по фазам и показывает найденное" data-i18n-alt="pshot2Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--dark">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard3Num">каждый ответ</span>
+            <span class="fact-pill__label" data-i18n="pcard3Label">в журнале</span>
+          </p>
+          <h3 data-i18n="feat3Title">Согласие можно доказать</h3>
+          <p data-i18n="feat3Text">Каждый ответ посетителя сохраняется на случай проверки.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/cabinet-stats.webp" width="1600" height="714"
+                 loading="lazy" decoding="async"
+                 alt="Как отвечают посетители: доли ответов, полосы и график по дням" data-i18n-alt="pshot3Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--cream">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard4Num">34</span>
+            <span class="fact-pill__label" data-i18n="pcard4Label">языка</span>
+          </p>
+          <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
+          <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков, остальные посетитель видит на своём.</p>
+          <div class="pcard__shot">
+            <img src="/img/cabinet-texts.webp" width="1114" height="1240"
+                 loading="lazy" decoding="async"
+                 alt="Тексты баннера в кабинете: выбор языка и поля заголовка и описания" data-i18n-alt="pshot4Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--sand">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard5Num">1</span>
+            <span class="fact-pill__label" data-i18n="pcard5Label">страница</span>
+          </p>
+          <h3 data-i18n="pcard5Title">Декларация cookie — своя публичная страница</h3>
+          <p data-i18n="pcard5Text">Список cookie с назначением и сроком хранения живёт на отдельной странице. Ссылку ставят в подвал сайта и в окно настроек баннера.</p>
+          <div class="pcard__shot pcard__shot--wide">
+            <img src="/img/declaration.webp" width="1600" height="1017"
+                 loading="lazy" decoding="async"
+                 alt="Публичная страница «Cookie на этом сайте» со списком cookie" data-i18n-alt="pshot5Alt">
+          </div>
+        </article>
+        <article class="pcard pcard--dark">
+          <p class="fact-pill">
+            <span class="fact-pill__num" data-i18n="pcard6Num">10 минут</span>
+            <span class="fact-pill__label" data-i18n="pcard6Label">установка</span>
+          </p>
+          <h3 data-i18n="feat6Title">Ставится на любой сайт за 10 минут</h3>
+          <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML. В кабинете сразу видно, как баннер увидит посетитель.</p>
+          <div class="pcard__shot">
+            <img src="/img/cabinet-preview.webp" width="1114" height="1410"
+                 loading="lazy" decoding="async"
+                 alt="Предпросмотр «Как увидит посетитель»: живой баннер в редакторе" data-i18n-alt="pshot6Alt">
+          </div>
+        </article>
+      </div>
+
+      <!-- The four facts that have no screen: they are true, they are short,
+           and giving each a screenshot would mean inventing one. A text row
+           under the grid, with its own subheading, is what §1 asks for. -->
+      <h3 class="feat-more__head" data-i18n="featMoreTitle">И ещё</h3>
+      <div class="feat-more">
+        <article class="feat">
           <h3 data-i18n="feat1Title">Счётчики молчат до ответа</h3>
           <p data-i18n="feat1Text">Аналитика и реклама не запускаются, пока посетитель не нажал кнопку.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="feat2Title">Сканер находит cookie сам</h3>
-          <p data-i18n="feat2Text">Мы обойдём страницы и составим готовый список для баннера.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat3Title">Согласие можно доказать</h3>
-          <p data-i18n="feat3Text">Каждый ответ посетителя сохраняется на случай проверки.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat4Title">Баннер говорит на 34 языках</h3>
-          <p data-i18n="feat4Text">Посетитель видит свой язык, а вы ничего не переводите.</p>
-        </article>
-        <article class="card">
+        <article class="feat">
           <h3 data-i18n="feat5Title">Реклама продолжает работать</h3>
-          <p data-i18n="feat5Text">Отказ не выключает Google целиком: он считает без личных данных.</p>
+          <p data-i18n="feat5Text">Отказ не выключает Google целиком: он считает без cookie и без опознавания посетителя.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="feat6Title">Ставится на любой сайт</h3>
-          <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML.</p>
-        </article>
-        <article class="card">
-          <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
-          <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков.</p>
-        </article>
-        <article class="card">
+        <article class="feat">
           <h3 data-i18n="feat8Title">Кабинет на трёх языках</h3>
           <p data-i18n="feat8Text">Русский, румынский и английский — интерфейс, письма и подсказки сканера. Посетитель видит cookie на своём языке.</p>
         </article>
-        <article class="card">
+        <article class="feat">
           <h3 data-i18n="feat9Title">Команда с ролями</h3>
           <p data-i18n="feat9Text">Коллеги и подрядчики работают с сайтом под своими адресами: редактор настраивает, наблюдатель только смотрит.</p>
         </article>
-        <article class="card">
-          <h3 data-i18n="feat10Title">Готовность к закону по пунктам</h3>
-          <p data-i18n="feat10Text">36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.</p>
-        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── compare: on your own / ConsentKit ─────────────────────────── -->
+  <!-- SPEC V1.24 §4. Every row is a fact about US — what we install, how many
+       languages, what the scanner does — set beside the WORK the same result
+       costs by hand. No competitor is named and no other product is graded:
+       the left column describes a job, not a rival, and its tone stays
+       neutral because doing it yourself is a legitimate choice.
+
+       The right column reuses the pricing table's own highlight — sand fill,
+       1px dark border — through a rule of its own rather than by joining
+       `.plan-table .is-featured`'s selector list, which the §2 red test reads
+       by name.
+
+       Deliberately NOT in the menu: the panel holds exactly seven section
+       links and this section is read on the way past, not navigated to. -->
+  <section id="compare">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 data-i18n="compareTitle">Сделать самому или взять готовое</h2>
+        <p class="section-lede" data-i18n="compareLede">Одно и то же можно собрать руками. Ниже — что при этом придётся делать и что уже сделано за вас.</p>
+      </div>
+
+      <!-- Same scroll wrapper the pricing table uses: the table is wider than
+           a phone, and it is the WRAPPER that scrolls, never the page. -->
+      <div class="cmp-scroll">
+        <table class="cmp-table">
+          <caption class="cmp-table__caption" data-i18n="cmpTableCaption">Сделать самому или взять готовое</caption>
+          <thead>
+            <tr>
+              <td class="cmp-table__corner"></td>
+              <th scope="col" data-i18n="cmpColSelf">Своими силами</th>
+              <th scope="col" class="is-featured" data-i18n="cmpColUs">ConsentKit</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <th scope="row" data-i18n="cmpRow1">Установка баннера</th>
+            <td data-i18n="cmpRow1Self">Вёрстка, скрипт блокировки, проверка</td>
+            <td class="is-featured" data-i18n="cmpRow1Us">Одна строка в head, 10 минут</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow2">Языки баннера</th>
+            <td data-i18n="cmpRow2Self">Переводить каждый текст</td>
+            <td class="is-featured" data-i18n="cmpRow2Us">34 языка сразу</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow3">Список cookie</th>
+            <td data-i18n="cmpRow3Self">Собирать и обновлять вручную</td>
+            <td class="is-featured" data-i18n="cmpRow3Us">Сканер находит и обновляет сам</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow4">Журнал согласий</th>
+            <td data-i18n="cmpRow4Self">Своя база и выгрузка</td>
+            <td class="is-featured" data-i18n="cmpRow4Us">Каждый ответ, выгрузка в CSV</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow5">Готовность к закону</th>
+            <td data-i18n="cmpRow5Self">Сверять с текстом закона</td>
+            <td class="is-featured" data-i18n="cmpRow5Us">36 пунктов в кабинете, часть проверяет сканер</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="cmpRow6">Обновления</th>
+            <td data-i18n="cmpRow6Self">Следить за изменениями самим</td>
+            <td class="is-featured" data-i18n="cmpRow6Us">Приходят с сервера</td>
+          </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>

@@ -2288,3 +2288,389 @@ section { padding: 96px 0; }
   .shot--ba .shot-frame { height: 168px; }
   .starter__card, .starter__facts { padding: 18px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SPEC V1.24 — экраны продукта
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── §2 the fact pill ───────────────────────────────────────────────── */
+
+/* A number and its caption, welded into one dark pill: the number sits in its
+   own cell on a slightly deeper ground, the caption follows on the pill's own
+   fill. Two facts side by side read as two facts; the same two words inside
+   one grey chip read as one soft claim, which is what the hero's old
+   «10 минут · бесплатный тариф навсегда» had become.
+
+   No new colour. --ink is the fill and --bg the text, which means the pill
+   INVERTS itself in the dark theme for free — on a dark page the same two
+   tokens paint a light pill with dark text, which is exactly what §2 asks for
+   on the dark cards. That is why there is no dark twin for this rule. */
+.fact-pill {
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0 0 16px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  line-height: 1.2;
+  /* The pill is a run of two <span>s inside a <p>; without this it inherits
+     the paragraph's 1em bottom margin twice over on the cards. */
+  vertical-align: middle;
+}
+.fact-pill__num {
+  padding: 7px 10px;
+  font-weight: 700;
+  /* A shade of the pill's own fill rather than a token of its own: the number
+     cell has to read as deeper than the caption in BOTH themes, and a fixed
+     colour would only work in one. */
+  background: rgba(0, 0, 0, .28);
+  white-space: nowrap;
+}
+.fact-pill__label {
+  padding: 7px 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* §2: «На тёмных карточках — инверсия (белая пилюля, тёмный текст).»
+   A --ink pill on an --ink card is the same colour twice — the pill would
+   simply vanish. So on the dark tone the two roles swap, and because both
+   sides of the swap are the same two tokens, the inversion survives the dark
+   theme by itself: there the card is light and the pill goes dark, which is
+   still «the pill is the opposite of its card». The number cell's wash has to
+   flip with it, or a black wash would fall on an already-dark pill. */
+.pcard--dark .fact-pill {
+  background: var(--bg);
+  color: var(--ink);
+}
+.pcard--dark .fact-pill__num { background: rgba(0, 0, 0, .10); }
+
+/* The hero's two pills, where the chip used to be. */
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.pills .fact-pill { margin: 0; }
+
+/* ── §5 the hero screenshot ─────────────────────────────────────────── */
+
+/* The frame is the same window it always was; what changed is that the page
+   inside it is a photograph instead of a skeleton, so the frame no longer
+   needs a min-height to hold a shape up — the image's own aspect ratio does
+   that, and `height: auto` (global img rule) keeps it undistorted next to the
+   width/height attributes that reserve its box before it loads. */
+.hero-shot .shot-frame { min-height: 0; }
+.shot-img {
+  display: block;
+  width: 100%;
+  /* The window's top bar has square-ish shoulders of its own; the picture
+     rounds only where it meets the frame's bottom corners. */
+  border-radius: 0 0 8px 8px;
+}
+
+/* ── §1 the six product cards ───────────────────────────────────────── */
+
+.pcards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+/* Two columns from 900 up, exactly as §1 asks. Below it the cards stack and
+   each one is full width, which is also where the tilt is switched off. */
+@media (min-width: 900px) {
+  .pcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.pcard {
+  border-radius: 20px;
+  padding: 36px 36px 0;
+  /* The whole point of the tilt: the screenshot is pushed down and rotated,
+     and the card clips it, so its bottom edge disappears under the card's own
+     rather than sitting inside a frame. */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pcard h3 {
+  font-size: 1.24rem;
+  margin: 0 0 .5em;
+  max-width: 24ch;
+}
+/* `:not(.fact-pill)` is load-bearing, not tidiness. The pill is authored as a
+   <p> — it is a standalone statement, not a run of text inside one — so a bare
+   `.pcard > p` (0,1,1) outranks `.fact-pill` (0,1,0) and repainted the pill's
+   own text --ink-soft. On the dark theme's light pill that is grey on
+   near-white: the number was legible only if you knew it was there. */
+.pcard > p:not(.fact-pill) {
+  color: var(--ink-soft);
+  font-size: .97rem;
+  margin: 0 0 26px;
+  max-width: 46ch;
+}
+
+/* The three tones, all from tokens the page already had. `cream` is the sand
+   surface §1 names (--surface-2), `sand` the warm cream, `dark` the ink — and
+   because every one of the three is a token with a dark twin already defined,
+   the whole grid follows the theme with no rule of its own. */
+.pcard--cream { background: var(--surface-2); color: var(--ink); }
+.pcard--sand { background: var(--cream); color: var(--ink); }
+.pcard--dark { background: var(--ink); color: var(--bg); }
+/* On the dark card the muted paragraph colour would be a dark grey on a dark
+   ground. It borrows the card's own text colour at reduced opacity instead,
+   which stays legible in both themes because --bg flips with them.
+   `:not(.fact-pill)` for the same reason as the rule above: the pill is a <p>
+   and must keep its own two colours. */
+.pcard--dark > p:not(.fact-pill) { color: inherit; opacity: .78; }
+
+/* The screenshot. The negative bottom margin is what makes the picture run off
+   the bottom of the card; the rotation is the Maestra trick §1 names, kept
+   small (2 degrees) so the dashboard still reads as a straight interface.
+
+   The FIXED height on the WRAPPER is the part that is not obvious. The seven
+   screenshots have wildly different shapes — 1600×714 for the stats card,
+   1114×1410 for the preview — and letting each one set its own height inside a
+   two-column grid meant one portrait screenshot decided the height of the
+   whole row, leaving its neighbour a 400px void between paragraph and picture.
+   A fixed band, and the wrapper's own `overflow: hidden` doing the clipping,
+   holds the six cards to one rhythm.
+
+   The image itself stays `width: 100%; height: auto` — deliberately NOT
+   object-fit: cover. Cover scales to fill BOTH axes, so a 2.1:1 screenshot in
+   a 496×300 box gets scaled up until it is 300 tall and then loses ~66px off
+   each side — which cut the left half off «Подключение сайта» and clipped the
+   stats card's last column. Clipping only at the bottom is both what §1 asks
+   for («низ картинки уходит под край») and the only crop that cannot destroy
+   the heading a screenshot is there to show: every one of these images says
+   what it is along its top edge. */
+/* max-height, not height: a wide screenshot is shorter than the band once it
+   is only ever scaled DOWN, and a hard height would hold open a strip of card
+   under it. The tall ones are the ones that get clipped, which is the point. */
+.pcard__shot {
+  /* A FIXED top margin, not `auto`: the two cards of a grid row share a
+     height, and `auto` sent the shorter card's picture to the bottom, leaving a
+     slab of empty card between its text and its screenshot (architect's review
+     of the first cut). The picture follows the text; whatever does not fit is
+     clipped at the card's bottom edge, which is the Maestra look §1 asks for. */
+  margin: 28px -8px -52px;
+  max-height: 300px;
+  transform: rotate(-2deg) translateY(12px);
+  transform-origin: 50% 0;
+  border-radius: 12px;
+  overflow: hidden;
+  /* The shadow is what lifts the picture off a card of the same family of
+     tones; a border would fight the tilt at the corners. */
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+}
+.pcard__shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* The four WIDE screenshots (readiness, scan, stats, declaration) were shot at
+   1180px and at 100% of a 450px card their text is a smear. Scaled to 135% and
+   anchored left they read like a crop of the real screen — the heading and
+   the first controls — instead of a thumbnail of the whole; the right edge is
+   cut, which is the same crop Maestra makes. The two tall ones (texts,
+   preview) are narrow already and stay at 100%. */
+.pcard__shot--wide img { width: 135%; max-width: none; }
+
+/* §1: «На узких экранах наклон 0, картинка во всю ширину.» A 2-degree tilt on
+   a 360px card costs 12px of the picture on each side and gains nothing. */
+@media (max-width: 700px) {
+  .pcard { padding: 24px 24px 0; border-radius: 16px; }
+  /* At phone width the card itself is the crop; 135% would cut a third of it. */
+  .pcard__shot--wide img { width: 110%; }
+  .pcard__shot {
+    margin: 20px -4px -28px;
+    max-height: 260px;
+    transform: none;
+  }
+}
+
+/* ── §1 the «И ещё» row ─────────────────────────────────────────────── */
+
+.feat-more__head {
+  margin: 44px 0 18px;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+/* Its own grid, not `.cards`: `#features .cards` carries the orphan-centring
+   rule written for the old ten-card layout, and four cards would trip it
+   (4 = 3·1+1) and send the last one to column 2. A separate class is cheaper
+   and clearer than fighting that selector. */
+.feat-more {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.feat {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.feat h3 { font-size: .99rem; margin: 0 0 .45em; }
+.feat p { color: var(--ink-soft); font-size: .92rem; margin: 0; max-width: 62ch; }
+
+/* ── §4 «Своими силами / ConsentKit» ───────────────────────────────── */
+
+/* Same discipline as .plan-scroll: the table is wider than a phone and it is
+   the WRAPPER that scrolls sideways, never the page. */
+.cmp-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 12px 2px 2px;
+  margin: -12px -2px 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.cmp-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: separate;   /* so the featured column keeps side borders */
+  border-spacing: 0;
+  font-size: .93rem;
+  text-align: left;
+}
+.cmp-table__caption {
+  caption-side: top;
+  text-align: left;
+  /* The <caption> repeats the section heading for a screen reader reaching the
+     table out of context. On screen the heading is right above it, so showing
+     both would be saying the same sentence twice. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.cmp-table th,
+.cmp-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.cmp-table tbody th {
+  width: 26%;
+  min-width: 170px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-size: .86rem;
+}
+.cmp-table thead th {
+  font-size: .95rem;
+  border-bottom: 1px solid var(--line);
+}
+.cmp-table__corner {
+  width: 26%;
+  min-width: 170px;
+  border-bottom: 1px solid var(--line);
+}
+/* Its own rule, NOT appended to `.plan-table .is-featured`'s selector list:
+   the §2 red-dosage test reads that rule by name to prove the pricing
+   highlight is still sand with a dark 1px border, and a joined selector would
+   read to it as a deleted rule. Same two declarations, said separately. */
+.cmp-table .is-featured {
+  background: var(--surface-2);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--ink);
+}
+.cmp-table thead .is-featured {
+  border-top: 1px solid var(--ink);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.cmp-table tbody tr:last-child .is-featured {
+  border-bottom: 1px solid var(--ink);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* ── §3 rounded blocks instead of full-bleed strips ─────────────────── */
+
+/* V1.14.1 painted #check red and #numbers cream edge to edge. §1.24 keeps
+   both colours and changes the GEOMETRY: each becomes a rounded card sitting
+   on the page's own background, with the same 24px rhythm between them. The
+   paint stays on the section itself — moving it onto .wrap would collide with
+   the ≥960 grid the check block already builds there.
+
+   The section's vertical padding becomes the card's inner padding, so the
+   space between two cards is the gap below plus nothing else. */
+#check,
+#numbers,
+#who,
+#dev {
+  max-width: calc(var(--wrap) + 48px);
+  margin: 0 auto 24px;
+  border-radius: 24px;
+  padding: 48px 0;
+}
+/* #who and #dev were `.band`, i.e. the page's own white, and as rounded cards
+   on a white page they would be invisible. §1.24 gives them the two remaining
+   tones — sand and ink — so the page reads cream → red → cream → sand → ink
+   rather than four white slabs with rounded corners. */
+#who { background: var(--surface-2); }
+
+/* #dev is the page's one INVERTED block, and inversion is the thing a token
+   cannot do for itself. `background: var(--ink)` is a dark card in the light
+   theme and, because --ink is the light theme's opposite, a WHITE slab in the
+   dark one — the same failure the palette's own note describes for a cream
+   band on a dark page. So the two colours are named through a pair of
+   properties instead, and the dark theme redefines them to a lifted dark
+   surface: the block stays «the darkest thing on the page» in both themes,
+   which is what its role is, rather than staying one literal colour.
+   #1E1E1E carries #FFF2E0 at 15.11:1 and #262626 carries #F2F2F2 at 13.2:1 —
+   both well past AA at body size. */
+#dev {
+  --dev-bg: var(--ink);
+  --dev-ink: var(--bg);
+  background: var(--dev-bg);
+  color: var(--dev-ink);
+}
+#dev h2 { color: var(--dev-ink); }
+#dev .section-lede,
+#dev .dev-facts { color: var(--dev-ink); opacity: .8; }
+#dev a { color: var(--dev-ink); }
+#dev a:hover { color: var(--dev-ink); opacity: .75; }
+/* The code block sits INSIDE the inverted card, and --code-bg is a near-black
+   in both themes, so on the dark theme's lifted surface it needs an edge to
+   stay a separate object rather than a hole. */
+#dev .code-block { border: 1px solid rgba(255, 255, 255, .12); }
+
+/* The #who cards sit on sand now, so a --bg fill would be a white card on
+   sand — right — but their beige rule reads as noise against it. */
+#who .card { background: var(--bg); border-color: var(--line-soft); }
+
+/* The dark twin of the inversion above, written in both of the file's dark
+   homes — the system one and the forced one — with identical declarations, as
+   every dark rule in this stylesheet must be. --surface-2 is the lifted dark
+   panel tone the palette already defines, and --ink is that theme's light
+   text: the block reads as a raised dark card instead of flipping white. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #dev {
+    --dev-bg: var(--surface-2);
+    --dev-ink: var(--ink);
+  }
+}
+:root[data-theme="dark"] #dev {
+  --dev-bg: var(--surface-2);
+  --dev-ink: var(--ink);
+}
+
+@media (max-width: 760px) {
+  #check,
+  #numbers,
+  #who,
+  #dev {
+    /* §3: on mobile the radius drops to 16 and the padding to 24/20. The
+       card also gives up its 24px side inset, because on a 375 screen an
+       inset card plus .wrap's own 24px padding leaves the text a 300px
+       column. */
+    max-width: 100%;
+    border-radius: 16px;
+    padding: 24px 0;
+    margin-bottom: 20px;
+  }
+}
