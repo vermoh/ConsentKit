@@ -1670,7 +1670,7 @@ test('§2: the elements that stopped being red have not become red again', () =>
      must not now. --accent-deco is exempt everywhere: it is the depicted
      CLIENT banner's colour, which §2 explicitly leaves alone. */
   for (const sel of [
-    '.brand-mark',            // the logo shield — a fourth red in screen one
+    '.brand-mark',            // the logo shield: its red lives inside the SVG (the brand, 08.09.2026), never from the accent token
     '.chip',                  // §2: sand fill, dark text
     '.btn--ghost',            // §2: white fill, dark 1px outline
     '.ba__grip',              // §2: «ручка чёрная»

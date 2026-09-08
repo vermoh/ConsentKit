@@ -386,9 +386,13 @@ a:hover { color: var(--accent-ink); }
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
-/* §3 counts the red elements in the first screen and allows three; the shield
-   is the logo, not a call to action, so it takes the capsule's cream. */
-.capsule-brand .brand-mark { color: var(--capsule-ink); flex: none; }
+/* The logo (08.09.2026). The shield's red is painted INSIDE the SVG, not from
+   a token: §3 counts red calls to action in the first screen, and the brand
+   mark is not one of them — the test that guards this rule still refuses
+   var(--accent) here, so a future edit cannot turn the mark into a button.
+   The wordmark follows the capsule's ink through currentColor. */
+.capsule-brand .brand-mark { flex: none; width: 26px; height: 26px; }
+.capsule-brand .brand-word { flex: none; height: 22px; width: auto; color: var(--capsule-ink); }
 
 /* Right: the one red button. It keeps .btn--primary — §2.4's single primary
    action on the page — and only loses the full-width phone rule. */
@@ -1124,6 +1128,24 @@ section[id],
 }
 
 .price-note { margin-top: 26px; font-size: .87rem; color: var(--ink-soft); }
+
+/* Creem's «Payments secured by» badge under the pricing table. The values are
+   the vendor's own (their embed snippet, inline styles moved here verbatim),
+   which is why nothing below uses a token: the badge is Creem's brand, it
+   looks the same on their site and on ours, and it does not switch with the
+   theme — a cream chip with a dark border in both. */
+.price-badge { margin-top: 14px; }
+.creem-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 13px; border-radius: 10px;
+  border: 2px solid #151617; background: #F5F2F0; box-shadow: 0 2px 0 0 #151617;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px; line-height: 1; text-decoration: none;
+}
+.creem-badge:hover { text-decoration: none; }
+.creem-badge svg { display: block; flex: 0 0 auto; }
+.creem-badge__lead { color: #5b5c5e; font-weight: 600; }
+.creem-badge__name { color: #151617; font-weight: 700; }
 
 /* P3-9, half two. The floating re-open button itself is moved from app.js —
    it lives inside #ck-root's shadow root, which no rule in this file can reach.
