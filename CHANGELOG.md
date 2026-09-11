@@ -5,6 +5,36 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.21
+
+- **A banner language that follows the page: `language: 'page'`.** The page's
+  own `<html lang>` is read first, then `navigator.language`, then `en` — each
+  step through the same exact → two-letter → nothing lookup, so `<html
+  lang="pt-BR">` is a Portuguese banner and the legacy Moldovan tag `mo` is
+  Romanian. A `lang` that is missing, empty or names a language ConsentKit has
+  no locale for is not an answer and falls through to the browser, rather than
+  dropping the visitor to English.
+  This is the mode for a site with real per-language URLs: on `/ro/` a visitor
+  whose browser says `ru-RU` now reads a Romanian banner, which is what every
+  other word on that page already said.
+- **`auto` is unchanged, on purpose.** It still reads only `navigator.language`
+  and still never looks at `<html lang>`. On builder-made sites that attribute
+  is routinely wrong — Tilda writes one template `lang` onto every page — so
+  teaching `auto` to read it would silently change the language on every
+  installation already running, including the ones that are correct today. A
+  third mode is opt-in; a redefined `auto` would not have been.
+  Note that `'page'` sent to a client older than 0.5.21 is not recognised as a
+  mode at all: it is read as a language code, matches no locale and renders
+  English.
+- The **debug panel** gains the same mode and a new «Language» row that names
+  both the code the banner resolved to and where it came from — the page's
+  `lang` attribute, the browser, or the config — which is the whole diagnosis
+  for «why is this banner in the wrong language». Translated in ru, ro and en.
+- `tools/build-inline.mjs` accepts `--language=page`; the WordPress plugin's
+  language selector gains «Same as the page (lang attribute)».
+- The **site demo** now runs `language: 'page'`, so consentkit.ecomconsult.net
+  demonstrates the mode on its own `/ru/` and `/ro/` pages.
+
 ## 0.5.20
 
 - Tracker database: **Maestra/Mindbox, the SoundCloud player, Trustindex, a

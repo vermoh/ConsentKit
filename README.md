@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.20).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.21).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -180,7 +180,7 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | Key | Type | Default | Notes |
 |---|---|---|---|
 | `policyVersion` | `string \| number` | `"1"` | Bump to invalidate stored consent and re-show the banner |
-| `language` | `string` | `"auto"` | `"auto"` reads `navigator.language`. Falls back `pt-BR` → `pt` → `en` |
+| `language` | `string` | `"auto"` | `"auto"` reads `navigator.language`; `"page"` (v0.5.21) reads `<html lang>` first; or a fixed code. Falls back `pt-BR` → `pt` → `en` — see [Banner language](#banner-language) |
 | `layout.type` | `"bar" \| "modal" \| "box"` | `"bar"` | `box` is a corner card, up to 540px wide |
 | `layout.position` | `string` | per type | `bar`: `bottom` (default) / `top`. `box`: `bottom-left` (default) / `bottom-right`. `modal` is always centred. A position that does not belong to the chosen type falls back to that type's default; the type itself is unaffected |
 | `theme.accent` | `string` | `"#2B50D8"` | Exposed as `--ck-accent` |
@@ -260,6 +260,31 @@ Both keys are translated in all 34 languages. The hosted service writes
 `purpose` objects and `expiryDays` into generated configs from 0.5.16 onwards,
 and keeps writing `expiry` as well so that an older inline copy of the client
 still shows something.
+
+### Banner language
+
+`language` takes one of three values:
+
+- **`"auto"`** (default) — the visitor's browser, from `navigator.language`.
+- **`"page"`** (v0.5.21) — the page's own `<html lang>` attribute, and only if
+  that is missing or names a language ConsentKit has no locale for, the browser.
+  This is the mode for a site with real per-language URLs (`/ru/`, `/ro/`): a
+  Romanian page then greets a visitor with a Russian browser in Romanian.
+- **a language code** — `"de"`, `"pt-BR"`, that language always.
+
+In every case the lookup falls back `pt-BR` → `pt` → `en`, and the legacy
+Moldovan tag `mo` is read as `ro`.
+
+**`"auto"` deliberately does not look at `<html lang>`.** On builder-made sites
+that attribute is routinely wrong — Tilda, for instance, writes one template
+`lang` onto every page, so a Romanian page announces itself as Russian — and
+teaching `auto` to read it would silently change the banner on every site
+already running, including the many where it is correct today. That is why
+`page` is a third mode rather than a new meaning for the old one.
+
+> `"page"` needs client **0.5.21 or newer**. An older client does not recognise
+> it as a mode, reads it as a language code, matches no locale and renders
+> English.
 
 ### Services
 
@@ -1124,19 +1149,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.20, rebuilt 2026-09-08, uncompressed — gzip on the server cuts
+ConsentKit 0.5.21, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 342,325 | 108,023 | 316,034 |
-| `ready/ru-bar.txt` | ru, ro, en | 344,509 | 108,975 | 318,032 |
-| `ready/ru-box.txt` | ru, ro, en | 344,524 | 108,981 | 318,047 |
-| `ready/ru-box-right.txt` | ru, ro, en | 344,533 | 108,987 | 318,056 |
-| `ready/ru-modal.txt` | ru, ro, en | 344,517 | 108,981 | 318,040 |
-| `ready/eu-bar.txt` | 34 languages | 396,443 | 128,479 | 369,986 |
+| `ready/en-bar.txt` | en | 346,464 | 109,494 | 320,173 |
+| `ready/ru-bar.txt` | ru, ro, en | 348,648 | 110,443 | 322,171 |
+| `ready/ru-box.txt` | ru, ro, en | 348,663 | 110,449 | 322,186 |
+| `ready/ru-box-right.txt` | ru, ro, en | 348,672 | 110,455 | 322,195 |
+| `ready/ru-modal.txt` | ru, ro, en | 348,656 | 110,449 | 322,179 |
+| `ready/eu-bar.txt` | 34 languages | 400,582 | 129,953 | 374,125 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1327,6 +1352,36 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.21
+
+- **A banner language that follows the page: `language: 'page'`.** The page's
+  own `<html lang>` is read first, then `navigator.language`, then `en` — each
+  step through the same exact → two-letter → nothing lookup, so `<html
+  lang="pt-BR">` is a Portuguese banner and the legacy Moldovan tag `mo` is
+  Romanian. A `lang` that is missing, empty or names a language ConsentKit has
+  no locale for is not an answer and falls through to the browser, rather than
+  dropping the visitor to English.
+  This is the mode for a site with real per-language URLs: on `/ro/` a visitor
+  whose browser says `ru-RU` now reads a Romanian banner, which is what every
+  other word on that page already said.
+- **`auto` is unchanged, on purpose.** It still reads only `navigator.language`
+  and still never looks at `<html lang>`. On builder-made sites that attribute
+  is routinely wrong — Tilda writes one template `lang` onto every page — so
+  teaching `auto` to read it would silently change the language on every
+  installation already running, including the ones that are correct today. A
+  third mode is opt-in; a redefined `auto` would not have been.
+  Note that `'page'` sent to a client older than 0.5.21 is not recognised as a
+  mode at all: it is read as a language code, matches no locale and renders
+  English.
+- The **debug panel** gains the same mode and a new «Language» row that names
+  both the code the banner resolved to and where it came from — the page's
+  `lang` attribute, the browser, or the config — which is the whole diagnosis
+  for «why is this banner in the wrong language». Translated in ru, ro and en.
+- `tools/build-inline.mjs` accepts `--language=page`; the WordPress plugin's
+  language selector gains «Same as the page (lang attribute)».
+- The **site demo** now runs `language: 'page'`, so consentkit.ecomconsult.net
+  demonstrates the mode on its own `/ru/` and `/ro/` pages.
 
 ### 0.5.20
 
@@ -1597,7 +1652,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.20), not a released product.** It is honest about
+**This is a prototype (v0.5.21), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

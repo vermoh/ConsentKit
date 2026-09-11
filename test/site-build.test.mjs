@@ -577,6 +577,26 @@ test('app.js no longer switches language at runtime', () => {
     'app.js does not use the ck-site-theme key the <head> boot script writes');
 });
 
+test("the demo banner runs language: 'page'", () => {
+  /* SPEC V1.25 §1 — this site is the case the mode was added for: /ru/ and
+     /ro/ are real pages carrying `<html lang>`, and before 0.5.21 a visitor
+     with a Russian browser got a Russian banner on the Romanian page.
+
+     Asserted against the source as it reads rather than against a literal
+     `language: 'page'`, because demoConfig() deliberately keeps two values
+     apart: the MODE goes to the client, while the branding line and the cookie
+     table follow the page's resolved language. Collapsing them would put an
+     English attribution under a Romanian banner — the same inconsistency on
+     one screen that the 'auto' branch existed to avoid. */
+  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
+  assert.match(app, /\(l === 'auto'\) \? 'page'/,
+    "the demo's default banner language is no longer 'page'");
+  assert.match(app, /language: effective/,
+    'the mode must be what reaches the client config');
+  assert.match(app, /brandingFor\(resolved\)/,
+    "branding must follow the resolved page language, never the literal 'page'");
+});
+
 test('the template is the only place page structure is authored', () => {
   assert.ok(existsSync(TEMPLATE), 'site/src/index.template.html is missing');
   for (const f of outputs()) {

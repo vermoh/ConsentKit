@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.20
- * Дата сборки:      2026-09-08
+ * Версия ConsentKit: 0.5.21
+ * Дата сборки:      2026-09-11
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
@@ -2566,7 +2566,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.20',
+    version: '0.5.21',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.
@@ -3688,17 +3688,96 @@
     return table;
   }
 
-  // exact lowercase match -> first two letters (pt-BR -> pt) -> en
-  function resolveLang(cfgLang, table) {
-    var raw = cfgLang;
-    if (!raw || raw === 'auto') {
-      raw = (typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) || 'en';
-    }
-    var code = String(raw).toLowerCase();
+  /* SPEC V1.25 §1 — «'mo' → ro в обоих путях».
+
+     'mo' is the legacy Moldovan tag, retired from BCP 47 in favour of 'ro' but
+     still sent by some browsers and still written into `<html lang>` by some
+     Moldovan sites. It is NORMALISED before the lookup rather than returned
+     outright: a build that bundles no Romanian then falls through to the next
+     source, instead of naming a locale the table does not carry. pluralIndex()
+     below already treats mo as ro, so this only makes the two agree. */
+  var LANG_ALIAS = { mo: 'ro' };
+
+  // One lookup: exact lowercase match -> first two letters (pt-BR -> pt) ->
+  // nothing. Returns '' rather than 'en' so the caller can tell «this source
+  // had no usable language» from «this source said English», which is the
+  // whole difference between the two steps of 'page' below.
+  function matchLang(raw, table) {
+    var code = String(raw || '').toLowerCase();
+    if (!code) return '';
+    if (LANG_ALIAS[code]) code = LANG_ALIAS[code];
     if (table[code]) return code;
     var short = code.slice(0, 2);
+    if (LANG_ALIAS[short]) short = LANG_ALIAS[short];
     if (table[short]) return short;
-    return 'en';
+    return '';
+  }
+
+  /* SPEC V1.25 §1 — three modes, and the reason there are three rather than two.
+
+     'auto'  — navigator.language, exactly as since 0.1. It deliberately does
+               NOT look at <html lang>, and that is not an oversight: on
+               builder-made sites the attribute is routinely wrong (Tilda writes
+               one template `lang` onto every page, so a Romanian page announces
+               itself as Russian). Teaching `auto` to read it would silently
+               change the language on every site already running — including the
+               ones that are correct today — so `auto` keeps its meaning.
+     'page'  — <html lang> first, then navigator.language, then en. The mode for
+               a site with real per-language URLs (/ru/, /ro/), where the page
+               itself is the authority: a Romanian page must greet a visitor
+               with a Russian browser in Romanian.
+     a code  — that language, always.
+
+     `docLang`/`navLang` are arguments so the rule is pure and testable without
+     globals; the call sites read document/navigator and pass them in. They are
+     still defaulted here because ck-debug.js calls this with two arguments
+     (see textsRow there) and must resolve 'page' the same way the banner does.
+
+     Note for the server: 'page' sent to a client older than 0.5.21 is not
+     recognised as a mode, is treated as a language code, matches no locale and
+     therefore renders en. That is handled by pinning the version server-side
+     (§2); nothing here can detect it. */
+  function resolveLang(cfgLang, table, docLang, navLang) {
+    var nav = (arguments.length > 3) ? navLang
+      : ((typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) || '');
+    var doc = (arguments.length > 2) ? docLang
+      : ((typeof document !== 'undefined' && document.documentElement &&
+          document.documentElement.lang) || '');
+
+    var mode = String(cfgLang == null ? '' : cfgLang).toLowerCase();
+
+    if (mode === 'page') {
+      // An attribute that is missing, empty or names a language we have no
+      // locale for ('xx') is no answer at all — fall through to the browser.
+      return matchLang(doc, table) || matchLang(nav, table) || 'en';
+    }
+    if (!mode || mode === 'auto') {
+      return matchLang(nav, table) || 'en';
+    }
+    return matchLang(mode, table) || 'en';
+  }
+
+  // The two globals resolveLang() needs, read HERE rather than inside it, so the
+  // rule itself stays pure. Both are wrapped: `document.documentElement` is
+  // absent in a worker and `navigator.language` throws in a few hardened
+  // embeddings, and neither is worth losing the banner over.
+  function docLangNow() {
+    try {
+      return (typeof document !== 'undefined' && document.documentElement &&
+        document.documentElement.lang) || '';
+    } catch (e) { return ''; }
+  }
+  function navLangNow() {
+    try {
+      return (typeof navigator !== 'undefined' &&
+        (navigator.language || navigator.userLanguage)) || '';
+    } catch (e) { return ''; }
+  }
+  // The config-reading resolve, in one place: both call sites (signature() and
+  // mount()) must read the same two sources, or the banner could remount in a
+  // language the signature never noticed changing.
+  function resolveCfgLang(cfg, table) {
+    return resolveLang(cfg && cfg.language, table, docLangNow(), navLangNow());
   }
 
   /* SPEC V1.12 §3 — plural forms.
@@ -4217,7 +4296,7 @@
   function detailsKind(cfg, lang) {
     var det = resolveDetails(cfg);
     var code = (typeof lang === 'string' && lang) ? lang :
-      resolveLang(cfg && cfg.language, localeTable());
+      resolveCfgLang(cfg, localeTable());
     return detailsDuplicatesLink(det, resolveLinks(cfg, code)) ? 'hide' : det.kind;
   }
 
@@ -6925,7 +7004,7 @@
     }
 
     var table = localeTable();                       // read at render time
-    LANG = resolveLang(cfg && cfg.language, table);
+    LANG = resolveCfgLang(cfg, table);
     // SPEC V1.16 §1.1 — the config is the third merge layer, so it must be
     // handed in here: this is the only place that knows which language the
     // banner actually resolved to, which is what the override is keyed by.

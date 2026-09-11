@@ -3,7 +3,7 @@
  * Plugin Name:       ConsentKit
  * Plugin URI:        https://example.com/consentkit
  * Description:       GDPR cookie banner with a parse-time blocking engine, 30+ locales and Google Consent Mode v2. Prototype.
- * Version:           0.5.20
+ * Version:           0.5.21
  * Requires PHP:      7.4
  * Requires at least: 6.0
  * Author:            E-COM CONSULT PLUS
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CONSENTKIT_VERSION', '0.5.20' );
+define( 'CONSENTKIT_VERSION', '0.5.21' );
 define( 'CONSENTKIT_FILE', __FILE__ );
 define( 'CONSENTKIT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CONSENTKIT_URL', plugin_dir_url( __FILE__ ) );
@@ -77,10 +77,17 @@ function consentkit_get_option( $name ) {
 /**
  * Allowed language codes for the language <select>.
  *
+ * Two of these are modes rather than codes. 'auto' reads the visitor's browser
+ * language. 'page' (SPEC V1.25 §1, client 0.5.21) reads this page's own <html
+ * lang> first and only falls back to the browser — the right answer for a
+ * multilingual site, where a Romanian page must greet a Russian-speaking
+ * browser in Romanian. 'auto' deliberately does NOT read that attribute, so
+ * sites whose theme mis-tags it keep behaving as they do today.
+ *
  * @return array<int, string>
  */
 function consentkit_allowed_languages() {
-	return array( 'auto', 'en', 'ru', 'de', 'fr', 'es', 'it', 'pl', 'custom' );
+	return array( 'auto', 'page', 'en', 'ru', 'de', 'fr', 'es', 'it', 'pl', 'custom' );
 }
 
 /**
@@ -479,6 +486,7 @@ function consentkit_render_admin_page() {
 								'consentkit_language',
 								array(
 									'auto'   => __( 'Auto (browser language)', 'consentkit' ),
+									'page'   => __( 'Same as the page (lang attribute)', 'consentkit' ),
 									'en'     => __( 'English', 'consentkit' ),
 									'ru'     => __( 'Russian', 'consentkit' ),
 									'de'     => __( 'German', 'consentkit' ),
@@ -505,6 +513,9 @@ function consentkit_render_admin_page() {
 							</p>
 							<p class="description">
 								<?php echo esc_html__( 'Used only when "Custom code…" is selected. ConsentKit ships 30+ locales; an unknown code falls back to English.', 'consentkit' ); ?>
+							</p>
+							<p class="description">
+								<?php echo esc_html__( 'Choose "Same as the page" for a site with several language versions: the banner takes the language from the page\'s lang attribute, and falls back to the browser language when the page does not set one.', 'consentkit' ); ?>
 							</p>
 						</td>
 					</tr>

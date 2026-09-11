@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.20
+Stable tag: 0.5.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,18 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.21 =
+* Banner language: a new "Same as the page (lang attribute)" option. The banner
+  takes its language from the page's own <html lang> first, and only falls back
+  to the visitor's browser language when the page sets none or names a language
+  ConsentKit has no locale for. This is the setting for a multilingual site: a
+  Romanian page now greets a visitor with a Russian browser in Romanian.
+* "Auto (browser language)" is unchanged and still ignores the lang attribute.
+  Many themes and builders mis-tag it, so reading it automatically would change
+  the language on sites that are correct today. The new option is opt-in.
+* The debug panel reports which language the banner resolved to and where it
+  came from: the page's lang attribute, the browser, or the settings.
 
 = 0.5.20 =
 * Tracker database: maestra.io and maestra-static.io -> marketing, with

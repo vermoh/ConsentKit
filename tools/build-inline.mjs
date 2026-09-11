@@ -20,6 +20,21 @@ const SRC = join(REPO, 'src');
 
 // en/ru live in the builtin dictionary of ck-ui.js; the locale pack never carries them.
 const BUILTIN_LANGS = ['en', 'ru'];
+/* SPEC V1.25 §1 — the two values of --language that are MODES rather than
+   locale codes. Neither names a language at build time: 'auto' asks the
+   browser at mount time, 'page' asks the page's own `lang` attribute and then
+   the browser. Everything else is a code and must be in --langs. */
+const LANG_MODES = ['auto', 'page'];
+// One sentence per mode, shared by the block header and the terminal summary so
+// the two can never describe the same build differently.
+function langNote(language, style = 'parens') {
+  const WORDS = {
+    auto: 'по языку браузера посетителя',
+    page: 'по атрибуту lang страницы, иначе по языку браузера'
+  };
+  const words = WORDS[language] || 'задан жёстко';
+  return style === 'dash' ? `${language} — ${words}` : `${language} (${words})`;
+}
 const LAYOUTS = ['bar', 'modal', 'box'];
 const MODES = ['auto', 'light', 'dark'];
 // Per v0.2: bar keeps bottom|top, box sits in a corner.
@@ -47,6 +62,9 @@ ConsentKit — сборщик инлайн-версии (один <script> дл�
                        локалей не включается вовсе.
   --language=auto      Язык баннера. По умолчанию: auto — язык браузера
                        посетителя, из тех что вошли в сборку, иначе английский.
+                       page — язык из атрибута lang самой страницы, а если его
+                       нет или он незнаком — язык браузера. Берите page, если у
+                       сайта несколько языковых версий (/ru/, /ro/).
                        Можно жёстко задать один язык, например --language=de;
                        он обязан входить в --langs.
   --layout=bar         Вид баннера: bar | modal | box. По умолчанию: bar.
@@ -306,8 +324,11 @@ function build(flags) {
 
   // --language must name a locale that actually shipped in this build, otherwise
   // ck-ui would silently fall back to en and the site owner would never know why.
+  // SPEC V1.25 §1: 'page' is a MODE, not a locale — like 'auto' it names no
+  // language at build time (the visitor's page does, at mount time), so it is
+  // exempt from the membership check for exactly the same reason 'auto' is.
   const language = String(flags.language == null ? 'auto' : flags.language).trim().toLowerCase();
-  if (language !== 'auto' && !requested.includes(language)) {
+  if (!LANG_MODES.includes(language) && !requested.includes(language)) {
     const known = available.concat(BUILTIN_LANGS).includes(language);
     fail(`Язык "--language=${flags.language}" не входит в эту сборку.\n` +
       (known
@@ -342,7 +363,10 @@ function build(flags) {
   // Which language the visitor actually gets first: an explicit --language, or
   // for --language=auto the first bundled language (ck-ui falls back to en when
   // the browser matches nothing). Keeps ru-* blocks Russian and en/eu English.
-  const primaryLang = language === 'auto' ? requested[0] : language;
+  // 'page' takes the same branch as 'auto': both decide in the browser, so
+  // neither names a language here, and feeding the literal 'page' into the
+  // attribution table below would silently pick the English line.
+  const primaryLang = LANG_MODES.includes(language) ? requested[0] : language;
 
   // 0.5.6: `text` alone is only right when the language is fixed. Under
   // --language=auto the visitor's browser decides at mount time, so a ru/ro/en
@@ -372,6 +396,7 @@ function build(flags) {
   const config = {
     policyVersion: policy,
     // 'auto' -> visitor's browser language among the bundled ones, else en.
+    // 'page' -> the page's own lang attribute first, then the browser, then en.
     // A fixed code must be one that actually shipped in this build.
     language,
     layout: { type: layout, position },
@@ -398,7 +423,7 @@ function build(flags) {
     ` * Версия ConsentKit: ${version}`,
     ` * Дата сборки:      ${stamp}`,
     ` * Языки:            ${requested.join(', ')}${fromPack.length === 0 ? ' (встроенные, пакет локалей не нужен)' : ''}`,
-    ` * Язык баннера:     ${language === 'auto' ? 'auto (по языку браузера посетителя)' : language + ' (задан жёстко)'}`,
+    ` * Язык баннера:     ${langNote(language)}`,
     ` * Вид:              ${layout} / ${position}, тема ${mode}, акцент ${accent}`,
     ` * Версия политики:  ${policy}`,
     ` * Брендинг:         ${noBranding ? 'нет — код брендинга не включён (--no-branding)' : 'строка «' + branding.poweredBy.text + '»'}`,
@@ -525,7 +550,7 @@ function main() {
       (stats.fromPack.length === 0
         ? ' (только встроенные, пакет локалей не подключён)'
         : ` (${stats.fromPack.length} из пакета локалей)`),
-    `  язык баннера  ${stats.language === 'auto' ? 'auto — по языку браузера посетителя' : stats.language + ' — задан жёстко'}`,
+    `  язык баннера  ${langNote(stats.language, 'dash')}`,
     `  cookie в таблице  ${stats.cookieRows}`,
     `  брендинг      ${stats.noBranding ? 'нет (--no-branding)' : stats.brandingText}`,
     '  ---',

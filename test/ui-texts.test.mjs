@@ -936,3 +936,152 @@ test('the appearance section renders the texts row', () => {
   assert.match(DEBUG_SRC, /\[T\.textsOverride, textsRow\(T\)\]/,
     'the row must be in the panel’s defs() list');
 });
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPEC V1.25 §1 — language: 'page'
+   ═══════════════════════════════════════════════════════════════════════
+
+   The bug: on the Romanian page of a multilingual site (`<html lang="ro">`) a
+   visitor whose browser says ru-RU got a RUSSIAN banner, because 'auto' reads
+   navigator.language and nothing else.
+
+   The fix is a third mode rather than a change to 'auto', and both halves of
+   that decision are asserted here: 'page' prefers the page, and 'auto' still
+   refuses to look at it. Every case passes docLang/navLang explicitly, so none
+   of this touches a global. */
+
+test("'page' takes the page's lang over the browser's", () => {
+  const C = load();
+  const table = C.localeTable();
+  // The exact case from the spec: Romanian page, Russian browser.
+  assert.equal(C.resolveLang('page', table, 'ro', 'ru-RU'), 'ro');
+  assert.equal(C.resolveLang('page', table, 'ru', 'en-US'), 'ru');
+  // A regional page tag resolves through the same two-letter base as a config
+  // code does — `<html lang="pt-BR">` is a Portuguese page.
+  assert.equal(C.resolveLang('page', table, 'pt-BR', 'en-US'), 'pt');
+});
+
+test("'page' falls through to the browser when the page says nothing usable", () => {
+  const C = load();
+  const table = C.localeTable();
+  // No attribute at all — the overwhelmingly common case on a one-language site.
+  assert.equal(C.resolveLang('page', table, '', 'ru-RU'), 'ru');
+  // An attribute naming a language ConsentKit has no locale for must not win:
+  // honouring it would render `en` and hide a perfectly good Russian browser.
+  assert.equal(C.resolveLang('page', table, 'xx', 'ru-RU'), 'ru');
+  assert.equal(C.resolveLang('page', table, 'xx-YY', 'ro-RO'), 'ro');
+  // Neither source usable — en is the floor, as everywhere else.
+  assert.equal(C.resolveLang('page', table, 'xx', 'zz'), 'en');
+  assert.equal(C.resolveLang('page', table, '', ''), 'en');
+});
+
+test("'auto' still ignores the page's lang — deliberately, not by omission", () => {
+  /* The reason this is a test and not a comment: builders mis-tag the
+     attribute (Tilda writes one template `lang` onto every page), so teaching
+     'auto' to read it would silently change the language on sites that are
+     correct today. Anyone "fixing" auto to read the page breaks this. */
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('auto', table, 'ro', 'ru-RU'), 'ru');
+  assert.equal(C.resolveLang('', table, 'ro', 'ru-RU'), 'ru');
+  assert.equal(C.resolveLang(undefined, table, 'ro', 'ru-RU'), 'ru');
+});
+
+test('an explicit code still beats both the page and the browser', () => {
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('en', table, 'ro', 'ru-RU'), 'en');
+  assert.equal(C.resolveLang('de', table, 'ro', 'ru-RU'), 'de');
+  // An unknown configured code is still en, exactly as before the mode existed.
+  assert.equal(C.resolveLang('xx', table, 'ro', 'ru-RU'), 'en');
+});
+
+test("the legacy 'mo' tag resolves to ro from the page as well as the browser", () => {
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('page', table, 'mo', 'ru-RU'), 'ro');
+  assert.equal(C.resolveLang('page', table, 'mo-MD', 'ru-RU'), 'ro');
+  assert.equal(C.resolveLang('auto', table, '', 'mo-MD'), 'ro');
+  assert.equal(C.resolveLang('mo', table, '', ''), 'ro');
+});
+
+test('resolveLang still answers with two arguments, reading the globals itself', () => {
+  /* ck-debug.js calls resolveLang(cfg.language, table) with two arguments — a
+     shape pinned by its own test above — so the defaults must exist and must
+     work in a context with no document and no navigator at all. */
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('ru', table), 'ru');
+  assert.equal(C.resolveLang('auto', table), 'en', 'no navigator in this context');
+  assert.equal(C.resolveLang('page', table), 'en', 'no document in this context');
+});
+
+/* ------------------------------------------------- the debug panel's mode */
+
+test("pickLang gets the same 'page' mode, with docLang APPENDED", () => {
+  /* Appended rather than inserted: pickLang('auto', 'ru-RU') is called
+     positionally throughout the suite, and moving the browser tag to third
+     place would silently reinterpret every one of those calls. */
+  const D = loadDebug();
+  assert.equal(D.pickLang('page', 'ru-RU', 'ro'), 'ro');
+  assert.equal(D.pickLang('page', 'ru-RU', 'ro-RO'), 'ro');
+  assert.equal(D.pickLang('page', 'ru-RU', ''), 'ru', 'no attribute -> the browser');
+  assert.equal(D.pickLang('page', 'ru-RU', 'de'), 'ru',
+    'a language the panel does not speak is not an answer');
+  assert.equal(D.pickLang('page', '', 'ro'), 'ro');
+  assert.equal(D.pickLang('page', 'mo-MD', ''), 'ro');
+  // 'auto' is untouched here too.
+  assert.equal(D.pickLang('auto', 'ru-RU', 'ro'), 'ru');
+  // And the two-argument calls the rest of the suite makes still mean what they did.
+  assert.equal(D.pickLang('auto', 'ru-RU'), 'ru');
+  assert.equal(D.pickLang('ro', ''), 'ro');
+});
+
+test('langSource names which of the three sources won', () => {
+  const D = loadDebug();
+  assert.equal(D.langSource('page', 'ru-RU', 'ro'), 'page');
+  // The attribute did not decide anything, so the row must not blame it.
+  assert.equal(D.langSource('page', 'ru-RU', ''), 'nav');
+  assert.equal(D.langSource('page', 'ru-RU', 'de'), 'nav');
+  assert.equal(D.langSource('auto', 'ru-RU', 'ro'), 'nav');
+  assert.equal(D.langSource('', 'ru-RU', 'ro'), 'nav');
+  assert.equal(D.langSource('ru', 'en-US', 'ro'), 'config');
+  assert.equal(D.langSource('en', '', ''), 'config');
+});
+
+test('the three panel dictionaries all carry the language-source wording', () => {
+  const D = loadDebug();
+  for (const code of ['en', 'ru', 'ro']) {
+    for (const k of ['bannerLang', 'langFromPage', 'langFromNav', 'langFromConfig']) {
+      assert.equal(typeof D.strings[code][k], 'string', `${code}.${k} is missing`);
+      assert.ok(D.strings[code][k].length > 0, `${code}.${k} is empty`);
+    }
+  }
+  // Three distinct answers, or the row would say the same thing whatever happened.
+  const ru = D.strings.ru;
+  assert.notEqual(ru.langFromPage, ru.langFromNav);
+  assert.notEqual(ru.langFromNav, ru.langFromConfig);
+});
+
+test('the appearance section renders the language row', () => {
+  assert.match(DEBUG_SRC, /\[T\.bannerLang, langRow\(T\)\]/,
+    'the row must be in the panel’s defs() list');
+  // Same «один код — одни числа» rule the texts row follows: the panel asks
+  // ck-ui which language the banner resolved to rather than deciding again.
+  /* The slice ends at textsRow, not at «Resolved lazily»: the two rows sit
+     next to each other and each has its own pinned resolver assertion, so a
+     window covering both would let either one lose its call unnoticed. */
+  const from = DEBUG_SRC.indexOf('function langRow');
+  const body = DEBUG_SRC.slice(from, DEBUG_SRC.indexOf('function textsRow'));
+  assert.match(body, /C\.resolveLang\(cfg\.language, C\.localeTable\(\)\)/,
+    'the row must ask ck-ui for the resolved code');
+  assert.match(body, /langSource\(/, 'the row must report the source');
+});
+
+test("refreshLang passes the page's lang, so the panel follows a 'page' banner", () => {
+  const from = DEBUG_SRC.indexOf('function refreshLang');
+  const body = DEBUG_SRC.slice(from, from + 600);
+  assert.match(body, /pageLang\(\)/,
+    'the panel would stay Russian on a Romanian page without this');
+  assert.match(body, /browserLang\(\)/);
+});

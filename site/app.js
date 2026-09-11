@@ -1161,12 +1161,26 @@
 
   function demoConfig() {
     var l = demo.bannerLang;
-    // 'auto' means "follow the visitor" in a real installation. In the demo it
-    // would let the banner speak the browser's language while the page and the
-    // branding line speak another — visibly inconsistent on the same screen —
-    // so here 'auto' resolves to the page language and the option is labelled
-    // accordingly.
-    var effective = (l === 'auto') ? lang : l;
+    /* SPEC V1.25 §1 — the site itself runs the mode it recommends.
+
+       This site IS the case 'page' was added for: /ru/ and /ro/ are real pages
+       carrying `<html lang>`, and before this a visitor with a Russian browser
+       got a Russian banner on the Romanian page. 'page' sends the banner to the
+       page's own attribute first, so the banner now matches the page the way
+       every other word on screen does.
+
+       'auto' is left in the picker on purpose — it is still the default for an
+       ordinary single-language installation, and seeing the two side by side is
+       half the point of a demo. */
+    var effective = (l === 'auto') ? 'page' : l;
+
+    /* What the banner will actually RESOLVE to, which is not the same string.
+       'page' is a mode, not a language: passing it to brandingFor() or to
+       cookieTable() would ask them for the dictionary of a language called
+       "page" and quietly hand back the English one — an English attribution
+       line under a Romanian banner, on the same screen. Both of those follow
+       the page, which is exactly what 'page' resolves to here. */
+    var resolved = (l === 'auto' || l === 'page') ? lang : l;
     return {
       language: effective,
       layout: { type: demo.layout, position: demo.position },
@@ -1175,7 +1189,7 @@
       // the site's own banner off-brand in dark theme. Derived text colours
       // still pass the client's contrast rule.
       theme: { mode: demo.theme, accent: demo.accent, dark: { accent: demo.accent }, radius: '10px' },
-      branding: brandingFor(effective),
+      branding: brandingFor(resolved),
       // Off, so the demo emits no further Consent Mode updates or GTM events as
       // you click around. Note the core still writes ONE all-denied Consent Mode
       // default into window.dataLayer at parse time — that happens before

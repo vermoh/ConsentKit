@@ -335,6 +335,14 @@
       themeCard: 'карточка',
       themeBtn: 'кнопки',
       themeLink: 'Ссылки',
+      /* SPEC V1.25 §1 — язык баннера и ОТКУДА он взят. Вопрос, ради которого
+         строка существует: «почему на румынской странице баннер русский».
+         Ответ всегда один из трёх — из атрибута lang страницы, из браузера,
+         из конфига, — и он сразу говорит, что чинить. */
+      bannerLang: 'Язык',
+      langFromPage: 'из атрибута lang страницы',
+      langFromNav: 'из языка браузера',
+      langFromConfig: 'задан в конфиге',
       // SPEC V1.16 §1.4 — какой язык получил свои тексты из конфига. Отвечает
       // на вопрос «почему на баннере не тот текст, который я вписал»: чаще
       // всего потому, что переопределение записано под другим кодом языка.
@@ -422,6 +430,10 @@
       themeCard: 'card',
       themeBtn: 'buttons',
       themeLink: 'Links',
+      bannerLang: 'Language',
+      langFromPage: 'from the page’s lang attribute',
+      langFromNav: 'from the browser language',
+      langFromConfig: 'set in the config',
       textsOverride: 'Texts',
       textsFor: 'overrides for ',
       textsNone: 'none',
@@ -507,6 +519,10 @@
       themeCard: 'card',
       themeBtn: 'butoane',
       themeLink: 'Linkuri',
+      bannerLang: 'Limba',
+      langFromPage: 'din atributul lang al paginii',
+      langFromNav: 'din limba browserului',
+      langFromConfig: 'setată în configurație',
       textsOverride: 'Texte',
       textsFor: 'suprascrieri pentru ',
       textsNone: 'niciuna',
@@ -535,12 +551,55 @@
     }
   };
 
-  // banner language (ConsentKit config) -> navigator.language -> en.
-  // `cfgLang` is ConsentKit.config.language, which may be 'auto'.
-  function pickLang(cfgLang, navLang) {
-    var raw = String(cfgLang || '').toLowerCase();
-    if (!raw || raw === 'auto') { raw = String(navLang || '').toLowerCase(); }
-    var two = raw.slice(0, 2);
+  // Which of the three sources the panel's own language came from — the thing
+  // a person debugging «why is this banner in the wrong language» actually
+  // needs to see. Pure, and separate from pickLang() so that one keeps
+  // returning a bare dictionary key.
+  //
+  // 'page' is only ever the answer under the 'page' mode AND with a usable
+  // attribute: `<html lang="xx">` is not a language this panel speaks, so it
+  // falls through to the browser and must say so, or the row would blame an
+  // attribute that had no effect.
+  // `navLang` is unused in the body but kept in second place on purpose: this
+  // takes the SAME three arguments in the same order as pickLang(), so the two
+  // can never be called with swapped tags at a call site.
+  function langSource(cfgLang, navLang, docLang) {
+    var raw = String(cfgLang == null ? '' : cfgLang).toLowerCase();
+    if (raw === 'page') { return known(docLang) ? 'page' : 'nav'; }
+    if (!raw || raw === 'auto') { return 'nav'; }
+    return 'config';
+  }
+
+  // Does this tag name one of the three panel dictionaries? The panel is RU/RO/
+  // EN only, so «known» here means «has its own panel dictionary», not «has a
+  // banner locale» — the banner has 34 and this panel will never have that many.
+  function known(tag) {
+    var two = String(tag || '').toLowerCase().slice(0, 2);
+    return two === 'ru' || two === 'ro' || two === 'mo';
+  }
+
+  /* banner language (ConsentKit config) -> navigator.language -> en.
+     `cfgLang` is ConsentKit.config.language, which may be 'auto' or, since
+     SPEC V1.25 §1, 'page'.
+
+     `docLang` is APPENDED, not inserted: pickLang('auto', 'ru-RU') is called
+     positionally throughout the suite and by refreshLang(), and moving the
+     browser tag to third place would silently reinterpret every one of them.
+
+     'page' mirrors ck-ui's resolveLang(): the page attribute first, then the
+     browser. 'auto' is untouched and still never reads the attribute — see the
+     note on resolveLang() in ck-ui.js for why that is deliberate. */
+  function pickLang(cfgLang, navLang, docLang) {
+    var mode = String(cfgLang == null ? '' : cfgLang).toLowerCase();
+    var raw;
+    if (mode === 'page') {
+      raw = known(docLang) ? String(docLang) : String(navLang || '');
+    } else if (!mode || mode === 'auto') {
+      raw = String(navLang || '');
+    } else {
+      raw = mode;
+    }
+    var two = raw.toLowerCase().slice(0, 2);
     if (two === 'ru') { return 'ru'; }
     // 'mo' is the legacy Moldovan tag some browsers still send for Romanian.
     if (two === 'ro' || two === 'mo') { return 'ro'; }
@@ -555,6 +614,10 @@
     buildRequests: buildRequests,
     stripUrl: stripUrl,
     pickLang: pickLang,
+    // SPEC V1.25 §1 — «показывает, ОТКУДА взят язык». Pure and exported for
+    // the same reason pickLang is: the wording of the row is testable without
+    // a DOM, and the cabinet can quote the same three answers.
+    langSource: langSource,
     strings: STRINGS,
     // SPEC V1.12 §3 — the per-row «почему» rule, pure and testable: given the
     // requests, what the engine intercepted and the Consent Mode signals, which
@@ -901,6 +964,47 @@
                 : 'inherit (' + T.themeFontInherit + tries + ')';
   }
 
+  // The page's own `lang`, read defensively: a page can be missing
+  // documentElement in exotic embeddings, and the panel is the last thing that
+  // should throw on a page someone is already debugging.
+  function pageLang() {
+    try { return (doc && doc.documentElement && doc.documentElement.lang) || ''; }
+    catch (e) { return ''; }
+  }
+  function browserLang() {
+    try {
+      var nav = global.navigator;
+      return (nav && (nav.language || nav.userLanguage)) || '';
+    } catch (e) { return ''; }
+  }
+
+  /* SPEC V1.25 §1 — «Язык: ro — из атрибута lang страницы».
+
+     Two facts, because either alone leaves the question open: WHICH language
+     the banner resolved to, and WHERE that came from. The code is asked of
+     ck-ui through _contrast for the same «один код — одни числа» reason
+     textsRow() does it — the panel must not reimplement resolveLang and drift
+     from the banner it reports on. The source is computed here, because it is
+     a property of the config's mode rather than of the resolved code.
+
+     With ck-ui absent (a core-only page) there is no banner to report on, so
+     only the source is shown. */
+  function langRow(T) {
+    var cfg = (CK && CK.config) || {};
+    var code = '';
+    try {
+      var C = CK && CK._contrast;
+      if (C && typeof C.resolveLang === 'function' && typeof C.localeTable === 'function') {
+        code = String(C.resolveLang(cfg.language, C.localeTable()) || '').toLowerCase();
+      }
+    } catch (e) { code = ''; }
+
+    var src = langSource(cfg.language, browserLang(), pageLang());
+    var where = src === 'page' ? T.langFromPage
+      : (src === 'config' ? T.langFromConfig : T.langFromNav);
+    return code ? code + ' — ' + where : where;
+  }
+
   /* SPEC V1.16 §1.4 — «Тексты: переопределения для ru» / «нет».
 
      The question this answers is «I filled the banner text in the cabinet and
@@ -946,10 +1050,12 @@
   // switches language at runtime switches the panel too.
   var T = STRINGS.en;
   function refreshLang() {
-    var nav = global.navigator;
+    // SPEC V1.25 §1 — the page's lang is passed too, so a panel on a 'page'
+    // banner speaks the page's language exactly as the banner does.
     T = STRINGS[pickLang(
       (CK && CK.config && CK.config.language) || '',
-      (nav && (nav.language || nav.userLanguage)) || ''
+      browserLang(),
+      pageLang()
     )] || STRINGS.en;
     return T;
   }
@@ -1176,6 +1282,11 @@
           [T.themeRadius, T.themeCard + ' ' + built.radius.card + 'px · ' +
             T.themeBtn + ' ' + built.radius.button + 'px'],
           [T.themeLink, lkTxt],
+          // SPEC V1.25 §1 — «Язык: ro — из атрибута lang страницы». Placed
+          // directly above the texts row: the two answer the same family of
+          // question, and the texts row is only meaningful once you know which
+          // language the banner actually resolved to.
+          [T.bannerLang, langRow(T)],
           // SPEC V1.16 §1.4 — «Тексты: переопределения для ru» / «нет».
           [T.textsOverride, textsRow(T)]
         ]));

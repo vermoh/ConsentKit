@@ -336,6 +336,24 @@ test('everything else, and nothing at all, resolves to en', () => {
   }
 });
 
+/* SPEC V1.25 §1 — the 'page' mode, which the panel gained alongside the banner.
+
+   The full matrix (the page winning over the browser, an unknown `lang`
+   falling through, 'auto' still refusing to read the attribute, langSource
+   naming the winner) lives in test/ui-texts.test.mjs, next to the ck-ui
+   resolveLang cases it must agree with and the source-pinned panel rows —
+   keeping the two halves of one rule in one place. What is asserted HERE is
+   the part that matters to this file: the third argument is APPENDED, so
+   every positional two-argument call above still means what it did. */
+test("'page' is a third mode, and docLang is the THIRD argument", () => {
+  assert.equal(pickLang('page', 'ru-RU', 'ro'), 'ro', "the page's lang wins");
+  assert.equal(pickLang('page', 'ru-RU', ''), 'ru', 'no attribute -> the browser');
+  assert.equal(pickLang('auto', 'ru-RU', 'ro'), 'ru', "'auto' must ignore the page");
+  // The two-argument shape the rest of this file uses is unchanged.
+  assert.equal(pickLang('auto', 'ru-RU'), 'ru');
+  assert.equal(pickLang('ru', 'en-US'), 'ru');
+});
+
 test('ru and en dictionaries cover exactly the same keys', () => {
   // A missing key renders the literal string "undefined" in the panel.
   const { ru, en } = load().strings;
