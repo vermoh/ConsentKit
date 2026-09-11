@@ -1235,38 +1235,60 @@
        * else stays same-origin (the document, styles.css, favicon.svg, app.js,
        * analytics.js and the vendor scripts). */
       integrations: { gcm: false, gtmDataLayer: true },
-      cookieTable: cookieTable()
+      cookieTable: cookieTable(),
+      services: demoServices()
     };
   }
 
+  /* The cookies this page ACTUALLY sets once the visitor answers the banner
+     (SPEC-V1.26: GTM loads after the first decision, and the GA4 / Meta / Ads
+     tags inside it obey ck_consent_* and Consent Mode). Until 11.09.2026 these
+     were three «Пример:» rows; a banner on a consent product must list the
+     real thing. Purposes are the cookie dictionary's own wording (server,
+     src/domain/cookieDictionary.ts), so the landing and every client
+     declaration say the same words for the same cookie. The stream cookie
+     carries GA4's stream id (G-WPEVN57WEB), as the real cookie does. */
+  var GA4_STREAM = 'WPEVN57WEB';
+
   function cookieTable() {
-    // Demo rows only — a real installation gets these from the scanner. Picked
-    // by page language so the panel reads in the same language as the page.
     var COPY = {
-      en: [
-        ['Stores the visitor\u2019s choice so the banner does not ask again.', '12 months'],
-        ['Example: distinguishes visitors in analytics.', '2 years'],
-        ['Example: links the visit to an ad campaign.', '3 months']
-      ],
-      ru: [
-        ['Хранит выбор посетителя, чтобы не спрашивать снова.', '12 месяцев'],
-        ['Пример: различает посетителей в статистике.', '2 года'],
-        ['Пример: связывает визит с рекламной кампанией.', '3 месяца']
-      ],
-      ro: [
-        ['Păstrează alegerea vizitatorului, ca bannerul să nu întrebe din nou.', '12 luni'],
-        ['Exemplu: deosebește vizitatorii în statistici.', '2 ani'],
-        ['Exemplu: leagă vizita de o campanie publicitară.', '3 luni']
-      ]
+      en: { choice: ['Stores the visitor’s choice so the banner does not ask again.', '12 months'],
+            stats: 'Site visit statistics', ads: 'Advertising and measuring its effectiveness',
+            y2: '2 years', d90: '90 days' },
+      ru: { choice: ['Хранит выбор посетителя, чтобы не спрашивать снова.', '12 месяцев'],
+            stats: 'Статистика посещений сайта', ads: 'Реклама и оценка её эффективности',
+            y2: '2 года', d90: '90 дней' },
+      ro: { choice: ['Păstrează alegerea vizitatorului, ca bannerul să nu întrebe din nou.', '12 luni'],
+            stats: 'Statistici privind vizitarea site-ului', ads: 'Publicitate și măsurarea eficienței ei',
+            y2: '2 ani', d90: '90 de zile' }
     };
     var c = COPY[lang] || COPY.en;
     return [
       { name: 'ck_consent', category: 'necessary', provider: 'ConsentKit',
-        purpose: c[0][0], expiry: c[0][1] },
-      { name: '_ga', category: 'analytics', provider: 'Google Analytics',
-        purpose: c[1][0], expiry: c[1][1] },
-      { name: '_fbp', category: 'marketing', provider: 'Meta',
-        purpose: c[2][0], expiry: c[2][1] }
+        purpose: c.choice[0], expiry: c.choice[1] },
+      { name: '_ga', category: 'analytics', provider: 'Google Analytics', purpose: c.stats, expiry: c.y2 },
+      { name: '_ga_' + GA4_STREAM, category: 'analytics', provider: 'Google Analytics', purpose: c.stats, expiry: c.y2 },
+      { name: '_fbp', category: 'marketing', provider: 'Meta Pixel', purpose: c.ads, expiry: c.d90 },
+      { name: '_fbc', category: 'marketing', provider: 'Meta Pixel', purpose: c.ads, expiry: c.d90 },
+      { name: '_gcl_au', category: 'marketing', provider: 'Google Ads', purpose: c.ads, expiry: c.d90 }
+    ];
+  }
+
+  /* The services behind those cookies, one switch each in the settings panel
+     (client 0.5.8 `services[]`). Hosts are the ones the tracker database
+     already files under the same category, so a switch and the blocking
+     engine can never disagree about a host. */
+  function demoServices() {
+    return [
+      { id: 'google-analytics', name: 'Google Analytics 4', vendor: 'Google Ireland Limited',
+        category: 'analytics', hosts: ['google-analytics.com', 'analytics.google.com'],
+        cookies: ['_ga', '_ga_' + GA4_STREAM] },
+      { id: 'meta-pixel', name: 'Meta Pixel', vendor: 'Meta Platforms Ireland Limited',
+        category: 'marketing', hosts: ['connect.facebook.net', 'facebook.com'],
+        cookies: ['_fbp', '_fbc'] },
+      { id: 'google-ads', name: 'Google Ads', vendor: 'Google Ireland Limited',
+        category: 'marketing', hosts: ['googleadservices.com', 'doubleclick.net'],
+        cookies: ['_gcl_au'] }
     ];
   }
 
