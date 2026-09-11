@@ -354,6 +354,50 @@ test("'page' is a third mode, and docLang is the THIRD argument", () => {
   assert.equal(pickLang('ru', 'en-US'), 'ru');
 });
 
+/* 0.5.24 — two more page signals between the attribute and the browser.
+
+   Appended for exactly the reason docLang was: every positional call above
+   must keep meaning what it did. The banner's own matrix lives in
+   test/ui-texts.test.mjs; what is pinned here is this file's contract —
+   langSource names FIVE sources now, and the two new ones are reachable. */
+const langSource = load().langSource;
+
+test('langSource names the path and og:locale steps', () => {
+  // The attribute still wins whenever it says something the panel speaks.
+  assert.equal(langSource('page', 'ru-RU', 'ro'), 'page');
+  assert.equal(langSource('page', 'ru-RU', 'ro', '/ru/'), 'page',
+    'the attribute outranks the path');
+  // No attribute: the first path segment answers, and the row must say so
+  // rather than blaming a browser that did not decide anything.
+  assert.equal(langSource('page', 'ru-RU', '', '/ro/'), 'path');
+  assert.equal(langSource('page', 'ru-RU', '', '/ro'), 'path');
+  assert.equal(langSource('page', 'ru-RU', '', '/ro/despre'), 'path');
+  // A segment that is not a two-letter code is not a language.
+  assert.equal(langSource('page', 'ru-RU', '', '/ruby/'), 'nav');
+  assert.equal(langSource('page', 'ru-RU', '', '/'), 'nav');
+  // Then og:locale, in the underscore form Facebook asks for.
+  assert.equal(langSource('page', 'ru-RU', '', '', 'ro_RO'), 'og');
+  assert.equal(langSource('page', 'en-US', '', '/xx/', 'ro_RO'), 'og',
+    'an unknown path falls past the path step, not to the browser');
+  // And the browser last, exactly as before.
+  assert.equal(langSource('page', 'ru-RU', '', '', ''), 'nav');
+  assert.equal(langSource('page', 'ru-RU', ''), 'nav');
+  // The other two modes never look at a page signal at all.
+  assert.equal(langSource('auto', 'ru-RU', 'ro', '/ro/', 'ro_RO'), 'nav');
+  assert.equal(langSource('ru', 'en-US', 'ro', '/ro/', 'ro_RO'), 'config');
+});
+
+test("pickLang follows the same four sources, so the panel matches the banner", () => {
+  assert.equal(pickLang('page', 'ru-RU', '', '/ro/'), 'ro');
+  assert.equal(pickLang('page', 'ru-RU', '', '/mo/'), 'ro', "'mo' is ro on the path too");
+  assert.equal(pickLang('page', 'ru-RU', '', '/ruby/'), 'ru', '/ruby/ is not a language');
+  assert.equal(pickLang('page', 'ru-RU', '', '', 'ro_RO'), 'ro');
+  assert.equal(pickLang('page', 'ru-RU', 'ro', '/ru/'), 'ro', 'the attribute wins');
+  // Unchanged for every call shape that existed before.
+  assert.equal(pickLang('page', 'ru-RU', ''), 'ru');
+  assert.equal(pickLang('auto', 'ru-RU', 'ro', '/ro/', 'ro_RO'), 'ru');
+});
+
 test('ru and en dictionaries cover exactly the same keys', () => {
   // A missing key renders the literal string "undefined" in the panel.
   const { ru, en } = load().strings;

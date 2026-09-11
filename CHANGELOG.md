@@ -5,6 +5,62 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.24
+
+- **`language: "page"` reads more than `<html lang>`.** Two live sites on
+  11.09.2026 showed the 0.5.21 order — attribute, then browser — was not enough,
+  and both failures had the same shape: the banner ended up in the visitor's
+  browser language on a page that was not in it. So `"page"` now resolves
+  through four sources, most deliberate first:
+
+  1. `<html lang>`
+  2. the **first path segment** of `location.pathname`, when it names a
+     language — `/ru/…`, `/ro`, `/en/about`
+  3. `<meta property="og:locale">` — `ro_RO` → `ro`
+  4. `navigator.language`
+  5. `en`
+
+  The case that forced it: **a site whose pages switch language by path and
+  carry no `lang` attribute at all** — a bare `<html>`, one Russian and one
+  Romanian page told apart only by the URL. `"page"` fell straight through to
+  the browser, so a visitor with a Russian browser got a Russian banner on the
+  Romanian page, which is the exact bug the mode exists to prevent.
+
+  Every step goes through the same lookup the configured code does, against the
+  locales the build actually ships: a source naming a language this build has no
+  locale for is **no answer at all** and falls to the **next** source rather than
+  to English. `/xx/` with `og:locale` `ro_RO` is Romanian. The path step is
+  gated on a plain two-letter code (or one the table carries verbatim) before
+  the lookup ever sees it, because the lookup falls back to the first two
+  letters — without the gate `/ruby/` would be Russian and `/engineering/`
+  English, an ordinary blog category deciding the banner's language. `mo` → `ro`
+  on the path as everywhere else.
+
+  **`<html lang>` per page is still the recommendation.** Steps 2 and 3 are a
+  safety net, not a replacement: the attribute is the one signal that is
+  unambiguous and is read first.
+
+- **`language: "page"` follows a `lang` attribute that changes after the banner
+  mounted.** The second failure: **an SPA that sets `lang` after the banner
+  mounted** — it ships `<html lang="ru">` statically and its own language switch
+  writes `document.documentElement.lang` once the page is already up. `mount()`
+  is one-shot, so the banner kept the language it read at first paint and
+  switching the app to Romanian left a Russian banner until a reload.
+
+  In `"page"` mode only, the banner now observes `document.documentElement` for
+  `lang` changes and, when the language it would resolve to **differs from the
+  one on screen**, rebuilds through the same remount a config change uses — no
+  second copy of the mount logic. The settings panel, if open, reopens in the
+  new language, so a visitor mid-decision keeps the panel they opened. Debounced
+  to one rebuild per tick, and the observer is disconnected on every remount, so
+  a page that switches language ten times still has exactly one. A change that
+  resolves to the same language rebuilds nothing.
+
+  No observer under `"auto"` or a fixed code: `"auto"` deliberately does not read
+  the page at all, and a fixed code cannot be changed by it. Guarded for a
+  missing `MutationObserver` — without one the banner renders exactly as before,
+  it simply does not follow a later change.
+
 ## 0.5.23
 
 - Tracker database: **Yandex Maps and the Druid chatbot.**

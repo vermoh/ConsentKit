@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.23).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.24).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -180,7 +180,7 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | Key | Type | Default | Notes |
 |---|---|---|---|
 | `policyVersion` | `string \| number` | `"1"` | Bump to invalidate stored consent and re-show the banner |
-| `language` | `string` | `"auto"` | `"auto"` reads `navigator.language`; `"page"` (v0.5.21) reads `<html lang>` first; or a fixed code. Falls back `pt-BR` → `pt` → `en` — see [Banner language](#banner-language) |
+| `language` | `string` | `"auto"` | `"auto"` reads `navigator.language`; `"page"` (v0.5.21) reads the page — `<html lang>`, then the first path segment, then `og:locale`, then the browser (v0.5.24); or a fixed code. Falls back `pt-BR` → `pt` → `en` — see [Banner language](#banner-language) |
 | `layout.type` | `"bar" \| "modal" \| "box"` | `"bar"` | `box` is a corner card, up to 540px wide |
 | `layout.position` | `string` | per type | `bar`: `bottom` (default) / `top`. `box`: `bottom-left` (default) / `bottom-right`. `modal` is always centred. A position that does not belong to the chosen type falls back to that type's default; the type itself is unaffected |
 | `theme.accent` | `string` | `"#2B50D8"` | Exposed as `--ck-accent` |
@@ -266,14 +266,42 @@ still shows something.
 `language` takes one of three values:
 
 - **`"auto"`** (default) — the visitor's browser, from `navigator.language`.
-- **`"page"`** (v0.5.21) — the page's own `<html lang>` attribute, and only if
-  that is missing or names a language ConsentKit has no locale for, the browser.
-  This is the mode for a site with real per-language URLs (`/ru/`, `/ro/`): a
-  Romanian page then greets a visitor with a Russian browser in Romanian.
+- **`"page"`** (v0.5.21) — the **page** decides. This is the mode for a site
+  with real per-language URLs (`/ru/`, `/ro/`): a Romanian page then greets a
+  visitor with a Russian browser in Romanian.
 - **a language code** — `"de"`, `"pt-BR"`, that language always.
 
+**What `"page"` reads, in order** (v0.5.24):
+
+1. **`<html lang>`** — the explicit declaration, and it always wins.
+2. **the first path segment**, when it names a language — `/ru/…`, `/ro`,
+   `/en/about`. Only a plain two-letter code (or one the locale table carries
+   verbatim, like `pt-br`) counts, so `/ruby/` is not Russian and
+   `/engineering/` is not English.
+3. **`<meta property="og:locale">`** — `ro_RO` → `ro`.
+4. **`navigator.language`**.
+5. **`en`**.
+
+Every step is checked against the locales the build actually ships, so a source
+naming a language this build has no locale for is no answer at all and falls
+through to the **next** source — never straight to English. A page at `/xx/`
+with `og:locale` `ro_RO` resolves to Romanian.
+
+**Give each page an `<html lang>` anyway.** Steps 2 and 3 are a safety net for
+sites that cannot — they exist because real sites switch language by path and
+ship a bare `<html>` — but the attribute is the one signal that is unambiguous,
+costs nothing, and is read first by ConsentKit, by screen readers and by search
+engines alike.
+
+**`"page"` follows a `lang` that changes later** (v0.5.24). An app that sets
+`document.documentElement.lang` from its own language switch after the banner
+has rendered — a single-page app, typically — gets a banner that rebuilds in the
+new language, with the settings panel reopened in it if it was open. Only in
+`"page"` mode; `"auto"` and a fixed code install no observer at all.
+
 In every case the lookup falls back `pt-BR` → `pt` → `en`, and the legacy
-Moldovan tag `mo` is read as `ro`.
+Moldovan tag `mo` is read as `ro` — on the path (`/mo/`) as well as everywhere
+else.
 
 **`"auto"` deliberately does not look at `<html lang>`.** On builder-made sites
 that attribute is routinely wrong — Tilda, for instance, writes one template
@@ -1161,19 +1189,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.23, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
+ConsentKit 0.5.24, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 353,604 | 112,140 | 327,313 |
-| `ready/ru-bar.txt` | ru, ro, en | 355,788 | 113,095 | 329,311 |
-| `ready/ru-box.txt` | ru, ro, en | 355,803 | 113,100 | 329,326 |
-| `ready/ru-box-right.txt` | ru, ro, en | 355,812 | 113,107 | 329,335 |
-| `ready/ru-modal.txt` | ru, ro, en | 355,796 | 113,101 | 329,319 |
-| `ready/eu-bar.txt` | 34 languages | 407,722 | 132,758 | 381,265 |
+| `ready/en-bar.txt` | en | 364,162 | 115,187 | 337,877 |
+| `ready/ru-bar.txt` | ru, ro, en | 366,346 | 116,137 | 339,875 |
+| `ready/ru-box.txt` | ru, ro, en | 366,361 | 116,143 | 339,890 |
+| `ready/ru-box-right.txt` | ru, ro, en | 366,370 | 116,149 | 339,899 |
+| `ready/ru-modal.txt` | ru, ro, en | 366,354 | 116,143 | 339,883 |
+| `ready/eu-bar.txt` | 34 languages | 418,280 | 135,724 | 391,829 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1364,6 +1392,62 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.24
+
+- **`language: "page"` reads more than `<html lang>`.** Two live sites on
+  11.09.2026 showed the 0.5.21 order — attribute, then browser — was not enough,
+  and both failures had the same shape: the banner ended up in the visitor's
+  browser language on a page that was not in it. So `"page"` now resolves
+  through four sources, most deliberate first:
+
+  1. `<html lang>`
+  2. the **first path segment** of `location.pathname`, when it names a
+     language — `/ru/…`, `/ro`, `/en/about`
+  3. `<meta property="og:locale">` — `ro_RO` → `ro`
+  4. `navigator.language`
+  5. `en`
+
+  The case that forced it: **a site whose pages switch language by path and
+  carry no `lang` attribute at all** — a bare `<html>`, one Russian and one
+  Romanian page told apart only by the URL. `"page"` fell straight through to
+  the browser, so a visitor with a Russian browser got a Russian banner on the
+  Romanian page, which is the exact bug the mode exists to prevent.
+
+  Every step goes through the same lookup the configured code does, against the
+  locales the build actually ships: a source naming a language this build has no
+  locale for is **no answer at all** and falls to the **next** source rather than
+  to English. `/xx/` with `og:locale` `ro_RO` is Romanian. The path step is
+  gated on a plain two-letter code (or one the table carries verbatim) before
+  the lookup ever sees it, because the lookup falls back to the first two
+  letters — without the gate `/ruby/` would be Russian and `/engineering/`
+  English, an ordinary blog category deciding the banner's language. `mo` → `ro`
+  on the path as everywhere else.
+
+  **`<html lang>` per page is still the recommendation.** Steps 2 and 3 are a
+  safety net, not a replacement: the attribute is the one signal that is
+  unambiguous and is read first.
+
+- **`language: "page"` follows a `lang` attribute that changes after the banner
+  mounted.** The second failure: **an SPA that sets `lang` after the banner
+  mounted** — it ships `<html lang="ru">` statically and its own language switch
+  writes `document.documentElement.lang` once the page is already up. `mount()`
+  is one-shot, so the banner kept the language it read at first paint and
+  switching the app to Romanian left a Russian banner until a reload.
+
+  In `"page"` mode only, the banner now observes `document.documentElement` for
+  `lang` changes and, when the language it would resolve to **differs from the
+  one on screen**, rebuilds through the same remount a config change uses — no
+  second copy of the mount logic. The settings panel, if open, reopens in the
+  new language, so a visitor mid-decision keeps the panel they opened. Debounced
+  to one rebuild per tick, and the observer is disconnected on every remount, so
+  a page that switches language ten times still has exactly one. A change that
+  resolves to the same language rebuilds nothing.
+
+  No observer under `"auto"` or a fixed code: `"auto"` deliberately does not read
+  the page at all, and a fixed code cannot be changed by it. Guarded for a
+  missing `MutationObserver` — without one the banner renders exactly as before,
+  it simply does not follow a later change.
 
 ### 0.5.23
 
@@ -1752,7 +1836,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.23), not a released product.** It is honest about
+**This is a prototype (v0.5.24), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

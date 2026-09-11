@@ -341,6 +341,8 @@
          из конфига, — и он сразу говорит, что чинить. */
       bannerLang: 'Язык',
       langFromPage: 'из атрибута lang страницы',
+      langFromPath: 'из первого сегмента адреса',
+      langFromOg: 'из og:locale',
       langFromNav: 'из языка браузера',
       langFromConfig: 'задан в конфиге',
       // SPEC V1.16 §1.4 — какой язык получил свои тексты из конфига. Отвечает
@@ -432,6 +434,8 @@
       themeLink: 'Links',
       bannerLang: 'Language',
       langFromPage: 'from the page’s lang attribute',
+      langFromPath: 'from the first path segment',
+      langFromOg: 'from og:locale',
       langFromNav: 'from the browser language',
       langFromConfig: 'set in the config',
       textsOverride: 'Texts',
@@ -521,6 +525,8 @@
       themeLink: 'Linkuri',
       bannerLang: 'Limba',
       langFromPage: 'din atributul lang al paginii',
+      langFromPath: 'din primul segment al adresei',
+      langFromOg: 'din og:locale',
       langFromNav: 'din limba browserului',
       langFromConfig: 'setată în configurație',
       textsOverride: 'Texte',
@@ -558,16 +564,42 @@
   //
   // 'page' is only ever the answer under the 'page' mode AND with a usable
   // attribute: `<html lang="xx">` is not a language this panel speaks, so it
-  // falls through to the browser and must say so, or the row would blame an
-  // attribute that had no effect.
+  // falls through and must say so, or the row would blame an attribute that had
+  // no effect.
+  //
+  // 0.5.24 — two sources between the attribute and the browser, mirroring
+  // ck-ui's resolveLang: the first path segment (`/ro/`) and `og:locale`. They
+  // are APPENDED, for the reason docLang was: langSource('page', nav, doc) is
+  // called positionally through the suite and inserting a slot would silently
+  // reinterpret every one of those calls.
   // `navLang` is unused in the body but kept in second place on purpose: this
-  // takes the SAME three arguments in the same order as pickLang(), so the two
-  // can never be called with swapped tags at a call site.
-  function langSource(cfgLang, navLang, docLang) {
+  // takes the SAME arguments in the same order as pickLang(), so the two can
+  // never be called with swapped tags at a call site.
+  function langSource(cfgLang, navLang, docLang, path, ogLocale) {
     var raw = String(cfgLang == null ? '' : cfgLang).toLowerCase();
-    if (raw === 'page') { return known(docLang) ? 'page' : 'nav'; }
+    if (raw === 'page') {
+      if (known(docLang)) { return 'page'; }
+      if (known(pathSeg(path))) { return 'path'; }
+      if (known(String(ogLocale || '').replace(/_/g, '-'))) { return 'og'; }
+      return 'nav';
+    }
     if (!raw || raw === 'auto') { return 'nav'; }
     return 'config';
+  }
+
+  /* The first path segment, when it could name a language — the panel's half of
+     ck-ui's pathLangSeg(). Same two-letter gate and the same reason for it: a
+     `/ruby/` or `/engineering/` segment must not be read as a language, because
+     known() below looks at the first two letters. */
+  function pathSeg(path) {
+    var parts = String(path || '').split('/');
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i]) {
+        var seg = parts[i].toLowerCase();
+        return /^[a-z]{2}$/.test(seg) ? seg : '';
+      }
+    }
+    return '';
   }
 
   // Does this tag name one of the three panel dictionaries? The panel is RU/RO/
@@ -589,11 +621,18 @@
      'page' mirrors ck-ui's resolveLang(): the page attribute first, then the
      browser. 'auto' is untouched and still never reads the attribute — see the
      note on resolveLang() in ck-ui.js for why that is deliberate. */
-  function pickLang(cfgLang, navLang, docLang) {
+  function pickLang(cfgLang, navLang, docLang, path, ogLocale) {
     var mode = String(cfgLang == null ? '' : cfgLang).toLowerCase();
     var raw;
     if (mode === 'page') {
-      raw = known(docLang) ? String(docLang) : String(navLang || '');
+      // 0.5.24 — the same four sources in the same order the banner uses, so a
+      // panel on a 'page' banner never speaks a different language than the
+      // banner it is reporting on. Appended, like docLang before them.
+      var seg = pathSeg(path);
+      var og = String(ogLocale || '').replace(/_/g, '-');
+      raw = known(docLang) ? String(docLang)
+        : (known(seg) ? seg
+          : (known(og) ? og : String(navLang || '')));
     } else if (!mode || mode === 'auto') {
       raw = String(navLang || '');
     } else {
@@ -971,6 +1010,21 @@
     try { return (doc && doc.documentElement && doc.documentElement.lang) || ''; }
     catch (e) { return ''; }
   }
+  // The other two page signals 'page' reads since 0.5.24, guarded the same way
+  // and for the same reason: the panel is the last thing that should throw on a
+  // page someone is already debugging.
+  function pagePath() {
+    try { return (global.location && global.location.pathname) || ''; }
+    catch (e) { return ''; }
+  }
+  function pageOgLocale() {
+    try {
+      if (!doc || !doc.querySelector) return '';
+      var m = doc.querySelector('meta[property="og:locale"]') ||
+        doc.querySelector('meta[name="og:locale"]');
+      return (m && (m.content || m.getAttribute('content'))) || '';
+    } catch (e) { return ''; }
+  }
   function browserLang() {
     try {
       var nav = global.navigator;
@@ -999,9 +1053,11 @@
       }
     } catch (e) { code = ''; }
 
-    var src = langSource(cfg.language, browserLang(), pageLang());
+    var src = langSource(cfg.language, browserLang(), pageLang(), pagePath(), pageOgLocale());
     var where = src === 'page' ? T.langFromPage
-      : (src === 'config' ? T.langFromConfig : T.langFromNav);
+      : (src === 'path' ? T.langFromPath
+        : (src === 'og' ? T.langFromOg
+          : (src === 'config' ? T.langFromConfig : T.langFromNav)));
     return code ? code + ' — ' + where : where;
   }
 
@@ -1055,7 +1111,9 @@
     T = STRINGS[pickLang(
       (CK && CK.config && CK.config.language) || '',
       browserLang(),
-      pageLang()
+      pageLang(),
+      pagePath(),
+      pageOgLocale()
     )] || STRINGS.en;
     return T;
   }

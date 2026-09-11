@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.23
+Stable tag: 0.5.24
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,24 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.24 =
+* language: "page" now reads FOUR page signals in order — <html lang>, then the
+  first path segment when it names a language (/ru/, /ro, /en/about), then
+  <meta property="og:locale"> (ro_RO -> ro), then the browser, then en. Two live
+  sites showed the two-step order was not enough: one switches language by path
+  and carries no lang attribute at all, so a Russian browser got a Russian
+  banner on the Romanian page. Every step is checked against the locales the
+  build actually ships, so an unknown code falls to the NEXT source rather than
+  to English, and /ruby/ or /engineering/ is not read as a language.
+* language: "page" now FOLLOWS a lang attribute that changes after the banner
+  rendered — the case of an app that sets the attribute from its own language
+  switch once the page is already up. The banner rebuilds in the new language,
+  and the settings panel reopens in it if it was open. Only in "page" mode:
+  "auto" and a fixed code are untouched.
+* Setting the banner language per page with <html lang> is still the
+  recommendation — the path and og:locale steps are a safety net for sites that
+  cannot.
 
 = 0.5.23 =
 * Tracker database: Yandex Maps -> functional, on api-maps.yandex.ru (the JS

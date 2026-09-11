@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.23
+ * Версия ConsentKit: 0.5.24
  * Дата сборки:      2026-09-11
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
@@ -2695,7 +2695,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.23',
+    version: '0.5.24',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.
@@ -3839,54 +3839,119 @@
     return '';
   }
 
+  /* SPEC V1.25 §1 — the first path segment, when it names a language.
+
+     `/ru/`, `/ro`, `/en/about` — the single most common way a site without a
+     CMS does multilingual, and (0.5.24) the reason 'page' failed on a real
+     client site: a bare `<html>` with no `lang` at all, one Russian and one
+     Romanian page, distinguished ONLY by the path.
+
+     Why the segment is not simply handed to matchLang(): that function falls
+     back to the first two letters, so `/ruby/` would resolve to ru and
+     `/engineering/` to en — a blog category silently deciding the banner's
+     language. So the segment is accepted only when it is a plain two-letter
+     code, or when the table carries it verbatim (`pt-br`). Everything that
+     passes that gate still goes THROUGH matchLang, so 'mo' becomes ro and a
+     two-letter code with no locale ('xx') is no answer and falls to the next
+     source rather than to English. */
+  var PATH_SEG_RE = /^[a-z]{2}$/;
+  function pathLangSeg(path, table) {
+    var raw = String(path || '');
+    // The first non-empty segment, query and hash already excluded by
+    // location.pathname; split copes with '', '/' and '//ru/' alike.
+    var parts = raw.split('/');
+    var seg = '';
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i]) { seg = parts[i].toLowerCase(); break; }
+    }
+    if (!seg) return '';
+    if (!PATH_SEG_RE.test(seg) && !table[seg]) return '';
+    return matchLang(seg, table);
+  }
+
+  /* SPEC V1.25 §1 — `<meta property="og:locale" content="ro_RO">`.
+
+     The one language declaration a CMS-less site usually DOES carry, because
+     Facebook asks for it: underscore-separated, so it is normalised to the
+     BCP 47 hyphen before the lookup and then resolves through matchLang's own
+     two-letter fallback (ro_RO -> ro-ro -> ro). */
+  function ogLangTag(ogLocale, table) {
+    var raw = String(ogLocale || '').replace(/_/g, '-');
+    return matchLang(raw, table);
+  }
+
   /* SPEC V1.25 §1 — three modes, and the reason there are three rather than two.
 
      'auto'  — navigator.language, exactly as since 0.1. It deliberately does
-               NOT look at <html lang>, and that is not an oversight: on
-               builder-made sites the attribute is routinely wrong (Tilda writes
+               NOT look at any page signal, and that is not an oversight: on
+               builder-made sites `<html lang>` is routinely wrong (Tilda writes
                one template `lang` onto every page, so a Romanian page announces
-               itself as Russian). Teaching `auto` to read it would silently
-               change the language on every site already running — including the
-               ones that are correct today — so `auto` keeps its meaning.
-     'page'  — <html lang> first, then navigator.language, then en. The mode for
-               a site with real per-language URLs (/ru/, /ro/), where the page
-               itself is the authority: a Romanian page must greet a visitor
-               with a Russian browser in Romanian.
+               itself as Russian). Teaching `auto` to read the page would
+               silently change the language on every site already running —
+               including the ones that are correct today — so `auto` keeps its
+               meaning.
+     'page'  — the PAGE decides, through four sources in falling order of how
+               deliberate they are (0.5.24):
+
+                 1. `<html lang>`      — the explicit declaration, always wins
+                 2. the first path segment, when it names a language — `/ro/`
+                 3. `<meta property="og:locale">` — `ro_RO` -> ro
+                 4. navigator.language
+                 5. en
+
+               Steps 2 and 3 exist because 0.5.21's two-step order fell straight
+               through to the browser on a site whose pages switch language by
+               path and carry no `lang` attribute at all: a Russian browser got
+               a Russian banner on the Romanian page, which is the exact bug
+               'page' was introduced to prevent.
+
+               EVERY step goes through matchLang, so a source naming a language
+               this build has no locale for is no answer at all and falls to the
+               NEXT source — never straight to English. That is the whole reason
+               matchLang returns '' rather than 'en'.
      a code  — that language, always.
 
-     `docLang`/`navLang` are arguments so the rule is pure and testable without
-     globals; the call sites read document/navigator and pass them in. They are
-     still defaulted here because ck-debug.js calls this with two arguments
-     (see textsRow there) and must resolve 'page' the same way the banner does.
+     `signals` is an object — `{ docLang, path, ogLocale, navLang }` — rather
+     than four positional arguments, and deliberately so: this file already
+     carries a note about `docLang` being APPENDED rather than inserted because
+     positional call sites silently reinterpret when an argument moves. Four
+     more slots would make that trap four times as likely; a named bag cannot be
+     passed in the wrong order. The rule stays pure — the call sites read
+     document/navigator/location and pass them in.
+
+     The 2-argument call is still supported and still reads the globals itself,
+     because ck-debug.js calls resolveLang(cfg.language, table) from langRow and
+     textsRow and must resolve 'page' exactly the way the banner did.
 
      Note for the server: 'page' sent to a client older than 0.5.21 is not
      recognised as a mode, is treated as a language code, matches no locale and
      therefore renders en. That is handled by pinning the version server-side
      (§2); nothing here can detect it. */
-  function resolveLang(cfgLang, table, docLang, navLang) {
-    var nav = (arguments.length > 3) ? navLang
-      : ((typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) || '');
-    var doc = (arguments.length > 2) ? docLang
-      : ((typeof document !== 'undefined' && document.documentElement &&
-          document.documentElement.lang) || '');
-
+  function resolveLang(cfgLang, table, signals) {
     var mode = String(cfgLang == null ? '' : cfgLang).toLowerCase();
 
-    if (mode === 'page') {
-      // An attribute that is missing, empty or names a language we have no
-      // locale for ('xx') is no answer at all — fall through to the browser.
-      return matchLang(doc, table) || matchLang(nav, table) || 'en';
-    }
+    // 'auto' and a fixed code read no page signal at all, so the globals are
+    // not even touched for them.
     if (!mode || mode === 'auto') {
-      return matchLang(nav, table) || 'en';
+      var navOnly = (arguments.length > 2 && signals) ? signals.navLang : navLangNow();
+      return matchLang(navOnly, table) || 'en';
     }
-    return matchLang(mode, table) || 'en';
+    if (mode !== 'page') {
+      return matchLang(mode, table) || 'en';
+    }
+
+    var s = (arguments.length > 2 && signals) ? signals : pageSignals();
+    return matchLang(s.docLang, table)
+      || pathLangSeg(s.path, table)
+      || ogLangTag(s.ogLocale, table)
+      || matchLang(s.navLang, table)
+      || 'en';
   }
 
-  // The two globals resolveLang() needs, read HERE rather than inside it, so the
-  // rule itself stays pure. Both are wrapped: `document.documentElement` is
-  // absent in a worker and `navigator.language` throws in a few hardened
-  // embeddings, and neither is worth losing the banner over.
+  // The globals resolveLang() needs, read HERE rather than inside it, so the
+  // rule itself stays pure. Each is wrapped: `document.documentElement` is
+  // absent in a worker, `navigator.language` throws in a few hardened
+  // embeddings, and none of it is worth losing the banner over.
   function docLangNow() {
     try {
       return (typeof document !== 'undefined' && document.documentElement &&
@@ -3899,11 +3964,40 @@
         (navigator.language || navigator.userLanguage)) || '';
     } catch (e) { return ''; }
   }
-  // The config-reading resolve, in one place: both call sites (signature() and
-  // mount()) must read the same two sources, or the banner could remount in a
-  // language the signature never noticed changing.
+  function pathNow() {
+    try {
+      return (typeof location !== 'undefined' && location.pathname) || '';
+    } catch (e) { return ''; }
+  }
+  /* The og:locale meta, read at resolve time rather than cached: a SPA can
+     rewrite it on a route change, and this is read once per mount anyway.
+     querySelector rather than a loop over document.getElementsByTagName so the
+     property/content pair is matched by the engine; `property` is the Open
+     Graph spelling (`name` is the HTML one and some CMSs emit that instead, so
+     both are accepted). */
+  function ogLocaleNow() {
+    try {
+      if (typeof document === 'undefined' || !document.querySelector) return '';
+      var m = document.querySelector('meta[property="og:locale"]') ||
+        document.querySelector('meta[name="og:locale"]');
+      return (m && (m.content || m.getAttribute('content'))) || '';
+    } catch (e) { return ''; }
+  }
+  // The four page signals in one object, so resolveLang's caller and its own
+  // default read exactly the same set.
+  function pageSignals() {
+    return {
+      docLang: docLangNow(),
+      path: pathNow(),
+      ogLocale: ogLocaleNow(),
+      navLang: navLangNow()
+    };
+  }
+  // The config-reading resolve, in one place: all call sites (signature(),
+  // mount() and the 'page'-mode observer) must read the same sources, or the
+  // banner could remount in a language the signature never noticed changing.
   function resolveCfgLang(cfg, table) {
-    return resolveLang(cfg && cfg.language, table, docLangNow(), navLangNow());
+    return resolveLang(cfg && cfg.language, table, pageSignals());
   }
 
   /* SPEC V1.12 §3 — plural forms.
@@ -7105,10 +7199,104 @@
     return ids.length + ',' + ids.join(',');
   }
 
+  /* ------------------------------------------------ SPEC V1.25 §1 — live lang */
+
+  /* 0.5.24 — an SPA that sets `<html lang>` AFTER the banner mounted.
+
+     The second live failure the 'page' order alone does not fix: a React
+     cabinet ships `<html lang="ru">` statically and its own language switch
+     writes `document.documentElement.lang` later, by which time the banner has
+     already painted and mount() is one-shot. Switching the app to Romanian left
+     a Russian banner until a reload.
+
+     Why this cannot go through the ck:init path: signature() opens with the
+     CONFIG's language string, which is the literal 'page' in this mode and does
+     not change when the attribute does. A dispatched ck:init would compare
+     equal and take the applyTheme() branch, repainting the palette and no text
+     at all. So the decision is made on the RESOLVED code and calls the existing
+     remount() — no mount logic is duplicated here.
+
+     'page' only. Under 'auto' the attribute is deliberately not read at all
+     (see resolveLang), and under a fixed code nothing about the page can change
+     the answer — so in both there is nothing to observe and no observer is
+     installed. */
+  var langObserver = null;
+  var langRemountScheduled = false;
+
+  // The pure half: given the mounted code and the one we would resolve now,
+  // should the UI be torn down and rebuilt? Extracted so the decision is
+  // testable without a MutationObserver, and so both the guard and the test
+  // read the same rule rather than two copies of it.
+  function shouldRemountForLang(mountedLang, nextLang) {
+    return !!nextLang && !!mountedLang && nextLang !== mountedLang;
+  }
+
+  function stopLangObserver() {
+    if (langObserver) {
+      try { langObserver.disconnect(); } catch (e) { /* noop */ }
+      langObserver = null;
+    }
+    langRemountScheduled = false;
+  }
+
+  /* Installed at the end of mount(), disconnected at the top of remount() and
+     again here before a new one is made, so there is never more than one
+     observer watching the attribute however many times the banner rebuilds.
+
+     Feature-checked rather than assumed: MutationObserver is absent from the
+     stub DOMs the suite evaluates this file against, and a missing observer
+     costs the live switch, not the banner. */
+  function startLangObserver(cfg) {
+    stopLangObserver();
+    if (String((cfg && cfg.language) || '').toLowerCase() !== 'page') return;
+    if (typeof MutationObserver !== 'function') return;
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    try {
+      langObserver = new MutationObserver(function () {
+        // Debounced to one remount per tick: a switch that writes `lang` and
+        // then rewrites it (or touches it alongside a class) delivers several
+        // records, and each would otherwise tear the banner down again. The
+        // flag is cleared INSIDE the scheduled callback, not after it, so the
+        // next genuine change still schedules one.
+        if (langRemountScheduled) return;
+        langRemountScheduled = true;
+        setTimeout(function () {
+          langRemountScheduled = false;
+          relangIfNeeded();
+        }, 0);
+      });
+      langObserver.observe(document.documentElement, {
+        attributes: true, attributeFilter: ['lang']
+      });
+    } catch (e) { langObserver = null; }
+  }
+
+  // Re-resolve and, only if the answer actually changed, rebuild. Reads the
+  // LIVE config rather than the one captured at mount, so a page that changed
+  // both its config and its `lang` rebuilds against the current one.
+  function relangIfNeeded() {
+    if (!mounted) return;
+    var cfg = safeConfig();
+    if (String((cfg && cfg.language) || '').toLowerCase() !== 'page') return;
+    var next = resolveCfgLang(cfg, localeTable());
+    if (!shouldRemountForLang(LANG, next)) return;
+    // The panel belongs to the render about to be replaced, so «re-render it
+    // too» means reopening the fresh one: remount() clears panelOpen on its way
+    // through, which is why the flag is captured first. A visitor mid-decision
+    // keeps the panel they opened, now in the new language.
+    var wasOpen = panelOpen;
+    remount(cfg);
+    if (wasOpen) openPanel(null);
+  }
+
   function remount(cfg) {
     mounted = false;
     panelOpen = false;
     lastFocus = null;
+    // The observer belongs to the render being replaced; mount() installs a
+    // fresh one. Without this a remount would leave the old one connected and
+    // every rebuild would add another.
+    stopLangObserver();
     // The cards belong to the render about to be replaced: their listeners close
     // over the old T and the old shadow root. mount() sweeps again and draws
     // fresh ones in the new language and theme.
@@ -7176,6 +7364,11 @@
     // SPEC V1.10 §2 — заглушки вместо задержанных встраиваний. After the shadow
     // root exists, because a placeholder's «Настроить cookie» calls openPanel().
     sweepPlaceholders(cfg);
+
+    /* SPEC V1.25 §1 — follow a `<html lang>` that changes AFTER this render.
+       The single install site: mount() is the only thing that ever produces a
+       banner, so an observer started here can never outnumber the renders. */
+    startLangObserver(cfg);
 
     /* SPEC V1.10 §1 — honour a settings request that arrived before there was
        anything to open: either ConsentKit.openSettings() called while this file
@@ -7265,6 +7458,14 @@
       buildStrings: buildStrings,
       localeTable: localeTable,
       resolveLang: resolveLang,
+      /* SPEC V1.25 §1 — the two page signals 'page' gained in 0.5.24, and the
+         observer's decision. Pure and exported for the same reason resolveLang
+         is: the path rule («two letters, or a code the table carries») and the
+         og:locale normalisation are the parts a site owner gets wrong, and the
+         cabinet's preview must answer exactly what the banner will. */
+      pathLangSeg: pathLangSeg,
+      ogLangTag: ogLangTag,
+      shouldRemountForLang: shouldRemountForLang,
       cookieRowsForService: cookieRowsForService,
       looseCookies: looseCookies,
       /* SPEC V1.18.1 §1 — the two cells the cookie table computes rather than

@@ -950,29 +950,37 @@ test('the appearance section renders the texts row', () => {
    refuses to look at it. Every case passes docLang/navLang explicitly, so none
    of this touches a global. */
 
+/* The four page signals, as the object resolveLang takes since 0.5.24. Named
+   rather than positional on purpose — four more slots after `table` is exactly
+   the trap this file's own «APPENDED, not inserted» note warns about, and a
+   string handed to a slot that moved would be silently ignored rather than
+   throw. Every field defaults to '' so each case names only the signal it is
+   about. */
+const sig = (o = {}) => ({ docLang: '', path: '', ogLocale: '', navLang: '', ...o });
+
 test("'page' takes the page's lang over the browser's", () => {
   const C = load();
   const table = C.localeTable();
   // The exact case from the spec: Romanian page, Russian browser.
-  assert.equal(C.resolveLang('page', table, 'ro', 'ru-RU'), 'ro');
-  assert.equal(C.resolveLang('page', table, 'ru', 'en-US'), 'ru');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'ro');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'ru', navLang: 'en-US' })), 'ru');
   // A regional page tag resolves through the same two-letter base as a config
   // code does — `<html lang="pt-BR">` is a Portuguese page.
-  assert.equal(C.resolveLang('page', table, 'pt-BR', 'en-US'), 'pt');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'pt-BR', navLang: 'en-US' })), 'pt');
 });
 
 test("'page' falls through to the browser when the page says nothing usable", () => {
   const C = load();
   const table = C.localeTable();
   // No attribute at all — the overwhelmingly common case on a one-language site.
-  assert.equal(C.resolveLang('page', table, '', 'ru-RU'), 'ru');
+  assert.equal(C.resolveLang('page', table, sig({ navLang: 'ru-RU' })), 'ru');
   // An attribute naming a language ConsentKit has no locale for must not win:
   // honouring it would render `en` and hide a perfectly good Russian browser.
-  assert.equal(C.resolveLang('page', table, 'xx', 'ru-RU'), 'ru');
-  assert.equal(C.resolveLang('page', table, 'xx-YY', 'ro-RO'), 'ro');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'xx', navLang: 'ru-RU' })), 'ru');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'xx-YY', navLang: 'ro-RO' })), 'ro');
   // Neither source usable — en is the floor, as everywhere else.
-  assert.equal(C.resolveLang('page', table, 'xx', 'zz'), 'en');
-  assert.equal(C.resolveLang('page', table, '', ''), 'en');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'xx', navLang: 'zz' })), 'en');
+  assert.equal(C.resolveLang('page', table, sig()), 'en');
 });
 
 test("'auto' still ignores the page's lang — deliberately, not by omission", () => {
@@ -982,27 +990,171 @@ test("'auto' still ignores the page's lang — deliberately, not by omission", (
      correct today. Anyone "fixing" auto to read the page breaks this. */
   const C = load();
   const table = C.localeTable();
-  assert.equal(C.resolveLang('auto', table, 'ro', 'ru-RU'), 'ru');
-  assert.equal(C.resolveLang('', table, 'ro', 'ru-RU'), 'ru');
-  assert.equal(C.resolveLang(undefined, table, 'ro', 'ru-RU'), 'ru');
+  assert.equal(C.resolveLang('auto', table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'ru');
+  assert.equal(C.resolveLang('', table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'ru');
+  assert.equal(C.resolveLang(undefined, table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'ru');
 });
 
 test('an explicit code still beats both the page and the browser', () => {
   const C = load();
   const table = C.localeTable();
-  assert.equal(C.resolveLang('en', table, 'ro', 'ru-RU'), 'en');
-  assert.equal(C.resolveLang('de', table, 'ro', 'ru-RU'), 'de');
+  assert.equal(C.resolveLang('en', table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'en');
+  assert.equal(C.resolveLang('de', table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'de');
   // An unknown configured code is still en, exactly as before the mode existed.
-  assert.equal(C.resolveLang('xx', table, 'ro', 'ru-RU'), 'en');
+  assert.equal(C.resolveLang('xx', table, sig({ docLang: 'ro', navLang: 'ru-RU' })), 'en');
 });
 
 test("the legacy 'mo' tag resolves to ro from the page as well as the browser", () => {
   const C = load();
   const table = C.localeTable();
-  assert.equal(C.resolveLang('page', table, 'mo', 'ru-RU'), 'ro');
-  assert.equal(C.resolveLang('page', table, 'mo-MD', 'ru-RU'), 'ro');
-  assert.equal(C.resolveLang('auto', table, '', 'mo-MD'), 'ro');
-  assert.equal(C.resolveLang('mo', table, '', ''), 'ro');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'mo', navLang: 'ru-RU' })), 'ro');
+  assert.equal(C.resolveLang('page', table, sig({ docLang: 'mo-MD', navLang: 'ru-RU' })), 'ro');
+  assert.equal(C.resolveLang('auto', table, sig({ navLang: 'mo-MD' })), 'ro');
+  assert.equal(C.resolveLang('mo', table, sig()), 'ro');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   0.5.24 — the path and og:locale steps
+   ═══════════════════════════════════════════════════════════════════════
+
+   Two live failures on 11.09.2026, and 0.5.21's two-step order fixed neither:
+
+   1. A site whose pages switch language by path and carry NO `lang` attribute
+      at all. `page` fell straight through to the browser, so a Russian browser
+      got a Russian banner on the Romanian page — the exact bug the mode exists
+      to prevent.
+   2. An SPA that ships `<html lang="ru">` and sets the attribute from its own
+      switch AFTER the banner mounted (covered by the observer tests below).
+
+   The order is: `<html lang>` -> first path segment -> og:locale -> browser ->
+   en, and EVERY step goes through matchLang so an unusable source falls to the
+   NEXT one rather than to English. */
+
+test('the first path segment decides when there is no lang attribute', () => {
+  const C = load();
+  const table = C.localeTable();
+  // Failure 1, exactly: bare <html>, Romanian path, Russian browser.
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/ro/', navLang: 'ru-RU' })), 'ro');
+  // The forms a real site uses: no trailing slash, and a deeper page.
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/ro', navLang: 'ru-RU' })), 'ro');
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/en/about', navLang: 'ru-RU' })), 'en');
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/ru/contacte', navLang: 'en-US' })), 'ru');
+  // The site root has no segment at all and must not decide anything.
+  assert.equal(C.resolveLang('page', table, sig({ path: '/', navLang: 'ru-RU' })), 'ru');
+  assert.equal(C.resolveLang('page', table, sig({ path: '', navLang: 'ru-RU' })), 'ru');
+});
+
+test('a path segment that is not a language code is not read as one', () => {
+  /* The reason the segment is gated on «exactly two letters» before matchLang
+     ever sees it: matchLang falls back to the first TWO letters, so a raw
+     segment would make `/ruby/` Russian and `/engineering/` English — an
+     ordinary blog category silently deciding the banner's language. */
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/ruby/tutorial', navLang: 'ro-RO' })), 'ro', '/ruby/ is not ru');
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/engineering/', navLang: 'ro-RO' })), 'ro', '/engineering/ is not en');
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/products/42', navLang: 'ru-RU' })), 'ru');
+  // A two-letter segment naming no locale is no answer either — and must fall
+  // to the NEXT source, not to English.
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/xx/', navLang: 'ru-RU' })), 'ru');
+});
+
+test("the path step reads 'mo' as ro, exactly as every other step does", () => {
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/mo/', navLang: 'ru-RU' })), 'ro');
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/mo/despre-noi', navLang: 'en-US' })), 'ro');
+});
+
+test('og:locale answers when neither the attribute nor the path does', () => {
+  const C = load();
+  const table = C.localeTable();
+  // The underscore form Facebook asks for, normalised to the hyphen before the
+  // lookup and then resolved through the same two-letter base.
+  assert.equal(C.resolveLang('page', table,
+    sig({ ogLocale: 'ro_RO', navLang: 'ru-RU' })), 'ro');
+  assert.equal(C.resolveLang('page', table,
+    sig({ ogLocale: 'ru_RU', navLang: 'en-US' })), 'ru');
+  assert.equal(C.resolveLang('page', table,
+    sig({ ogLocale: 'pt-BR', navLang: 'en-US' })), 'pt');
+  // An unknown path falls PAST the path step to og:locale — the brief's case.
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/xx/', ogLocale: 'ro_RO', navLang: 'ru-RU' })), 'ro');
+  // And an unusable og:locale falls on to the browser rather than to English.
+  assert.equal(C.resolveLang('page', table,
+    sig({ ogLocale: 'xx_YY', navLang: 'ru-RU' })), 'ru');
+});
+
+test('the four sources are ranked, most deliberate first', () => {
+  const C = load();
+  const table = C.localeTable();
+  // <html lang> beats a path that says otherwise: an explicit declaration is
+  // the most deliberate thing on the page.
+  assert.equal(C.resolveLang('page', table,
+    sig({ docLang: 'ro', path: '/ru/', ogLocale: 'en_US', navLang: 'ru-RU' })), 'ro');
+  // The path beats og:locale, which is written once per site far more often
+  // than it is written once per page.
+  assert.equal(C.resolveLang('page', table,
+    sig({ path: '/ro/', ogLocale: 'ru_RU', navLang: 'en-US' })), 'ro');
+  // og:locale beats the browser.
+  assert.equal(C.resolveLang('page', table,
+    sig({ ogLocale: 'ro_RO', navLang: 'ru-RU' })), 'ro');
+  // And with nothing on the page at all, the browser still decides.
+  assert.equal(C.resolveLang('page', table, sig({ navLang: 'ru-RU' })), 'ru');
+  // Nothing anywhere: en is the floor.
+  assert.equal(C.resolveLang('page', table,
+    sig({ docLang: 'xx', path: '/zz/', ogLocale: 'qq_QQ', navLang: 'yy' })), 'en');
+});
+
+test("'auto' ignores the path and og:locale too, not just the attribute", () => {
+  /* The 0.5.24 half of the promise 'auto' has carried since 0.5.21: it reads
+     the BROWSER and nothing else. A site on /ro/ whose visitors are Russian
+     keeps the banner it has today. */
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.resolveLang('auto', table,
+    sig({ path: '/ro/', navLang: 'ru-RU' })), 'ru');
+  assert.equal(C.resolveLang('auto', table,
+    sig({ ogLocale: 'ro_RO', navLang: 'ru-RU' })), 'ru');
+  assert.equal(C.resolveLang('auto', table,
+    sig({ docLang: 'ro', path: '/ro/', ogLocale: 'ro_RO', navLang: 'ru-RU' })), 'ru');
+  // A fixed code ignores all of it as well.
+  assert.equal(C.resolveLang('de', table,
+    sig({ docLang: 'ro', path: '/ro/', ogLocale: 'ro_RO', navLang: 'ru-RU' })), 'de');
+});
+
+test('the path rule is exported, and is the one the banner uses', () => {
+  /* «один код — одни числа»: the cabinet's preview must answer exactly what
+     the banner will, so the rule is a function rather than an inline regex. */
+  const C = load();
+  const table = C.localeTable();
+  assert.equal(C.pathLangSeg('/ro/', table), 'ro');
+  assert.equal(C.pathLangSeg('/ro', table), 'ro');
+  assert.equal(C.pathLangSeg('/en/about', table), 'en');
+  assert.equal(C.pathLangSeg('/mo/', table), 'ro');
+  assert.equal(C.pathLangSeg('/ruby/', table), '');
+  assert.equal(C.pathLangSeg('/xx/', table), '');
+  assert.equal(C.pathLangSeg('/', table), '');
+  assert.equal(C.pathLangSeg('', table), '');
+  // A leading double slash, and an uppercase segment a hand-written link made.
+  assert.equal(C.pathLangSeg('//ro/x', table), 'ro');
+  assert.equal(C.pathLangSeg('/RO/', table), 'ro');
+  // og:locale's normalisation, the same way.
+  assert.equal(C.ogLangTag('ro_RO', table), 'ro');
+  assert.equal(C.ogLangTag('ru_RU', table), 'ru');
+  assert.equal(C.ogLangTag('mo_MD', table), 'ro');
+  assert.equal(C.ogLangTag('xx_YY', table), '');
+  assert.equal(C.ogLangTag('', table), '');
 });
 
 test('resolveLang still answers with two arguments, reading the globals itself', () => {
@@ -1037,7 +1189,7 @@ test("pickLang gets the same 'page' mode, with docLang APPENDED", () => {
   assert.equal(D.pickLang('ro', ''), 'ro');
 });
 
-test('langSource names which of the three sources won', () => {
+test('langSource names which of the five sources won', () => {
   const D = loadDebug();
   assert.equal(D.langSource('page', 'ru-RU', 'ro'), 'page');
   // The attribute did not decide anything, so the row must not blame it.
@@ -1047,20 +1199,32 @@ test('langSource names which of the three sources won', () => {
   assert.equal(D.langSource('', 'ru-RU', 'ro'), 'nav');
   assert.equal(D.langSource('ru', 'en-US', 'ro'), 'config');
   assert.equal(D.langSource('en', '', ''), 'config');
+  /* 0.5.24 — the two steps between the attribute and the browser. The row
+     exists to answer «why is this banner in the wrong language», so naming the
+     wrong source is the one thing it must never do. */
+  assert.equal(D.langSource('page', 'ru-RU', '', '/ro/'), 'path');
+  assert.equal(D.langSource('page', 'ru-RU', 'ro', '/ru/'), 'page');
+  assert.equal(D.langSource('page', 'ru-RU', '', '/ruby/'), 'nav');
+  assert.equal(D.langSource('page', 'ru-RU', '', '', 'ro_RO'), 'og');
+  assert.equal(D.langSource('page', 'en-US', '', '/xx/', 'ro_RO'), 'og');
+  assert.equal(D.langSource('auto', 'ru-RU', '', '/ro/', 'ro_RO'), 'nav');
 });
 
 test('the three panel dictionaries all carry the language-source wording', () => {
   const D = loadDebug();
   for (const code of ['en', 'ru', 'ro']) {
-    for (const k of ['bannerLang', 'langFromPage', 'langFromNav', 'langFromConfig']) {
+    for (const k of ['bannerLang', 'langFromPage', 'langFromPath', 'langFromOg',
+      'langFromNav', 'langFromConfig']) {
       assert.equal(typeof D.strings[code][k], 'string', `${code}.${k} is missing`);
       assert.ok(D.strings[code][k].length > 0, `${code}.${k} is empty`);
     }
   }
   // Three distinct answers, or the row would say the same thing whatever happened.
   const ru = D.strings.ru;
-  assert.notEqual(ru.langFromPage, ru.langFromNav);
-  assert.notEqual(ru.langFromNav, ru.langFromConfig);
+  const answers = [ru.langFromPage, ru.langFromPath, ru.langFromOg,
+    ru.langFromNav, ru.langFromConfig];
+  assert.equal(new Set(answers).size, answers.length,
+    'two sources that read the same leave the question the row exists to answer open');
 });
 
 test('the appearance section renders the language row', () => {
@@ -1084,4 +1248,396 @@ test("refreshLang passes the page's lang, so the panel follows a 'page' banner",
   assert.match(body, /pageLang\(\)/,
     'the panel would stay Russian on a Romanian page without this');
   assert.match(body, /browserLang\(\)/);
+  // 0.5.24 — and the two signals the banner gained, or the panel would speak a
+  // different language than the banner it is reporting on.
+  assert.match(body, /pagePath\(\)/);
+  assert.match(body, /pageOgLocale\(\)/);
+});
+
+test('the language row can name the path and og:locale', () => {
+  // The row's whole job is «where did this language come from», so a source the
+  // resolver can pick must have wording, or the row would fall back to blaming
+  // the browser for a decision the path made.
+  const from = DEBUG_SRC.indexOf('function langRow');
+  const body = DEBUG_SRC.slice(from, DEBUG_SRC.indexOf('function textsRow'));
+  assert.match(body, /T\.langFromPath/);
+  assert.match(body, /T\.langFromOg/);
+  assert.match(body, /pagePath\(\), pageOgLocale\(\)/,
+    'langRow must pass the new signals to langSource');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   0.5.24 — the live `<html lang>` observer
+   ═══════════════════════════════════════════════════════════════════════
+
+   The second live failure: an SPA that ships `<html lang="ru">` statically and
+   sets `document.documentElement.lang` from its own language switch AFTER the
+   banner has rendered. mount() is one-shot, so the banner kept the language it
+   read at first paint and switching the app to Romanian left a Russian banner
+   until a reload.
+
+   Why a dispatched ck:init could not fix it, and why this is tested end to end
+   rather than only as a rule: signature() opens with the CONFIG's language
+   string, which is the literal 'page' in this mode and does not change when the
+   attribute does — so the ck:init path compares EQUAL and repaints the palette
+   only. A test of the pure decision alone would have passed against that broken
+   wiring. The harness below therefore really mounts, really flips the
+   attribute, and asserts the banner's TITLE changed.
+
+   The stub DOM can express a MutationObserver (it is an ordinary class), so the
+   pure «should remount?» extraction is asserted as well as, not instead of, the
+   live path. */
+
+/** A DOM stub complete enough for ck-ui to mount, with a working observer. */
+function makeLivePage({ lang = '', path = '/', navLang = 'en-US' } = {}) {
+  const g = Object.create(null);
+  const nodes = [];
+  const observers = [];
+  const timers = [];
+
+  function node(tagName) {
+    const attrs = new Map();
+    const n = {
+      tagName: String(tagName).toUpperCase(),
+      nodeType: 1,
+      parentNode: null,
+      childNodes: [],
+      style: {},
+      className: '',
+      id: '',
+      textContent: '',
+      dataset: {},
+      _lang: '',
+      getAttribute(k) { const s = String(k).toLowerCase(); return attrs.has(s) ? attrs.get(s) : null; },
+      setAttribute(k, v) { attrs.set(String(k).toLowerCase(), String(v)); },
+      removeAttribute(k) { attrs.delete(String(k).toLowerCase()); },
+      hasAttribute(k) { return attrs.has(String(k).toLowerCase()); },
+      appendChild(c) { c.parentNode = n; n.childNodes.push(c); return c; },
+      insertBefore(c) { c.parentNode = n; n.childNodes.push(c); return c; },
+      removeChild(c) {
+        const i = n.childNodes.indexOf(c);
+        if (i > -1) n.childNodes.splice(i, 1);
+        c.parentNode = null;
+        return c;
+      },
+      contains() { return false; },
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      getElementsByTagName() { return []; },
+      addEventListener() {}, removeEventListener() {}, focus() {}, closest() { return null; },
+      /* A REAL view over `className`, not a separate Set. ck-ui creates nodes
+         with `el('div', 'ck-panel ck-hidden')` — a className STRING — and then
+         toggles the same class through classList; a browser keeps those one and
+         the same. A Set that starts empty would report a freshly built,
+         hidden panel as visible and an opened one as hidden, so the
+         panel-reopen assertions below would be exactly backwards. */
+      classList: {
+        _list() { return String(n.className || '').split(/\s+/).filter(Boolean); },
+        _write(list) { n.className = list.join(' '); },
+        add(...c) {
+          const l = this._list();
+          for (const x of c) if (l.indexOf(x) < 0) l.push(x);
+          this._write(l);
+        },
+        remove(...c) { this._write(this._list().filter((x) => c.indexOf(x) < 0)); },
+        contains(c) { return this._list().indexOf(c) > -1; },
+        toggle(c, force) {
+          const on = (force === undefined) ? !this.contains(c) : !!force;
+          if (on) { this.add(c); } else { this.remove(c); }
+          return on;
+        }
+      },
+      // No `shadowRoot` property: mount() reads `host.shadowRoot ||
+      // host.attachShadow(...)`, and a remount must really build a new root.
+      attachShadow() {
+        const root = node('#shadow-root');
+        root.host = n;
+        n._root = root;
+        return root;
+      }
+    };
+    nodes.push(n);
+    return n;
+  }
+
+  const html = node('html');
+  /* `lang` is a real accessor, so writing `documentElement.lang = 'ro'` — what
+     an SPA's switch actually does — notifies the observers the way a browser
+     does. A plain data property would let the attribute change with nothing
+     watching and the whole feature would be untested. */
+  Object.defineProperty(html, 'lang', {
+    configurable: true,
+    get() { return html._lang; },
+    set(v) {
+      html._lang = String(v);
+      for (const o of observers) {
+        if (o.target === html) o.cb([{ type: 'attributes', attributeName: 'lang' }], o.api);
+      }
+    }
+  });
+  html.lang = lang;
+
+  const listeners = {};
+  const doc = {
+    cookie: '',
+    readyState: 'complete',
+    documentElement: html,
+    createElement: node,
+    createTextNode(t) { const n = node('#text'); n.textContent = String(t); return n; },
+    getElementById(id) { return nodes.find((n) => n.id === id) || null; },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    addEventListener(t, fn) { (listeners[t] || (listeners[t] = [])).push(fn); },
+    removeEventListener(t, fn) {
+      const l = listeners[t]; if (!l) return;
+      const i = l.indexOf(fn); if (i > -1) l.splice(i, 1);
+    },
+    dispatchEvent(ev) {
+      for (const fn of (listeners[ev && ev.type] || []).slice()) fn(ev);
+      return true;
+    },
+    body: null, head: null
+  };
+  doc.body = node('body');
+  doc.head = node('head');
+
+  g.window = g; g.self = g; g.globalThis = g;
+  g.document = doc;
+  g.console = { log() {}, info() {}, warn() {}, error() {} };
+  g.location = { href: 'https://site.example' + path, pathname: path, hostname: 'site.example', search: '', hash: '' };
+  g.navigator = { language: navLang };
+  g.localStorage = null;
+  g.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {} });
+  g.getComputedStyle = () => ({ getPropertyValue: () => '', fontFamily: '' });
+  // Real enough to drain: the observer debounces through setTimeout, so a stub
+  // returning 0 would make the remount never happen and the test pass on a
+  // banner that never changed.
+  g.setTimeout = (fn) => { timers.push(fn); return timers.length; };
+  g.clearTimeout = () => {};
+  g.setInterval = () => 0; g.clearInterval = () => {};
+  g.requestAnimationFrame = () => 0;
+  g.CustomEvent = function (name, init) { this.type = name; this.detail = (init && init.detail) || null; };
+  g.addEventListener = () => {}; g.removeEventListener = () => {};
+  g.MutationObserver = class {
+    constructor(cb) { this.cb = cb; this._entry = null; }
+    observe(target) {
+      this._entry = { target, cb: this.cb, api: this };
+      observers.push(this._entry);
+    }
+    disconnect() {
+      const i = observers.indexOf(this._entry);
+      if (i > -1) observers.splice(i, 1);
+      this._entry = null;
+    }
+    takeRecords() { return []; }
+  };
+
+  const ctx = vm.createContext(g);
+  vm.runInContext(LOCALES_SRC, ctx, { filename: 'src/ck-locales.js' });
+  vm.runInContext(UI_SRC, ctx, { filename: 'src/ck-ui.js' });
+
+  return {
+    g, doc, html,
+    observerCount() { return observers.length; },
+    /* Run every queued timer, including ones queued while draining — the
+       debounce schedules from inside a callback. Bounded so a bug that
+       re-queues forever fails loudly instead of hanging the suite. */
+    drain() {
+      for (let i = 0; i < 50 && timers.length; i++) {
+        const batch = timers.splice(0, timers.length);
+        for (const fn of batch) fn();
+      }
+    },
+    init(cfg) {
+      g.ConsentKit = g.ConsentKit || {};
+      g.ConsentKit.config = cfg;
+      doc.dispatchEvent(new g.CustomEvent('ck:init', { detail: { config: cfg } }));
+    },
+    /* Every <h2> in the shadow tree, in order. The banner's is first and the
+       settings panel's is second, so the panel's language is readable without
+       reaching into ck-ui's internals. */
+    headings() {
+      const host = doc.getElementById('ck-root');
+      const root = host && host._root;
+      if (!root) return [];
+      const out = [];
+      (function walk(list) {
+        for (const n of list) {
+          if (n.tagName === 'H2') out.push(n.textContent);
+          walk(n.childNodes || []);
+        }
+      })(root.childNodes);
+      return out;
+    },
+    /* Is the settings panel on screen? openPanel() clears `ck-hidden` from the
+       panel node, so the class is the same fact the visitor sees — not a flag
+       this harness invented. Found by its aria-label, which is the panel title
+       in whatever language the render used. */
+    panelOpen() {
+      const host = doc.getElementById('ck-root');
+      const root = host && host._root;
+      if (!root) return false;
+      let open = false;
+      (function walk(list) {
+        for (const n of list) {
+          const cl = n.classList;
+          if (cl && cl.contains('ck-panel') && !cl.contains('ck-hidden')) { open = true; }
+          walk(n.childNodes || []);
+        }
+      })(root.childNodes);
+      return open;
+    },
+    openPreferences() {
+      doc.dispatchEvent(new g.CustomEvent('ck:ui:open-preferences', { detail: {} }));
+    },
+    /** The <h2> the banner painted, wherever in the shadow tree it landed. */
+    title() {
+      const host = doc.getElementById('ck-root');
+      const root = host && host._root;
+      if (!root) return null;
+      let found = null;
+      (function walk(list) {
+        for (const n of list) {
+          if (n.tagName === 'H2' && !found) { found = n.textContent; return; }
+          walk(n.childNodes || []);
+        }
+      })(root.childNodes);
+      return found;
+    }
+  };
+}
+
+test("the banner follows a `lang` the page sets AFTER it mounted", () => {
+  // The cabinet, exactly: <html lang="ru"> at first paint, ru-RU browser.
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  assert.equal(page.title(), 'Cookie на этом сайте', 'the first render must be Russian');
+
+  // The app's own language switch, two seconds later.
+  page.html.lang = 'ro';
+  page.drain();
+  assert.equal(page.title(), 'Cookie-uri pe acest site',
+    'the banner kept the language it read at first paint');
+});
+
+test('the observer is installed once and survives a remount', () => {
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  assert.equal(page.observerCount(), 1, 'exactly one observer after the first mount');
+
+  // A remount must disconnect the old one before installing the new one, or
+  // every language switch would leave another observer behind.
+  page.html.lang = 'ro';
+  page.drain();
+  assert.equal(page.observerCount(), 1, 'a remount left a second observer connected');
+
+  page.html.lang = 'ru';
+  page.drain();
+  assert.equal(page.observerCount(), 1);
+  assert.equal(page.title(), 'Cookie на этом сайте', 'the second switch must work too');
+});
+
+test('a `lang` change that resolves to the same language does not remount', () => {
+  /* The debounce and the comparison are on the RESOLVED code, not on the raw
+     attribute: an SPA that rewrites `lang` to a regional variant of the same
+     language must not tear a banner down under a visitor mid-decision. */
+  const page = makeLivePage({ lang: 'ru', navLang: 'en-US' });
+  page.init({ language: 'page' });
+  page.drain();
+  const host = page.doc.getElementById('ck-root');
+  const rootBefore = host && host._root;
+
+  page.html.lang = 'ru-RU';       // still ru
+  page.drain();
+  assert.equal(page.title(), 'Cookie на этом сайте');
+  assert.equal(host._root, rootBefore, 'the banner was rebuilt for nothing');
+});
+
+test("no observer in 'auto' or in a fixed mode", () => {
+  /* 'auto' does not read the attribute at all, and a fixed code cannot be
+     changed by the page — so in both there is nothing to watch, and watching
+     would mean remounting a banner whose language cannot have changed. */
+  for (const language of ['auto', '', 'ru', 'de', undefined]) {
+    const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+    page.init({ language });
+    page.drain();
+    assert.equal(page.observerCount(), 0,
+      `language: ${JSON.stringify(language)} must install no observer`);
+  }
+});
+
+test("'auto' really does ignore a live `lang` change", () => {
+  // The positive control for the test above: with no observer, the banner the
+  // browser chose must still be on screen after the attribute moves.
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'auto' });
+  page.drain();
+  assert.equal(page.title(), 'Cookie на этом сайте');
+  page.html.lang = 'ro';
+  page.drain();
+  assert.equal(page.title(), 'Cookie на этом сайте', "'auto' followed the page");
+});
+
+test('the path decides on a page with no lang attribute at all — live', () => {
+  // Failure 1 end to end: bare <html>, served at /ro/, Russian browser.
+  const page = makeLivePage({ lang: '', path: '/ro/', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  assert.equal(page.title(), 'Cookie-uri pe acest site');
+});
+
+test('the remount decision is a pure function, and it is the one used', () => {
+  /* Exported so the rule can be read without a DOM, and so the guard and this
+     assertion cannot drift into two different rules. */
+  const C = load();
+  assert.equal(C.shouldRemountForLang('ru', 'ro'), true);
+  assert.equal(C.shouldRemountForLang('ru', 'ru'), false, 'no change, no rebuild');
+  // Never rebuild on a missing answer: a resolve that produced nothing is not
+  // a reason to tear the banner down.
+  assert.equal(C.shouldRemountForLang('ru', ''), false);
+  assert.equal(C.shouldRemountForLang('', 'ro'), false);
+  assert.equal(C.shouldRemountForLang('', ''), false);
+});
+
+test('an OPEN settings panel comes back open, in the new language', () => {
+  /* Part of the promise, and the part that does not come for free: remount()
+     clears panelOpen on its way through, so without capturing the flag first a
+     visitor who was mid-decision would have the panel vanish under them when
+     the app changed its language. */
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  page.openPreferences();
+  page.drain();
+  assert.equal(page.panelOpen(), true, 'the panel did not open to begin with');
+  const before = page.headings();
+  assert.ok(before.length >= 2, 'the panel should have painted its own heading');
+  assert.equal(before[0], 'Cookie на этом сайте');
+
+  page.html.lang = 'ro';
+  page.drain();
+  assert.equal(page.panelOpen(), true, 'the panel vanished instead of reopening');
+  const after = page.headings();
+  assert.equal(after[0], 'Cookie-uri pe acest site');
+  // The panel's own heading must be Romanian too — reopening a panel still
+  // rendered in Russian would be the same bug one layer down.
+  assert.notDeepEqual(after, before);
+  for (const h of after) {
+    assert.ok(!/[а-яА-Я]/.test(h), `a Russian heading survived the switch: ${h}`);
+  }
+});
+
+test('a CLOSED settings panel stays closed across a language switch', () => {
+  // The other half of the `wasOpen` capture: reopening a panel nobody asked for
+  // would put a modal in front of a visitor who never touched anything.
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  assert.equal(page.panelOpen(), false);
+  page.html.lang = 'ro';
+  page.drain();
+  assert.equal(page.title(), 'Cookie-uri pe acest site', 'the banner should still switch');
+  assert.equal(page.panelOpen(), false, 'the switch opened a panel by itself');
 });
