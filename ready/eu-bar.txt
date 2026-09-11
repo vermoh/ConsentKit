@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.22
+ * Версия ConsentKit: 0.5.23
  * Дата сборки:      2026-09-11
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -128,6 +128,26 @@
     // longest, so a bare entry could shadow this one depending on insertion
     // order. Every Tilda API host is therefore named in full.
     'stat.tildaapi.one': 'analytics',
+    // Convia — a visitor tracker the DoFollow marketing agency runs for its
+    // clients' sites: t.convia.dofollow.md serves convia.js and receives
+    // /v1/track. The bare entry is on convia.dofollow.md, which is the product's
+    // own subdomain and covers the t. host by suffix. dofollow.md itself is the
+    // AGENCY'S OWN SITE and stays unlisted — naming it would rule `analytics` on
+    // an ordinary business site, and the tracker does not live there.
+    'convia.dofollow.md': 'analytics',
+    // Monolytics — session replay and product analytics (/tracker.js). It
+    // records what the visitor does on the page and plays it back, which is the
+    // same class of measurement as hotjar and smartlook above, so the same
+    // category. The domain is dedicated to the product, so the bare entry is
+    // the right scope.
+    'monolytics.app': 'analytics',
+    // Google Optimize — the A/B testing tool tied to GA
+    // (www.googleoptimize.com/optimize.js). Google sunset it in 2023, but sites
+    // still carry the reference, and the script still loads GA identifiers when
+    // it does: that is measurement, so it is CLASSIFIED rather than ignored. A
+    // dead product left in a page is exactly what an audit exists to surface.
+    // The domain serves nothing but the tool, so the bare entry is right.
+    'googleoptimize.com': 'analytics',
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
@@ -257,6 +277,22 @@
     'jivo.chat': 'functional',
     'tidio.co': 'functional',
     'tidiochat.com': 'functional',
+    // Druid — a chatbot widget an owner puts on the site, the same kind of
+    // feature as tawk.to and crisp.chat above: a visitor who declines
+    // functional loses the chat and nothing else. druidplatform.com is bare
+    // because the domain is dedicated to the product — it covers
+    // druidapi.druidplatform.com, which serves
+    // /api/services/app/Bot/LoadConfiguration.
+    //
+    // The widget's own bundle is delivered from Azure's CDN, and that entry is
+    // the EXACT host and nothing shorter. 'azureedge.net' must never appear as
+    // a bare entry here: it hosts half of Azure's customers' OWN assets, and a
+    // bare suffix would rule `functional` on every one of them at once — the
+    // same trap as the capi-automation S3 bucket above. For the same reason
+    // nothing broader than this may ever be inserted ABOVE it — lookupHostMap
+    // returns the FIRST match, not the longest.
+    'druidplatform.com': 'functional',
+    'prod-druid-apc.azureedge.net': 'functional',
     // Searchanise — site search for e-commerce. The widget IS the search box,
     // so a shop whose visitor declines functional loses the feature and nothing
     // else; it is not measurement. The numbered API hosts are enumerated
@@ -286,6 +322,33 @@
     'maps.googleapis.com': 'functional',
     'places.googleapis.com': 'functional',
     'maps.gstatic.com': 'functional',
+    // Yandex Maps — the same decision as the Google Maps block above, made the
+    // same way: a map the owner embedded is a FEATURE, and a visitor who
+    // declines functional loses the map and nothing else.
+    //
+    // api-maps.yandex.ru is the JS API itself (/2.1/?apikey=…). Its own
+    // telemetry, log.api-maps.yandex.ru /services/logging/…, is covered by the
+    // same entry through suffix matching — it is the map's own reporting about
+    // the map, not a visitor profile, and it is held and released with the
+    // widget it belongs to. maps.yandex.net carries the tile servers
+    // (core-renderer-tiles.maps.yandex.net); the domain is dedicated to maps,
+    // so the bare entry is the right scope for both.
+    //
+    // yastatic.net is Yandex's static CDN, and it is the one entry here most
+    // likely to be mistaken for infrastructure — it is NOT. Unlike tildacdn.*
+    // in INFRA_DB it is never a SITE'S OWN asset host: it serves the maps API
+    // bundle (/s3/front-maps-static/…/full.js) and the map's cursor images,
+    // i.e. the widget's own code, so it is held with the widget. The same host
+    // also serves Yandex share buttons, which are a feature of the same kind
+    // and take the same category.
+    //
+    // mc.yandex.ru stays `analytics` in its own entry above and is untouched by
+    // these: neither key is a suffix of the other, so neither shadows the
+    // other. There is deliberately NO bare 'yandex.ru' — yandex.ru is a normal
+    // site, and a bare entry would rule on all of it at once.
+    'api-maps.yandex.ru': 'functional',
+    'maps.yandex.net': 'functional',
+    'yastatic.net': 'functional',
 
     // Vimeo — an embedded player. Unlike YouTube it does not feed an ad
     // profile by default, so a visitor who declines functional loses the video
@@ -646,6 +709,20 @@
     'cdn.shopify.com',
     'squarespace-cdn.com',
     'assets.website-files.com',            // Webflow
+    // ECOM (ecom.md) — «платформа для интернет-магазина и B2B в Молдове»
+    // (verified 11.09.2026 from its home page). A shop built on it is served
+    // its own media and its own content by its own builder:
+    //   media.ecom.md   the platform's media/asset host
+    //                   (/swift/v1/AUTH_…/ecom_prod/media/…)
+    //   admin.ecom.md   the platform's content API — /base/gallery/all_images,
+    //                   /base/vacancies, /general/promotions. That is the
+    //                   SHOP'S OWN CONTENT delivered by the builder, which is
+    //                   exactly the claim forms.tildaapi.one carries above.
+    // Both are named as EXACT hosts. ecom.md itself is NOT added: it is the
+    // platform's own marketing site, and waving it through would be a claim
+    // about a site rather than about asset delivery.
+    'media.ecom.md',
+    'admin.ecom.md',
     // --- general asset CDNs --------------------------------------------
     'cdn.jsdelivr.net',
     'unpkg.com',
@@ -670,6 +747,21 @@
     // asbis.io carries the group's own sites, and its self-hosted Sentry is
     // named separately in HOST_DB as `necessary`.
     'prod-cdn.prod.asbis.io',
+    // cdn.polyfill.io is DELIBERATELY ABSENT, and this note is here because
+    // this run of general asset CDNs is where a reader would look for it.
+    //
+    // It looks like exactly the kind of host that belongs in this list — a
+    // polyfill bundle is the page's own code, and for years it was. In 2024 the
+    // domain CHANGED HANDS and began serving malicious code to visitors of the
+    // sites that embedded it; Google Ads blocks pages that load it. A host that
+    // has already been used to attack visitors must never be waved through as
+    // infrastructure, and it does not get a category either: it stays
+    // UNCLASSIFIED on purpose, so the audit keeps listing it as an unnamed
+    // third party and the owner is told it is there. Being reported is the
+    // whole point — the server's explain rules name it explicitly (SPEC
+    // follow-up), and silence is the one outcome that would help nobody.
+    //
+    // Do not "fix" this by adding it below, in either table.
     // --- fonts ----------------------------------------------------------
     'fonts.googleapis.com',
     'fonts.google.com',                    // the catalogue host; some embeds and
@@ -2265,10 +2357,27 @@
           .replace(/:\d+$/, '')                 // port
           .replace(/^\.+|\.+$/g, '');
         if (!h || h.indexOf('.') === -1 || out.indexOf(h) > -1) { continue; }
+        // 0.5.23 — the page's OWN host is never a linked host, nor is a parent
+        // of it. Seen 11.09.2026 on the cabinet: the owner listed the site
+        // itself, every in-page link (the cabinet's `#/…` routes included) got
+        // `&ck_consent=…` appended, and the hash router read the fragment as
+        // part of the route. A site does not need a fragment to reach itself
+        // (that is what shareSubdomains is for), so such an entry is dropped
+        // here rather than left for the click handler to act on.
+        if (isOwnHost(h)) { continue; }
         out.push(h);
       }
     } catch (e) { /* noop */ }
     return out;
+  }
+
+  // True when `h` is this page's host or a parent domain of it — i.e. when
+  // suffix matching would make the page's own links «linked».
+  function isOwnHost(h) {
+    var self = '';
+    try { self = String((global.location && global.location.hostname) || '').toLowerCase(); } catch (e) { return false; }
+    if (!self) { return false; }
+    return self === h || self.slice(-(h.length + 1)) === '.' + h;
   }
 
   function hostIsLinked(host, hosts) {
@@ -2586,7 +2695,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.22',
+    version: '0.5.23',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

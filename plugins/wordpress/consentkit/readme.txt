@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.22
+Stable tag: 0.5.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers 140 known tracker hosts and
+  requests them. This is on by default and covers 148 known tracker hosts and
   14 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (140 hosts, 14 path rules) and matches by
+* The tracker database is a snapshot (148 hosts, 14 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,33 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.23 =
+* Tracker database: Yandex Maps -> functional, on api-maps.yandex.ru (the JS
+  API, and its own telemetry log.api-maps.yandex.ru through the same entry),
+  maps.yandex.net (the tile servers) and yastatic.net. A map the owner embedded
+  is a feature: declining functional costs the visitor the map and nothing else.
+  yastatic.net is NOT infrastructure — it is never a site's own asset host, it
+  serves the maps API bundle and the Yandex share buttons, so it is held with
+  the widget whose code it is. yandex.ru is never named: mc.yandex.ru stays
+  analytics in its own entry, and yandex.ru itself is a normal site.
+* Tracker database: the Druid chatbot -> functional — druidplatform.com (the
+  bot's configuration API) and the exact host prod-druid-apc.azureedge.net (the
+  widget's bundle). azureedge.net must never be named bare: it carries half of
+  Azure's customers' own assets.
+* Tracker database: convia.dofollow.md -> analytics (the DoFollow agency's
+  visitor tracker, convia.js and /v1/track; the agency's own site dofollow.md
+  stays unlisted), monolytics.app -> analytics (session replay and product
+  analytics, the hotjar class) and googleoptimize.com -> analytics (Google
+  sunset the A/B tool in 2023, but sites still reference optimize.js and it
+  still loads GA identifiers, so it is classified rather than ignored).
+* Infrastructure: media.ecom.md and admin.ecom.md — the ECOM.md shop platform
+  serving a shop its own media and its own content. Exact hosts; ecom.md itself
+  is the platform's marketing site and is not added.
+* cdn.polyfill.io stays deliberately unclassified and is documented as such in
+  the database. The domain changed hands in 2024 and served malicious code to
+  visitors; it must never be waved through as infrastructure, and leaving it
+  uncategorised is what keeps the audit reporting it to the owner.
 
 = 0.5.22 =
 * Google Consent Mode: url_passthrough and ads_data_redaction are now set by

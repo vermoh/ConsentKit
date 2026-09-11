@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.22).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.23).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -826,15 +826,15 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **140 hosts** and **14 path rules**, matched by suffix (a
+The database ships **148 hosts** and **14 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 140 | 50 `marketing`, 43 `functional`, 31 `analytics`, 16 `necessary` |
+| `HOST_DB` | 148 | 50 `marketing`, 48 `functional`, 34 `analytics`, 16 `necessary` |
 | `PATH_DB` | 14 | 6 `functional`, 4 `marketing`, 2 `analytics`, 2 `necessary` |
-| `INFRA_DB` | 43 | not a category — see [Infrastructure](#infrastructure) |
+| `INFRA_DB` | 45 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
 TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
@@ -1161,19 +1161,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.22, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
+ConsentKit 0.5.23, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 347,601 | 109,905 | 321,269 |
-| `ready/ru-bar.txt` | ru, ro, en | 349,785 | 110,852 | 323,267 |
-| `ready/ru-box.txt` | ru, ro, en | 349,800 | 110,857 | 323,282 |
-| `ready/ru-box-right.txt` | ru, ro, en | 349,809 | 110,864 | 323,291 |
-| `ready/ru-modal.txt` | ru, ro, en | 349,793 | 110,857 | 323,275 |
-| `ready/eu-bar.txt` | 34 languages | 401,719 | 130,372 | 375,221 |
+| `ready/en-bar.txt` | en | 353,604 | 112,140 | 327,313 |
+| `ready/ru-bar.txt` | ru, ro, en | 355,788 | 113,095 | 329,311 |
+| `ready/ru-box.txt` | ru, ro, en | 355,803 | 113,100 | 329,326 |
+| `ready/ru-box-right.txt` | ru, ro, en | 355,812 | 113,107 | 329,335 |
+| `ready/ru-modal.txt` | ru, ro, en | 355,796 | 113,101 | 329,319 |
+| `ready/eu-bar.txt` | 34 languages | 407,722 | 132,758 | 381,265 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1364,6 +1364,60 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.23
+
+- Tracker database: **Yandex Maps and the Druid chatbot.**
+  `api-maps.yandex.ru`, `maps.yandex.net` and
+  `yastatic.net` → functional, the Google Maps decision made the same way: a map
+  the owner embedded is a feature, and a visitor who declines functional loses
+  the map and nothing else. The JS API's own telemetry
+  (`log.api-maps.yandex.ru/services/logging/…`) needs no entry of its own — it
+  is covered by `api-maps.yandex.ru` through suffix matching, and it is the map
+  reporting about the map. `maps.yandex.net` carries the tile servers
+  (`core-renderer-tiles.maps.yandex.net`) on a domain dedicated to maps.
+  `yastatic.net` is the entry most likely to be mistaken for infrastructure and
+  is deliberately **not** in `INFRA_DB`: unlike `tildacdn.*` it is never a
+  *site's own* asset host — it serves the maps API bundle
+  (`s3/front-maps-static/…/full.js`) and the cursor images, i.e. the widget's own
+  code, so it is held with the widget. The same host serves Yandex share
+  buttons, a feature of the same kind. There is no bare `yandex.ru`:
+  `mc.yandex.ru` stays analytics in its own entry, and yandex.ru is a normal
+  site.
+  `druidplatform.com` and `prod-druid-apc.azureedge.net` → functional, a chat
+  widget beside tawk and crisp. The bare domain covers
+  `druidapi.druidplatform.com/api/services/app/Bot/LoadConfiguration`; the
+  bundle host is named as the **exact host** because `azureedge.net` carries half
+  of Azure's customers' own assets, and nothing broader may ever sit above it —
+  `lookupHostMap` returns the first match, not the longest.
+- Tracker database, measurement: `convia.dofollow.md` → analytics, a visitor
+  tracker the DoFollow marketing agency runs for its clients (`convia.js` and
+  `/v1/track` on `t.convia.dofollow.md`, covered by suffix); `dofollow.md` is the
+  agency's own site and stays unlisted. `monolytics.app` → analytics — session
+  replay and product analytics, the same class as hotjar and smartlook.
+  `googleoptimize.com` → analytics: Google sunset the A/B testing tool in 2023,
+  but sites still reference `optimize.js` and it still loads GA identifiers when
+  they do, so it is classified rather than ignored — a dead product left in a
+  page is exactly what an audit exists to surface.
+- Infrastructure (§8): `media.ecom.md` and `admin.ecom.md`, the ECOM.md shop
+  platform («платформа для интернет-магазина и B2B в Молдове») serving a shop
+  its own media (`/swift/v1/AUTH_…/ecom_prod/media/…`) and its own content
+  (`/base/gallery/all_images`, `/base/vacancies`, `/general/promotions`) — the
+  same claim `forms.tildaapi.one` carries. Exact hosts; `ecom.md` itself is the
+  platform's marketing site and is not added.
+- **`cdn.polyfill.io` is deliberately left unclassified**, and the database now
+  says so where a reader would look for it. It looks exactly like an asset CDN
+  and for years it was one; the domain changed hands in 2024 and served
+  malicious code to the visitors of the sites embedding it, and Google Ads
+  blocks pages that load it. A host that has been used to attack visitors must
+  never be waved through as infrastructure — and it gets no category either, so
+  the audit keeps listing it as an unnamed third party and the owner is told it
+  is there.
+- **Linked domains: a site never links to itself.** An entry in
+  `consent.linkedDomains` that is the page's own host, or a parent of it, is
+  ignored — seen on a cabinet that listed itself: every in-page `#/…` link got
+  `&ck_consent=…` appended and the hash router read it as part of the route.
+  Subdomains of one site are what `consent.shareSubdomains` is for.
 
 ### 0.5.22
 
@@ -1698,7 +1752,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.22), not a released product.** It is honest about
+**This is a prototype (v0.5.23), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

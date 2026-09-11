@@ -88,6 +88,15 @@ const CASES = [
   ['https://w.soundcloud.com/player/api.js', 'marketing'],
   ['https://api-widget.soundcloud.com/resolve', 'marketing'],
 
+  // --- analytics: owner's findings 11.09.2026 (audits) ---------------------
+  // Convia — the DoFollow agency's visitor tracker, on the product's own
+  // subdomain; Monolytics — session replay in the hotjar class; Google Optimize
+  // — sunset in 2023 but still referenced, still loading GA identifiers.
+  ['https://t.convia.dofollow.md/convia.js', 'analytics'],
+  ['https://t.convia.dofollow.md/v1/track', 'analytics'],
+  ['https://monolytics.app/tracker.js', 'analytics'],
+  ['https://www.googleoptimize.com/optimize.js', 'analytics'],
+
   // --- functional by PATH: a self-hosted Bitrix24 CRM form ------------------
   // The finding was rdp.ecosanteh.md; any host works, because that is the point
   // of naming this by path — see the PATH_DB comment.
@@ -121,6 +130,17 @@ const CASES = [
   ['https://cdn.growthbook.io/api/features/sdk-AbC123XyZ', 'functional'],
   // Trustindex — the reviews widget, a feature rendered on the shop's own page.
   ['https://cdn.trustindex.io/loader.js', 'functional'],
+  // Owner's findings 11.09.2026 (audits): Yandex Maps — the JS API, its own
+  // telemetry under the same entry, the tile servers and the CDN serving the
+  // widget's bundle. A map the owner embedded, exactly like Google Maps above.
+  ['https://api-maps.yandex.ru/2.1/?apikey=abc', 'functional'],
+  ['https://log.api-maps.yandex.ru/services/logging/1', 'functional'],
+  ['https://core-renderer-tiles.maps.yandex.net/tiles?l=map', 'functional'],
+  ['https://yastatic.net/s3/front-maps-static/1.2.3/full.js', 'functional'],
+  // The Druid chatbot: its configuration API and the widget's bundle on Azure's
+  // CDN, named as the exact host and nothing broader.
+  ['https://druidapi.druidplatform.com/api/services/app/Bot/LoadConfiguration', 'functional'],
+  ['https://prod-druid-apc.azureedge.net/widget.js', 'functional'],
 
   // --- necessary: named, never held ----------------------------------------
   ['https://browser.sentry-cdn.com/7.0.0/bundle.min.js', 'necessary'],
@@ -384,4 +404,128 @@ test('the 0.5.20 infrastructure hosts carry no category and are waved through', 
     "the group's asset CDN serves the shop's own images");
   assert.ok(!CK._isInfra('iconify.design'),
     'the bare parent is not named — only the two hosts that serve the icons');
+});
+
+/* --------------------------------------------------- 0.5.23 additions */
+
+test('Yandex Maps is a feature, on the API, the tiles and the widget CDN alike', () => {
+  /* The Google Maps decision, made the same way: a map the owner embedded is a
+     feature, and declining functional costs the visitor the map and nothing
+     else. api-maps.yandex.ru covers its own telemetry host by suffix — that
+     logging is the map reporting about the map, and it is held and released
+     with the widget it belongs to. yastatic.net is the entry most likely to be
+     "tidied" into INFRA_DB: it is Yandex's static CDN, but it is NEVER a site's
+     own asset host, so unlike tildacdn.* it carries the widget's own code and
+     is held with it. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://api-maps.yandex.ru/2.1/?apikey=abc'), 'functional',
+    'the maps JS API is the embed itself');
+  assert.equal(CK._categoryForUrl('https://log.api-maps.yandex.ru/services/logging/1'), 'functional',
+    "the API's own telemetry is covered by the same entry through suffix matching");
+  assert.equal(CK._categoryForUrl('https://core-renderer-tiles.maps.yandex.net/tiles?l=map'), 'functional',
+    'the tile servers are on a domain dedicated to maps');
+  assert.equal(CK._categoryForUrl('https://yastatic.net/s3/front-maps-static/1.2.3/full.js'), 'functional',
+    "the maps API bundle is the widget's own code, not the site's assets");
+  for (const host of ['api-maps.yandex.ru', 'maps.yandex.net', 'yastatic.net']) {
+    assert.ok(!CK._isInfra(host),
+      `${host} must not be waved through as infrastructure — the embed is a decision`);
+  }
+  assert.equal(CK._categoryForUrl('https://yandex.ru/'), null,
+    'yandex.ru is a normal site and must stay unclassified');
+  assert.equal(CK._categoryForUrl('https://mc.yandex.ru/metrika/tag.js'), 'analytics',
+    '…while Metrica keeps the analytics its own entry above gives it');
+});
+
+test('the Druid chatbot is named on its own domain and its exact CDN host', () => {
+  /* A chat widget beside tawk.to and crisp.chat: the visitor who declines
+     functional loses the chat and nothing else. The bundle host is the
+     dangerous half — azureedge.net carries an enormous share of Azure
+     customers' OWN assets, so only the exact host may be named, and
+     lookupHostMap returns the FIRST match rather than the longest, so nothing
+     broader may ever be inserted above it. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://druidapi.druidplatform.com/api/services/app/Bot/LoadConfiguration'), 'functional',
+    "the bot's configuration API is the widget the owner chose");
+  assert.equal(CK._categoryForUrl('https://druidplatform.com/'), 'functional',
+    'the domain is dedicated to the product, so the bare entry is right');
+  assert.equal(CK._categoryForUrl('https://prod-druid-apc.azureedge.net/widget.js'), 'functional',
+    "the widget's own bundle on Azure's CDN");
+  assert.equal(CK._categoryForUrl('https://foo.azureedge.net/x.js'), null,
+    "a neighbouring Azure CDN endpoint must stay unclassified — it is somebody's own assets");
+  assert.ok(!CK._isInfra('foo.azureedge.net'),
+    'and azureedge.net must not be waved through as infrastructure either');
+  assert.equal(CK._categoryForUrl('https://azureedge.net/x.js'), null,
+    'the bare registrable domain must never carry a category');
+});
+
+test('Convia is analytics on the tracker subdomain, not on the agency it belongs to', () => {
+  /* A visitor tracker the DoFollow agency runs for its clients' sites. The
+     entry is convia.dofollow.md, the product's own subdomain, which covers the
+     t. host by suffix; dofollow.md is the agency's ordinary business site and
+     must not inherit a category from a subdomain of it. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://t.convia.dofollow.md/convia.js'), 'analytics',
+    'the tracker script measures the visitor');
+  assert.equal(CK._categoryForUrl('https://t.convia.dofollow.md/v1/track'), 'analytics',
+    'and so does the endpoint it reports to');
+  assert.equal(CK._categoryForUrl('https://dofollow.md/'), null,
+    "the agency's own site must stay unclassified");
+  assert.ok(!CK._isInfra('convia.dofollow.md'),
+    'a visitor tracker is never infrastructure');
+});
+
+test('Monolytics and Google Optimize are measurement and are named as such', () => {
+  /* Monolytics is session replay plus product analytics — the hotjar/smartlook
+     class. Google Optimize was sunset in 2023, but sites still reference
+     optimize.js and it still loads GA identifiers when they do, so it is
+     classified rather than ignored: a dead product left in a page is exactly
+     what an audit exists to surface. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://monolytics.app/tracker.js'), 'analytics',
+    'session replay records the visitor, so it is measurement');
+  assert.equal(CK._categoryForUrl('https://www.googleoptimize.com/optimize.js'), 'analytics',
+    'the A/B testing script still loads GA identifiers');
+  for (const host of ['monolytics.app', 'googleoptimize.com']) {
+    assert.ok(!CK._isInfra(host),
+      `${host} must not be waved through as infrastructure — it measures`);
+  }
+});
+
+test('the ECOM.md platform hosts are infrastructure, but the platform site is not', () => {
+  /* The builder serving a shop its own media and its own content — the same
+     claim forms.tildaapi.one carries. Both are EXACT hosts: ecom.md itself is
+     the platform's marketing site, and waving that through would be a claim
+     about a site rather than about asset delivery. */
+  const CK = loadCore();
+  for (const host of ['media.ecom.md', 'admin.ecom.md']) {
+    assert.ok(CK._infra().includes(host), `${host} is missing from _infra()`);
+    assert.ok(CK._isInfra(host), `_isInfra(${host}) should be true`);
+  }
+  assert.equal(CK._categoryForUrl('https://media.ecom.md/swift/v1/AUTH_x/ecom_prod/media/a.jpg'), null,
+    "the platform's media host serves the shop's own images");
+  assert.equal(CK._categoryForUrl('https://admin.ecom.md/base/gallery/all_images'), null,
+    "and its content API serves the shop's own content");
+  assert.equal(CK._categoryForUrl('https://ecom.md/'), null,
+    "the platform's own marketing site carries no category");
+  assert.ok(!CK._isInfra('ecom.md'),
+    'and it is not waved through as infrastructure either — only the two exact hosts are');
+});
+
+test('cdn.polyfill.io is deliberately unclassified, so the audit keeps reporting it', () => {
+  /* It looks like an asset CDN and for years it was one. The domain changed
+     hands in 2024 and served malicious code to visitors of the sites embedding
+     it; Google Ads blocks pages that load it. A host that has been used to
+     attack visitors must never be waved through as infrastructure — and it gets
+     no category either, so it stays in the audit as an unnamed third party and
+     the owner is told it is there. This test is the guard against someone
+     "helpfully" filing it into either table. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://cdn.polyfill.io/v2/polyfill.min.js'), null,
+    'polyfill.io must carry no category — being reported is the point');
+  assert.equal(CK._isInfra('cdn.polyfill.io'), false,
+    'and it must never be waved through as infrastructure');
+  assert.ok(!CK._isInfra('polyfill.io'),
+    'nor the bare parent domain someone would tidy it into');
+  assert.ok(!CK._infra().includes('cdn.polyfill.io'),
+    'cdn.polyfill.io must not appear in _infra() at all');
 });

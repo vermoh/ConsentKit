@@ -5,6 +5,60 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.23
+
+- Tracker database: **Yandex Maps and the Druid chatbot.**
+  `api-maps.yandex.ru`, `maps.yandex.net` and
+  `yastatic.net` → functional, the Google Maps decision made the same way: a map
+  the owner embedded is a feature, and a visitor who declines functional loses
+  the map and nothing else. The JS API's own telemetry
+  (`log.api-maps.yandex.ru/services/logging/…`) needs no entry of its own — it
+  is covered by `api-maps.yandex.ru` through suffix matching, and it is the map
+  reporting about the map. `maps.yandex.net` carries the tile servers
+  (`core-renderer-tiles.maps.yandex.net`) on a domain dedicated to maps.
+  `yastatic.net` is the entry most likely to be mistaken for infrastructure and
+  is deliberately **not** in `INFRA_DB`: unlike `tildacdn.*` it is never a
+  *site's own* asset host — it serves the maps API bundle
+  (`s3/front-maps-static/…/full.js`) and the cursor images, i.e. the widget's own
+  code, so it is held with the widget. The same host serves Yandex share
+  buttons, a feature of the same kind. There is no bare `yandex.ru`:
+  `mc.yandex.ru` stays analytics in its own entry, and yandex.ru is a normal
+  site.
+  `druidplatform.com` and `prod-druid-apc.azureedge.net` → functional, a chat
+  widget beside tawk and crisp. The bare domain covers
+  `druidapi.druidplatform.com/api/services/app/Bot/LoadConfiguration`; the
+  bundle host is named as the **exact host** because `azureedge.net` carries half
+  of Azure's customers' own assets, and nothing broader may ever sit above it —
+  `lookupHostMap` returns the first match, not the longest.
+- Tracker database, measurement: `convia.dofollow.md` → analytics, a visitor
+  tracker the DoFollow marketing agency runs for its clients (`convia.js` and
+  `/v1/track` on `t.convia.dofollow.md`, covered by suffix); `dofollow.md` is the
+  agency's own site and stays unlisted. `monolytics.app` → analytics — session
+  replay and product analytics, the same class as hotjar and smartlook.
+  `googleoptimize.com` → analytics: Google sunset the A/B testing tool in 2023,
+  but sites still reference `optimize.js` and it still loads GA identifiers when
+  they do, so it is classified rather than ignored — a dead product left in a
+  page is exactly what an audit exists to surface.
+- Infrastructure (§8): `media.ecom.md` and `admin.ecom.md`, the ECOM.md shop
+  platform («платформа для интернет-магазина и B2B в Молдове») serving a shop
+  its own media (`/swift/v1/AUTH_…/ecom_prod/media/…`) and its own content
+  (`/base/gallery/all_images`, `/base/vacancies`, `/general/promotions`) — the
+  same claim `forms.tildaapi.one` carries. Exact hosts; `ecom.md` itself is the
+  platform's marketing site and is not added.
+- **`cdn.polyfill.io` is deliberately left unclassified**, and the database now
+  says so where a reader would look for it. It looks exactly like an asset CDN
+  and for years it was one; the domain changed hands in 2024 and served
+  malicious code to the visitors of the sites embedding it, and Google Ads
+  blocks pages that load it. A host that has been used to attack visitors must
+  never be waved through as infrastructure — and it gets no category either, so
+  the audit keeps listing it as an unnamed third party and the owner is told it
+  is there.
+- **Linked domains: a site never links to itself.** An entry in
+  `consent.linkedDomains` that is the page's own host, or a parent of it, is
+  ignored — seen on a cabinet that listed itself: every in-page `#/…` link got
+  `&ck_consent=…` appended and the hash router read it as part of the route.
+  Subdomains of one site are what `consent.shareSubdomains` is for.
+
 ## 0.5.22
 
 - **Consent Mode: `url_passthrough` and `ads_data_redaction` are on by

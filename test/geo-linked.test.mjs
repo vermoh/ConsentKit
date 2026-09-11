@@ -707,6 +707,22 @@ test('§2.2 non-http schemes are left alone', () => {
   }
 });
 
+test('0.5.23 — the page\'s own host in linkedDomains is ignored, so in-page links stay clean', () => {
+  // 11.09.2026, the cabinet linked to itself: every `#/…` route link got the
+  // fragment and the hash router read it as part of the route.
+  const env = decided(loadCore({ href: 'https://app.example.com/#/admin' }), {
+    consent: { linkedDomains: ['shop.example.com', 'app.example.com', 'example.com'] },
+  });
+  const self = env.anchor('#/admin/audits/scan_1');
+  const parent = env.anchor('https://www.example.com/page');
+  const other = env.anchor('https://shop.example.com/cart');
+  env.click(self); env.click(parent); env.click(other);
+  assert.equal(self.getAttribute('href'), '#/admin/audits/scan_1', 'an in-page hash link must not be decorated');
+  assert.equal(parent.getAttribute('href'), 'https://www.example.com/page',
+    'a parent-domain entry would cover the page itself and is dropped');
+  assert.match(other.getAttribute('href'), /#ck_consent=/, 'a real linked host is still decorated');
+});
+
 test('§2.2 at most 10 linked hosts are honoured', () => {
   const many = Array.from({ length: 14 }, (_, i) => `h${i}.example`);
   const env = decided(loadCore({ href: 'https://shop.example.com/p' }),
