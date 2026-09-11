@@ -1264,6 +1264,12 @@ section[id],
      the headline and both buttons stay above the fold on a phone. */
   .hero-shot { padding: 8px; }
   .shot-frame { min-height: 0; height: min(58vh, 420px); }
+  /* V1.24 put a real screenshot in the hero frame, and a screenshot has its
+     own height: the cap above (written for the skeleton mockup) held a 216px
+     picture inside a 420px frame and left a cream void under it on every
+     phone (owner, 12.09.2026). The picture's aspect ratio is the frame's
+     height now, the same rule the desktop already follows. */
+  .hero-shot .shot-frame { height: auto; }
   /* …but not the demo window: it holds a wrapping toolbar and a footer strip,
      and .shot-frame clips its overflow, so a fixed height would cut the
      controls off exactly where a phone has the least room to spare. */
