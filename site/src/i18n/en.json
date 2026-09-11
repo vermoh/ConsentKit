@@ -187,6 +187,7 @@
   "devTitle": "For developers",
   "devLede": "Three tags to load the client and one call to configure it — no build step and no dashboard.",
   "devFacts": "Open source under MIT, zero dependencies, 34 languages, Google Consent Mode v2.",
+  "devOwnAnalytics": "Analytics on this site is switched on only after you answer the banner.",
   "devDocs": "Installation guide",
   "navLaw": "Rules",
   "lawDated": "Correct as of September 2026. General information, not legal advice.",

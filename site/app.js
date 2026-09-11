@@ -1,10 +1,15 @@
 /* ConsentKit public page — language switch, pricing render, live demo.
  *
- * No frameworks, no build step, and only our own API: the page that argues for
- * privacy must not itself load a third-party font, script or beacon. Its three
- * off-origin requests all go to {API_BASE}, which is ours: GET /v1/public/pricing
+ * No frameworks, no build step, and no third-party font or beacon: the page
+ * that argues for privacy must not load one. The three off-origin requests
+ * THIS file makes all go to {API_BASE}, which is ours: GET /v1/public/pricing
  * for the prices, GET /v1/public/stats for the «Цифры» block, and the
  * POST /v1/public/site-check the «Проверить сайт» form sends.
+ *
+ * Since 0.5.22 one more off-origin request exists on this page, and it is not
+ * made here: site/analytics.js loads the GTM container AFTER the visitor's
+ * first answer to the banner, never before it (SPEC-V1.26 §2, R1). This file
+ * owns the banner config that makes that trigger possible — see demoConfig().
  *
  * The file is also loaded by the law pages under /law/<slug>, which carry the
  * header, the footer and one check form but none of the demo, pricing or FAQ
@@ -344,6 +349,12 @@
      the agency one is still the only link that leaves for mailto:. */
   function ctaLink(d) {
     var a = el('a', 'btn btn--sm ' + (d.plan === FEATURED ? 'btn--primary' : 'btn--ghost'));
+    /* The analytics hook (SPEC-V1.26 §2, ck_plan_click). Stamped here rather
+       than matched on the label, which is translated three ways and changes
+       between the free/paid/agency branches below. The price travels with it
+       so the event does not have to re-parse a rendered «9 €/сайт в месяц». */
+    a.setAttribute('data-plan', d.plan);
+    a.setAttribute('data-plan-price', d.priceEur === null ? '' : String(d.priceEur));
     if (d.priceEur === null) {
       a.href = 'mailto:' + CONTACT_EMAIL;
       a.textContent = t('planCtaAgency');
@@ -413,6 +424,10 @@
     var cta = el('a', 'btn btn--primary');
     cta.href = CABINET_URL;
     cta.textContent = t('ctaCabinet');
+    // Same hook as the table's per-plan buttons — this card IS the Starter
+    // plan, so a click on it is a plan click, not a generic dashboard CTA.
+    cta.setAttribute('data-plan', 'starter');
+    cta.setAttribute('data-plan-price', String(PRICES.starter));
     card.appendChild(cta);
 
     /* ---- the three facts ---- */
@@ -809,6 +824,15 @@
     out.textContent = msg;
     out.className = 'check__state check__state--' + (STATE_TONE[key] || 'warn');
 
+    /* The state KEY, beside the translated sentence (SPEC-V1.26 §2).
+       site/analytics.js turns the scan outcome into ck_scan_submit /
+       ck_scan_result / ck_scan_error, and this is the one funnel every
+       outcome already passes through. The alternative — matching on the
+       rendered message — would mean three regexes per language that break on
+       a copy edit. The key is stable, language-independent and already the
+       name of this state everywhere else in this file. */
+    out.setAttribute('data-check-state', key);
+
     // The «обычно занимает пару минут» line belongs to exactly one state.
     var wait = $('[data-check-wait]', form);
     if (wait) wait.hidden = (key !== 'checkRunning');
@@ -1190,14 +1214,27 @@
       // still pass the client's contrast rule.
       theme: { mode: demo.theme, accent: demo.accent, dark: { accent: demo.accent }, radius: '10px' },
       branding: brandingFor(resolved),
-      // Off, so the demo emits no further Consent Mode updates or GTM events as
-      // you click around. Note the core still writes ONE all-denied Consent Mode
-      // default into window.dataLayer at parse time — that happens before
-      // init() can read this flag. It is an in-memory array on a page with no
-      // Google tags, so nothing is sent anywhere; the page still makes only
-      // same-origin requests (the document, styles.css, favicon.svg, app.js and
-      // the four vendor scripts) and no external ones.
-      integrations: { gcm: false, gtmDataLayer: false },
+      /* The two integration gates are set apart on purpose (SPEC-V1.26 §2, R1).
+       *
+       * gcm: false — no Consent Mode UPDATE as you click around the demo. The
+       * «Что увидит Google» line is derived from the state (see updateGcm), so
+       * a demo click must not also move a real Consent Mode signal for this
+       * page. The core still writes ONE all-denied default at parse time; that
+       * happens before init() can read this flag.
+       *
+       * gtmDataLayer: TRUE since 0.5.22 — and this banner is no longer only a
+       * demo: it is THE banner of this site, and its first answer is what
+       * analytics.js waits for. `ck_consent_update` and `ck_consent_<category>`
+       * are the trigger for loading the GTM container at all (R1) and for
+       * writing attribution to localStorage (R2). With the events off, this
+       * site could never measure itself without measuring visitors before they
+       * answered — which is the one thing the product sells against.
+       *
+       * So the page DOES make an external request now: the GTM container,
+       * after the visitor's first decision and never before it. Everything
+       * else stays same-origin (the document, styles.css, favicon.svg, app.js,
+       * analytics.js and the vendor scripts). */
+      integrations: { gcm: false, gtmDataLayer: true },
       cookieTable: cookieTable()
     };
   }
@@ -1275,9 +1312,12 @@
    *
    * DERIVED from the consent state, not read back from dataLayer: demoConfig()
    * sets integrations.gcm = false precisely so the demo emits no Consent Mode
-   * updates as the visitor clicks around, which means dataLayer holds only the
-   * core's one parse-time default and would never move. The mapping is the one
-   * the client itself applies (docs/CONSENT-MODE-NOTES-2026-09.md §2):
+   * updates as the visitor clicks around, which means the only Consent Mode
+   * entry in dataLayer is the core's one parse-time default and it would never
+   * move. (`gtmDataLayer` IS on since 0.5.22 — but that gate feeds the
+   * ck_consent_* events analytics.js listens to, not the Consent Mode signals
+   * this line reports.) The mapping is the one the client itself applies
+   * (docs/CONSENT-MODE-NOTES-2026-09.md §2):
    * analytics -> analytics_storage, marketing -> ad_storage.
    *
    * Both are denied until the visitor decides, which is the honest reading of

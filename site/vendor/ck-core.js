@@ -1216,6 +1216,26 @@
   function gcmDefault() {
     var signals = gcmSignals(emptyCategories());
     signals.wait_for_update = 500;
+
+    // WHY these two travel with wait_for_update rather than being left to the
+    // site owner's GTM (SPEC-V1.26 §1, owner's brief §07):
+    //
+    // url_passthrough — with ad_storage denied there is no cookie to carry the
+    // click id, so Google passes it in the URL instead. Without it a visitor
+    // who DECLINED cookies loses the gclid between the landing page and the
+    // cabinet, and the conversion is attributed to nobody. That is our own
+    // product breaking our own ads' attribution — and every customer's, since
+    // they install this file, not a hand-tuned container. A refusal must cost
+    // the identifier, not the campaign.
+    //
+    // ads_data_redaction — the other half of the same refusal: while ad_storage
+    // is denied, Google trims identifiers out of the ad requests themselves, so
+    // a declined visitor is measured in aggregate rather than tracked. Both are
+    // defaults a consent tool should ship ON, because the site that most needs
+    // them is the one that never opens the container's settings.
+    signals.url_passthrough = true;
+    signals.ads_data_redaction = true;
+
     ckGtag('consent', 'default', signals);
   }
 
@@ -2550,7 +2570,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.21',
+    version: '0.5.22',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

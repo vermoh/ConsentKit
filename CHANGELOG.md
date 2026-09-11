@@ -5,6 +5,40 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.22
+
+- **Consent Mode: `url_passthrough` and `ads_data_redaction` are on by
+  default.** Both now travel with the `consent default` push the core makes at
+  parse time, beside `wait_for_update: 500`. The reason is the refusal case,
+  which is the case a consent tool exists for: with `ad_storage` denied there
+  is no cookie to carry a Google click id, so without `url_passthrough` a
+  visitor who declined loses their `gclid` the moment they follow a link to
+  another page — the campaign that paid for the visit is credited to nobody,
+  and the site owner concludes that asking for consent cost them their
+  advertising. It did not; the default did. `ads_data_redaction` is the other
+  half of the same refusal: while `ad_storage` is denied, Google strips
+  identifiers out of the ad requests themselves, so a visitor who said no is
+  counted in aggregate rather than followed. Neither flag stores anything, and
+  neither weakens a refusal — they are what an honest refusal is supposed to
+  look like on Google's side, and they ship on because the site that most
+  needs them is the one that will never open the container's settings. A tag
+  manager that sets its own values still wins: this is a `default`, and every
+  later `update` leaves both untouched.
+- **The site measures itself under its own rule.** consentkit.ecomconsult.net
+  gains an analytics layer (`site/analytics.js`) built to the same standard
+  the product sells: the Google Tag Manager container is not requested until
+  the visitor has answered the banner — accept or decline, either is an
+  answer — and until then the page asks Google for nothing at all. Campaign
+  tags (`gclid`, `fbclid`, `utm_*` and the rest) are held in memory and
+  appended to links leaving for the dashboard, which carries attribution
+  across the domain boundary without storing anything; they reach
+  `localStorage` only once consent to analytics or marketing actually
+  arrives, and the first source a visitor ever came from is never overwritten
+  by a later one. `window.dataLayer` is declared by the first statement on the
+  page, so the events that happen before the container loads queue up rather
+  than vanish. The «Разработчикам» block now says this out loud, in all three
+  languages.
+
 ## 0.5.21
 
 - **A banner language that follows the page: `language: 'page'`.** The page's

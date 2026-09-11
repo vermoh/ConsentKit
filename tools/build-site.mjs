@@ -75,6 +75,25 @@ export const THEME_BOOT =
   '}catch(e){}})();' +
   '</script>';
 
+/* ------------------------------------------------------- dataLayer, first */
+
+/* SPEC-V1.26 §2: `window.dataLayer` must be declared by the FIRST statement of
+ * the FIRST script on the page — before the vendor client, before the theme
+ * boot, before anything.
+ *
+ * WHY IT CANNOT LIVE IN analytics.js. ck-core.js pushes its Consent Mode
+ * default at PARSE TIME, and it loads five scripts earlier than analytics.js.
+ * The core does `global.dataLayer = global.dataLayer || []` defensively, so
+ * nothing is lost either way — but then the array's identity is created by
+ * whichever script happens to run first, and GTM's own snippet relies on the
+ * array existing before it is read. Declaring it here makes the order a
+ * property of the document rather than of the load sequence.
+ *
+ * It is one array literal and no behaviour: nothing is sent anywhere by
+ * declaring it, which is precisely why it is safe to have before consent. */
+export const DATALAYER_BOOT =
+  '<script>window.dataLayer = window.dataLayer || [];</script>';
+
 /* ------------------------------------------------------- asset versioning */
 
 /* The pages used to reference /styles.css and /app.js bare, and Vercel caches
@@ -89,6 +108,7 @@ export const THEME_BOOT =
 export const VERSIONED_ASSETS = [
   '/styles.css',
   '/app.js',
+  '/analytics.js',
   '/vendor/ck-core.js',
   '/vendor/ck-locales.js',
   '/vendor/ck-ui-branding.js',
@@ -108,7 +128,7 @@ export function assetHash(urlPath) {
 export function versionAssets(html) {
   const known = new Set(VERSIONED_ASSETS);
   return html.replace(
-    /\b(href|src)="(\/(?:styles\.css|app\.js|vendor\/[a-z0-9-]+\.js))"/g,
+    /\b(href|src)="(\/(?:styles\.css|app\.js|analytics\.js|vendor\/[a-z0-9-]+\.js))"/g,
     (m, attr, path) => {
       if (!known.has(path)) return m;
       return attr + '="' + path + '?v=' + assetHash(path) + '"';
@@ -309,7 +329,13 @@ function langSwitch(current, paths) {
   const rows = LANGS.map((l) => {
     const on = l.code === current;
     const href = paths ? paths[l.code] : pagePath(l.dir);
+    /* data-lang is the analytics hook (SPEC-V1.26 §2, ck_lang_switch). The
+       event needs the language this link LEADS to, and reading it off the
+       label would mean matching on visible text; hreflang already carries it
+       but is metadata a crawler reads, so it stays untouched and the hook is
+       its own attribute. `lang_from` comes from <html lang> at click time. */
     return '        <a class="lang-btn" href="' + escapeAttr(href) + '"' +
+      ' data-lang="' + l.code + '"' +
       ' hreflang="' + l.code + '" lang="' + l.code + '"' +
       (on ? ' aria-current="page"' : '') +
       ' aria-pressed="' + (on ? 'true' : 'false') + '">' + l.label + '</a>';
@@ -588,6 +614,7 @@ export function renderLawPage(template, lang, page) {
     ogLocaleAlt(lang),
     '<meta name="twitter:card" content="summary_large_image">',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    DATALAYER_BOOT,
     THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
@@ -618,6 +645,7 @@ export function renderLawPage(template, lang, page) {
     '',
     '<script>window.__CK_SITE_I18N=' + jsonForScript(runtimeDict(dict)) + ';</script>',
     '<script src="/app.js"></script>',
+    '<script src="/analytics.js"></script>',
     '</body>',
     '</html>',
     ''
@@ -685,6 +713,7 @@ export function renderLawIndex(template, lang) {
     ogLocaleAlt(lang),
     '<meta name="twitter:card" content="summary_large_image">',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    DATALAYER_BOOT,
     THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
@@ -716,6 +745,7 @@ export function renderLawIndex(template, lang) {
     '',
     '<script>window.__CK_SITE_I18N=' + jsonForScript(runtimeDict(dict)) + ';</script>',
     '<script src="/app.js"></script>',
+    '<script src="/analytics.js"></script>',
     '</body>',
     '</html>',
     ''
@@ -892,6 +922,7 @@ export function renderPage(template, lang) {
     OG_LOCALE: entry.ogLocale,
     OG_LOCALE_ALT: ogLocaleAlt(lang),
     LANG_SWITCH: langSwitch(lang),
+    DATALAYER_BOOT,
     THEME_BOOT,
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
     VERSION: escapeHtml(VERSION),

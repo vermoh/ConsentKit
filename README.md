@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.21).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.22).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -982,6 +982,18 @@ are set, always as one block:
 | `functionality_storage`, `personalization_storage` | `functional` |
 | `security_storage` | always `granted` |
 
+Two page-level flags travel with the `default` push as well (since **0.5.22**),
+and only with it — a later `consent: update` never repeats them:
+
+| Flag | Value | What it does |
+|---|---|---|
+| `url_passthrough` | `true` | With `ad_storage` denied there is no cookie to carry a Google click id, so Google passes `gclid` in the URL instead. Without it a visitor who **declined** loses the click id on the next navigation, and the campaign that paid for the visit is credited to nobody. |
+| `ads_data_redaction` | `true` | While `ad_storage` is denied, Google strips identifiers out of the ad requests themselves — a declined visitor is measured in aggregate rather than followed. |
+
+Neither flag stores anything or weakens a refusal; they are what an honest
+refusal looks like on Google's side. If your own tag manager sets different
+values, it wins — these are defaults, not overrides.
+
 `integrations.gtmDataLayer` (also on by default) is an independent gate: it
 pushes a `ck_consent_update` event carrying `ck_consent` (the four categories)
 and `ck_method`, so GTM triggers work even with `gcm: false`.
@@ -1149,19 +1161,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.21, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
+ConsentKit 0.5.22, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 346,464 | 109,494 | 320,173 |
-| `ready/ru-bar.txt` | ru, ro, en | 348,648 | 110,443 | 322,171 |
-| `ready/ru-box.txt` | ru, ro, en | 348,663 | 110,449 | 322,186 |
-| `ready/ru-box-right.txt` | ru, ro, en | 348,672 | 110,455 | 322,195 |
-| `ready/ru-modal.txt` | ru, ro, en | 348,656 | 110,449 | 322,179 |
-| `ready/eu-bar.txt` | 34 languages | 400,582 | 129,953 | 374,125 |
+| `ready/en-bar.txt` | en | 347,601 | 109,905 | 321,269 |
+| `ready/ru-bar.txt` | ru, ro, en | 349,785 | 110,852 | 323,267 |
+| `ready/ru-box.txt` | ru, ro, en | 349,800 | 110,857 | 323,282 |
+| `ready/ru-box-right.txt` | ru, ro, en | 349,809 | 110,864 | 323,291 |
+| `ready/ru-modal.txt` | ru, ro, en | 349,793 | 110,857 | 323,275 |
+| `ready/eu-bar.txt` | 34 languages | 401,719 | 130,372 | 375,221 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1352,6 +1364,40 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.22
+
+- **Consent Mode: `url_passthrough` and `ads_data_redaction` are on by
+  default.** Both now travel with the `consent default` push the core makes at
+  parse time, beside `wait_for_update: 500`. The reason is the refusal case,
+  which is the case a consent tool exists for: with `ad_storage` denied there
+  is no cookie to carry a Google click id, so without `url_passthrough` a
+  visitor who declined loses their `gclid` the moment they follow a link to
+  another page — the campaign that paid for the visit is credited to nobody,
+  and the site owner concludes that asking for consent cost them their
+  advertising. It did not; the default did. `ads_data_redaction` is the other
+  half of the same refusal: while `ad_storage` is denied, Google strips
+  identifiers out of the ad requests themselves, so a visitor who said no is
+  counted in aggregate rather than followed. Neither flag stores anything, and
+  neither weakens a refusal — they are what an honest refusal is supposed to
+  look like on Google's side, and they ship on because the site that most
+  needs them is the one that will never open the container's settings. A tag
+  manager that sets its own values still wins: this is a `default`, and every
+  later `update` leaves both untouched.
+- **The site measures itself under its own rule.** consentkit.ecomconsult.net
+  gains an analytics layer (`site/analytics.js`) built to the same standard
+  the product sells: the Google Tag Manager container is not requested until
+  the visitor has answered the banner — accept or decline, either is an
+  answer — and until then the page asks Google for nothing at all. Campaign
+  tags (`gclid`, `fbclid`, `utm_*` and the rest) are held in memory and
+  appended to links leaving for the dashboard, which carries attribution
+  across the domain boundary without storing anything; they reach
+  `localStorage` only once consent to analytics or marketing actually
+  arrives, and the first source a visitor ever came from is never overwritten
+  by a later one. `window.dataLayer` is declared by the first statement on the
+  page, so the events that happen before the container loads queue up rather
+  than vanish. The «Разработчикам» block now says this out loud, in all three
+  languages.
 
 ### 0.5.21
 
@@ -1652,7 +1698,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.21), not a released product.** It is honest about
+**This is a prototype (v0.5.22), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

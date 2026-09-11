@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.21
+Stable tag: 0.5.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,17 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.22 =
+* Google Consent Mode: url_passthrough and ads_data_redaction are now set by
+  default, alongside the existing wait_for_update. They matter when a visitor
+  DECLINES: with ad storage denied there is no cookie to carry a Google click
+  id, so without url_passthrough the click id is lost between one page and the
+  next and the ad campaign that paid for the visit is credited to nobody.
+  ads_data_redaction is the other half — while ad storage is denied, Google
+  strips identifiers out of its ad requests. Neither stores anything and
+  neither weakens a refusal. If your tag manager already sets these values,
+  it still wins: these are defaults, and later consent updates leave them be.
 
 = 0.5.21 =
 * Banner language: a new "Same as the page (lang attribute)" option. The banner
