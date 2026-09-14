@@ -679,7 +679,7 @@ test('the site copy says analytics waits for the answer', () => {
    exists once a real server answered. */
 test('ck_scan_submit carries the server-issued event_id from the POST answer', () => {
   const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
-  assert.match(app, /r\.data\.eventId/, 'app.js does not read eventId off the site-check answer');
+  assert.match(app, /r\.data\.event_id/, 'app.js does not read event_id off the site-check answer');
   assert.match(app, /setAttribute\('data-check-event-id'/, 'app.js does not stamp the id on the form');
   const both = ANALYTICS.match(/event: 'ck_scan_submit',\s*event_id: eventId/g) || [];
   assert.equal(both.length, 2, 'both ck_scan_submit pushes (with and without e-mail) must carry event_id');

@@ -1010,13 +1010,14 @@
     }, 10000)
       .then(function (r) {
         var id = r.data && r.data.checkId;
-        // The server mints an event id for THIS submit (SPEC-V1.26 follow-up,
+        // The server mints an event id for THIS submit — answer key `event_id`,
+        // the reviewer's name, kept snake_case end to end (SPEC-V1.26 follow-up,
         // 14.09.2026): analytics.js reads it off the form when it pushes
         // ck_scan_submit, and the server keeps the same id for a later
         // Conversions API send, so Meta can deduplicate pixel vs server.
         // Stamped before any state change, because the state change is what
         // fires the event. Absent on an error answer — nothing fires then.
-        var ev = r.data && r.data.eventId;
+        var ev = r.data && r.data.event_id;
         if (ev) { form.setAttribute('data-check-event-id', String(ev)); }
         else { form.removeAttribute('data-check-event-id'); }
 
