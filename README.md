@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.25).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.26).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -191,10 +191,11 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `theme.dark` | `{ bg, ink, accent, onAccent }` | built-in | Overrides the dark palette |
 | `theme.light` | `{ onAccent }` | built-in | v0.5.10. The light mirror of `theme.dark`. An `onAccent` set here is the filled buttons' text colour for light mode, painted as given |
 | `texts.policyUrl` | `string` | — | v0.5.0. Cookie policy address. `http(s)` only; anything else is ignored |
+| `texts.policyUrls` | `object` | — | v0.5.26. The policy address **per language**: `{ ru: "https://shop.md/ru/privacy", ro: "https://shop.md/ro/politica" }`. Resolved `policyUrls[<lang>]` → two-letter base → `policyUrl`; `http(s)` only, and a value that is not falls through to the next candidate. `policyUrl` stays the default, so an older client ignores this key — see [Custom texts and links](#custom-texts-and-links) |
 | `texts.detailsAction` | `"policy" \| "settings" \| "hide" \| "declaration"` | see notes | v0.5.0, `declaration` in v0.5.7. What «Learn more» does. Defaults to `policy` when `policyUrl` is set, `settings` when it is not. `policy` or `declaration` without a usable URL falls back to `settings` rather than rendering a dead link |
-| `texts.declarationUrl` | `string` | — | v0.5.7. Address of the cookie declaration page, used by `detailsAction: "declaration"`. `http(s)` only. Filled by the hosted service; the client only reads it |
+| `texts.declarationUrl` | `string` | — | v0.5.7. Address of the cookie declaration page, used by `detailsAction: "declaration"`. `http(s)` only. Filled by the hosted service; the client only reads it. A single string — since v0.5.26 the page is opened with `?lang=<banner language>` instead of a second address |
 | `texts.<lang>` | `object` | — | v0.5.15. Per-language dictionary overrides, keyed by a language tag (`ru`, `ro`, `en`, `pt-br`, …). Overridable keys: `bannerTitle`, `bannerText`, `panelTitle`, `panelIntro`, `extraTitle`, `extraText`, and `cat.<necessary\|functional\|analytics\|marketing>.title` / `.desc`. An empty string falls through to the standard text; every other key is ignored — see [Custom texts and links](#custom-texts-and-links) |
-| `texts.links` | `object[]` | `[]` | v0.5.15. Up to 3 links under the banner buttons and at the foot of the settings panel: `{ id, url, label: { ru, ro, en, … } }`. `url` is `http(s)` only; a row with no resolvable label or an unusable address is skipped. Does not affect `detailsAction`, except that «Learn more» is hidden when its `policy` / `declaration` URL repeats one of these links — see [Custom texts and links](#custom-texts-and-links) |
+| `texts.links` | `object[]` | `[]` | v0.5.15. Up to 3 links under the banner buttons and at the foot of the settings panel: `{ id, url, urls?, label: { ru, ro, en, … } }`. `url` is `http(s)` only and **required**; a row with no resolvable label or an unusable address is skipped. v0.5.26 adds the optional `urls` — `{ <lang>: <http(s) url> }` beside `url`, resolved `urls[<lang>]` → two-letter base → `url`, so a bilingual site can send each language to its own page. Does not affect `detailsAction`, except that «Learn more» is hidden when its `policy` / `declaration` URL repeats one of these links — see [Custom texts and links](#custom-texts-and-links) |
 | `categories.*.enabled` | `boolean` | `true` | Per category: `functional`, `analytics`, `marketing`. Hides the toggle when `false` |
 | `consentTtlDays` | `number` | `365` | Lifetime of the stored decision |
 | `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2: push `consent update` after each choice. `false` only when the site runs Consent Mode itself — the parse-time all-denied `default` is pushed regardless, so a site with `false` and no update of its own stays denied for Google forever |
@@ -462,6 +463,23 @@ is not — so supplying only a URL does the obvious thing. `declarationUrl`
 deliberately does *not* affect that default: a site that gains a declaration
 address keeps whatever «Learn more» already did until it asks for the change.
 
+Since v0.5.26 `policy` resolves its address through
+[`texts.policyUrls`](#textslinks--your-own-links) when one is present —
+`policyUrls[<lang>]`, then the two-letter base, then `policyUrl` — so a
+bilingual site sends each banner to its own policy page. The map alone is
+enough in the languages it covers; the ones it does not still fall back to
+`policyUrl`, or degrade to `settings` when there is none, exactly as before.
+
+`declaration` needs no second address. The cookie declaration page is ours and
+reads `?lang=ro|ru|en`, so since v0.5.26 the banner **appends its own language**
+to it — `?lang=` or `&lang=` as the address demands, replacing any `lang` that
+is already there rather than adding a second one, and always before a `#`
+fragment. Before this a Romanian banner opened a Russian table of cookies,
+because the page fell back to the visitor's browser language. The rewrite is
+deliberately narrow: it touches only the address `declarationUrl` itself names
+— including a link row you pasted it into, so both copies still count as one
+page for the duplicate rule below — and never an address of yours.
+
 Both link forms accept `http(s)` addresses only. A `javascript:` or `data:` URL
 in a control the visitor is invited to click is an XSS vector, so anything else
 is refused and the link degrades to `settings`.
@@ -583,6 +601,39 @@ same fallback chain as `branding.poweredBy.texts` — exact code, then the
 two-letter base, then `en` — and a row whose label resolves to nothing is
 skipped rather than rendered blank. The cap of three is applied to the rows that
 *survive* those checks, so one malformed entry never costs a good one its place.
+
+##### `urls` — a different address per language (v0.5.26)
+
+A bilingual site publishes its policy twice, at `/ro/politica` and at
+`/ru/politika`. Before 0.5.26 a link row carried one `url` with a label per
+language, so the Romanian banner printed a Romanian label on the Russian page —
+the label was translated, the destination was not. The optional `urls` map fixes
+that:
+
+```js
+texts: {
+  links: [
+    { id: 'privacy',
+      url: 'https://shop.md/privacy',
+      urls: { ru: 'https://shop.md/ru/privacy', ro: 'https://shop.md/ro/politica' },
+      label: { ru: 'Политика конфиденциальности', ro: 'Politica de confidențialitate', en: 'Privacy policy' } }
+  ]
+}
+```
+
+The chain is three steps and stops: `urls[<lang>]`, then `urls[<two-letter
+base>]` (`ro-RO` → `ro`), then `url`. It deliberately does **not** end at `en`
+the way `label` does — there is always a usable address, because `url` is
+required, and sending a German visitor to the English *page* would be a worse
+answer than your own default. Keys are matched lowercased, and a value that is
+not `http(s)` is ignored and the next candidate tried, so one typo never costs
+the other language its address.
+
+`url` stays **required** and stays the default. A row without a usable `url` is
+skipped even when `urls` would have answered — which is also the compatibility
+rule: an older client copy, inlined on a page or pasted into WordPress, ignores
+`urls` it has never heard of and keeps sending everyone to `url`. Nothing about
+`url` changed type or meaning.
 
 This does not touch `detailsAction`, with one exception that keeps the banner
 from printing the same address twice: when `detailsAction` resolves to `policy`
@@ -1201,19 +1252,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.25, rebuilt 2026-09-14, uncompressed — gzip on the server cuts
+ConsentKit 0.5.26, rebuilt 2026-09-14, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 365,442 | 115,656 | 339,151 |
-| `ready/ru-bar.txt` | ru, ro, en | 367,626 | 116,605 | 341,149 |
-| `ready/ru-box.txt` | ru, ro, en | 367,641 | 116,611 | 341,164 |
-| `ready/ru-box-right.txt` | ru, ro, en | 367,650 | 116,616 | 341,173 |
-| `ready/ru-modal.txt` | ru, ro, en | 367,634 | 116,609 | 341,157 |
-| `ready/eu-bar.txt` | 34 languages | 419,560 | 136,202 | 393,103 |
+| `ready/en-bar.txt` | en | 376,670 | 119,399 | 350,376 |
+| `ready/ru-bar.txt` | ru, ro, en | 378,854 | 120,358 | 352,374 |
+| `ready/ru-box.txt` | ru, ro, en | 378,869 | 120,363 | 352,389 |
+| `ready/ru-box-right.txt` | ru, ro, en | 378,878 | 120,368 | 352,398 |
+| `ready/ru-modal.txt` | ru, ro, en | 378,862 | 120,362 | 352,382 |
+| `ready/eu-bar.txt` | 34 languages | 430,788 | 139,920 | 404,328 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1404,6 +1455,55 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.26
+
+- **A link can carry a different address per language — `texts.links[].urls`.**
+  A bilingual Moldovan shop publishes its policy twice, at `/ro/politica` and at
+  `/ru/politika`, and a link row carried one `url` with a label per language. So
+  the Romanian banner printed a Romanian label on the Russian page: the label
+  was translated, the destination was not. `urls` is an optional
+  `{ <lang>: <http(s) url> }` map beside `url`, resolved `urls[<lang>]` → the
+  two-letter base (`ro-RO` → `ro`) → `url`. It deliberately does **not** end at
+  `en` the way a label does — there is always a usable address, and sending a
+  German visitor to the English *page* is worse than the operator's own default.
+  A value that is not `http(s)` is ignored and the next candidate tried, so one
+  typo cannot cost the other language its address.
+
+  `texts.policyUrls` is the same map for the address behind «Подробнее»
+  (`detailsAction: "policy"`), resolved the same way over `policyUrl`.
+
+  **Compatibility:** `url` and `policyUrl` stay required and stay the defaults,
+  and neither changed type. **Old clients ignore `urls` and use `url`** — a copy
+  inlined on a page or pasted into WordPress before today keeps working exactly
+  as it did. A row whose `url` is missing or unusable is still skipped even when
+  `urls` would have answered, because a row only newer clients can draw is a row
+  half the installed base renders as nothing.
+
+- **Our cookie declaration page now follows the banner's language.**
+  `texts.declarationUrl` points at a page we serve, it honours
+  `?lang=ro|ru|en`, and the banner never appended one — so a visitor reading a
+  Romanian card was handed a Russian table of cookies, the page having fallen
+  back to the browser's language. The banner now appends its own language:
+  `?lang=` or `&lang=` as the address demands, an existing `lang` **replaced**
+  rather than duplicated, and the parameter always placed before a `#` fragment.
+
+  Both paths, or the banner would print the same page twice: the in-text link
+  for `detailsAction: "declaration"` **and** a link row the owner pasted that
+  address into. `declarationUrl` stays a single string — it needs no per-language
+  map, because one address with a parameter is the whole answer.
+
+  Narrow on purpose: only the address `declarationUrl` itself names is ever
+  rewritten, compared ignoring the query and the fragment. An operator's own
+  URLs are returned untouched — adding a `lang` parameter to someone else's page
+  is noise at best and a collision with a real parameter at worst.
+
+- **The live language switch follows the addresses too.** `language: "page"`
+  remounts when `<html lang>` changes (0.5.24); the mount signature now moves
+  when the *resolved* links do, so a visitor switching from Romanian to Russian
+  no longer keeps the Romanian policy link under a Russian banner. A config with
+  no `urls` and no `policyUrls` signs byte-identically to 0.5.25, so an upgrade
+  rebuilds nothing that has not changed.
 
 ### 0.5.25
 
@@ -1871,7 +1971,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.25), not a released product.** It is honest about
+**This is a prototype (v0.5.26), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

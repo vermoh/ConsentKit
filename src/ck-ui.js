@@ -877,6 +877,125 @@
 
   var MAX_LINKS = 3;
 
+  /* SPEC V1.26 §1 — one link, one address PER LANGUAGE (0.5.26).
+
+     The failure the owner reported on 14.09.2026: a bilingual Moldovan shop
+     publishes its policy twice, at `/ro/politica` and at `/ru/politika`, and
+     `texts.links[]` carried ONE `url` with a label per language. So the
+     Romanian banner printed a Romanian label on the Russian page — the label
+     was translated, the destination was not.
+
+     `urls` is therefore an OPTIONAL map beside `url`, never instead of it:
+     `url` stays required and stays the default, so an older client copy pasted
+     inline or into WordPress ignores the key it has never heard of and keeps
+     sending everyone to the one address it knows. Nothing about `url` changes
+     type or meaning.
+
+     Deliberately NOT linkLabel(): that chain has a fourth step (`en`) and it is
+     load-bearing there — a link with no LABEL in this language is not a link
+     and the row is skipped. An address is the opposite: there is always a
+     usable one, because `url` is required, and falling through to the English
+     PAGE for a German visitor would be a worse answer than the operator's own
+     default. So the chain is three steps and stops:
+
+       urls[<lang>]  ->  urls[<two letters of lang>]  ->  url
+
+     A CANDIDATE CHAIN, not «malformed map, ignore the map»: a `urls['ro-ro']`
+     that is not http(s) falls to `urls['ro']`, and only then to `url`. One
+     typo'd entry must not cost the other language its address, which is the
+     same rule the link ROW already follows (§1.3 skips the malformed row, not
+     the list).
+
+     Own properties only and the LANG is lowercased, not the keys — exactly as
+     linkLabel does it, and for the two same reasons: `urls` is author-supplied
+     JSON that may have been merged over a prototype, and a config writing
+     `urls: { 'ro-RO': … }` is asking for a key this file has never matched. */
+  function langUrl(map, lang, fallback) {
+    var def = str(fallback);
+    if (def && !/^https?:\/\//i.test(def)) def = null;
+    if (!map || typeof map !== 'object' || Array.isArray(map)) return def;
+    var code = (typeof lang === 'string') ? lang.toLowerCase() : '';
+
+    function own(k) {
+      if (!k || !Object.prototype.hasOwnProperty.call(map, k)) return null;
+      var v = str(map[k]);
+      return (v && /^https?:\/\//i.test(v)) ? v : null;      // non-http(s): fall through
+    }
+
+    var hit = own(code);
+    if (!hit && code.length > 2) hit = own(code.slice(0, 2));  // ro-RO -> ro
+    return hit || def;
+  }
+
+  /* §2 — OUR cookie declaration page follows the BANNER's language.
+
+     The second finding of the same day: `texts.declarationUrl` is a page we
+     serve (`…/p/<siteId>/cookies`), it honours `?lang=ro|ru|en`, and the banner
+     never appended one — so a Romanian banner opened the declaration in the
+     visitor's BROWSER language. A visitor reading a Romanian card was handed a
+     Russian table of cookies.
+
+     Narrow on purpose. This rewrites EXACTLY ONE address — the one the config
+     itself names as `declarationUrl` — and never an operator's own URL: adding
+     a `lang` parameter to someone else's page is at best noise and at worst a
+     collision with a parameter that already means something there.
+
+     Matching ignores the query and the fragment, because the owner pastes the
+     bare address into a link row while the config's `declarationUrl` may carry
+     a `?lang=` already; both are the same page and both must be rewritten. The
+     comparison itself is normHref's, so «same address» means one thing in this
+     file and not two.
+
+     Writing: `?lang=` or `&lang=` as the existing query demands, an existing
+     `lang` REPLACED rather than duplicated (two `lang` parameters is a coin
+     toss on the server), and the parameter always placed before the `#` — a
+     fragment is the browser's, and `#top?lang=ro` is not a query at all. */
+  function declHref(url, declarationUrl, lang) {
+    var href = str(url);
+    if (!href) return href;
+    var decl = str(declarationUrl);
+    if (!decl || !/^https?:\/\//i.test(decl)) return href;
+    var code = str(lang);
+    if (!code) return href;
+
+    // Identity is the address without its query or fragment: the link row and
+    // the config may spell the same page with different parameters.
+    function bare(v) { return normHref(String(v).replace(/[?#][\s\S]*$/, '')); }
+    var mine = bare(href);
+    if (!mine || mine !== bare(decl)) return href;            // not our page: untouched
+
+    var hash = '';
+    var hi = href.indexOf('#');
+    if (hi >= 0) { hash = href.slice(hi); href = href.slice(0, hi); }
+
+    var qi = href.indexOf('?');
+    var kept = [];
+    if (qi >= 0) {
+      var parts = href.slice(qi + 1).split('&');
+      for (var i = 0; i < parts.length; i++) {
+        if (!parts[i]) continue;
+        var name = parts[i].split('=')[0].toLowerCase();
+        if (name === 'lang') continue;                        // replace, never duplicate
+        kept.push(parts[i]);
+      }
+    }
+    kept.push('lang=' + encodeURIComponent(code));
+
+    /* Built from `mine` — the CANONICAL spelling normHref() produced — and not
+       from the address as pasted. This is what keeps the two call paths from
+       disagreeing: the operator writes the declaration address with a trailing
+       slash in the link row and the server injects it without one, and
+       normHref's trailing-slash strip anchors at END OF STRING, so once a
+       query is appended the slash is no longer last and would survive on one
+       side only. The banner would then print the same page twice, the duplicate
+       rule having compared `…/cookies?lang=en` with `…/cookies/?lang=en`.
+
+       Safe precisely because of the guard above: we are only here for the one
+       address the config itself names as ours, where the host's case and a
+       trailing slash are typography. Every operator URL returned untouched. */
+    return mine + '?' + kept.join('&') + hash;
+  }
+
   function resolveLinks(cfg, lang) {
     var texts = (cfg && cfg.texts && typeof cfg.texts === 'object') ? cfg.texts : null;
     var list = texts && texts.links;
@@ -885,10 +1004,19 @@
     for (var i = 0; i < list.length && out.length < MAX_LINKS; i++) {
       var row = list[i];
       if (!row || typeof row !== 'object') continue;
+      /* The row still LIVES or DIES by `url`: a row whose default address is
+         missing or not http(s) is skipped exactly as in 0.5.15, even when a
+         per-language `urls` entry would have been usable. `url` is the
+         contract every older client reads, and a row that only newer clients
+         can render is a row half the installed base draws as nothing. */
       var url = str(row.url);
       if (!url || !/^https?:\/\//i.test(url)) continue;
       var label = linkLabel(row.label, lang);
       if (!label) continue;
+      url = langUrl(row.urls, lang, url);
+      // …and if the operator pasted OUR declaration address into a link row,
+      // it follows the banner's language like the in-text link does.
+      url = declHref(url, texts.declarationUrl, lang);
       out.push({ id: str(row.id) || ('link' + i), url: url, label: label });
     }
     return out;
@@ -935,9 +1063,12 @@
      `lang` is the code the banner resolved to; signature() passes the config's
      own so both sides of a comparison are read in the same language. */
   function detailsKind(cfg, lang) {
-    var det = resolveDetails(cfg);
     var code = (typeof lang === 'string' && lang) ? lang :
       resolveCfgLang(cfg, localeTable());
+    // 0.5.26 — the language reaches resolveDetails too: with `policyUrls` the
+    // ADDRESS itself is per-language, so reading the details in one language
+    // and the links in another would compare two different pages.
+    var det = resolveDetails(cfg, code);
     return detailsDuplicatesLink(det, resolveLinks(cfg, code)) ? 'hide' : det.kind;
   }
 
@@ -2729,10 +2860,20 @@
      dead link. Only http(s) is accepted — javascript: and data: URLs in a
      link the visitor is invited to click are an XSS vector, and a relative
      path cannot be validated here without a base. */
-  function resolveDetails(cfg) {
+  /* `lang` is OPTIONAL and defaults to the config's own resolved code, exactly
+     as detailsKind() does it — so the two sides of any comparison are read in
+     the same language, and the three call sites that have passed one argument
+     since 0.5.0 keep answering what they always did. */
+  function resolveDetails(cfg, lang) {
     var texts = (cfg && cfg.texts && typeof cfg.texts === 'object') ? cfg.texts : {};
-    var url = str(texts.policyUrl);
-    if (url && !/^https?:\/\//i.test(url)) url = null;
+    var code = (typeof lang === 'string' && lang) ? lang : resolveCfgLang(cfg, localeTable());
+
+    /* SPEC V1.26 §1 — `texts.policyUrls`, the same per-language map as
+       `texts.links[].urls` and for the same reason: the address behind
+       «Подробнее» is a PAGE, and a bilingual site publishes it twice.
+       `policyUrl` stays the required default, so an older client ignores the
+       map and keeps the address it has always had. */
+    var url = langUrl(texts.policyUrls, code, texts.policyUrl);
 
     /* SPEC V1.10 §1 — the third destination: our own cookie declaration page.
        `declarationUrl` is server-owned (the SaaS config injects it, like
@@ -2755,8 +2896,22 @@
     if (action === 'declaration' && !decl) action = 'settings';
 
     var href = null;
-    if (action === 'policy') href = url;
-    else if (action === 'declaration') href = decl;
+    /* Through declHref() on BOTH branches, and the guard inside it decides.
+       An owner who pastes our declaration address into `policyUrl` — which the
+       hosted service makes easy, since it hands them one address — has still
+       named OUR page, and the page is identified by the address rather than by
+       which key carries it. Without this the link row (which does append) and
+       «Подробнее» (which would not) spell the same page two ways, the duplicate
+       rule fails to match, and the banner prints it twice. Every address that
+       is not the configured `declarationUrl` is returned untouched, so an
+       operator's own policy URL is as safe here as it is in the link row. */
+    if (action === 'policy') href = declHref(url, texts.declarationUrl, code);
+    /* §2 — our own page, so it follows the banner's language rather than the
+       visitor's browser. Through the same declHref() the link row uses: if the
+       operator ALSO pasted this address into a link row, both copies carry the
+       same `lang` and the duplicate rule below still recognises them as one
+       page. Appending on one side only would print the address twice. */
+    else if (action === 'declaration') href = declHref(decl, decl, code);
     return { kind: action, href: href };
   }
 
@@ -2794,7 +2949,10 @@
     body.appendChild(h);
 
     var p = el('p');
-    var det = resolveDetails(cfg);
+    // 0.5.26 — THIS render's language, the same one detailsKind() is asked
+    // below and the same one buildLinksRow() resolves with: `policyUrls` makes
+    // the address per-language, and our declaration page takes a `lang` from it.
+    var det = resolveDetails(cfg, LANG);
     /* SPEC V1.16 §1.3 — «Подробнее» and one of the link rows point at the same
        page: drop the in-text copy rather than print the address twice. Asked
        through detailsKind() so the shape drawn here is the same one signature()
@@ -3592,14 +3750,42 @@
       if (LANG_KEY_RE.test(String(k).toLowerCase())) langs.push(String(k).toLowerCase());
     }
     langs.sort();
+    /* The config's own language, resolved the way mount() resolves it —
+       read ONCE, so the links half and the policy half below cannot disagree
+       about which language they are signing. Under `language: 'page'` it
+       follows `<html lang>`, so a live switch moves the signature and 0.5.24's
+       observer remounts a banner that really does need rebuilding. */
+    var code = resolveCfgLang(cfg, localeTable());
     var list = texts.links;
     var ids = [];
     if (Array.isArray(list)) {
+      /* 0.5.26 — the RESOLVED address, but only when it differs from `url`.
+
+         Why not simply serialise the resolved row: a config with no `urls`
+         must produce the string 0.5.25 produced, byte for byte, or every
+         signature pinned in the tests and every live mount that compares
+         against one would flip on upgrade for a config that has not changed.
+         So the 0.5.15 component stays exactly as it was and the per-language
+         address is APPENDED to it, which is empty for every config written
+         before today.
+
+         The language is the config's own, resolved the way mount() resolves
+         it — the same rule detailsKind() follows above, so both halves of the
+         signature read the links in one language rather than two. */
       for (var i = 0; i < list.length; i++) {
         var row = list[i];
-        if (row && typeof row === 'object') ids.push(String(row.id || i) + ':' + String(row.url || ''));
+        if (!row || typeof row !== 'object') continue;
+        var raw = String(row.url || '');
+        var got = langUrl(row.urls, code, row.url);
+        ids.push(String(row.id || i) + ':' + raw + ((got && got !== raw) ? '>' + got : ''));
       }
     }
+    /* `policyUrls` rides in the same half for the same reason: it changes
+       WHERE «Подробнее» points without changing resolveDetails' KIND, so
+       detailsKind() alone would not see a live language switch move the
+       address. Only the resolved value, and only when the map answers. */
+    var pol = langUrl(texts.policyUrls, code, texts.policyUrl);
+    if (pol && pol !== str(texts.policyUrl)) ids.push('policy:' + pol);
     if (!langs.length && !ids.length) return '0';
     return langs.join(',') + '/' + ids.join(',');
   }
@@ -3911,6 +4097,13 @@
       renderRich: renderRich,
       resolveLinks: resolveLinks,
       linkLabel: linkLabel,
+      /* SPEC V1.26 §1–§2 — the per-language address and the declaration page's
+         `lang`, exported for the same reason every other pure half is: the
+         cabinet's live preview must quote the rule the banner paints, and the
+         server's validator must be testable against the same contract rather
+         than a second copy of it. */
+      langUrl: langUrl,
+      declHref: declHref,
       detailsDuplicatesLink: detailsDuplicatesLink,
       detailsKind: detailsKind,
       textsSignature: textsSignature,

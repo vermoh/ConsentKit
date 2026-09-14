@@ -2696,7 +2696,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.25',
+    version: '0.5.26',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

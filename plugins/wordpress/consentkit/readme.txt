@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.25
+Stable tag: 0.5.26
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,24 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.26 =
+* texts.links[] gains an optional `urls` map: { ru: "...", ro: "..." } beside
+  `url`, so a bilingual site sends each language to its own page. Resolved
+  urls[<lang>] -> the two-letter base (ro-RO -> ro) -> url; a value that is not
+  http(s) falls through to the next candidate. Before this the label was
+  translated and the destination was not, so a Romanian banner linked the
+  Russian policy page. texts.policyUrls is the same map for the address behind
+  "Learn more" (detailsAction: "policy").
+* Compatibility: `url` and `policyUrl` stay required and stay the defaults, and
+  neither changed type. Old clients ignore `urls` and use `url`, so a block
+  pasted before today keeps working exactly as it did.
+* The cookie declaration page (texts.declarationUrl) now opens in the BANNER's
+  language: the banner appends ?lang= / &lang=, replacing any lang already
+  there rather than duplicating it, and always before a # fragment. Previously
+  the page fell back to the visitor's browser language, so a Romanian card
+  handed the reader a Russian table of cookies. Only that one address is ever
+  rewritten; an operator's own URLs are left untouched.
 
 = 0.5.25 =
 * Consent Mode: url_passthrough and ads_data_redaction are now issued as

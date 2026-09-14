@@ -659,6 +659,308 @@ test('a link label read from a prototype is not a label', () => {
   assert.equal(C.linkLabel(['A'], 'en'), null);
 });
 
+/* ==================================== V1.26 §1 — one address per language */
+
+/* The owner's finding of 14.09.2026, on a bilingual Moldovan shop: the label
+   was translated and the DESTINATION was not, so the Romanian banner sent a
+   Romanian reader to the Russian policy page. */
+
+test('links[].urls picks the address for the banner’s language', () => {
+  const C = load();
+  const cfg = {
+    texts: {
+      links: [{
+        id: 'privacy',
+        url: 'https://shop.md/privacy',
+        urls: { ru: 'https://shop.md/ru/privacy', ro: 'https://shop.md/ro/politica' },
+        label: { ru: 'Политика', ro: 'Politica', en: 'Policy' }
+      }]
+    }
+  };
+  const url = (lang) => C.resolveLinks(cfg, lang)[0].url;
+  assert.equal(url('ru'), 'https://shop.md/ru/privacy');
+  assert.equal(url('ro'), 'https://shop.md/ro/politica');
+  // ro-RO -> ro, the two-letter step, exactly as the LABEL chain does it.
+  assert.equal(url('ro-RO'), 'https://shop.md/ro/politica');
+  assert.equal(url('ru-ru'), 'https://shop.md/ru/privacy');
+  /* A language the map does not carry falls to `url` and NOT to en: there is
+     always a usable address, so handing a German visitor the English PAGE
+     would be a worse answer than the operator's own default. The label still
+     falls back to en — the two chains are deliberately different lengths. */
+  assert.equal(url('de'), 'https://shop.md/privacy');
+  assert.equal(C.resolveLinks(cfg, 'de')[0].label, 'Policy');
+});
+
+test('a non-http(s) urls entry falls through to the next candidate', () => {
+  /* A CANDIDATE CHAIN, not «malformed map, ignore the map»: one typo'd entry
+     must not cost the other language its address. */
+  const C = load();
+  const row = (urls) => ({ id: 'p', url: 'https://shop.md/privacy', urls: urls, label: { en: 'P' } });
+  const url = (urls, lang) => C.resolveLinks({ texts: { links: [row(urls)] } }, lang)[0].url;
+
+  // 'ro-ro' is refused, so 'ro' answers.
+  assert.equal(url({ 'ro-ro': 'javascript:alert(1)', ro: 'https://shop.md/ro/p' }, 'ro-RO'),
+    'https://shop.md/ro/p');
+  // Nothing usable anywhere in the map: the default, never a dead link.
+  for (const bad of ['javascript:alert(1)', 'data:text/html,x', '/ro/politica', '', null, 42, {}]) {
+    assert.equal(url({ ro: bad }, 'ro'), 'https://shop.md/privacy', `${bad} must not be an address`);
+  }
+  // A malformed MAP is simply not a map.
+  for (const m of [null, 'nope', 42, ['https://x.md']]) {
+    assert.equal(url(m, 'ro'), 'https://shop.md/privacy');
+  }
+});
+
+test('`url` stays required: a row without one is skipped even with urls', () => {
+  /* The compatibility rule in one assertion. `url` is what EVERY older client
+     copy reads — inlined on a page or pasted into WordPress — so a row only
+     newer clients can draw is a row half the installed base renders as
+     nothing. Better no row than a row that exists on some visitors' screens. */
+  const C = load();
+  const cfg = {
+    texts: {
+      links: [
+        { id: 'a', urls: { ro: 'https://shop.md/ro/p' }, label: { en: 'A' } },
+        { id: 'b', url: '/relative', urls: { ro: 'https://shop.md/ro/q' }, label: { en: 'B' } },
+        { id: 'c', url: 'https://shop.md/c', label: { en: 'C' } }
+      ]
+    }
+  };
+  assert.deepEqual(plain(C.resolveLinks(cfg, 'ro').map((l) => l.id)), ['c']);
+});
+
+test('an old client’s config is untouched: no urls means url', () => {
+  const C = load();
+  const cfg = {
+    texts: { links: [{ id: 'p', url: 'https://shop.md/privacy', label: { en: 'P' } }] }
+  };
+  for (const lang of ['ru', 'ro', 'en', 'de', 'ro-RO']) {
+    assert.equal(C.resolveLinks(cfg, lang)[0].url, 'https://shop.md/privacy');
+  }
+});
+
+test('langUrl reads own properties only', () => {
+  /* The same guard linkLabel carries, for the same reason: `urls` is author
+     JSON that may have been merged over a prototype. */
+  const C = load();
+  assert.equal(C.langUrl({}, 'constructor', 'https://d.md'), 'https://d.md');
+  assert.equal(C.langUrl({}, 'toString', 'https://d.md'), 'https://d.md');
+  assert.equal(C.langUrl(null, 'ro', 'https://d.md'), 'https://d.md');
+  // A default that is not http(s) is no default at all.
+  assert.equal(C.langUrl({ ro: 'https://r.md' }, 'ro', 'javascript:x'), 'https://r.md');
+  assert.equal(C.langUrl(null, 'ro', 'javascript:x'), null);
+});
+
+test('policyUrls picks the «Подробнее» address for the banner’s language', () => {
+  const C = load();
+  const cfg = {
+    texts: {
+      policyUrl: 'https://shop.md/privacy',
+      policyUrls: { ru: 'https://shop.md/ru/privacy', ro: 'https://shop.md/ro/politica' }
+    }
+  };
+  assert.deepEqual(plain(C.resolveDetails(cfg, 'ro')),
+    { kind: 'policy', href: 'https://shop.md/ro/politica' });
+  assert.deepEqual(plain(C.resolveDetails(cfg, 'ru-RU')),
+    { kind: 'policy', href: 'https://shop.md/ru/privacy' });
+  // Unlisted language -> the default, which is what an older client also shows.
+  assert.deepEqual(plain(C.resolveDetails(cfg, 'de')),
+    { kind: 'policy', href: 'https://shop.md/privacy' });
+  // …and a config with no map at all answers exactly what 0.5.25 answered.
+  assert.deepEqual(plain(C.resolveDetails({ texts: { policyUrl: 'https://shop.md/privacy' } }, 'ro')),
+    { kind: 'policy', href: 'https://shop.md/privacy' });
+});
+
+test('policyUrls alone can supply the address the default action needs', () => {
+  /* `policyUrl` is the documented default and a config SHOULD carry it. One
+     that carries only the map still gets a link in the languages it covers —
+     and 'settings' in the ones it does not, because 'policy' with no usable
+     URL has degraded to 'settings' rather than rendered a dead link since
+     0.5.0. A per-language shape flip, which detailsKind() and signature()
+     already track. */
+  const C = load();
+  const cfg = { texts: { policyUrls: { ro: 'https://shop.md/ro/politica' } } };
+  assert.deepEqual(plain(C.resolveDetails(cfg, 'ro')),
+    { kind: 'policy', href: 'https://shop.md/ro/politica' });
+  assert.deepEqual(plain(C.resolveDetails(cfg, 'ru')), { kind: 'settings', href: null });
+});
+
+test('the duplicate rule compares the RESOLVED address, not the default', () => {
+  /* The bilingual failure in its sharpest form: policy and link row agree in
+     Romanian and disagree in Russian, so «Подробнее» is noise on one banner
+     and the only policy link on the other. */
+  const C = load();
+  const cfg = {
+    texts: {
+      policyUrl: 'https://shop.md/privacy',
+      policyUrls: { ro: 'https://shop.md/ro/politica', ru: 'https://shop.md/ru/privacy' },
+      links: [{
+        id: 'p',
+        url: 'https://shop.md/privacy',
+        urls: { ro: 'https://shop.md/ro/politica' },
+        label: { ro: 'Politica', ru: 'Политика', en: 'Policy' }
+      }]
+    }
+  };
+  assert.equal(C.detailsKind(cfg, 'ro'), 'hide', 'both resolve to the ro page');
+  assert.equal(C.detailsKind(cfg, 'ru'), 'policy', 'the row is the default, the link is /ru/');
+  // en resolves both to the default, so they are the same page again.
+  assert.equal(C.detailsKind(cfg, 'en'), 'hide');
+});
+
+/* ===================== V1.26 §2 — our declaration page follows the banner */
+
+const DECL = 'https://consent.ecomconsult.net/p/42/cookies';
+
+test('the declaration address gains the banner’s lang', () => {
+  const C = load();
+  assert.equal(C.declHref(DECL, DECL, 'ro'), DECL + '?lang=ro');
+  assert.equal(C.declHref(DECL, DECL, 'ru'), DECL + '?lang=ru');
+  // An existing query keeps its parameters and gains one with «&».
+  assert.equal(C.declHref(DECL + '?site=42', DECL, 'ro'), DECL + '?site=42&lang=ro');
+  // A STALE lang is replaced, not duplicated — two lang params is a coin toss.
+  assert.equal(C.declHref(DECL + '?lang=ru', DECL, 'ro'), DECL + '?lang=ro');
+  assert.equal(C.declHref(DECL + '?lang=ru&site=42', DECL, 'ro'), DECL + '?site=42&lang=ro');
+  assert.equal(C.declHref(DECL + '?LANG=ru', DECL, 'ro'), DECL + '?lang=ro');
+  // The parameter lands before the fragment: «#top?lang=ro» is not a query.
+  assert.equal(C.declHref(DECL + '#top', DECL, 'ro'), DECL + '?lang=ro#top');
+  assert.equal(C.declHref(DECL + '?lang=ru#top', DECL, 'ro'), DECL + '?lang=ro#top');
+  // Typography — a trailing slash, the host's case — is not a different page,
+  // and the EMITTED form is canonical so both call paths spell it alike.
+  assert.equal(C.declHref(DECL + '/', DECL, 'ro'), DECL + '?lang=ro');
+  assert.equal(C.declHref('https://CONSENT.ecomconsult.net/p/42/cookies', DECL, 'ro'),
+    DECL + '?lang=ro');
+});
+
+test('an operator’s own URL is never rewritten', () => {
+  /* The rule that keeps this narrow: exactly one address is touched, the one
+     the config itself names. Adding `lang` to someone else's page is noise at
+     best and a collision with a real parameter at worst. */
+  const C = load();
+  for (const other of ['https://shop.md/privacy', 'https://shop.md/ru/privacy',
+    'https://consent.ecomconsult.net/p/43/cookies', 'https://consent.ecomconsult.net/p/42/terms',
+    'https://shop.md/privacy?lang=ru']) {
+    assert.equal(C.declHref(other, DECL, 'ro'), other, `${other} must be left alone`);
+  }
+  // No declaration address configured, or an unusable one: nothing is rewritten.
+  for (const decl of [undefined, null, '', 'javascript:alert(1)', '/p/42/cookies']) {
+    assert.equal(C.declHref(DECL, decl, 'ro'), DECL);
+  }
+  assert.equal(C.declHref(DECL, DECL, ''), DECL, 'no language, no parameter');
+});
+
+test('the declaration link and a link row to it carry the same lang', () => {
+  /* Both paths or neither: appending on one side only would leave the banner
+     printing the same page twice, the duplicate rule having compared
+     «…/cookies?lang=ro» with «…/cookies/». */
+  const C = load();
+  const cfg = {
+    texts: {
+      detailsAction: 'declaration',
+      declarationUrl: DECL,
+      links: [{ id: 'd', url: DECL + '/', label: { ro: 'Cookie-uri', ru: 'Cookie' } }]
+    }
+  };
+  assert.equal(C.resolveLinks(cfg, 'ro')[0].url, DECL + '?lang=ro');
+  assert.equal(C.resolveLinks(cfg, 'ru')[0].url, DECL + '?lang=ru');
+  assert.equal(C.resolveDetails(cfg, 'ro').href, DECL + '?lang=ro');
+  assert.equal(C.detailsKind(cfg, 'ro'), 'hide', 'one page, printed once');
+  assert.equal(C.detailsKind(cfg, 'ru'), 'hide');
+});
+
+test('policyUrl pointing at OUR declaration page gets the lang too', () => {
+  /* The hosted service hands the owner one address, and nothing stops them
+     pasting it into `policyUrl` instead of `declarationUrl`. The page is
+     identified by its ADDRESS, not by which key carries it — so «Подробнее»
+     must append the language exactly as the link row does. Otherwise the two
+     spell the same page two ways, the duplicate rule fails to match, and the
+     banner prints it twice. */
+  const C = load();
+  const cfg = {
+    texts: {
+      detailsAction: 'policy',
+      policyUrl: DECL,
+      declarationUrl: DECL,
+      links: [{ id: 'd', url: DECL, label: { ro: 'Cookie-uri' } }]
+    }
+  };
+  assert.equal(C.resolveDetails(cfg, 'ro').href, DECL + '?lang=ro');
+  assert.equal(C.resolveLinks(cfg, 'ro')[0].url, DECL + '?lang=ro');
+  assert.equal(C.detailsKind(cfg, 'ro'), 'hide', 'one page, printed once');
+
+  // An ordinary policyUrl is still returned exactly as written.
+  assert.equal(
+    C.resolveDetails({ texts: { policyUrl: 'https://shop.md/privacy', declarationUrl: DECL } }, 'ro').href,
+    'https://shop.md/privacy');
+});
+
+test('a link row to the declaration gets lang even when «Подробнее» is elsewhere', () => {
+  const C = load();
+  const cfg = {
+    texts: {
+      policyUrl: 'https://shop.md/privacy',
+      declarationUrl: DECL,
+      links: [
+        { id: 'd', url: DECL, label: { ro: 'Cookie-uri' } },
+        { id: 'p', url: 'https://shop.md/privacy', label: { ro: 'Politica' } }
+      ]
+    }
+  };
+  const rows = C.resolveLinks(cfg, 'ro');
+  assert.equal(rows[0].url, DECL + '?lang=ro', 'ours follows the banner');
+  assert.equal(rows[1].url, 'https://shop.md/privacy', 'theirs does not');
+  assert.equal(C.detailsKind(cfg, 'ro'), 'hide', 'the policy row still silences «Подробнее»');
+});
+
+test('the resolved links move the signature when the language does', () => {
+  /* 0.5.24's 'page' mode remounts on an `<html lang>` change, and mount() is
+     one-shot: if the signature did not move with the resolved ADDRESS, a
+     Romanian visitor switching to Russian would keep the Romanian policy link
+     under a Russian banner. */
+  const C = load();
+  const withUrls = {
+    language: 'ro',
+    texts: {
+      links: [{
+        id: 'p', url: 'https://shop.md/privacy',
+        urls: { ru: 'https://shop.md/ru/privacy', ro: 'https://shop.md/ro/politica' },
+        label: { ru: 'Политика', ro: 'Politica', en: 'Policy' }
+      }]
+    }
+  };
+  const ru = { ...withUrls, language: 'ru' };
+  assert.notEqual(C.textsSignature(withUrls), C.textsSignature(ru),
+    'the address changed, so the DOM must be rebuilt');
+  assert.notEqual(C.signature(withUrls), C.signature(ru));
+
+  // …and policyUrls moves it too: resolveDetails still answers 'policy' in
+  // both, so detailsKind() alone would not see the address change.
+  const pol = (lang) => ({
+    language: lang,
+    texts: {
+      policyUrl: 'https://shop.md/privacy',
+      policyUrls: { ru: 'https://shop.md/ru/privacy', ro: 'https://shop.md/ro/politica' }
+    }
+  });
+  assert.equal(C.resolveDetails(pol('ro')).kind, C.resolveDetails(pol('ru')).kind);
+  assert.notEqual(C.signature(pol('ro')), C.signature(pol('ru')));
+});
+
+test('a config with no urls signs exactly as 0.5.25 signed it', () => {
+  /* The compatibility rule applied to the signature: an upgrade must not flip
+     the shape of a config that has not changed, or every live mount comparing
+     against a stored signature would rebuild on nothing. */
+  const C = load();
+  const cfg = {
+    texts: { links: [{ id: 'p', url: 'https://shop.md/privacy', label: { en: 'P' } }] }
+  };
+  assert.equal(C.textsSignature(cfg), '/p:https://shop.md/privacy');
+  assert.equal(C.textsSignature({ texts: { policyUrl: 'https://x.md' } }), '0');
+  // The language cannot move it when no map answers.
+  assert.equal(C.textsSignature({ ...cfg, language: 'ro' }),
+    C.textsSignature({ ...cfg, language: 'ru' }));
+});
+
 test('the link row is built for the banner in every layout and for the panel', () => {
   /* Three DOM sites, and the bar layout is the one that needs watching: its
      banner is a flex row, and its mobile media query orders every child
@@ -798,8 +1100,11 @@ test('a duplicated DECLARATION address is dropped the same way', () => {
       links: [{ id: 'd', url: 'https://shop.md/cookie-declaration/', label: { en: 'Cookies' } }]
     }
   };
-  assert.deepEqual(plain(C.resolveDetails(cfg)),
-    { kind: 'declaration', href: 'https://shop.md/cookie-declaration' });
+  /* 0.5.26 — the href carries the banner's language (§2). The duplicate rule
+     still fires: `lang` is appended to BOTH copies, the link row's and the
+     in-text one's, and the comparison ignores the query anyway. */
+  assert.deepEqual(plain(C.resolveDetails(cfg, 'en')),
+    { kind: 'declaration', href: 'https://shop.md/cookie-declaration?lang=en' });
   assert.equal(C.detailsKind(cfg, 'en'), 'hide');
   // A declaration that points somewhere else survives.
   assert.equal(C.detailsKind({

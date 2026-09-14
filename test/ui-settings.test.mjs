@@ -146,9 +146,12 @@ test("detailsAction 'declaration' with a valid URL renders an outbound link", ()
   const C = load();
   const det = C.resolveDetails({
     texts: { detailsAction: 'declaration', declarationUrl: 'https://consent.example.net/p/7/cookies' }
-  });
+  }, 'ro');
   assert.equal(det.kind, 'declaration');
-  assert.equal(det.href, 'https://consent.example.net/p/7/cookies');
+  /* 0.5.26 — the declaration page is OURS and honours `?lang=`, so the href
+     follows the BANNER's language rather than the visitor's browser. Before
+     today a Romanian banner opened a Russian table of cookies. */
+  assert.equal(det.href, 'https://consent.example.net/p/7/cookies?lang=ro');
 });
 
 test("detailsAction 'declaration' with no URL behaves like 'settings'", () => {

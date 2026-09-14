@@ -5,6 +5,55 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.26
+
+- **A link can carry a different address per language — `texts.links[].urls`.**
+  A bilingual Moldovan shop publishes its policy twice, at `/ro/politica` and at
+  `/ru/politika`, and a link row carried one `url` with a label per language. So
+  the Romanian banner printed a Romanian label on the Russian page: the label
+  was translated, the destination was not. `urls` is an optional
+  `{ <lang>: <http(s) url> }` map beside `url`, resolved `urls[<lang>]` → the
+  two-letter base (`ro-RO` → `ro`) → `url`. It deliberately does **not** end at
+  `en` the way a label does — there is always a usable address, and sending a
+  German visitor to the English *page* is worse than the operator's own default.
+  A value that is not `http(s)` is ignored and the next candidate tried, so one
+  typo cannot cost the other language its address.
+
+  `texts.policyUrls` is the same map for the address behind «Подробнее»
+  (`detailsAction: "policy"`), resolved the same way over `policyUrl`.
+
+  **Compatibility:** `url` and `policyUrl` stay required and stay the defaults,
+  and neither changed type. **Old clients ignore `urls` and use `url`** — a copy
+  inlined on a page or pasted into WordPress before today keeps working exactly
+  as it did. A row whose `url` is missing or unusable is still skipped even when
+  `urls` would have answered, because a row only newer clients can draw is a row
+  half the installed base renders as nothing.
+
+- **Our cookie declaration page now follows the banner's language.**
+  `texts.declarationUrl` points at a page we serve, it honours
+  `?lang=ro|ru|en`, and the banner never appended one — so a visitor reading a
+  Romanian card was handed a Russian table of cookies, the page having fallen
+  back to the browser's language. The banner now appends its own language:
+  `?lang=` or `&lang=` as the address demands, an existing `lang` **replaced**
+  rather than duplicated, and the parameter always placed before a `#` fragment.
+
+  Both paths, or the banner would print the same page twice: the in-text link
+  for `detailsAction: "declaration"` **and** a link row the owner pasted that
+  address into. `declarationUrl` stays a single string — it needs no per-language
+  map, because one address with a parameter is the whole answer.
+
+  Narrow on purpose: only the address `declarationUrl` itself names is ever
+  rewritten, compared ignoring the query and the fragment. An operator's own
+  URLs are returned untouched — adding a `lang` parameter to someone else's page
+  is noise at best and a collision with a real parameter at worst.
+
+- **The live language switch follows the addresses too.** `language: "page"`
+  remounts when `<html lang>` changes (0.5.24); the mount signature now moves
+  when the *resolved* links do, so a visitor switching from Romanian to Russian
+  no longer keeps the Romanian policy link under a Russian banner. A config with
+  no `urls` and no `policyUrls` signs byte-identically to 0.5.25, so an upgrade
+  rebuilds nothing that has not changed.
+
 ## 0.5.25
 
 - **Consent Mode: `url_passthrough` and `ads_data_redaction` are now real gtag
