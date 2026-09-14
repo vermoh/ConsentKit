@@ -100,18 +100,19 @@ test('dataLayer is declared by the first statement of the first script', () => {
 
       /* The FIRST script element on the page must be the declaration itself.
          Asserting merely "declared before the first push" would pass with the
-         theme boot or the vendor client ahead of it — and the vendor client
-         pushes Consent Mode at parse time, which is the push that must find
-         the array already there. */
+         vendor client ahead of it — and the vendor client pushes Consent Mode
+         at parse time, which is the push that must find the array already
+         there. (Until 14.09.2026 the theme boot script was the other thing
+         this had to beat; the site is dark-only now, that script is gone, and
+         the metas that replaced it run no JavaScript — so being the first
+         <script> is the whole of the ordering claim.) */
       const firstTag = html.slice(first, html.indexOf('</script>', first) + 9);
       assert.match(firstTag, /^<script>window\.dataLayer = window\.dataLayer \|\| \[\];<\/script>$/,
         `${label}'s first script is not the dataLayer declaration: ${firstTag.slice(0, 120)}`);
 
-      // …and it is genuinely ahead of the theme boot and, where the page
-      // carries it, the vendor client. The law pages load no client — they
-      // have no banner to demo — so its absence is not a failure here.
-      assert.ok(first < html.indexOf('ck-site-theme'),
-        `${label} declares dataLayer after the theme boot`);
+      // …and it is genuinely ahead of the vendor client, where the page
+      // carries one. The law pages load no client — they have no banner to
+      // demo — so its absence is not a failure here.
       const client = html.indexOf('/vendor/ck-core.js');
       if (client > -1) {
         assert.ok(first < client, `${label} declares dataLayer after the vendor client`);

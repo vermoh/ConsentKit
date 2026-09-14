@@ -20,8 +20,16 @@
 {{OG_LOCALE_ALT}}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- Dark-only since 14.09.2026 (owner's decision). These two say so BEFORE
+     the stylesheet loads: color-scheme makes the browser paint its own form
+     controls and scrollbars dark from the first paint instead of flashing a
+     light set, and theme-color hands mobile Chrome and Safari the page's own
+     background for the address bar. There used to be an inline boot script
+     here reading a stored theme choice out of localStorage; with one theme
+     there is nothing to read, so it is gone and with it its try/catch. -->
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#141414">
 {{DATALAYER_BOOT}}
-{{THEME_BOOT}}
 <link rel="stylesheet" href="/styles.css">
 {{JSON_LD}}
 </head>
@@ -102,26 +110,6 @@
            is still a real link to its own URL, so the switch stays crawlable
            and works without JavaScript exactly as before. -->
 {{LANG_SWITCH}}
-
-      <!-- Owner, 07.09.2026: «Тема» beside the languages. Unlike a language,
-           a theme is not a URL — there is one page per language but only one
-           page per theme — so these are real <button>s carrying aria-pressed,
-           not links. app.js binds them; the inline script in <head> has
-           already applied the stored choice before the first paint.
-           Authored with «Как в системе» pressed: that is the truthful state
-           with JavaScript off, where no preference can be read or written and
-           the page simply follows prefers-color-scheme. -->
-      <div class="theme-switch">
-        <span class="theme-switch__label" id="theme-switch-label" data-i18n="siteThemeLabel">Тема</span>
-        <div class="theme-group" role="group" aria-labelledby="theme-switch-label">
-          <button class="theme-btn" type="button" data-theme-choice="system"
-                  aria-pressed="true" data-i18n="siteThemeSystem">Как в системе</button>
-          <button class="theme-btn" type="button" data-theme-choice="light"
-                  aria-pressed="false" data-i18n="siteThemeLight">Светлая</button>
-          <button class="theme-btn" type="button" data-theme-choice="dark"
-                  aria-pressed="false" data-i18n="siteThemeDark">Тёмная</button>
-        </div>
-      </div>
 
       <a class="head-link" href="https://app.ecomconsult.net" data-cta="header-cabinet" data-i18n="ctaCabinetShort">Кабинет</a>
     </div>

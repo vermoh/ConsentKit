@@ -32,117 +32,63 @@
        else that used to be red is now black, dark grey or sand.
    Because red is now scarce, the fill role and the text role must never
    swap: --accent is a FILL that carries white text, --accent-ink is TEXT
-   that sits on a light background. In dark mode the button keeps the same
-   #D63838 fill (white on it = 4.69) while the text red lightens to #FF6B6B
-   (6.7:1 on #141414) — using #D63838 as text on the dark ground would be
-   3.9:1 and fail. */
+   that sits on the page. The button keeps the #D63838 fill (white on it =
+   4.69) while the text red is #FF6B6B (6.7:1 on #141414) — using #D63838 as
+   text on the dark ground would be 3.9:1 and fail.
+
+   ── DARK ONLY, since 14.09.2026 (owner's decision) ──────────────────────
+   The site used to carry two palettes: a light one here on :root and a dark
+   twin written twice over — once behind the system-preference media query,
+   once under the forced attribute the menu's «Тема» switch set on <html>.
+   The owner removed that switch and kept the dark look, so there is nothing
+   left for a second palette to answer to: the values below ARE the former
+   dark twins, promoted onto :root as the only values, and the light
+   originals and both dark homes are gone. Nothing in this stylesheet is
+   conditional on a theme any more — a token has one value, on one selector,
+   and the `color-scheme` below tells the browser to paint its own form
+   controls and scrollbars to match. A test asserts that neither the media
+   query nor the attribute ever comes back. */
 
 :root {
-  --bg:         #FFFFFF;  /* §2: the page is white */
-  --cream:      #FFF2E0;  /* hero and «Цифры» only */
-  --surface:    #FFFFFF;  /* cards */
-  --surface-2:  #F5E7D3;  /* sand — trim, panels, the highlighted plan column */
-  --bg-band:    #FFFFFF;  /* .band is no longer a tint; see the .band rule */
-  --ink:        #1E1E1E;  /* 16.67:1 on --bg, 15.11:1 on --cream */
-  --ink-soft:   #5A5A5A;  /* neutral grey (owner, 07.09.2026): 7.37:1 on --bg, 6.6:1 on --cream */
-  --line:       #C6AF8D;  /* beige rule */
-  --line-soft:  #E7D6BC;
+  color-scheme: dark;
+  /* The «cream» role is a surface tone, not a hue: a literal cream band on a
+     dark page would be a white slab, so the hero and «Цифры» take a lifted
+     dark surface and the section rhythm survives as a change of value. */
+  --bg:         #141414;  /* neutral black (owner, 07.09.2026: no warm browns) */
+  --cream:      #1B1B1B;  /* the hero / «Цифры» lift */
+  --surface:    #1F1F1F;  /* cards */
+  --surface-2:  #262626;  /* the lifted panel tone: trim and panels */
+  --bg-band:    #141414;  /* .band is not a tint; see the .band rule */
+  --ink:        #F2F2F2;  /* 16.9:1 on --bg */
+  --ink-soft:   #B3B3B3;  /* 8.9:1 on --bg */
+  --line:       #333333;
+  --line-soft:  #262626;
+  /* The fill / text split is what survives from the two-palette era, and it
+     still matters: §2 asks for «#D63838 + белый», and white on that fill is
+     4.69:1. The TEXT red cannot be the same value — #D63838 as text on
+     #141414 is 3.90:1 — so it lightens to #FF6B6B, 6.61:1, the same red. */
   --accent:     #D63838;  /* FILL under normal text: #FFFFFF on it = 4.69:1 */
-  --accent-ink: #B82E2D;  /* TEXT red: 6.06:1 on white, 5.49:1 on cream */
+  --accent-ink: #FF6B6B;  /* TEXT red: 6.61:1 on --bg */
   --accent-deco:#E63939;  /* §1 brand red — decoration and the banner only */
   --on-accent:  #FFFFFF;  /* 4.69:1 on --accent */
   --band:       #B82E2D;  /* «Проверьте свой сайт» full-width red */
   --on-band:    #FDE1B9;  /* peach, 4.80:1 on --band — body size is legal */
   --on-band-strong: #FFFFFF; /* 6.06:1 on --band, for headings and small print */
-  --code-bg:    #1E1E1E;
-  --code-ink:   #FFF2E0;
-  /* §2.2 pills. TINTED, never filled: small bold text on saturated red or
-     green cannot reach 4.5:1, but dark ink on a light tint of the same hue
-     clears it easily and still reads as red / green.
-       #9B2726 on #FBE3DE = 6.32:1     #14603C on #DDF0E3 = 6.38:1 */
-  --bad-bg:     #FBE3DE;
-  --bad-ink:    #9B2726;
-  --bad-line:   #F2C9C2;
-  --ok-bg:      #DDF0E3;
-  --ok-ink:     #14603C;  /* also the «после» label: 6.87:1 on --bg */
-  --ok-line:    #BFE0CC;
-  --radius:     12px;     /* §1: buttons and cards round at 12px */
-  --wrap:       1120px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    /* §2's own dark values. The «cream» role becomes the surface tone: a
-       cream band on a dark page would be a white slab, so the hero and
-       «Цифры» take a lifted dark surface instead and the rhythm survives as
-       a change of value rather than of hue. */
-    --bg:         #141414;  /* neutral black (owner, 07.09.2026: no warm browns) */
-    --cream:      #1B1B1B;  /* the hero / «Цифры» lift, dark-mode equivalent */
-    --surface:    #1F1F1F;
-    --surface-2:  #262626;  /* sand's dark stand-in: trim and panels */
-    --bg-band:    #141414;
-    --ink:        #F2F2F2;  /* 16.9:1 on --bg */
-    --ink-soft:   #B3B3B3;  /* 8.9:1 on --bg */
-    --line:       #333333;
-    --line-soft:  #262626;
-    /* The split matters most here. The BUTTON keeps the light theme's fill —
-       §2 asks for «#D63838 + белый», and white on it is 4.69:1 in any theme.
-       The TEXT red has to lighten: #D63838 as text on #171412 is 3.90:1,
-       #FF6B6B is 6.61:1 and still reads as the same red. */
-    --accent:     #D63838;
-    --accent-ink: #FF6B6B;
-    --accent-deco:#E63939;
-    --on-accent:  #FFFFFF;  /* 4.69:1 on --accent */
-    --band:       #B82E2D;  /* the band keeps its red in both themes */
-    --on-band:    #FDE1B9;  /* 4.80:1 */
-    --on-band-strong: #FFFFFF;
-    --code-bg:    #0F0F0F;
-    --code-ink:   #FFF2E0;
-    /* #FF9A9A on #3A1F1D = 7.42:1, #7DDCA8 on #16301F = 8.58:1, and
-       #7DDCA8 on --bg = 11.16:1 for the «после» label. */
-    --bad-bg:     #3A1F1D;
-    --bad-ink:    #FF9A9A;
-    --bad-line:   #522B28;
-    --ok-bg:      #16301F;
-    --ok-ink:     #7DDCA8;
-    --ok-line:    #24462F;
-  }
-}
-:root[data-theme="dark"] {
-  /* §2's own dark values. The «cream» role becomes the surface tone: a
-     cream band on a dark page would be a white slab, so the hero and
-     «Цифры» take a lifted dark surface instead and the rhythm survives as
-     a change of value rather than of hue. */
-  --bg:         #141414;  /* neutral black (owner, 07.09.2026: no warm browns) */
-  --cream:      #1B1B1B;  /* the hero / «Цифры» lift, dark-mode equivalent */
-  --surface:    #1F1F1F;
-  --surface-2:  #262626;  /* sand's dark stand-in: trim and panels */
-  --bg-band:    #141414;
-  --ink:        #F2F2F2;  /* 16.9:1 on --bg */
-  --ink-soft:   #B3B3B3;  /* 8.9:1 on --bg */
-  --line:       #333333;
-  --line-soft:  #262626;
-  /* The split matters most here. The BUTTON keeps the light theme's fill —
-     §2 asks for «#D63838 + белый», and white on it is 4.69:1 in any theme.
-     The TEXT red has to lighten: #D63838 as text on #171412 is 3.90:1,
-     #FF6B6B is 6.61:1 and still reads as the same red. */
-  --accent:     #D63838;
-  --accent-ink: #FF6B6B;
-  --accent-deco:#E63939;
-  --on-accent:  #FFFFFF;  /* 4.69:1 on --accent */
-  --band:       #B82E2D;  /* the band keeps its red in both themes */
-  --on-band:    #FDE1B9;  /* 4.80:1 */
-  --on-band-strong: #FFFFFF;
   --code-bg:    #0F0F0F;
   --code-ink:   #FFF2E0;
-  /* #FF9A9A on #3A1F1D = 7.42:1, #7DDCA8 on #16301F = 8.58:1, and
-     #7DDCA8 on --bg = 11.16:1 for the «после» label. */
+  /* §2.2 pills. TINTED, never filled: small bold text on saturated red or
+     green cannot reach 4.5:1, but a light ink on a dark tint of the same hue
+     clears it easily and still reads as red / green.
+       #FF9A9A on #3A1F1D = 7.42:1     #7DDCA8 on #16301F = 8.58:1
+     and #7DDCA8 on --bg = 11.16:1 for the «после» label. */
   --bad-bg:     #3A1F1D;
   --bad-ink:    #FF9A9A;
   --bad-line:   #522B28;
   --ok-bg:      #16301F;
   --ok-ink:     #7DDCA8;
   --ok-line:    #24462F;
+  --radius:     12px;     /* §1: buttons and cards round at 12px */
+  --wrap:       1120px;
 }
 
 /* ── Onest, self-hosted ─────────────────────────────────────────────────
@@ -291,34 +237,16 @@ a:hover { color: var(--accent-ink); }
 :root { --head-overlay: 81px; }
 @media (max-width: 560px) { :root { --head-overlay: 72px; } }
 
-/* The capsule's own colours. They must NOT come from --ink / --ink-soft: in
-   the light theme those are dark brown, and dark brown on a #1E1E1E pill is
-   unreadable. Inside the capsule the palette is inverted in both themes —
-   dark surface, cream text — so it gets tokens of its own. */
+/* The capsule's own colours. They must NOT come from --ink / --ink-soft:
+   those are the PAGE's roles, and the capsule is a lifted surface with its
+   own inverted relationship between ground and ink, so it gets tokens of its
+   own. Dark-only since 14.09.2026: these are the former dark-theme values —
+   §2's dark surface, so the capsule reads as lifted off the black page
+   rather than as a second, blacker hole in it. */
 :root {
-  --capsule-bg:       #1E1E1E;  /* §2's --ink as a SURFACE */
-  --capsule-ink:      #FFF2E0;  /* §2's cream: 15.11:1 on #1E1E1E */
-  --capsule-ink-soft: #CFCFCF;  /* 10.5:1 on #1E1E1E — the resting nav ink */
-  --capsule-line:     #3A3A3A;
-  --capsule-hover:    #2C2C2C;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    /* §2's dark surface, so the capsule reads as lifted off the warm black
-       page rather than as a second, blacker hole in it. */
-    --capsule-bg:       #1F1F1F;
-    --capsule-ink:      #FFF2E0;  /* 14.9:1 on #1F1F1F */
-    --capsule-ink-soft: #CFCFCF;
-    --capsule-line:     #3A3A3A;
-    --capsule-hover:    #2F2925;
-  }
-}
-:root[data-theme="dark"] {
-  /* §2's dark surface, so the capsule reads as lifted off the warm black
-     page rather than as a second, blacker hole in it. */
-  --capsule-bg:       #1F1F1F;
-  --capsule-ink:      #FFF2E0;  /* 14.9:1 on #1F1F1F */
-  --capsule-ink-soft: #CFCFCF;
+  --capsule-bg:       #1F1F1F;  /* §2's dark surface */
+  --capsule-ink:      #FFF2E0;  /* §2's cream: 14.9:1 on #1F1F1F */
+  --capsule-ink-soft: #CFCFCF;  /* 10.4:1 on #1F1F1F — the resting nav ink */
   --capsule-line:     #3A3A3A;
   --capsule-hover:    #2F2925;
 }
@@ -340,12 +268,10 @@ a:hover { color: var(--accent-ink); }
   border-radius: 16px;
   background: var(--capsule-bg);
   color: var(--capsule-ink);
-  box-shadow: 0 10px 30px rgba(30, 22, 12, .18), 0 2px 6px rgba(30, 22, 12, .10);
+  /* Dark-only since 14.09.2026: the deeper, blacker shadow that used to be
+     the dark twin. A warm low-alpha shadow is invisible on a black page. */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .capsule { box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30); }
-}
-:root[data-theme="dark"] .capsule { box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30); }
 
 /* Left: the disclosure button. */
 .capsule-menu {
@@ -412,12 +338,10 @@ a:hover { color: var(--accent-ink); }
   border-radius: 16px;
   background: var(--capsule-bg);
   color: var(--capsule-ink);
-  box-shadow: 0 14px 40px rgba(30, 22, 12, .20), 0 2px 6px rgba(30, 22, 12, .10);
+  /* Dark-only since 14.09.2026: the former dark twin, for the same reason as
+     the capsule's — a warm shadow does not read against black. */
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .menu-panel { box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30); }
-}
-:root[data-theme="dark"] .menu-panel { box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30); }
 
 /* All seven section links. They wrap into as many rows as they need — the
    panel is not competing for the capsule's single row, which is the entire
@@ -460,6 +384,12 @@ a:hover { color: var(--accent-ink); }
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  /* The panel's bottom-row spacer. It briefly lived on .theme-switch, which
+     sat to the right of the languages; with the theme switch gone (owner,
+     14.09.2026 — the site is dark-only) the languages are the leftmost thing
+     in the row again and carry it back, so «Кабинет» still sits at the far
+     right instead of sliding up against them. */
+  margin-right: auto;
 }
 .lang-btn {
   appearance: none;
@@ -487,65 +417,6 @@ a:hover { color: var(--accent-ink); }
   text-underline-offset: 3px;
 }
 .lang-btn:not([aria-pressed="true"]):hover {
-  color: var(--capsule-ink);
-  background: var(--capsule-hover);
-}
-
-/* ── the theme switch ───────────────────────────────────────────────────
-   Owner, 07.09.2026: «Тема» beside the languages. Three real <button>s in a
-   role="group", because unlike a language this is not a URL — it is a
-   preference stored in localStorage and applied as data-theme on <html>.
-   The group is styled as a segmented control rather than as three bare
-   letters: the labels are words, not three-letter codes, so they need the
-   plate to read as one control instead of three loose links. */
-.theme-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  /* Takes over the spacer the language switch used to carry: languages and
-     theme sit together on the left, «Кабинет» stays at the far right. */
-  margin-right: auto;
-}
-.theme-switch__label {
-  font-size: .85rem;
-  font-weight: 600;
-  color: var(--capsule-ink-soft);
-  white-space: nowrap;
-}
-.theme-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--capsule-line);
-  border-radius: 10px;
-}
-.theme-btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--capsule-ink-soft);
-  font: inherit;
-  font-size: .8rem;
-  font-weight: 600;
-  /* Same 40px touch floor the languages and the nav links keep, so the panel
-     stays usable with a thumb at 375. */
-  min-height: 40px;
-  padding: 0 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-/* The chosen theme is stated the same way the current language is — by ink
-   and weight on the panel's own hover surface. §2 spends its red on the one
-   call to action, so this control gets none of it. */
-.theme-btn[aria-pressed="true"] {
-  color: var(--capsule-ink);
-  background: var(--capsule-hover);
-  font-weight: 700;
-}
-.theme-btn:not([aria-pressed="true"]):hover {
   color: var(--capsule-ink);
   background: var(--capsule-hover);
 }
@@ -932,17 +803,14 @@ section[id],
 .art-ghost   { fill: none; stroke: var(--line); stroke-width: 1.5; }
 .art-pill--a { fill: var(--accent); opacity: .22; }
 .art-pill--b { fill: var(--ink-soft); opacity: .22; }
-.art-ok-disc { fill: #17a15e; opacity: .16; }
-.art-ok-tick { stroke: #17a15e; }
+/* Dark-only since 14.09.2026: the lighter green that used to be the dark
+   twin is the only green. #17a15e was tuned to read on a white page and is
+   too dark against #141414. */
+.art-ok-disc { fill: #4ade9a; opacity: .18; }
+.art-ok-tick { stroke: #4ade9a; }
 .art-track   { fill: var(--line); }
 .art-track--on { fill: var(--accent); }
 .art-knob    { fill: var(--bg); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .art-ok-disc { fill: #4ade9a; opacity: .18; }
-  :root:not([data-theme="light"]) .art-ok-tick { stroke: #4ade9a; }
-}
-:root[data-theme="dark"] .art-ok-disc { fill: #4ade9a; opacity: .18; }
-:root[data-theme="dark"] .art-ok-tick { stroke: #4ade9a; }
 
 /* ── cards ──────────────────────────────────────────────────────────── */
 
@@ -1444,18 +1312,14 @@ img { max-width: 100%; height: auto; }
    aria-live announces the first message it receives. */
 .check__state { margin: 0; font-size: .9rem; font-weight: 600; }
 .check__state:empty { display: none; }
-.check__state--ok { color: #17603a; }
-.check__state--warn { color: #8a4b00; }
+/* Dark-only since 14.09.2026: the lifted green and amber that used to be the
+   dark twins are the only values — #17603a and #8a4b00 were picked to carry
+   text on a white page and fail AA against the dark ground. */
+.check__state--ok { color: #6ee7a8; }
+.check__state--warn { color: #f0b46b; }
 .check__state--wait { color: var(--ink-soft); }
 
 .check__note { margin: 10px 0 0; font-size: .84rem; color: var(--ink-soft); }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .check__state--ok { color: #6ee7a8; }
-  :root:not([data-theme="light"]) .check__state--warn { color: #f0b46b; }
-}
-:root[data-theme="dark"] .check__state--ok { color: #6ee7a8; }
-:root[data-theme="dark"] .check__state--warn { color: #f0b46b; }
 
 /* ── hero tiles ─────────────────────────────────────────────────────── */
 
@@ -1519,15 +1383,18 @@ img { max-width: 100%; height: auto; }
        else's website and a page that followed the reader's dark mode would
        stop looking like a screenshot of somewhere else;
      · the CHROME — the toolbar above it and the status strip below it, which
-       belong to OUR interface, not to the depicted site. §1.2 puts those on
-       sand in the light theme and on a dark surface in the dark one.
-   The chrome colours therefore come from three window-scoped custom
-   properties, redeclared once for dark mode, instead of the hardcoded
-   blue-greys that used to sit here and matched neither palette. */
+       belong to OUR interface, not to the depicted site, and therefore go
+       dark with the rest of the page (§1.2).
+   The chrome colours come from window-scoped custom properties rather than
+   from the hardcoded blue-greys that used to sit here and matched neither
+   palette. Since 14.09.2026 those properties are declared once, with the
+   dark values, because the site has one theme. */
 .demo-win {
   display: flex;
   flex-direction: column;
-  /* the window's own page surface — white in both themes */
+  /* The window's own page surface. Hardcoded white ON PURPOSE and NOT from a
+     token: this is the visitor's site, not ours, and it does not turn black
+     because our landing is dark. */
   background: #FFFFFF;
   /* .demo-win is a .shot-frame but was never in the `.hero-shot, .shot`
      selector that DECLARES the --shot-* group, so .shot-frame's
@@ -1535,39 +1402,19 @@ img { max-width: 100%; height: auto; }
      nothing here — which is precisely why the window had no surface. The
      group is declared for the window too; the title-bar dots take the same
      sand chrome as the toolbar directly beneath them. */
+  /* The PAPER and its skeleton stay light: this window depicts a VISITOR's
+     site, not ours, and a client's page does not turn black because our
+     landing is dark. Only the CHROME — the dots strip, the toolbar, the
+     status strip and the form fields, all of which are our UI wrapped around
+     that page — takes the dark values, which since 14.09.2026 (owner: the
+     site is dark-only) are the former dark twins and the only ones. */
   --shot-paper:      #FFFFFF;
   --shot-paper-line: #E6D9C4;
   --shot-skeleton:   #EDE2D2;
   --shot-skeleton-2: #DFD1BC;
-  --shot-chrome:     #F5E7D3;
-  --shot-chrome-line:#E2D2B8;
-  --win-chrome:      #F5E7D3;  /* sand toolbar / status strip */
-  --win-chrome-line: #E2D2B8;
-  --win-ink:         #1E1E1E;  /* 13.70:1 on the sand */
-  --win-ink-soft:    #5A5A5A;  /* neutral grey, 5.9:1 on the sand */
-  --win-field:       #FFFFFF;
-  --win-field-line:  #C6AF8D;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .demo-win {
-    /* The dots strip is chrome, so it follows the theme with the toolbar;
-       the paper stays white, because the page it depicts is not ours. */
-    --shot-chrome:     #262626;
-    --shot-chrome-line:#3A3A3A;
-    --win-chrome:      #262626;
-    --win-chrome-line: #3A3A3A;
-    --win-ink:         #F2F2F2;  /* 13.6:1 on #262626 */
-    --win-ink-soft:    #B3B3B3;  /* 7.1:1 on #262626 */
-    --win-field:       #141414;
-    --win-field-line:  #4A423B;
-  }
-}
-:root[data-theme="dark"] .demo-win {
-  /* The dots strip is chrome, so it follows the theme with the toolbar;
-     the paper stays white, because the page it depicts is not ours. */
   --shot-chrome:     #262626;
   --shot-chrome-line:#3A3A3A;
-  --win-chrome:      #262626;
+  --win-chrome:      #262626;  /* dark toolbar / status strip */
   --win-chrome-line: #3A3A3A;
   --win-ink:         #F2F2F2;  /* 13.6:1 on #262626 */
   --win-ink-soft:    #B3B3B3;  /* 7.1:1 on #262626 */
@@ -2496,19 +2343,18 @@ section { padding: 96px 0; }
    rather than four white slabs with rounded corners. */
 #who { background: var(--surface-2); }
 
-/* #dev is the page's one INVERTED block, and inversion is the thing a token
-   cannot do for itself. `background: var(--ink)` is a dark card in the light
-   theme and, because --ink is the light theme's opposite, a WHITE slab in the
-   dark one — the same failure the palette's own note describes for a cream
-   band on a dark page. So the two colours are named through a pair of
-   properties instead, and the dark theme redefines them to a lifted dark
-   surface: the block stays «the darkest thing on the page» in both themes,
-   which is what its role is, rather than staying one literal colour.
-   #1E1E1E carries #FFF2E0 at 15.11:1 and #262626 carries #F2F2F2 at 13.2:1 —
-   both well past AA at body size. */
+/* #dev is the page's one block set apart by VALUE rather than by hue, and the
+   naive way to write that — `background: var(--ink)` — is exactly wrong here:
+   --ink on a dark page is the light TEXT colour, so the block would flip to a
+   white slab, the same failure the palette's note describes for a cream band.
+   So the two colours are named through a pair of properties of their own.
+   Dark-only since 14.09.2026 (owner's decision): the values are the former
+   dark twins — the lifted panel tone the palette already defines, inked with
+   the page's own light text, so the block reads as a RAISED card rather than
+   as a hole. #262626 carries #F2F2F2 at 13.2:1, well past AA at body size. */
 #dev {
-  --dev-bg: var(--ink);
-  --dev-ink: var(--bg);
+  --dev-bg: var(--surface-2);
+  --dev-ink: var(--ink);
   background: var(--dev-bg);
   color: var(--dev-ink);
 }
@@ -2517,30 +2363,14 @@ section { padding: 96px 0; }
 #dev .dev-facts { color: var(--dev-ink); opacity: .8; }
 #dev a { color: var(--dev-ink); }
 #dev a:hover { color: var(--dev-ink); opacity: .75; }
-/* The code block sits INSIDE the inverted card, and --code-bg is a near-black
-   in both themes, so on the dark theme's lifted surface it needs an edge to
-   stay a separate object rather than a hole. */
+/* The code block sits INSIDE that card, and --code-bg is a near-black, so on
+   the card's lifted surface it needs an edge to stay a separate object
+   rather than a hole. */
 #dev .code-block { border: 1px solid rgba(255, 255, 255, .12); }
 
-/* The #who cards sit on sand now, so a --bg fill would be a white card on
-   sand — right — but their beige rule reads as noise against it. */
+/* The #who cards take the page ground and its soft rule, so they read as
+   separate objects on the section's lifted surface without a loud edge. */
 #who .card { background: var(--bg); border-color: var(--line-soft); }
-
-/* The dark twin of the inversion above, written in both of the file's dark
-   homes — the system one and the forced one — with identical declarations, as
-   every dark rule in this stylesheet must be. --surface-2 is the lifted dark
-   panel tone the palette already defines, and --ink is that theme's light
-   text: the block reads as a raised dark card instead of flipping white. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) #dev {
-    --dev-bg: var(--surface-2);
-    --dev-ink: var(--ink);
-  }
-}
-:root[data-theme="dark"] #dev {
-  --dev-bg: var(--surface-2);
-  --dev-ink: var(--ink);
-}
 
 @media (max-width: 760px) {
   #check,

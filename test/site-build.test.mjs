@@ -24,7 +24,7 @@ import {
   renderLawPage, renderLawIndex, bodyWords, faqJsonLd,
   VERSION, BUILD_DATE, updatedText,
   MARQUEE_CARDS, renderMarquee, readClientLocales,
-  VERSIONED_ASSETS, assetHash, THEME_KEY, THEME_BOOT
+  VERSIONED_ASSETS, assetHash, THEME_META
 } from '../tools/build-site.mjs';
 
 /* ------------------------------------------------------------ the outputs */
@@ -561,20 +561,21 @@ test('app.js no longer switches language at runtime', () => {
   assert.doesNotMatch(app, /navigator\.language/,
     'app.js still guesses the language from the browser');
 
-  /* app.js may touch localStorage — the site THEME is stored there (owner,
-     07.09.2026) — but the only key it is allowed to touch is that one. A
-     language preference in storage is the exact bug this test exists for: it
+  /* app.js must not touch localStorage AT ALL. It used to be allowed exactly
+     one key — the site theme (owner, 07.09.2026) — but the site is dark-only
+     since 14.09.2026 and the «Тема» switch that wrote it is gone, so the
+     permitted set is now empty and the guard is the stronger form of the same
+     intent: nothing about this page is a stored preference.
+
+     A language preference in storage is the exact bug this test exists for: it
      would make /ru render English for a returning visitor, because the URL
      would say Russian and the stored key would say otherwise. */
   const keys = [...app.matchAll(/localStorage\.(?:get|set|remove)Item\(\s*([A-Za-z_$][\w$]*|'[^']*'|"[^"]*")/g)]
     .map((m) => m[1]);
-  assert.ok(keys.length > 0, 'the localStorage guard below matched nothing — has the API changed?');
-  for (const k of keys) {
-    assert.equal(k, 'THEME_KEY',
-      `app.js reads or writes localStorage with ${k} — only the site theme may be stored`);
-  }
-  assert.match(app, /var THEME_KEY = 'ck-site-theme'/,
-    'app.js does not use the ck-site-theme key the <head> boot script writes');
+  assert.deepEqual(keys, [],
+    `app.js reads or writes localStorage with ${keys.join(', ')} — it may store nothing`);
+  assert.doesNotMatch(app, /ck-site-theme/,
+    'app.js still carries the site-theme storage key — the switch it served is gone');
 });
 
 test("the demo banner runs language: 'page'", () => {
@@ -1170,23 +1171,31 @@ test('the palette is the V1.14.1 one, and on-accent text reaches AA', () => {
 
   /* V1.14.1 §2 keeps every colour of §1 and changes only the DOSAGE, so the
      brand hexes are still asserted here — what moved is which token holds
-     which of them. The page background is now white and the cream has its own
-     token, because cream is a two-section accent rather than the ground. */
+     which of them.
+
+     Dark-only since 14.09.2026 (owner's decision): the light values that used
+     to sit on :root are gone and the former dark twins are the only palette,
+     so the tokens asserted are the dark ones. The RED is the part that did
+     NOT move — §2's three red roles are theme-independent and survive the
+     collapse unchanged, which is exactly why they are still pinned here. */
   for (const [token, value] of [
-    ['--bg', '#FFFFFF'], ['--cream', '#FFF2E0'], ['--surface-2', '#F5E7D3'],
-    ['--ink', '#1E1E1E'],
-    ['--accent', '#D63838'], ['--on-accent', '#FFFFFF'],
+    ['--bg', '#141414'], ['--cream', '#1B1B1B'], ['--surface', '#1F1F1F'],
+    ['--surface-2', '#262626'],
+    ['--ink', '#F2F2F2'], ['--ink-soft', '#B3B3B3'], ['--line', '#333333'],
+    ['--accent', '#D63838'], ['--accent-ink', '#FF6B6B'], ['--on-accent', '#FFFFFF'],
     ['--band', '#B82E2D'], ['--on-band', '#FDE1B9'],
     ['--accent-deco', '#E63939']
   ]) {
     assert.ok(new RegExp(`${token}:\\s*${value}`, 'i').test(css),
       `styles.css does not set ${token} to ${value}`);
   }
-  // §2's own dark-theme values.
-  assert.match(css, /--bg:\s*#141414/i, 'the dark theme is not the neutral black (owner, 07.09.2026)');
-  assert.match(css, /--surface:\s*#1F1F1F/i, 'the dark surface is not the neutral one');
-  assert.match(css, /--ink:\s*#F2F2F2/i, 'the dark ink is not the neutral one');
-  assert.match(css, /--line:\s*#333333/i, 'the dark rule colour is not the neutral one');
+  /* And the light ground is genuinely gone rather than merely overridden: a
+     stray `--bg: #FFFFFF` on some later selector would repaint the page white
+     with no media query left to stop it. */
+  assert.doesNotMatch(css, /--bg:\s*#FFFFFF/i,
+    'styles.css still sets --bg to the old white page ground');
+  assert.doesNotMatch(css, /--ink:\s*#1E1E1E/i,
+    'styles.css still sets --ink to the old light-theme near-black');
 
   const lum = (hex) => {
     const c = hex.replace('#', '');
@@ -1207,27 +1216,32 @@ test('the palette is the V1.14.1 one, and on-accent text reaches AA', () => {
     'white on --accent must clear AA for normal-size button text');
   assert.ok(ratio('#FDE1B9', '#B82E2D') >= 4.5,
     'peach on --band must clear AA for normal-size body text');
-  assert.ok(ratio('#1E1E1E', '#FFF2E0') >= 4.5);
-  assert.ok(ratio('#5A5A5A', '#FFF2E0') >= 4.5, '--ink-soft must clear AA on the cream');
-  // The white page and the sand trim the V1.14.1 palette leans on.
-  assert.ok(ratio('#1E1E1E', '#FFFFFF') >= 4.5, '--ink must clear AA on the white page');
-  assert.ok(ratio('#5A5A5A', '#FFFFFF') >= 4.5, '--ink-soft must clear AA on white');
-  assert.ok(ratio('#1E1E1E', '#F5E7D3') >= 4.5, 'the sand chip needs dark text at AA');
-  assert.ok(ratio('#B82E2D', '#FFFFFF') >= 4.5, 'the text red must clear AA on white');
 
-  /* Dark theme. The point of the split: the FILL red is the same #D63838 in
-     both themes and carries white; the TEXT red lightens, because #D63838 as
-     text on #141414 is 3.9:1 and would fail. A future edit that "simplifies"
-     the two into one token breaks one of these two assertions. */
-  assert.ok(ratio('#FF6B6B', '#141414') >= 4.5, 'the dark text red must clear AA');
-  assert.ok(ratio('#FFFFFF', '#D63838') >= 4.5, 'the dark button keeps the light fill pair');
+  /* The page's own ink on each of its three grounds — the black page, the
+     hero lift, and the raised panel tone that carries #dev and the demo
+     window's chrome. These used to be the "dark theme" half of this test;
+     since 14.09.2026 they are simply the palette. */
+  assert.ok(ratio('#F2F2F2', '#141414') >= 4.5, '--ink must clear AA on the page');
+  assert.ok(ratio('#B3B3B3', '#141414') >= 4.5, '--ink-soft must clear AA on the page');
+  assert.ok(ratio('#F2F2F2', '#1B1B1B') >= 4.5, '--ink must clear AA on the hero lift');
+  assert.ok(ratio('#B3B3B3', '#1B1B1B') >= 4.5, '--ink-soft must clear AA on the hero lift');
+  assert.ok(ratio('#F2F2F2', '#262626') >= 4.5, '--ink must clear AA on the raised panel');
+  assert.ok(ratio('#B3B3B3', '#262626') >= 4.5, '--ink-soft must clear AA on the raised panel');
+  // The capsule is inverted trim with tokens of its own; its cream must hold.
+  assert.ok(ratio('#FFF2E0', '#1F1F1F') >= 4.5, 'the capsule cream must clear AA on its pill');
+  assert.ok(ratio('#CFCFCF', '#1F1F1F') >= 4.5, 'the capsule soft ink must clear AA');
+
+  /* The fill / text split is the one piece of two-palette thinking that had to
+     survive the collapse: the FILL red carries white, and the TEXT red cannot
+     be that same value, because #D63838 as text on #141414 is 3.9:1. A future
+     edit that "simplifies" the two into one token breaks one of these. */
+  assert.ok(ratio('#FF6B6B', '#141414') >= 4.5, 'the text red must clear AA on the page');
   assert.ok(ratio('#D63838', '#141414') < 4.5,
-    'if the fill red ever clears AA as text on the dark ground, the split can be simplified');
-  assert.ok(ratio('#F2F2F2', '#141414') >= 4.5, 'the dark ink must clear AA');
-  assert.ok(ratio('#B3B3B3', '#141414') >= 4.5, 'the dark soft ink must clear AA');
+    'if the fill red ever clears AA as text on the page ground, the split can be simplified');
   // The pills are tinted rather than filled, for exactly this reason.
-  assert.ok(ratio('#9B2726', '#FBE3DE') >= 4.5, 'the «до» pill must clear AA');
-  assert.ok(ratio('#14603C', '#DDF0E3') >= 4.5, 'the «после» pill must clear AA');
+  assert.ok(ratio('#FF9A9A', '#3A1F1D') >= 4.5, 'the «до» pill must clear AA');
+  assert.ok(ratio('#7DDCA8', '#16301F') >= 4.5, 'the «после» pill must clear AA');
+  assert.ok(ratio('#7DDCA8', '#141414') >= 4.5, 'the «после» label must clear AA on the page');
 
   // And the trap itself, asserted so the note in styles.css cannot rot.
   assert.ok(ratio('#FFFFFF', '#E63939') < 4.5,
@@ -1630,7 +1644,7 @@ test('the panel is closed by JS only — no `hidden` in the built HTML', () => {
    page's --ink / --ink-soft: in the light theme those are dark brown, and dark
    brown on #1E1E1E is unreadable. This guards the tokens that keep it legible
    — the single most likely regression when someone next tidies the CSS. */
-test('the capsule inks itself from its own tokens, in both themes', () => {
+test('the capsule inks itself from its own tokens', () => {
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
 
   const capsule = css.match(/^\.capsule \{[\s\S]*?^\}/m)[0];
@@ -1642,11 +1656,15 @@ test('the capsule inks itself from its own tokens, in both themes', () => {
   assert.match(capsule, /flex-wrap:\s*nowrap/,
     'the capsule may wrap onto a second row — §1 asks for one row');
 
-  // Light values, then the dark override, both present.
-  assert.match(css, /--capsule-bg:\s*#1E1E1E/, 'the light capsule is not §2\'s #1E1E1E');
-  assert.match(css, /--capsule-ink:\s*#FFF2E0/, 'the capsule text is not §2\'s cream');
+  /* One value each, on one selector. The capsule used to carry a light pair
+     and a dark override; dark-only since 14.09.2026, it keeps the dark one —
+     §2's lifted surface, so the pill reads as raised off the black page
+     rather than as a second, blacker hole in it. */
   assert.match(css, /--capsule-bg:\s*#1F1F1F/,
-    'the dark theme has no #1F1F1F capsule — it would stay light-theme black');
+    'the capsule is not on §2\'s lifted dark surface');
+  assert.match(css, /--capsule-ink:\s*#FFF2E0/, 'the capsule text is not §2\'s cream');
+  assert.doesNotMatch(css, /--capsule-bg:\s*#1E1E1E/,
+    'the old light-theme capsule black is back — there is no light theme to need it');
 
   // Nothing inside the capsule or the panel may borrow the PAGE's ink.
   for (const sel of ['.capsule-menu', '.capsule-brand', '.head-nav a', '.head-link']) {
@@ -1756,7 +1774,7 @@ test('§2: the elements that stopped being red have not become red again', () =>
 
 /* ------------------------------------------------ §1.2 the demo window */
 
-test('§1.2: the demo window is a white page with sand chrome in both themes', () => {
+test('§1.2: the demo window keeps a white page inside dark chrome', () => {
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
 
   /* Anchored to the top-level rule: a later `.demo-win { height: auto; }`
@@ -1770,8 +1788,18 @@ test('§1.2: the demo window is a white page with sand chrome in both themes', (
     '.demo-win does not declare the paper the frame paints itself with');
   assert.match(win, /background:\s*#FFFFFF/i,
     'the demo window has no white page surface of its own');
-  assert.match(win, /--win-chrome:\s*#F5E7D3/i,
-    '§1.2: the toolbar and status strip sit on sand in the light theme');
+  /* The chrome. Dark-only since 14.09.2026: the window used to declare sand
+     chrome here and darken it in the two dark homes; now the dark value is
+     declared once, in the same block as the paper. The SPLIT is what this
+     test is really about and it survives intact — the chrome is OURS and goes
+     dark with the site, while the paper depicts a VISITOR's page and must
+     stay white, which is the half-switched look the owner asked to avoid,
+     read the other way round. */
+  assert.match(win, /--win-chrome:\s*#262626/i,
+    '§1.2: the toolbar and status strip sit on the dark chrome');
+  assert.match(win, /--win-ink:\s*#F2F2F2/i, 'the chrome ink does not suit a dark toolbar');
+  assert.doesNotMatch(win, /--win-chrome:\s*#F5E7D3/i,
+    'the old sand chrome is back — there is no light theme to justify it');
 
   // The toolbar and the strip both take that chrome — §1.2 names both.
   assert.match(css, /\.demo-tools \{[\s\S]*?background:\s*var\(--win-chrome\)/,
@@ -1779,32 +1807,21 @@ test('§1.2: the demo window is a white page with sand chrome in both themes', (
   assert.match(css, /\.demo-foot \{[\s\S]*?background:\s*var\(--win-chrome\)/,
     'the demo status strip is not on the window chrome');
 
-  // Dark theme: the chrome darkens, the page does NOT — it depicts a client's
-  // site, not ours, so it stays white.
-  /* Two homes since the manual theme switch (owner, 07.09.2026): the system
-     one behind prefers-color-scheme, and the forced one under
-     :root[data-theme="dark"]. Both are checked, because the demo window
-     following only ONE of them is exactly the half-switched look the owner
-     asked to avoid — the page would go dark and the window's chrome stay
-     sand. The pairing test above already proves the two carry identical
-     declarations; this asserts the values themselves. */
-  const darkWins = [
-    css.match(/@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) \.demo-win \{[\s\S]*?\n  \}/),
-    css.match(/\n:root\[data-theme="dark"\] \.demo-win \{[\s\S]*?\n\}/)
-  ];
-  assert.ok(darkWins[0], 'the demo window has no dark-theme chrome for the system theme');
-  assert.ok(darkWins[1], 'the demo window does not follow a forced dark site theme');
-  const darkWin = darkWins[0];
-  for (const w of darkWins) {
-    assert.match(w[0], /--win-chrome:\s*#262626/i,
-      '§1.2: in the dark theme the chrome is a dark surface');
-    assert.ok(!/--shot-paper/.test(w[0]),
-      'the depicted page must stay white in the dark theme');
+  /* The window declares its paper once, white, and no later rule re-declares
+     it FOR THE WINDOW. (The `.shot` / `.hero-shot` replica cards carry their
+     own --shot-paper, light and dark both: those depict clients' sites and
+     always did, which is why they were never part of the theme mechanism.) */
+  assert.match(win, /--shot-paper:\s*#FFFFFF/i,
+    'the demo window no longer declares a white paper');
+  // Every .demo-win block in the file, and none of them may restate the paper
+  // as anything but white — the top-level one above is the only declaration.
+  for (const m of css.matchAll(/\.demo-win\b[^{]*\{[^}]*\}/g)) {
+    const paper = m[0].match(/--shot-paper:\s*(#[0-9a-f]{3,8})/i);
+    if (paper) {
+      assert.match(paper[1], /^#FFFFFF$/i,
+        `a .demo-win rule repaints the depicted page ${paper[1]} — it must stay white`);
+    }
   }
-  assert.match(darkWin[0], /--win-chrome:\s*#262626/i,
-    '§1.2: in the dark theme the chrome is a dark surface');
-  assert.ok(!/--shot-paper/.test(darkWin[0]),
-    'the depicted page must stay white in the dark theme');
 
   // And no blue-grey anywhere: the old hardcoded #f7f9fc / #55607a / #161d2b
   // matched neither palette and were the "grey blocks" the owner saw.
@@ -1834,173 +1851,74 @@ test('§1.3: the chip is short and only refuses to wrap from 560 up', () => {
      styles.css whether or not the hero is still the thing using it. */
 });
 
-/* ────────────────────────────── the manual theme switch (owner, 07.09.2026) */
+/* ──────────────────────────────────── dark only (owner, 14.09.2026) */
 
-/* Every dark declaration now lives in TWO places: behind the system's
-   prefers-color-scheme and under a forced :root[data-theme="dark"]. That is
-   the only way one stylesheet can serve three states — and it is also two
-   copies of the same values, which drift the moment someone tunes a colour in
-   one home and forgets the other. Then «Тёмная» and a dark system preference
-   render the same page differently, which is the worst kind of bug: it looks
-   right on the machine of whoever made the change.
+/* The site used to ship two palettes and a «Тема» switch in the menu panel
+   that chose between them, which cost this file three tests: one proving the
+   two dark homes (the prefers-color-scheme one and the forced
+   :root[data-theme="dark"] one) had not drifted apart, one proving the three
+   buttons were present in every language, and one proving the stored choice
+   reached <html> before the stylesheet so the page never flashed.
 
-   This parses styles.css and asserts the two homes are declaration-identical,
-   keyed by the selector INSIDE the block rather than by block order, so
-   reordering the file is free and changing one half of a pair is not. */
-test('every forced-dark block matches its prefers-color-scheme twin', () => {
+   The owner removed the switch and kept the dark look, so all three are gone
+   with the thing they guarded — there is no second palette to drift from, no
+   control to render and no stored choice to apply before paint. What replaces
+   them is the guard below: the mechanism must not come BACK by halves. A
+   single stray `@media (prefers-color-scheme: light)` or a `data-theme` hook
+   re-added "just for this one block" is exactly how a site that is supposed
+   to have one look grows a second one nobody tests. */
+test('the site is dark-only: no theme mechanism survives anywhere', () => {
+  /* styles.css names neither the media feature nor the attribute — not in a
+     rule and not in a comment, so the scan needs no parser to be honest.
+     Scoped to the SITE's stylesheet: site/vendor/* is the banner's own code,
+     and the banner keeps its themes (it renders on clients' sites). */
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  assert.doesNotMatch(css, /prefers-color-scheme/,
+    'styles.css reacts to the system theme again — the site is dark-only');
+  assert.doesNotMatch(css, /data-theme/,
+    'styles.css carries a data-theme hook again — the switch that set it is gone');
 
-  const SYS_PREFIX = ':root:not([data-theme="light"])';
-  const DARK_PREFIX = ':root[data-theme="dark"]';
+  /* …and it states the one theme it has, so the browser paints its own form
+     controls and scrollbars to match instead of flashing a light set. */
+  assert.match(css, /color-scheme:\s*dark/,
+    'styles.css does not declare color-scheme: dark on :root');
 
-  /* Comments carry the AA arithmetic and wrap differently at the two indents,
-     so they are stripped before comparing; whitespace goes the same way. A
-     declaration set is compared as a SET, because the order of custom
-     properties inside a block has no meaning. */
-  const declarations = (body) => {
-    const clean = body.replace(/\/\*[\s\S]*?\*\//g, '');
-    return clean.split(';')
-      .map((d) => d.replace(/\s+/g, ' ').trim())
-      .filter(Boolean)
-      .sort();
-  };
-
-  /* Brace-matched, so a nested block inside a rule could not truncate it. */
-  const blockAt = (src, open) => {
-    let depth = 0;
-    for (let i = open; i < src.length; i++) {
-      if (src[i] === '{') depth++;
-      else if (src[i] === '}') { depth--; if (depth === 0) return src.slice(open + 1, i); }
-    }
-    throw new Error('unbalanced braces in styles.css');
-  };
-
-  /* The forced home: every top-level :root[data-theme="dark"] rule.
-
-     A selector may legitimately appear more than once — the page palette and
-     the capsule tokens are two separate `:root` blocks, written next to the
-     light values they override rather than merged into one far-away block.
-     So the declarations for a selector ACCUMULATE, and the comparison below
-     is against everything the other home says about that same selector. */
-  const forced = new Map();
-  for (const m of css.matchAll(/^:root\[data-theme="dark"\]([^{]*)\{/gm)) {
-    const sel = m[1].trim();          // '' for the token blocks, '.demo-win' etc.
-    const body = blockAt(css, m.index + m[0].length - 1);
-    forced.set(sel, (forced.get(sel) || []).concat(declarations(body)));
-  }
-  for (const [sel, d] of forced) forced.set(sel, d.sort());
-  assert.ok(forced.size > 0,
-    'styles.css has no :root[data-theme="dark"] blocks — the manual dark theme cannot work');
-
-  /* The system home: the same rules inside prefers-color-scheme blocks.
-
-     Every occurrence of the feature in the file has to be one of these plain
-     blocks. A compound query — `@media (prefers-color-scheme: dark) and
-     (min-width: 560px)` — would be invisible to the matcher below AND
-     ungated on :root:not([data-theme="light"]), so it would leak dark styling
-     onto a visitor who explicitly chose «Светлая». Counting first is what
-     makes this guard exhaustive rather than merely indicative. */
-  const blockCount = [...css.matchAll(/@media \(prefers-color-scheme: dark\) \{/g)].length;
-  const featureCount = [...css.matchAll(/prefers-color-scheme/g)].length;
-  assert.equal(featureCount, blockCount,
-    'styles.css mentions prefers-color-scheme in a form this guard cannot read — ' +
-    'every dark block must be exactly "@media (prefers-color-scheme: dark) {", ' +
-    'or its declarations escape the light/dark pairing check');
-
-  const system = new Map();
-  for (const m of css.matchAll(/@media \(prefers-color-scheme: dark\) \{/g)) {
-    const inner = blockAt(css, m.index + m[0].length - 1);
-    for (const r of inner.matchAll(/(^|\n)\s*([^{}\n][^{}]*)\{/g)) {
-      const sel = r[2].trim();
-      assert.ok(sel.startsWith(SYS_PREFIX),
-        `styles.css has a dark rule for "${sel}" that is not gated on ` +
-        `${SYS_PREFIX} — a visitor who chose «Светлая» would still get it`);
-      const key = sel.slice(SYS_PREFIX.length).trim();
-      const body = blockAt(inner, r.index + r[0].length - 1);
-      system.set(key, (system.get(key) || []).concat(declarations(body)));
-    }
-  }
-  for (const [sel, d] of system) system.set(sel, d.sort());
-
-  // Same set of selectors on both sides…
-  assert.deepEqual([...forced.keys()].sort(), [...system.keys()].sort(),
-    'the forced and system dark themes cover different selectors — one of them ' +
-    'has a rule the other is missing, so the two look different');
-
-  // …and the same declarations under each.
-  for (const [sel, decls] of forced) {
-    assert.deepEqual(decls, system.get(sel),
-      `the dark declarations for "${sel || ':root'}" have drifted: ` +
-      `${DARK_PREFIX} and the prefers-color-scheme twin must stay identical`);
-  }
-});
-
-/* The control itself: three buttons, aria-pressed, in every language, on the
-   home pages AND the law pages (which slice the same header). */
-test('the menu panel carries the three-state theme switch in every language', () => {
-  for (const f of [...outputs(), ...lawOutputs()]) {
-    const html = readFileSync(f.path, 'utf8');
-    const group = html.match(/<div class="theme-group"[\s\S]*?<\/div>/);
-    assert.ok(group, `${f.label} has no theme switch in the menu panel`);
-
-    for (const choice of ['system', 'light', 'dark']) {
-      assert.match(group[0], new RegExp(`data-theme-choice="${choice}"`),
-        `${f.label} has no «${choice}» theme button`);
-    }
-    // A segmented group states which member is current, or a screen reader
-    // cannot tell the visitor what the theme is set to.
-    assert.equal((group[0].match(/aria-pressed="/g) || []).length, 3,
-      `${f.label}'s theme buttons do not all carry aria-pressed`);
-    assert.equal((group[0].match(/aria-pressed="true"/g) || []).length, 1,
-      `${f.label} does not mark exactly one theme as current`);
-    assert.match(group[0], /data-theme-choice="system"[^>]*aria-pressed="true"/,
-      `${f.label} is authored with a forced theme pressed — with JavaScript ` +
-      'off the truthful state is «as in the system»');
-    assert.match(group[0], /role="group"|<div class="theme-group" role="group"/,
-      `${f.label}'s theme buttons are not grouped`);
-  }
-
-  // The labels are translated, and they are NOT the banner demo's own theme
-  // select (which keeps its themeAuto/themeLight/themeDark keys).
-  for (const { code } of LANGS) {
-    const dict = readDict(code);
-    for (const key of ['siteThemeLabel', 'siteThemeSystem', 'siteThemeLight', 'siteThemeDark']) {
-      assert.equal(typeof dict[key], 'string',
-        `site/src/i18n/${code}.json has no "${key}"`);
-      assert.ok(dict[key].length > 0, `${code}.json leaves "${key}" empty`);
-    }
-  }
-});
-
-/* No flash. The stored choice has to be on <html> before the stylesheet that
-   reads it is even fetched, which means an inline script in <head>, ABOVE the
-   <link>. In the header slice it would run after the header markup has been
-   parsed and the page would paint light before turning dark. */
-test('the stored theme is applied in <head>, before the stylesheet', () => {
   for (const f of [...outputs(), ...lawOutputs()]) {
     const html = readFileSync(f.path, 'utf8');
 
-    const boot = html.indexOf("localStorage.getItem('ck-site-theme')");
-    assert.ok(boot > -1, `${f.label} has no before-paint theme script`);
+    assert.doesNotMatch(html, /theme-switch/,
+      `${f.label} still renders the theme switch in the menu panel`);
+    assert.doesNotMatch(html, /ck-site-theme/,
+      `${f.label} still carries the theme storage key — nothing may store a theme`);
+    assert.doesNotMatch(html, /data-theme/,
+      `${f.label} still carries a data-theme hook`);
+
+    /* The metas that replaced the boot script, and the same ordering rule the
+       script had to obey: both stand in <head> ABOVE the stylesheet link, so
+       the browser knows the page is dark before it has the CSS that says so. */
+    const cs = html.indexOf('<meta name="color-scheme" content="dark">');
+    assert.ok(cs > -1, `${f.label} does not declare a dark color-scheme`);
+    assert.match(html, /<meta name="theme-color" content="#141414">/,
+      `${f.label} does not hand the browser chrome the page's own background`);
 
     const sheet = html.search(/<link rel="stylesheet" href="\/styles\.css/);
     assert.ok(sheet > -1, `${f.label} does not load the stylesheet`);
-    assert.ok(boot < sheet,
-      `${f.label} applies the theme after the stylesheet link — that is the flash`);
+    assert.ok(cs < sheet,
+      `${f.label} declares color-scheme after the stylesheet link`);
+    assert.ok(cs < html.indexOf('</head>'),
+      `${f.label} declares color-scheme outside <head>`);
+  }
+});
 
-    const headEnd = html.indexOf('</head>');
-    assert.ok(boot < headEnd, `${f.label} applies the theme outside <head>`);
-
-    // `system` is the ABSENCE of the attribute: anything else would defeat
-    // the :root:not([data-theme="light"]) gate the whole scheme rests on.
-    assert.doesNotMatch(html, /<html[^>]*\bdata-theme=/,
-      `${f.label} hardcodes data-theme on <html> — the system theme could ` +
-      'never apply, and prefers-color-scheme would be dead');
-
-    // Reading localStorage throws outright where site data is blocked.
-    const script = html.slice(boot - 200, boot + 200);
-    assert.match(script, /try\s*\{/,
-      `${f.label}'s theme script does not guard localStorage with try/catch`);
+/* The metas are one constant rather than a literal repeated in the template's
+   map and the two law-page head builders, so /law cannot drift from /. */
+test('the dark metas are built from one shared constant', () => {
+  assert.match(THEME_META, /<meta name="color-scheme" content="dark">/);
+  assert.match(THEME_META, /<meta name="theme-color" content="#141414">/);
+  for (const f of [...outputs(), ...lawOutputs()]) {
+    const html = readFileSync(f.path, 'utf8');
+    assert.ok(html.includes(THEME_META),
+      `${f.label} does not carry the shared dark metas verbatim`);
   }
 });
 

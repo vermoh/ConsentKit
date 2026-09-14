@@ -50,36 +50,30 @@ export const DEFAULT_LANG = 'en';
 
 /* ---------------------------------------------------------- theme, before paint */
 
-/* Owner, 07.09.2026: a manual «Тема» switch, three states, remembered.
+/* Owner, 14.09.2026: the site is DARK ONLY. The «Тема» switch in the menu is
+ * gone, and so is the inline boot script that used to stand here — it read a
+ * stored choice out of localStorage and stamped data-theme on <html> before
+ * the first paint so a chosen theme would not flash. With one theme there is
+ * no choice to store, nothing to read and nothing to flash, so the script,
+ * its storage key and its try/catch all went with the switch.
  *
- * The stored choice has to reach <html> BEFORE the first paint, or a visitor
- * who chose «Тёмная» gets a white flash on every navigation while the
- * stylesheet resolves against a system preference that is about to be
- * overridden. That rules out app.js — and it also rules out the header slice's
- * own inline script, which runs only after ~70 lines of header markup have
- * been parsed. So this goes in <head>, immediately before the stylesheet link:
- * the attribute is on the element before any rule that reads it is fetched.
- *
- * `system` is the absence of the attribute, not a third value: with no
- * data-theme at all the CSS falls through to prefers-color-scheme, which is
- * exactly what «Как в системе» means. Wrapped in try/catch because reading
- * localStorage throws outright in a browser set to block site data, and a
- * theme preference is never worth a blank page. */
-export const THEME_KEY = 'ck-site-theme';
-
-export const THEME_BOOT =
-  '<script>' +
-  '(function(){try{' +
-  "var t=localStorage.getItem('" + THEME_KEY + "');" +
-  "if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);" +
-  '}catch(e){}})();' +
-  '</script>';
+ * What replaces it is two static metas, and they still have to be in <head>
+ * ABOVE the stylesheet link: color-scheme tells the browser to paint its own
+ * form controls and scrollbars dark from the very first paint rather than
+ * drawing a light set and restyling, and theme-color hands mobile Chrome and
+ * Safari the page's own --bg for the address bar. They are one constant
+ * rather than a literal in three head builders (the template's map and the
+ * two law-page head arrays) so the landing and /law cannot drift apart. */
+export const THEME_META =
+  '<meta name="color-scheme" content="dark">\n' +
+  '<meta name="theme-color" content="#141414">';
 
 /* ------------------------------------------------------- dataLayer, first */
 
 /* SPEC-V1.26 §2: `window.dataLayer` must be declared by the FIRST statement of
- * the FIRST script on the page — before the vendor client, before the theme
- * boot, before anything.
+ * the FIRST script on the page — before the vendor client, before anything.
+ * (It used to have to beat the theme boot script too; that script is gone
+ * with the theme switch, and the metas that replaced it run no JavaScript.)
  *
  * WHY IT CANNOT LIVE IN analytics.js. ck-core.js pushes its Consent Mode
  * default at PARSE TIME, and it loads five scripts earlier than analytics.js.
@@ -614,8 +608,8 @@ export function renderLawPage(template, lang, page) {
     ogLocaleAlt(lang),
     '<meta name="twitter:card" content="summary_large_image">',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    THEME_META,
     DATALAYER_BOOT,
-    THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
     '<body>',
@@ -713,8 +707,8 @@ export function renderLawIndex(template, lang) {
     ogLocaleAlt(lang),
     '<meta name="twitter:card" content="summary_large_image">',
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
+    THEME_META,
     DATALAYER_BOOT,
-    THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
     '<body>',
@@ -923,7 +917,6 @@ export function renderPage(template, lang) {
     OG_LOCALE_ALT: ogLocaleAlt(lang),
     LANG_SWITCH: langSwitch(lang),
     DATALAYER_BOOT,
-    THEME_BOOT,
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
     VERSION: escapeHtml(VERSION),
     SERVICES: String(SITE_STATS.services),
