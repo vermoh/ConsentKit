@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.24
+Stable tag: 0.5.25
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,17 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.25 =
+* Consent Mode: url_passthrough and ads_data_redaction are now issued as
+  gtag('set', <flag>, true) commands BEFORE the consent default, which is the
+  only form Google reads. 0.5.22 shipped them inside the consent default
+  object, where a tag manager showed them as unrecognised and applied neither.
+* integrations.gcm: false is documented for what it is: the parse-time
+  all-denied default is pushed regardless, because a Google tag firing before
+  any answer must find a denial waiting; false only suppresses the update, so
+  it is for sites that run Consent Mode themselves. A site that turns it off
+  and pushes nothing of its own keeps Google denied forever.
 
 = 0.5.24 =
 * language: "page" now reads FOUR page signals in order — <html lang>, then the

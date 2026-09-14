@@ -168,28 +168,32 @@ test('the parse-time Consent Mode default is pushed once, all-denied', () => {
     'the default push lost wait_for_update');
 });
 
-test('SPEC-V1.26 §1: url_passthrough and ads_data_redaction ship ON by default', () => {
+test('SPEC-V1.26 §1: url_passthrough and ads_data_redaction are gtag SETTINGS, pushed before the default', () => {
   const { dataLayer } = loadCore();
-  const signals = defaultPush(dataLayer)[2];
 
-  /* url_passthrough: with ad_storage denied there is no cookie to carry the
-     click id. Without this flag a visitor who DECLINED loses the gclid between
-     the landing page and the cabinet — our own product would break our own
-     ads' attribution, and every customer's, since they install this file
-     rather than a hand-tuned container. */
-  assert.equal(signals.url_passthrough, true,
-    'the default push does not set url_passthrough — a declined visitor loses the gclid');
+  /* 0.5.22 put the two flags INSIDE the consent default object; a tag manager
+     shows them there as unrecognised and applies neither (14.09.2026). Google
+     documents them as `gtag('set', <flag>, true)` issued before the consent
+     and config commands, so that is the shape and the order asserted here. */
+  const sets = dataLayer.filter((e) => e && e[0] === 'set');
+  const byName = Object.fromEntries(sets.map((e) => [e[1], e[2]]));
+  assert.equal(byName.url_passthrough, true,
+    "no gtag('set', 'url_passthrough', true) — a declined visitor loses the gclid");
+  assert.equal(byName.ads_data_redaction, true,
+    "no gtag('set', 'ads_data_redaction', true)");
+  // Booleans: Google reads these as flags, and a string would be truthy either way.
+  assert.equal(typeof byName.url_passthrough, 'boolean');
+  assert.equal(typeof byName.ads_data_redaction, 'boolean');
 
-  /* ads_data_redaction: the other half of the same refusal — Google trims
-     identifiers out of the ad requests themselves while ad_storage is denied. */
-  assert.equal(signals.ads_data_redaction, true,
-    'the default push does not set ads_data_redaction');
+  // Order: both settings precede the consent default, as the docs require.
+  const firstSet = dataLayer.findIndex((e) => e && e[0] === 'set');
+  const def = dataLayer.findIndex((e) => e && e[0] === 'consent' && e[1] === 'default');
+  assert.ok(firstSet > -1 && def > firstSet, 'the settings must be pushed before the consent default');
 
-  // Booleans, not the 'granted'/'denied' strings the storage signals use:
-  // Google reads these two as flags and a string is truthy either way, so a
-  // wrong type would go unnoticed in a browser and silently disable nothing.
-  assert.equal(typeof signals.url_passthrough, 'boolean');
-  assert.equal(typeof signals.ads_data_redaction, 'boolean');
+  // …and they are NOT inside the consent default any more.
+  const signals = dataLayer[def][2];
+  assert.equal(signals.url_passthrough, undefined, 'url_passthrough must not sit inside the consent default');
+  assert.equal(signals.ads_data_redaction, undefined, 'ads_data_redaction must not sit inside the consent default');
 });
 
 test('the two flags belong to the default only, not to consent updates', () => {

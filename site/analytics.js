@@ -722,22 +722,13 @@
       } catch (e) { /* noop */ }
     }, true);
 
-    /* accept / reject / settings happen INSIDE the banner's shadow root, which
-       this file deliberately does not reach into. The client already announces
-       them: ck:change carries the method the visitor used. */
-    document.addEventListener('ck:change', function (ev) {
-      try {
-        var method = (ev && ev.detail && ev.detail.state && ev.detail.state.method) || '';
-        var MAP = {
-          accept_all: 'accept',
-          reject_all: 'reject',
-          save: 'settings',
-          withdraw: 'withdraw'
-        };
-        var action = MAP[method];
-        if (action) push({ event: 'ck_demo_interact', demo_action: action });
-      } catch (e) { /* noop */ }
-    });
+    /* Accept / reject / settings on the banner itself are NOT demo
+       interactions: the demo block only restyles THE page's real banner, so a
+       visitor answering it is answering the site, and the client already
+       announces that answer as ck_consent_update and ck_consent_<category>.
+       Until 14.09.2026 this file also translated ck:change into
+       ck_demo_interact, and every real accept counted as a demo click
+       (owner's reviewer). Only the demo controls above count now. */
   }
 
   /* ---- ck_faq_open ----

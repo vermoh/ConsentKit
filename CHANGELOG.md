@@ -5,6 +5,29 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.25
+
+- **Consent Mode: `url_passthrough` and `ads_data_redaction` are now real gtag
+  settings.** 0.5.22 shipped them inside the `consent default` object; Google
+  reads them only as `gtag('set', <flag>, true)` issued before the consent and
+  config commands, and a tag manager showed the in-object form as unrecognised.
+  They are pushed first, then the all-denied default — verified in Tag Assistant
+  by the owner's reviewer.
+
+- **`integrations.gcm: false` is documented for what it is.** The parse-time
+  all-denied `default` is pushed regardless (the config is not known yet, and a
+  Google tag firing before any answer must find a denial waiting); `false` only
+  suppresses the `update`, so it is for sites that run Consent Mode themselves.
+  A site that turns it off and pushes nothing of its own keeps Google denied
+  forever — which is what our own landing page did until today. Check:
+  `google_tag_data.ics.usedUpdate` after accepting must be `true`.
+
+- **Site:** the landing's banner now issues the Consent Mode update
+  (`gcm: true`), and answering the real banner no longer counts as a demo
+  interaction — `ck_demo_interact` fires only from the demo block's own
+  controls; consent answers are already announced as `ck_consent_update` /
+  `ck_consent_<category>`.
+
 ## 0.5.24
 
 - **`language: "page"` reads more than `<html lang>`.** Two live sites on

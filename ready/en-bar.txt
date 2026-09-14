@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.24
- * Дата сборки:      2026-09-11
+ * Версия ConsentKit: 0.5.25
+ * Дата сборки:      2026-09-14
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
@@ -1322,11 +1322,16 @@
   // integrations.gcm, and before any tag can load. Consent Mode expects a
   // single 'default'; every later change goes through gcmUpdate().
   function gcmDefault() {
-    var signals = gcmSignals(emptyCategories());
-    signals.wait_for_update = 500;
-
-    // WHY these two travel with wait_for_update rather than being left to the
-    // site owner's GTM (SPEC-V1.26 §1, owner's brief §07):
+    // url_passthrough and ads_data_redaction are gtag SETTINGS, not consent
+    // signals: Google documents them as `gtag('set', 'url_passthrough', true)`
+    // and `gtag('set', 'ads_data_redaction', true)`, issued BEFORE the consent
+    // and config commands. 0.5.22 put them inside the `consent default`
+    // object, where a tag manager shows them as unrecognised and applies
+    // neither (owner's reviewer, Tag Assistant, 14.09.2026). They are pushed
+    // here, ahead of the default, so they sit at the top of the dataLayer
+    // exactly as the documentation orders them.
+    //
+    // WHY these two ship ON (SPEC-V1.26 §1, owner's brief §07):
     //
     // url_passthrough — with ad_storage denied there is no cookie to carry the
     // click id, so Google passes it in the URL instead. Without it a visitor
@@ -1341,9 +1346,11 @@
     // a declined visitor is measured in aggregate rather than tracked. Both are
     // defaults a consent tool should ship ON, because the site that most needs
     // them is the one that never opens the container's settings.
-    signals.url_passthrough = true;
-    signals.ads_data_redaction = true;
+    ckGtag('set', 'url_passthrough', true);
+    ckGtag('set', 'ads_data_redaction', true);
 
+    var signals = gcmSignals(emptyCategories());
+    signals.wait_for_update = 500;
     ckGtag('consent', 'default', signals);
   }
 
@@ -1369,6 +1376,16 @@
   // integrations.gcm, the ck_consent_update event answers to gtmDataLayer.
   // A {gcm:false, gtmDataLayer:true} config must still populate the GTM
   // ck_consent.* variables.
+  // `integrations.gcm === false` means the SITE runs Consent Mode itself: it
+  // pushes its own `consent default` (after this file, so its default wins)
+  // and its own updates, and ConsentKit stays out of the way. What it does
+  // NOT mean is «no Consent Mode at all»: the all-denied default above is
+  // pushed at parse time, before any config is known, because a Google tag
+  // that fires before anyone has answered must find a denial waiting. A site
+  // that switches the gate off and then pushes no update of its own leaves
+  // Google denied for every visitor forever (14.09.2026, our own landing page
+  // — seen as gcs=G100 on every hit). The default is therefore TRUE, and the
+  // README says when false is the right choice.
   function gcmUpdate() {
     try {
       var integrations = config.integrations || {};
@@ -2695,7 +2712,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.24',
+    version: '0.5.25',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

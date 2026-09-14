@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.24).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.25).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -197,7 +197,7 @@ Pass any subset to `init()`. Nested objects merge with the defaults.
 | `texts.links` | `object[]` | `[]` | v0.5.15. Up to 3 links under the banner buttons and at the foot of the settings panel: `{ id, url, label: { ru, ro, en, … } }`. `url` is `http(s)` only; a row with no resolvable label or an unusable address is skipped. Does not affect `detailsAction`, except that «Learn more» is hidden when its `policy` / `declaration` URL repeats one of these links — see [Custom texts and links](#custom-texts-and-links) |
 | `categories.*.enabled` | `boolean` | `true` | Per category: `functional`, `analytics`, `marketing`. Hides the toggle when `false` |
 | `consentTtlDays` | `number` | `365` | Lifetime of the stored decision |
-| `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2 signals |
+| `integrations.gcm` | `boolean` | `true` | Google Consent Mode v2: push `consent update` after each choice. `false` only when the site runs Consent Mode itself — the parse-time all-denied `default` is pushed regardless, so a site with `false` and no update of its own stays denied for Google forever |
 | `integrations.gtmDataLayer` | `boolean` | `true` | Push consent events to `window.dataLayer` |
 | `blocking.mode` | `"known" \| "strict"` | `"known"` | `strict` also holds back unknown third-party scripts and iframes — see [Strict mode](#strict-mode) |
 | `blocking.allow` | `string[]` | `[]` | Hosts strict mode must never intercept. Matched by suffix, so `partner.com` also covers `cdn.partner.com` |
@@ -1010,8 +1010,9 @@ are set, always as one block:
 | `functionality_storage`, `personalization_storage` | `functional` |
 | `security_storage` | always `granted` |
 
-Two page-level flags travel with the `default` push as well (since **0.5.22**),
-and only with it — a later `consent: update` never repeats them:
+Two page-level settings are pushed **before** the `default` (since **0.5.22**;
+as `gtag('set', …)` commands since **0.5.25** — 0.5.22–0.5.24 put them inside
+the `consent default` object, where a tag manager does not recognise them):
 
 | Flag | Value | What it does |
 |---|---|---|
@@ -1021,6 +1022,17 @@ and only with it — a later `consent: update` never repeats them:
 Neither flag stores anything or weakens a refusal; they are what an honest
 refusal looks like on Google's side. If your own tag manager sets different
 values, it wins — these are defaults, not overrides.
+
+**When to set `gcm: false`.** Only when your own code or container issues the
+Consent Mode `default` and `update` commands itself. ConsentKit still pushes
+its all-denied `default` at parse time — the config is not known yet, and a
+Google tag that fires before anyone answered must find a denial waiting —
+and your own `default`, issued after this script, overrides it. What
+ConsentKit will NOT do with `gcm: false` is push an `update`: a site that turns
+the gate off and pushes no update of its own keeps every visitor denied for
+Google forever (`gcs=G100` on every hit), including the ones who accepted.
+Check with `google_tag_data.ics.usedUpdate` in the console after accepting:
+`true` means the update reached Google.
 
 `integrations.gtmDataLayer` (also on by default) is an independent gate: it
 pushes a `ck_consent_update` event carrying `ck_consent` (the four categories)
@@ -1189,19 +1201,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.24, rebuilt 2026-09-11, uncompressed — gzip on the server cuts
+ConsentKit 0.5.25, rebuilt 2026-09-14, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 364,162 | 115,187 | 337,877 |
-| `ready/ru-bar.txt` | ru, ro, en | 366,346 | 116,137 | 339,875 |
-| `ready/ru-box.txt` | ru, ro, en | 366,361 | 116,143 | 339,890 |
-| `ready/ru-box-right.txt` | ru, ro, en | 366,370 | 116,149 | 339,899 |
-| `ready/ru-modal.txt` | ru, ro, en | 366,354 | 116,143 | 339,883 |
-| `ready/eu-bar.txt` | 34 languages | 418,280 | 135,724 | 391,829 |
+| `ready/en-bar.txt` | en | 365,442 | 115,656 | 339,151 |
+| `ready/ru-bar.txt` | ru, ro, en | 367,626 | 116,605 | 341,149 |
+| `ready/ru-box.txt` | ru, ro, en | 367,641 | 116,611 | 341,164 |
+| `ready/ru-box-right.txt` | ru, ro, en | 367,650 | 116,616 | 341,173 |
+| `ready/ru-modal.txt` | ru, ro, en | 367,634 | 116,609 | 341,157 |
+| `ready/eu-bar.txt` | 34 languages | 419,560 | 136,202 | 393,103 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1392,6 +1404,29 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.25
+
+- **Consent Mode: `url_passthrough` and `ads_data_redaction` are now real gtag
+  settings.** 0.5.22 shipped them inside the `consent default` object; Google
+  reads them only as `gtag('set', <flag>, true)` issued before the consent and
+  config commands, and a tag manager showed the in-object form as unrecognised.
+  They are pushed first, then the all-denied default — verified in Tag Assistant
+  by the owner's reviewer.
+
+- **`integrations.gcm: false` is documented for what it is.** The parse-time
+  all-denied `default` is pushed regardless (the config is not known yet, and a
+  Google tag firing before any answer must find a denial waiting); `false` only
+  suppresses the `update`, so it is for sites that run Consent Mode themselves.
+  A site that turns it off and pushes nothing of its own keeps Google denied
+  forever — which is what our own landing page did until today. Check:
+  `google_tag_data.ics.usedUpdate` after accepting must be `true`.
+
+- **Site:** the landing's banner now issues the Consent Mode update
+  (`gcm: true`), and answering the real banner no longer counts as a demo
+  interaction — `ck_demo_interact` fires only from the demo block's own
+  controls; consent answers are already announced as `ck_consent_update` /
+  `ck_consent_<category>`.
 
 ### 0.5.24
 
@@ -1836,7 +1871,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.24), not a released product.** It is honest about
+**This is a prototype (v0.5.25), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

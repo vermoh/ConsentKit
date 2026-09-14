@@ -1214,27 +1214,23 @@
       // still pass the client's contrast rule.
       theme: { mode: demo.theme, accent: demo.accent, dark: { accent: demo.accent }, radius: '10px' },
       branding: brandingFor(resolved),
-      /* The two integration gates are set apart on purpose (SPEC-V1.26 §2, R1).
+      /* Both integration gates ON (14.09.2026; until then gcm was false).
        *
-       * gcm: false — no Consent Mode UPDATE as you click around the demo. The
-       * «Что увидит Google» line is derived from the state (see updateGcm), so
-       * a demo click must not also move a real Consent Mode signal for this
-       * page. The core still writes ONE all-denied default at parse time; that
-       * happens before init() can read this flag.
+       * gcm: true — the banner's answer becomes a real Consent Mode UPDATE.
+       * With the gate off the core still pushed its parse-time all-denied
+       * default but never an update, so for Google every visitor of this page
+       * stayed denied forever — «Accept all» included — and no conversion
+       * could ever be attributed (owner's reviewer: gcs=G100 on every hit,
+       * google_tag_data.ics.usedUpdate false). The «Что увидит Google» line
+       * (updateGcm) is derived from the same state the update carries, so it
+       * now reports what was actually sent.
        *
-       * gtmDataLayer: TRUE since 0.5.22 — and this banner is no longer only a
-       * demo: it is THE banner of this site, and its first answer is what
-       * analytics.js waits for. `ck_consent_update` and `ck_consent_<category>`
-       * are the trigger for loading the GTM container at all (R1) and for
-       * writing attribution to localStorage (R2). With the events off, this
-       * site could never measure itself without measuring visitors before they
-       * answered — which is the one thing the product sells against.
-       *
-       * So the page DOES make an external request now: the GTM container,
-       * after the visitor's first decision and never before it. Everything
-       * else stays same-origin (the document, styles.css, favicon.svg, app.js,
-       * analytics.js and the vendor scripts). */
-      integrations: { gcm: false, gtmDataLayer: true },
+       * gtmDataLayer: true since 0.5.22 — this is THE banner of this site,
+       * and its first answer is what analytics.js waits for: `ck_consent_*`
+       * events load the GTM container (R1) and release attribution to
+       * localStorage (R2). The page makes its one external request — the GTM
+       * container — only after that first decision, never before. */
+      integrations: { gcm: true, gtmDataLayer: true },
       cookieTable: cookieTable(),
       services: demoServices()
     };
@@ -1332,18 +1328,12 @@
 
   /* «Что увидит Google: analytics_storage — denied, ad_storage — denied.»
    *
-   * DERIVED from the consent state, not read back from dataLayer: demoConfig()
-   * sets integrations.gcm = false precisely so the demo emits no Consent Mode
-   * updates as the visitor clicks around, which means the only Consent Mode
-   * entry in dataLayer is the core's one parse-time default and it would never
-   * move. (`gtmDataLayer` IS on since 0.5.22 — but that gate feeds the
-   * ck_consent_* events analytics.js listens to, not the Consent Mode signals
-   * this line reports.) The mapping is the one the client itself applies
-   * (docs/CONSENT-MODE-NOTES-2026-09.md §2):
-   * analytics -> analytics_storage, marketing -> ad_storage.
-   *
-   * Both are denied until the visitor decides, which is the honest reading of
-   * a banner that has not been answered yet. */
+   * DERIVED from the consent state — the same state the core maps onto its
+   * Consent Mode update (docs/CONSENT-MODE-NOTES-2026-09.md §2:
+   * analytics -> analytics_storage, marketing -> ad_storage), so the line
+   * and the signal Google receives cannot disagree. Both are denied until the
+   * visitor decides, which is the honest reading of a banner that has not
+   * been answered yet. */
   function updateGcm(state) {
     var out = $('#d-gcm');
     if (!out) return;
