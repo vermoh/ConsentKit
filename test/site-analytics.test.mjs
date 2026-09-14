@@ -672,3 +672,17 @@ test('the site copy says analytics waits for the answer', () => {
   assert.ok(html.includes('после вашего ответа баннеру'),
     'the Russian page does not carry the sentence');
 });
+
+/* 14.09.2026 — ck_scan_submit carries the SERVER-issued event_id (Meta
+   dedup between pixel and Conversions API); app.js stamps it from the POST
+   answer, analytics.js reads it from the form. Source-pinned: the value only
+   exists once a real server answered. */
+test('ck_scan_submit carries the server-issued event_id from the POST answer', () => {
+  const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
+  assert.match(app, /r\.data\.eventId/, 'app.js does not read eventId off the site-check answer');
+  assert.match(app, /setAttribute\('data-check-event-id'/, 'app.js does not stamp the id on the form');
+  const both = ANALYTICS.match(/event: 'ck_scan_submit',\s*event_id: eventId/g) || [];
+  assert.equal(both.length, 2, 'both ck_scan_submit pushes (with and without e-mail) must carry event_id');
+  assert.match(ANALYTICS, /getAttribute\('data-check-event-id'\)/);
+});
+

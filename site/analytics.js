@@ -503,10 +503,17 @@
         email = el ? String(el.value || '').trim() : '';
       } catch (e) { /* noop */ }
 
+      // Server-issued, one per submit, the same id the server would use for a
+      // Conversions API send of this event (reviewer, 14.09.2026). Read from
+      // the form, where app.js stamped it from the POST answer; push() drops
+      // it when absent, so an old server answer simply yields no event_id.
+      var eventId = form.getAttribute('data-check-event-id') || '';
+
       if (email) {
         sha256(email).then(function (hash) {
           pushForm(form, {
             event: 'ck_scan_submit',
+            event_id: eventId,
             scan_domain: formDomain(form),
             has_email: true,
             user_hash: hash
@@ -516,6 +523,7 @@
       }
       pushForm(form, {
         event: 'ck_scan_submit',
+        event_id: eventId,
         scan_domain: formDomain(form),
         has_email: false
       });
