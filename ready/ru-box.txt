@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.26
- * Дата сборки:      2026-09-14
+ * Версия ConsentKit: 0.5.27
+ * Дата сборки:      2026-09-18
  * Языки:            ru, ro, en
  * Язык баннера:     auto (по языку браузера посетителя)
  * Вид:              box / bottom-left, тема auto, акцент #2B50D8
@@ -196,6 +196,20 @@
     // visitor has to make — not a feature the site owner merely switched on.
     'youtube.com': 'marketing',               // the player sets Google ad cookies on play
     'youtube-nocookie.com': 'marketing',      // "privacy-enhanced" still sets them once played
+    // The YouTube player's attestation endpoint,
+    // /$rpc/google.internal.waa.v1.Waa/GenerateIT. It is requested ONLY by the
+    // embedded player, as part of loading it — so it is held and released with
+    // the player, and it follows the youtube.com decision directly above rather
+    // than the maps.googleapis.com / places.googleapis.com entries below, which
+    // are a different product on the same parent domain.
+    //
+    // The EXACT host, and it must stay exact: googleapis.com carries Maps
+    // (classified `functional` below), ajax.googleapis.com and
+    // fonts.googleapis.com (both INFRA_DB), so a bare 'googleapis.com' here
+    // would rule `marketing` on all of them at once — lookupHostMap returns the
+    // FIRST match, not the longest. For the same reason nothing broader may
+    // ever be inserted above it.
+    'jnn-pa.googleapis.com': 'marketing',
     'facebook.com': 'marketing',              // like/page/comments plugins and iframes
     'instagram.com': 'marketing',             // post and profile embeds
     'cdninstagram.com': 'marketing',          // the embed's own asset host
@@ -262,6 +276,20 @@
     'maestra-static.io': 'marketing',
     'mindbox.ru': 'marketing',
     'mindbox.cloud': 'marketing',
+    // Targeting (targeting.md, AIP GROUP SRL, Moldova) — an ad-management
+    // platform, and app.targeting.md /api/t.js is its attribution tag. The tag
+    // (global `bordtrack`) mints a persistent visitor id in localStorage
+    // (`bt_vid`, plus the `bt_sid`/`bt_sid_exp` session pair), reads gclid,
+    // fbclid, wbraid and gbraid off the URL along with the `_fbp`/`_fbc`
+    // cookies, and posts all of it to /api/collect to feed Meta and Google
+    // conversions. A persistent id joined to ad click ids IS the advertising
+    // profile, so `marketing` — the connect.facebook.net decision, made on a
+    // Moldovan platform.
+    //
+    // The EXACT host. targeting.md itself is the vendor's own marketing site,
+    // and a bare entry would rule `marketing` on a mere link to it — the same
+    // split as w.soundcloud.com against soundcloud.com above.
+    'app.targeting.md': 'marketing',
 
     // --- functional ----------------------------------------------------
     'intercom.io': 'functional',
@@ -449,6 +477,41 @@
     // the same reason nothing broader than this may ever be inserted ABOVE it —
     // lookupHostMap returns the FIRST match, not the longest.
     'sentry.asbis.io': 'necessary',
+    // Search Atlas OTTO «dynamic optimization» — an SEO script, white-labelled
+    // in Moldova by Local SEO (app.localseo.md /scripts/dynamic_optimization.js)
+    // and talking to the vendor's API (sa.searchatlas.com /api/v2/otto-*). It
+    // rewrites the page's titles, meta tags, links and alt texts, and logs the
+    // page URL, the user agent and the referrer. Checked in the script itself
+    // on 18.09.2026: it sets NO cookie and uses neither localStorage nor
+    // sessionStorage, so there is no identifier and no visitor profile.
+    //
+    // WHY `necessary` AND NOT `functional`. Its whole job is to change what
+    // CRAWLERS see, and a crawler never answers a consent banner. Held until
+    // consent, the script would therefore never run for the single audience it
+    // exists for — «blocked until consent» is not a degraded feature here, it
+    // is the feature deleted outright. A `functional` visitor-facing widget
+    // like the 999.md listing above loses only the visitor who declined; this
+    // would lose all of them. It is named so the audit stops filing it under
+    // «сторонние подключения без категории», which is what a `necessary` entry
+    // buys — the category is never held either way.
+    //
+    // EXACT hosts, both of them. localseo.md and searchatlas.com carry each
+    // vendor's own site, and hostMatches is plain suffix matching, so a bare
+    // entry would be a claim about those too.
+    'app.localseo.md': 'necessary',
+    'sa.searchatlas.com': 'necessary',
+    // Transcend Consent Management (airgap.js, ui.js, cm.css) — ANOTHER
+    // vendor's consent manager. Blocking a consent manager behind consent is
+    // circular: the script that would ask the visitor for a decision cannot
+    // itself wait on that decision, and a page carrying it would show no banner
+    // at all. So it is never held, and it is named rather than left silent so
+    // the audit reports that a second consent tool is present on the page —
+    // which is precisely what an owner needs to be told.
+    //
+    // The domain is dedicated to the product (transcend-cdn.com serves nothing
+    // else), so the bare registrable domain is the right scope here, the way
+    // recaptcha.net is above.
+    'transcend-cdn.com': 'necessary',
     'paypal.com': 'necessary',
     'paypalobjects.com': 'necessary',         // PayPal button assets
     'paynet.md': 'necessary',                 // Moldovan payment gateway
@@ -709,6 +772,11 @@
     'cdn.shopify.com',
     'squarespace-cdn.com',
     'assets.website-files.com',            // Webflow
+    'cdn.prod.website-files.com',          // Webflow's current asset CDN — the same
+                                           // build output as the line above, served
+                                           // from the host Webflow moved to; named
+                                           // in full because website-files.com is
+                                           // not a suffix either entry shares
     // ECOM (ecom.md) — «платформа для интернет-магазина и B2B в Молдове»
     // (verified 11.09.2026 from its home page). A shop built on it is served
     // its own media and its own content by its own builder:
@@ -747,6 +815,24 @@
     // asbis.io carries the group's own sites, and its self-hosted Sentry is
     // named separately in HOST_DB as `necessary`.
     'prod-cdn.prod.asbis.io',
+    // The Phosphor icon files an Elfsight widget loads. Icon FILES only, the
+    // same class of asset as the Iconify pair above — this entry classifies
+    // NOTHING about the Elfsight widget platform itself, which is a separate
+    // decision nobody has made yet. The EXACT host for exactly that reason: a
+    // bare 'elfsightcdn.com' would quietly wave the platform through.
+    'phosphor.utils.elfsightcdn.com',
+    // Wikimedia Commons media files: upload.wikimedia.org serves the originals
+    // and thumb.wikimedia.org the generated thumbnails. A page that illustrates
+    // an article with a Commons photo is hot-linking an image, which is the
+    // i.imgur.com case above and not a consent decision.
+    //
+    // EXACT hosts. wikimedia.org is NOT named, and neither are
+    // auth.wikimedia.org and meta.wikimedia.org: those are Wikimedia's own
+    // central login, only ever seen on Wikimedia's own sites, so they are a
+    // decision about a site rather than about asset delivery — they stay
+    // unclassified in both tables on purpose, the way ecom.md does above.
+    'upload.wikimedia.org',
+    'thumb.wikimedia.org',
     // cdn.polyfill.io is DELIBERATELY ABSENT, and this note is here because
     // this run of general asset CDNs is where a reader would look for it.
     //
@@ -804,6 +890,12 @@
     // and sprites, sets nothing, and a held placeholder still wants its
     // thumbnail.
     'ytimg.com',
+    // Google's user-content image CDN, which is where YouTube channel avatars
+    // come from (yt3.ggpht.com). Exactly the ytimg.com note above, host for
+    // host: the PLAYER is marketing and sits in HOST_DB on youtube.com, while
+    // this host serves pictures, sets nothing, and a held placeholder still
+    // wants the channel's avatar beside its title.
+    'ggpht.com',
     // --- our own service -------------------------------------------------
     // The consent tool must not report itself as an unnamed third party.
     'consent.ecomconsult.net'
@@ -2712,7 +2804,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.26',
+    version: '0.5.27',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

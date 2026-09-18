@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.26).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.27).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -905,15 +905,15 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **148 hosts** and **14 path rules**, matched by suffix (a
+The database ships **153 hosts** and **14 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 148 | 50 `marketing`, 48 `functional`, 34 `analytics`, 16 `necessary` |
+| `HOST_DB` | 153 | 52 `marketing`, 48 `functional`, 34 `analytics`, 19 `necessary` |
 | `PATH_DB` | 14 | 6 `functional`, 4 `marketing`, 2 `analytics`, 2 `necessary` |
-| `INFRA_DB` | 45 | not a category — see [Infrastructure](#infrastructure) |
+| `INFRA_DB` | 50 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
 TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
@@ -1252,19 +1252,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.26, rebuilt 2026-09-14, uncompressed — gzip on the server cuts
+ConsentKit 0.5.27, rebuilt 2026-09-18, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 376,670 | 119,399 | 350,376 |
-| `ready/ru-bar.txt` | ru, ro, en | 378,854 | 120,358 | 352,374 |
-| `ready/ru-box.txt` | ru, ro, en | 378,869 | 120,363 | 352,389 |
-| `ready/ru-box-right.txt` | ru, ro, en | 378,878 | 120,368 | 352,398 |
-| `ready/ru-modal.txt` | ru, ro, en | 378,862 | 120,362 | 352,382 |
-| `ready/eu-bar.txt` | 34 languages | 430,788 | 139,920 | 404,328 |
+| `ready/en-bar.txt` | en | 382,742 | 121,663 | 356,451 |
+| `ready/ru-bar.txt` | ru, ro, en | 384,926 | 122,632 | 358,449 |
+| `ready/ru-box.txt` | ru, ro, en | 384,941 | 122,638 | 358,464 |
+| `ready/ru-box-right.txt` | ru, ro, en | 384,950 | 122,645 | 358,473 |
+| `ready/ru-modal.txt` | ru, ro, en | 384,934 | 122,638 | 358,457 |
+| `ready/eu-bar.txt` | 34 languages | 436,860 | 142,262 | 410,403 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1455,6 +1455,50 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.27
+
+- Tracker database: **a Moldovan ad platform, the YouTube player's attestation
+  call, an SEO script and a second consent manager.**
+  `app.targeting.md` → marketing, the **exact host**: Targeting (targeting.md,
+  AIP GROUP SRL) is an ad-management platform, and its attribution tag
+  (`/api/t.js`, global `bordtrack`) mints a persistent visitor id in
+  localStorage — `bt_vid`, with a `bt_sid`/`bt_sid_exp` session pair — reads
+  `gclid`, `fbclid`, `wbraid` and `gbraid` off the URL along with the
+  `_fbp`/`_fbc` cookies, and posts all of it to `/api/collect` to feed Meta and
+  Google conversions. `targeting.md` itself stays unclassified, because a link
+  to the vendor's own site is not a tag.
+  `jnn-pa.googleapis.com` → marketing, again the **exact host**: the YouTube
+  player's attestation endpoint
+  (`/$rpc/google.internal.waa.v1.Waa/GenerateIT`), requested only by the
+  embedded player, so it follows the `youtube.com` decision rather than the
+  Maps entries on the same parent domain — which keep their own category, as
+  do `fonts.googleapis.com` and `ajax.googleapis.com` in §8.
+  `app.localseo.md` and `sa.searchatlas.com` → **necessary**: the Search Atlas
+  OTTO "dynamic optimization" script, white-labelled in Moldova by Local SEO. It
+  rewrites titles, meta tags, links and alt texts and logs the page URL, user
+  agent and referrer; checked in the script on 18.09.2026, it sets no cookie and
+  uses no local or session storage. It is `necessary` and not `functional`
+  because its whole audience is **crawlers**, and a crawler never answers a
+  banner — held until consent, it would never run for the one audience it exists
+  for. Exact hosts, so neither vendor's own site is classified.
+  `transcend-cdn.com` → necessary: Transcend Consent Management (`airgap.js`,
+  `ui.js`, `cm.css`) is another vendor's consent manager, and blocking a consent
+  manager behind consent is circular. It is named rather than left silent so the
+  audit reports that a second consent tool is on the page.
+- Infrastructure (§8), static assets only: `ggpht.com` (Google's user-content
+  image CDN — `yt3.ggpht.com` serves YouTube channel avatars, the same argument
+  as the existing `ytimg.com`: the **player** is marketing on `youtube.com`,
+  this host serves pictures), `phosphor.utils.elfsightcdn.com` (the Phosphor
+  icon files an Elfsight widget loads — the icons only; the widget platform
+  itself is **not** classified by this entry), `upload.wikimedia.org` and
+  `thumb.wikimedia.org` (Wikimedia Commons originals and thumbnails), and
+  `cdn.prod.website-files.com`, Webflow's current asset CDN beside the existing
+  `assets.website-files.com`.
+- Deliberately **not** classified: `auth.wikimedia.org` and `meta.wikimedia.org`
+  — Wikimedia's own central login, only ever seen on Wikimedia's own sites,
+  which makes them a decision about a site rather than about asset delivery. So
+  only the two media hosts are named, and the bare `wikimedia.org` never is.
 
 ### 0.5.26
 
@@ -1971,7 +2015,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.26), not a released product.** It is honest about
+**This is a prototype (v0.5.27), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

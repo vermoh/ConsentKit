@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.26
+Stable tag: 0.5.27
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers 148 known tracker hosts and
+  requests them. This is on by default and covers 153 known tracker hosts and
   14 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (148 hosts, 14 path rules) and matches by
+* The tracker database is a snapshot (153 hosts, 14 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,41 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.27 =
+* Tracker database: app.targeting.md -> marketing, the exact host. Targeting
+  (targeting.md, AIP GROUP SRL) is a Moldovan ad-management platform; its
+  attribution tag (/api/t.js, global bordtrack) mints a persistent visitor id in
+  localStorage (bt_vid, plus a bt_sid/bt_sid_exp session pair), reads gclid,
+  fbclid, wbraid and gbraid off the URL along with the _fbp/_fbc cookies, and
+  posts them to /api/collect to feed Meta and Google conversions. targeting.md
+  itself stays unclassified: a link to the vendor is not a tag.
+* Tracker database: jnn-pa.googleapis.com -> marketing, the exact host. The
+  YouTube player's attestation endpoint, requested only by the embedded player,
+  so it follows the youtube.com decision. The Maps hosts on the same parent
+  domain keep their own category, and the Google font and Ajax CDNs stay
+  infrastructure.
+* Tracker database: app.localseo.md and sa.searchatlas.com -> necessary. The
+  Search Atlas OTTO "dynamic optimization" script, white-labelled in Moldova by
+  Local SEO: it rewrites titles, meta tags, links and alt texts and logs the page
+  URL, user agent and referrer, and it sets no cookie and uses no local or
+  session storage (checked in the script on 18.09.2026). Necessary rather than
+  functional because its audience is crawlers, and a crawler never answers a
+  banner -- held until consent it would never run at all. Exact hosts only.
+* Tracker database: transcend-cdn.com -> necessary. Transcend Consent Management
+  (airgap.js, ui.js, cm.css) is another vendor's consent manager, and blocking a
+  consent manager behind consent is circular. Named rather than left silent, so
+  the audit reports that a second consent tool is on the page.
+* Infrastructure: ggpht.com (Google's user-content image CDN -- yt3.ggpht.com
+  serves YouTube channel avatars; the player is marketing on youtube.com, this
+  host serves pictures), phosphor.utils.elfsightcdn.com (the Phosphor icon files
+  an Elfsight widget loads -- the icons only, not the widget platform),
+  upload.wikimedia.org and thumb.wikimedia.org (Wikimedia Commons media) and
+  cdn.prod.website-files.com (Webflow's current asset CDN). Not consent
+  decisions, so no category.
+* Deliberately not classified: auth.wikimedia.org and meta.wikimedia.org,
+  Wikimedia's own central login, seen only on Wikimedia's own sites -- a decision
+  about a site rather than about asset delivery.
 
 = 0.5.26 =
 * texts.links[] gains an optional `urls` map: { ru: "...", ro: "..." } beside

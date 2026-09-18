@@ -28,7 +28,7 @@ export function undecidedState() {
  */
 export function createStub() {
   const stub = {
-    version: '0.5.26',
+    version: '0.5.27',
     config: {},
     init: function () { return undecidedState(); },
     allowed: function (cat) { return cat === 'necessary'; },

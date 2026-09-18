@@ -87,6 +87,13 @@ const CASES = [
   // API it talks to. Subdomains only — see the dedicated block below.
   ['https://w.soundcloud.com/player/api.js', 'marketing'],
   ['https://api-widget.soundcloud.com/resolve', 'marketing'],
+  // Owner's findings 18.09.2026 (audits): Targeting (targeting.md, AIP GROUP
+  // SRL) — a Moldovan ad-management platform whose attribution tag mints a
+  // persistent visitor id and joins it to the Google/Meta click ids; and the
+  // YouTube player's attestation endpoint, requested only by the embed.
+  ['https://app.targeting.md/api/t.js', 'marketing'],
+  ['https://app.targeting.md/api/collect', 'marketing'],
+  ['https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/GenerateIT', 'marketing'],
 
   // --- analytics: owner's findings 11.09.2026 (audits) ---------------------
   // Convia — the DoFollow agency's visitor tracker, on the product's own
@@ -147,6 +154,12 @@ const CASES = [
   ['https://o123456.ingest.sentry.io/api/1/envelope/', 'necessary'],
   // The ASBIS group's self-hosted Sentry, the exact host only.
   ['https://sentry.asbis.io/api/32/envelope/', 'necessary'],
+  // Owner's findings 18.09.2026: Search Atlas OTTO, the SEO script white-
+  // labelled by Local SEO Moldova, and Transcend's consent manager. Both are
+  // `necessary` for reasons of their own — see the dedicated tests below.
+  ['https://app.localseo.md/scripts/dynamic_optimization.js', 'necessary'],
+  ['https://sa.searchatlas.com/api/v2/otto-url-details', 'necessary'],
+  ['https://transcend-cdn.com/cm/abc123/airgap.js', 'necessary'],
   ['https://sentry.io/api/1/store/', 'necessary'],
   ['https://www.paypal.com/sdk/js?client-id=x', 'necessary'],
   ['https://www.paypalobjects.com/js/external/api.js', 'necessary'],
@@ -528,4 +541,158 @@ test('cdn.polyfill.io is deliberately unclassified, so the audit keeps reporting
     'nor the bare parent domain someone would tidy it into');
   assert.ok(!CK._infra().includes('cdn.polyfill.io'),
     'cdn.polyfill.io must not appear in _infra() at all');
+});
+
+/* --------------------------------------------------- 0.5.27 additions */
+
+test('Targeting is caught on its tag host, and a link to the vendor is not', () => {
+  /* app.targeting.md /api/t.js (global `bordtrack`) mints a persistent visitor
+     id in localStorage — `bt_vid`, with the `bt_sid`/`bt_sid_exp` session pair
+     beside it — reads gclid/fbclid/wbraid/gbraid off the URL and the
+     `_fbp`/`_fbc` cookies, and posts the lot to /api/collect to feed Meta and
+     Google conversions. A persistent id joined to ad click ids is an
+     advertising profile, so `marketing`.
+
+     The EXACT host, and this test is the guard on that: targeting.md is the
+     vendor's own marketing site, and a bare entry would rule `marketing` on a
+     mere link to it — the w.soundcloud.com / soundcloud.com split. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://app.targeting.md/api/t.js'), 'marketing',
+    'the attribution tag builds the ad profile');
+  assert.equal(CK._categoryForUrl('https://app.targeting.md/api/collect'), 'marketing',
+    'and the endpoint it posts the click ids to is the same decision');
+  assert.equal(CK._categoryForUrl('https://targeting.md/'), null,
+    "the vendor's own marketing site must stay unclassified — a link is not a tag");
+  assert.equal(CK._categoryForUrl('https://www.targeting.md/pricing'), null,
+    'nor is a www link to one of its pages');
+  assert.ok(!CK._isInfra('app.targeting.md'),
+    'a tracker must never be waved through as infrastructure');
+});
+
+test('the YouTube attestation host does not leak onto the rest of googleapis.com', () => {
+  /* jnn-pa.googleapis.com /$rpc/…Waa/GenerateIT is requested ONLY by the
+     embedded player, so it is held and released with the player and follows the
+     youtube.com decision. googleapis.com, however, also carries Maps
+     (`functional`) and two INFRA_DB hosts, and lookupHostMap returns the FIRST
+     match rather than the longest — so naming the exact host is the whole
+     safety property here, and these are the assertions that pin it. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/GenerateIT'), 'marketing',
+    "the player's attestation call follows the player");
+  assert.ok(!CK._isInfra('jnn-pa.googleapis.com'),
+    'it is the player talking, not asset delivery');
+  assert.equal(CK._categoryForUrl('https://maps.googleapis.com/maps/api/js?key=x'), 'functional',
+    'Maps must keep its own category');
+  assert.equal(CK._categoryForUrl('https://fonts.googleapis.com/css2?family=Inter'), null,
+    'the font CDN must stay uncategorised');
+  assert.equal(CK._categoryForUrl('https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js'), null,
+    'and so must the Ajax CDN');
+  for (const host of ['fonts.googleapis.com', 'ajax.googleapis.com']) {
+    assert.ok(CK._isInfra(host), `${host} must still be waved through as infrastructure`);
+  }
+  assert.ok(!CK._isInfra('googleapis.com'),
+    'the bare parent is not named in either table');
+});
+
+test('the OTTO SEO script is necessary because a crawler cannot consent', () => {
+  /* Search Atlas OTTO «dynamic optimization», white-labelled by Local SEO
+     Moldova. It rewrites titles, meta tags, links and alt texts and logs the
+     page URL, user agent and referrer; checked in the script on 18.09.2026, it
+     sets no cookie and uses no local/session storage, so there is no identifier
+     to hold.
+
+     `necessary` rather than `functional` because its whole audience is
+     CRAWLERS, and a crawler never answers a banner: held until consent, it
+     would never run for the one audience it exists for. Exact hosts, so that
+     neither vendor's own site is classified by these entries. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://app.localseo.md/scripts/dynamic_optimization.js'), 'necessary',
+    'the white-labelled script is never held');
+  assert.equal(CK._categoryForUrl('https://sa.searchatlas.com/api/v2/otto-url-details'), 'necessary',
+    "and neither is the vendor's API it reads its rewrites from");
+  assert.equal(CK._categoryForUrl('https://localseo.md/'), null,
+    "the reseller's own site must stay unclassified");
+  assert.equal(CK._categoryForUrl('https://searchatlas.com/'), null,
+    "and so must the vendor's own site");
+  for (const host of ['app.localseo.md', 'sa.searchatlas.com']) {
+    assert.ok(!CK._isInfra(host),
+      `${host} is a vendor the owner chose, which is a decision and not infrastructure`);
+  }
+});
+
+test('another vendor’s consent manager is never held behind consent', () => {
+  /* Transcend Consent Management (airgap.js, ui.js, cm.css). Blocking a consent
+     manager behind consent is circular — the script that would ask the visitor
+     for a decision cannot wait on that decision, and the page would show no
+     banner at all. It is named rather than left silent so the audit reports
+     that a second consent tool is on the page. The domain is dedicated to the
+     product, so the bare entry is the right scope. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://transcend-cdn.com/cm/abc123/airgap.js'), 'necessary',
+    'the consent manager itself must load');
+  assert.equal(CK._categoryForUrl('https://transcend-cdn.com/cm/abc123/ui.js'), 'necessary',
+    'and so must its UI');
+  assert.equal(CK._categoryForUrl('https://transcend-cdn.com/cm/abc123/cm.css'), 'necessary',
+    'and its stylesheet');
+  assert.ok(!CK._isInfra('transcend-cdn.com'),
+    'a consent manager is a third party the owner chose, not asset delivery');
+});
+
+test('the 0.5.27 infrastructure hosts carry no category and are waved through', () => {
+  /* Static assets only: Google's user-content image CDN (YouTube channel
+     avatars — the ytimg.com argument, host for host), the Phosphor icon files
+     an Elfsight widget loads, Wikimedia Commons media, and Webflow's current
+     asset CDN beside the one it moved from. */
+  const CK = loadCore();
+  const HOSTS = [
+    'ggpht.com',
+    'phosphor.utils.elfsightcdn.com',
+    'upload.wikimedia.org',
+    'thumb.wikimedia.org',
+    'cdn.prod.website-files.com',
+  ];
+  for (const host of HOSTS) {
+    assert.ok(CK._infra().includes(host), `${host} is missing from _infra()`);
+    assert.ok(CK._isInfra(host), `_isInfra(${host}) should be true`);
+  }
+  assert.equal(CK._categoryForUrl('https://yt3.ggpht.com/ytc/AIdro_abc=s176-c-k-c0x00ffffff-no-rj'), null,
+    'a channel avatar is a picture, not the player');
+  assert.equal(CK._categoryForUrl('https://phosphor.utils.elfsightcdn.com/regular/house.svg'), null,
+    'an icon file carries no category');
+  assert.equal(CK._categoryForUrl('https://upload.wikimedia.org/wikipedia/commons/a/a9/Example.jpg'), null,
+    'a Commons original is a hot-linked image');
+  assert.equal(CK._categoryForUrl('https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Example.jpg/320px-Example.jpg'), null,
+    'and so is its generated thumbnail');
+  assert.equal(CK._categoryForUrl('https://cdn.prod.website-files.com/abc/def/style.css'), null,
+    "Webflow serves the site's own build output");
+  /* The player itself is untouched by the avatar host beside it. */
+  assert.equal(CK._categoryForUrl('https://www.youtube.com/embed/dQw4w9WgXcQ'), 'marketing',
+    'the YouTube player stays marketing');
+});
+
+test('the 0.5.27 non-additions stay out of both tables', () => {
+  /* Recorded as a test because a deliberate absence is invisible otherwise, and
+     the next reader's instinct is to "complete" the set.
+
+     auth.wikimedia.org and meta.wikimedia.org are Wikimedia's own central
+     login. They are only ever seen on Wikimedia's own sites, which makes them a
+     decision about a SITE rather than about asset delivery — the ecom.md
+     reasoning — so only the two media hosts are named and the bare parent never
+     is. elfsightcdn.com is likewise absent: this release classifies the icon
+     files a widget loads, and says nothing about the widget platform. */
+  const CK = loadCore();
+  for (const host of ['wikimedia.org', 'auth.wikimedia.org', 'meta.wikimedia.org']) {
+    assert.ok(!CK._isInfra(host),
+      `${host} must not be waved through — only the two media hosts are named`);
+    assert.equal(CK._categoryForUrl('https://' + host + '/'), null,
+      `${host} must carry no category either`);
+  }
+  assert.ok(!CK._isInfra('elfsightcdn.com'),
+    'the Elfsight widget platform is not classified by the Phosphor icon entry');
+  assert.ok(!CK._infra().includes('elfsightcdn.com'),
+    'and the bare parent must not appear in _infra()');
+  assert.ok(!CK._isInfra('website-files.com'),
+    'both Webflow hosts are named in full; the bare parent is not');
+  assert.ok(!CK._isInfra('targeting.md'), 'the Targeting vendor site is in neither table');
+  assert.ok(!CK._isInfra('searchatlas.com'), 'nor is the Search Atlas vendor site');
 });

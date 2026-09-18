@@ -5,6 +5,50 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.27
+
+- Tracker database: **a Moldovan ad platform, the YouTube player's attestation
+  call, an SEO script and a second consent manager.**
+  `app.targeting.md` → marketing, the **exact host**: Targeting (targeting.md,
+  AIP GROUP SRL) is an ad-management platform, and its attribution tag
+  (`/api/t.js`, global `bordtrack`) mints a persistent visitor id in
+  localStorage — `bt_vid`, with a `bt_sid`/`bt_sid_exp` session pair — reads
+  `gclid`, `fbclid`, `wbraid` and `gbraid` off the URL along with the
+  `_fbp`/`_fbc` cookies, and posts all of it to `/api/collect` to feed Meta and
+  Google conversions. `targeting.md` itself stays unclassified, because a link
+  to the vendor's own site is not a tag.
+  `jnn-pa.googleapis.com` → marketing, again the **exact host**: the YouTube
+  player's attestation endpoint
+  (`/$rpc/google.internal.waa.v1.Waa/GenerateIT`), requested only by the
+  embedded player, so it follows the `youtube.com` decision rather than the
+  Maps entries on the same parent domain — which keep their own category, as
+  do `fonts.googleapis.com` and `ajax.googleapis.com` in §8.
+  `app.localseo.md` and `sa.searchatlas.com` → **necessary**: the Search Atlas
+  OTTO "dynamic optimization" script, white-labelled in Moldova by Local SEO. It
+  rewrites titles, meta tags, links and alt texts and logs the page URL, user
+  agent and referrer; checked in the script on 18.09.2026, it sets no cookie and
+  uses no local or session storage. It is `necessary` and not `functional`
+  because its whole audience is **crawlers**, and a crawler never answers a
+  banner — held until consent, it would never run for the one audience it exists
+  for. Exact hosts, so neither vendor's own site is classified.
+  `transcend-cdn.com` → necessary: Transcend Consent Management (`airgap.js`,
+  `ui.js`, `cm.css`) is another vendor's consent manager, and blocking a consent
+  manager behind consent is circular. It is named rather than left silent so the
+  audit reports that a second consent tool is on the page.
+- Infrastructure (§8), static assets only: `ggpht.com` (Google's user-content
+  image CDN — `yt3.ggpht.com` serves YouTube channel avatars, the same argument
+  as the existing `ytimg.com`: the **player** is marketing on `youtube.com`,
+  this host serves pictures), `phosphor.utils.elfsightcdn.com` (the Phosphor
+  icon files an Elfsight widget loads — the icons only; the widget platform
+  itself is **not** classified by this entry), `upload.wikimedia.org` and
+  `thumb.wikimedia.org` (Wikimedia Commons originals and thumbnails), and
+  `cdn.prod.website-files.com`, Webflow's current asset CDN beside the existing
+  `assets.website-files.com`.
+- Deliberately **not** classified: `auth.wikimedia.org` and `meta.wikimedia.org`
+  — Wikimedia's own central login, only ever seen on Wikimedia's own sites,
+  which makes them a decision about a site rather than about asset delivery. So
+  only the two media hosts are named, and the bare `wikimedia.org` never is.
+
 ## 0.5.26
 
 - **A link can carry a different address per language — `texts.links[].urls`.**
