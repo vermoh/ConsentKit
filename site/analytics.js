@@ -55,7 +55,9 @@
   /* Where attribution has to survive to. Links to this host are decorated. */
   var CABINET_HOST = 'app.ecomconsult.net';
 
-  /* The storage key holding the FIRST source a visitor arrived from. */
+  /* The storage key holding the attribution record: the visit's FIRST source
+     (utm_*, referrer, landing_page, first_seen) plus the LATEST click id of
+     each kind with its date (SPEC-V1.29 §1). */
   var ATTR_KEY = 'ck_attr';
 
   /* The click ids and campaign fields from the brief (§03), plus the three we
@@ -66,6 +68,38 @@
   ];
 
   var ATTR_DERIVED = ['referrer', 'landing_page', 'first_seen'];
+
+  /* The two classes of key (SPEC-V1.29 §1).
+   *
+   * CLICK IDS are LAST-TOUCH: a buyer who came from Meta a week ago and comes
+   * back through a Google ad today bought because of the Google click, and
+   * Google Ads can only credit the conversion to the gclid it issued. Each
+   * one carries its own `<name>_at` — the moment this browser first saw it —
+   * because the Ads conversion window is 90 days and a click older than that
+   * is no longer a click Google will accept.
+   *
+   * The VISIT'S SOURCE is FIRST-TOUCH, as it always was: the campaign that
+   * first brought the visitor stays the answer to «where did they come
+   * from», and a later newsletter link does not rewrite it. */
+  var CLICK_IDS = ['gclid', 'wbraid', 'gbraid', 'fbclid', 'msclkid'];
+
+  var FIRST_TOUCH = [
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+    'referrer', 'landing_page', 'first_seen'
+  ];
+
+  /* A click id older than this is treated as absent when read. One constant
+     per place (landing, cabinet, server), each pinned by a test. */
+  var CLICK_TTL_DAYS = 90;
+
+  /* A stored date this far in the future is a clock that was wrong when it
+     was written; trusting it would let it outrank every later click. */
+  var CLICK_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+  /* THE WHITELIST: every key the record may hold and a cabinet link may
+     carry, in the order a decorated URL lists them. Anything else found in
+     storage is dropped at the next merge. */
+  var ATTR_KEYS = ATTR_PARAMS.concat(ATTR_DERIVED, CLICK_IDS.map(function (k) { return k + '_at'; }));
 
   /* ══════════════════════════════════════════════════════════════════
      dataLayer
@@ -141,7 +175,33 @@
     } catch (e) { return null; }
   }
 
-  /* What the CURRENT address says. Empty for a direct visit. */
+  function has(obj, k) {
+    return !!obj && Object.prototype.hasOwnProperty.call(obj, k) &&
+      obj[k] !== '' && obj[k] !== null && obj[k] !== undefined;
+  }
+
+  /* The time of a click id's `_at`, or NaN when the pair is unusable: no
+     date, not a date, older than CLICK_TTL_DAYS, or from the future. A NaN
+     means «this click id does not exist» — it is dropped with its date. */
+  function clickTime(rec, id) {
+    try {
+      if (!has(rec, id) || !has(rec, id + '_at')) return NaN;
+      var t = new Date(String(rec[id + '_at'])).getTime();
+      if (isNaN(t)) return NaN;
+      var now = new Date().getTime();
+      if (t > now + CLICK_FUTURE_SKEW_MS) return NaN;
+      if (now - t > CLICK_TTL_DAYS * 24 * 60 * 60 * 1000) return NaN;
+      return t;
+    } catch (e) { return NaN; }
+  }
+
+  /* What the CURRENT address says, as a record. Empty for a direct visit.
+   *
+   * Each click id is stamped with its `_at` HERE, once per page load — not
+   * when it is stored — so a visitor who answers the banner a minute later
+   * does not move the date of the click. The derived first-touch fields are
+   * only recorded alongside a real source: a bare direct visit must not look
+   * like one. */
   function attrFromUrl() {
     var out = {};
     try {
@@ -151,37 +211,93 @@
         if (v) out[ATTR_PARAMS[i]] = String(v).slice(0, 200);
       }
     } catch (e) { /* no URLSearchParams: no attribution, not a broken page */ }
-    return out;
-  }
-
-  /* The record this page load works from.
-   *
-   * THE FIRST SOURCE WINS. A stored record is a visitor who already arrived
-   * from somewhere — and the campaign that EARNED the visit is the first one,
-   * not the last link they happened to click on the way back. So a stored
-   * record is returned whole and the current URL is not merged into it.
-   *
-   * Held in memory either way, which is what makes R2 possible: the links can
-   * be decorated on a page load where nothing may be written yet. */
-  var ATTR = (function () {
-    var stored = readStoredAttr();
-    if (stored) return stored;
-
-    var fresh = attrFromUrl();
     try {
-      // Only recorded alongside a real source; a bare direct visit stores and
-      // decorates nothing, and an empty record must not look like a visit.
-      if (Object.keys(fresh).length) {
+      if (Object.keys(out).length) {
+        var at = new Date().toISOString();
+        for (var c = 0; c < CLICK_IDS.length; c++) {
+          if (has(out, CLICK_IDS[c])) out[CLICK_IDS[c] + '_at'] = at;
+        }
         // Empty values are dropped for the same reason push() drops them: an
         // empty `referrer=` in a decorated URL is a query parameter that says
         // nothing, and it would travel on every cabinet link forever.
         var ref = String(document.referrer || '').slice(0, 200);
-        if (ref) fresh.referrer = ref;
-        fresh.landing_page = String(window.location.pathname || '/').slice(0, 200);
-        fresh.first_seen = new Date().toISOString();
+        if (ref) out.referrer = ref;
+        out.landing_page = String(window.location.pathname || '/').slice(0, 200);
+        out.first_seen = at;
       }
     } catch (e) { /* noop */ }
-    return fresh;
+    return out;
+  }
+
+  /* merge(stored, fresh) — SPEC-V1.29 §1.
+   *
+   * FIRST-TOUCH for the visit's source: if storage already holds a source,
+   * its whole set (utm_*, referrer, landing_page, first_seen) is kept and
+   * this visit's is ignored. All or nothing — a utm_medium from today beside
+   * a utm_source from last month would describe a campaign that never ran.
+   *
+   * LAST-TOUCH for click ids: a non-empty click id in this address replaces
+   * the stored one, date and all; an absent one leaves the stored one alone.
+   * A buyer who came from Meta a week ago and returns through a Google ad
+   * must be credited to the Google click. When both sides carry the same id
+   * kind the later `_at` wins (this load's wins a tie) — which is what lets
+   * the re-merge in storeAttr() respect a newer click written by another tab.
+   *
+   * Expired or undated click ids are dropped on the way through (clickTime),
+   * so neither the record nor a decorated link ever carries one. The result
+   * holds only whitelisted keys, in ATTR_KEYS order. */
+  function mergeAttr(stored, fresh) {
+    var s = stored || {};
+    var f = fresh || {};
+    var out = {};
+    var i, k;
+
+    var src = f;
+    for (i = 0; i < FIRST_TOUCH.length; i++) {
+      if (has(s, FIRST_TOUCH[i])) { src = s; break; }
+    }
+
+    var pick = {};
+    for (i = 0; i < CLICK_IDS.length; i++) {
+      var id = CLICK_IDS[i];
+      var ts = clickTime(s, id);
+      var tf = clickTime(f, id);
+      if (!isNaN(tf) && (isNaN(ts) || tf >= ts)) pick[id] = f;
+      else if (!isNaN(ts)) pick[id] = s;
+    }
+
+    for (i = 0; i < ATTR_KEYS.length; i++) {
+      k = ATTR_KEYS[i];
+      var base = k.slice(-3) === '_at' ? k.slice(0, -3) : k;
+      var from = pick.hasOwnProperty(base) ? pick[base]
+        : (FIRST_TOUCH.indexOf(k) > -1 ? src : null);
+      if (from && has(from, k)) out[k] = String(from[k]).slice(0, 200);
+    }
+    return out;
+  }
+
+  function sameAttr(a, b) {
+    var ka = Object.keys(a || {});
+    var kb = Object.keys(b || {});
+    if (ka.length !== kb.length) return false;
+    for (var i = 0; i < ka.length; i++) {
+      if (!Object.prototype.hasOwnProperty.call(b, ka[i])) return false;
+      if (String(a[ka[i]]) !== String(b[ka[i]])) return false;
+    }
+    return true;
+  }
+
+  /* This page load's address, read once. */
+  var FRESH = attrFromUrl();
+
+  /* The record this page load works from: merge(stored, fresh).
+   *
+   * Held in memory either way, which is what makes R2 possible: the links can
+   * be decorated on a page load where nothing may be written yet — and an
+   * expired click id is already gone from memory and links even though the
+   * copy in storage waits for the next consented write to be cleaned. */
+  var ATTR = (function () {
+    try { return mergeAttr(readStoredAttr(), FRESH); } catch (e) { return {}; }
   })();
 
   function hasAttr() {
@@ -189,19 +305,21 @@
   }
 
   /* R2's single write point. Called only from a consent signal. */
-  var attrStored = false;
-
   function storeAttr() {
-    if (attrStored) return;
-    if (!hasAttr()) return;
     try {
-      // Never overwrite: a record already in storage is the first source, and
-      // this page load's URL is by definition later. Re-checked here and not
-      // only in ATTR above, because a second decision on the same page load
-      // would otherwise race a write from another tab.
-      if (window.localStorage.getItem(ATTR_KEY)) { attrStored = true; return; }
-      window.localStorage.setItem(ATTR_KEY, JSON.stringify(ATTR));
-      attrStored = true;
+      // Re-read and re-merge right before writing, not only once at load:
+      // another tab may have stored a newer click (or the first source) since
+      // this page loaded, and writing the load-time ATTR over it would lose
+      // that. The merge keeps the first stored source and the later click.
+      var stored = readStoredAttr();
+      var merged = mergeAttr(stored, FRESH);
+      ATTR = merged;
+      if (!hasAttr()) return;
+      // Overwrite only when the merge CHANGED something — a new click id, a
+      // pruned expired one, a first write. Identical records are left alone,
+      // so repeated consent signals on one page are no-ops.
+      if (stored && sameAttr(stored, merged)) return;
+      window.localStorage.setItem(ATTR_KEY, JSON.stringify(merged));
     } catch (e) { /* storage blocked: memory and links still work */ }
   }
 
@@ -231,13 +349,23 @@
       if (url.hostname !== CABINET_HOST) return;
 
       var changed = false;
-      for (var k in ATTR) {
-        if (!Object.prototype.hasOwnProperty.call(ATTR, k)) continue;
+      // The link as authored, before this loop adds anything to it.
+      var authored = new URLSearchParams(url.search);
+      // Only whitelisted keys travel (ATTR_KEYS), in their fixed order.
+      for (var i = 0; i < ATTR_KEYS.length; i++) {
+        var k = ATTR_KEYS[i];
+        if (!has(ATTR, k)) continue;
         // Existing query and hash are preserved — a link may already carry a
         // plan or a return path, and a decorator that clobbered it would
         // break the destination to measure it. An existing value for the same
         // key wins: whoever authored the link meant it.
         if (url.searchParams.has(k)) continue;
+        // A click id and its date travel as a PAIR: a link that already
+        // carries its own gclid (or gclid_at) must not be given our date for
+        // it, and a date never travels without its id.
+        var id = k.slice(-3) === '_at' ? k.slice(0, -3) : k;
+        if (CLICK_IDS.indexOf(id) > -1 &&
+            (authored.has(id) || authored.has(id + '_at') || !has(ATTR, id))) continue;
         url.searchParams.set(k, ATTR[k]);
         changed = true;
       }

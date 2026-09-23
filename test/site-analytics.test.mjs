@@ -297,7 +297,7 @@ function fakeCK(cats) {
 const gtmRequested = (injected) =>
   injected.filter((el) => String(el.src || '').includes('googletagmanager.com')).length;
 
-/* The storage key holding the visitor's first source. */
+/* The storage key holding the attribution record (first source + latest click ids). */
 const ATTR_KEY = 'ck_attr';
 
 /* ══════════════════════════════════════════════════════ R1 — the container */
@@ -426,30 +426,11 @@ test('R2: an already-consented visitor has it written at load', () => {
     'a returning consented visitor had no attribution stored');
 });
 
-test('the FIRST source wins — storage is never overwritten', () => {
-  /* The campaign that EARNED the visit is the first one. A visitor who
-     arrived from an ad in March and returns in May through a newsletter link
-     must still be attributed to the ad. */
-  const first = { gclid: 'FIRST', utm_source: 'ads', first_seen: '2026-01-01T00:00:00.000Z' };
-  const { store, anchors, dataLayer } = run({
-    href: 'https://consentkit.ecomconsult.net/ru/?gclid=SECOND&utm_source=newsletter',
-    storage: { [ATTR_KEY]: JSON.stringify(first) },
-    consentKit: fakeCK({ analytics: true }),
-    links: ['https://app.ecomconsult.net/']
-  });
-
-  assert.deepEqual(JSON.parse(store[ATTR_KEY]), first,
-    'a later visit overwrote the first source in storage');
-
-  // And the link carries the FIRST source too, not the URL's.
-  const href = anchors[0].getAttribute('href');
-  assert.match(href, /gclid=FIRST/, 'the cabinet link carried the later click id');
-  assert.doesNotMatch(href, /SECOND/, 'the cabinet link leaked the later click id');
-
-  dataLayer.push({ event: 'ck_consent_analytics' });
-  assert.deepEqual(JSON.parse(store[ATTR_KEY]), first,
-    'a consent event overwrote the stored first source');
-});
+/* «The FIRST source wins — storage is never overwritten» lived here until
+   SPEC-V1.29 (23.09.2026). It is now only half true: the visit's SOURCE is
+   still first-touch, but click ids are last-touch with a 90-day life, and the
+   stored record IS overwritten when a merge changes it. That model is pinned
+   in test/site-attr.test.mjs. */
 
 test('an empty referrer is never written into the record or the link', () => {
   /* REGRESSION (found by the Playwright proof, 11.09.2026). A visitor who
