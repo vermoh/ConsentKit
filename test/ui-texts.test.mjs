@@ -1629,7 +1629,15 @@ function makeLivePage({ lang = '', path = '/', navLang = 'en-US' } = {}) {
       querySelector() { return null; },
       querySelectorAll() { return []; },
       getElementsByTagName() { return []; },
-      addEventListener() {}, removeEventListener() {}, focus() {}, closest() { return null; },
+      // Listeners are recorded, never dispatched by the stub itself: the
+      // 0.5.28 Tab-trap test below calls the panel's keydown handler by hand.
+      _listeners: {},
+      addEventListener(t, fn) { (n._listeners[t] || (n._listeners[t] = [])).push(fn); },
+      removeEventListener() {}, closest() { return null; },
+      // Records the options of every call, so the 0.5.28 preventScroll
+      // assertions below can read what ck-ui actually passed.
+      _focusCalls: [],
+      focus(opts) { n._focusCalls.push(opts); },
       /* A REAL view over `className`, not a separate Set. ck-ui creates nodes
          with `el('div', 'ck-panel ck-hidden')` — a className STRING — and then
          toggles the same class through classList; a browser keeps those one and
@@ -1945,4 +1953,171 @@ test('a CLOSED settings panel stays closed across a language switch', () => {
   page.drain();
   assert.equal(page.title(), 'Cookie-uri pe acest site', 'the banner should still switch');
   assert.equal(page.panelOpen(), false, 'the switch opened a panel by itself');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   0.5.28 — focus never scrolls the host page
+   ═══════════════════════════════════════════════════════════════════════
+
+   A plain focus() scrolls the focused node into view. The settings panel
+   focuses itself on open, cycles focus in its Tab trap and restores focus to
+   the invoker on close — and each of those could move the site the banner
+   sits on. A consent panel must never move the host page, so all three pass
+   { preventScroll: true }.
+
+   The open path is driven live through the stub (its focus() records the
+   options). The stub's addEventListener is a no-op, so the Tab trap and the
+   restore cannot be reached that way; the source assertion covers them. */
+
+test('opening the settings panel focuses it with preventScroll', () => {
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  page.openPreferences();
+  page.drain();
+  assert.equal(page.panelOpen(), true, 'the panel did not open');
+
+  const host = page.doc.getElementById('ck-root');
+  let panel = null;
+  (function walk(list) {
+    for (const n of list) {
+      if (!panel && n.classList && n.classList.contains('ck-panel')) { panel = n; return; }
+      walk(n.childNodes || []);
+    }
+  })(host._root.childNodes);
+  assert.ok(panel, 'no .ck-panel node in the shadow tree');
+  assert.ok(panel._focusCalls.length >= 1, 'openPanel() did not focus the panel');
+  for (const opts of panel._focusCalls) {
+    assert.ok(opts && opts.preventScroll === true,
+      `the panel was focused with ${JSON.stringify(opts)} — it would scroll the host page`);
+  }
+});
+
+test('every focus() call in ck-ui.js passes preventScroll', () => {
+  const calls = UI_SRC.match(/\.focus\([^)]*\)/g) || [];
+  assert.equal(calls.length, 3,
+    `expected the three panel focus calls (trap, open, restore), found ${calls.length}`);
+  for (const c of calls) {
+    assert.match(c, /preventScroll:\s*true/, `${c} can scroll the host page`);
+  }
+});
+
+/* The Tab trap focuses with preventScroll, so it has to bring a control that
+   sits outside the visible part of .ck-panel__body into view itself — by that
+   element's scrollTop only. Driven live: the panel's recorded keydown handler
+   is called with a Tab event, the focus targets are stubs with rectangles, and
+   every way the host document could scroll is a recorder that must stay
+   silent. */
+test('Tab to a control below the fold scrolls the panel body, never the page', () => {
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  page.openPreferences();
+  page.drain();
+
+  const host = page.doc.getElementById('ck-root');
+  const root = host._root;
+  const find = (cls) => {
+    let hit = null;
+    (function walk(list) {
+      for (const n of list) {
+        if (!hit && n.classList && n.classList.contains(cls)) { hit = n; return; }
+        walk(n.childNodes || []);
+      }
+    })(root.childNodes);
+    return hit;
+  };
+  const panel = find('ck-panel');
+  const body = find('ck-panel__body');
+  assert.ok(panel && body, 'panel or panel body missing from the shadow tree');
+  const onKey = (panel._listeners.keydown || [])[0];
+  assert.equal(typeof onKey, 'function', 'the panel has no keydown handler');
+
+  // Every document-level scroll the reveal must NOT use.
+  const pageScrolls = [];
+  const g = page.g;
+  g.scrollTo = (...a) => pageScrolls.push(['scrollTo', a]);
+  g.scrollBy = (...a) => pageScrolls.push(['scrollBy', a]);
+  g.scroll = (...a) => pageScrolls.push(['scroll', a]);
+  page.doc.documentElement.scrollTop = 0;
+  page.doc.body.scrollTop = 0;
+
+  // The body's visible box is y 100..300 of the viewport, scrolled to the top.
+  body.scrollTop = 0;
+  body.getBoundingClientRect = () => ({ top: 100, bottom: 300, left: 0, right: 600, height: 200, width: 600 });
+
+  function control(rect) {
+    const c = page.doc.createElement('button');
+    c.offsetParent = body;
+    c.getClientRects = () => [rect];
+    c.getBoundingClientRect = () => rect;
+    c.scrollIntoView = (...a) => pageScrolls.push(['scrollIntoView', a]);
+    body.appendChild(c);
+    return c;
+  }
+  const first = control({ top: 120, bottom: 150, height: 30 });   // visible
+  const below = control({ top: 400, bottom: 440, height: 40 });   // under the fold
+  panel.querySelectorAll = () => [first, below];
+  root.activeElement = first;
+
+  let prevented = false;
+  onKey({ key: 'Tab', shiftKey: false, preventDefault() { prevented = true; }, stopPropagation() {} });
+
+  assert.ok(prevented, 'the trap must take over Tab');
+  assert.equal(below._focusCalls.length, 1, 'Tab did not move focus to the next control');
+  assert.equal(below._focusCalls[0] && below._focusCalls[0].preventScroll, true,
+    'the trap focused without preventScroll');
+  assert.ok(body.scrollTop >= 140,
+    `the body did not scroll the control into view (scrollTop ${body.scrollTop}, needs >= 140)`);
+  assert.deepEqual(pageScrolls, [], 'the host document was asked to scroll');
+  assert.equal(page.doc.documentElement.scrollTop, 0, 'the document scrollTop moved');
+  assert.equal(page.doc.body.scrollTop, 0, 'the document body scrollTop moved');
+
+  // And back up: Shift+Tab to a control now above the visible box.
+  const scrolled = body.scrollTop;
+  first.getBoundingClientRect = () => ({ top: -40, bottom: -10, height: 30 });
+  root.activeElement = below;
+  onKey({ key: 'Tab', shiftKey: true, preventDefault() {}, stopPropagation() {} });
+  assert.equal(first._focusCalls.length, 1, 'Shift+Tab did not move focus back');
+  assert.ok(body.scrollTop < scrolled, 'the body did not scroll back up to the control');
+  assert.ok(body.scrollTop >= 0, 'scrollTop went negative');
+  assert.deepEqual(pageScrolls, [], 'the host document was asked to scroll');
+});
+
+test('a control already visible in the panel body does not scroll it', () => {
+  const page = makeLivePage({ lang: 'ru', navLang: 'ru-RU' });
+  page.init({ language: 'page' });
+  page.drain();
+  page.openPreferences();
+  page.drain();
+  const root = page.doc.getElementById('ck-root')._root;
+  let panel = null; let body = null;
+  (function walk(list) {
+    for (const n of list) {
+      if (n.classList && n.classList.contains('ck-panel') && !panel) panel = n;
+      if (n.classList && n.classList.contains('ck-panel__body') && !body) body = n;
+      walk(n.childNodes || []);
+    }
+  })(root.childNodes);
+  body.scrollTop = 50;
+  body.getBoundingClientRect = () => ({ top: 100, bottom: 300, height: 200 });
+  const mk = (top) => {
+    const c = page.doc.createElement('button');
+    const r = { top, bottom: top + 30, height: 30 };
+    c.offsetParent = body; c.getClientRects = () => [r]; c.getBoundingClientRect = () => r;
+    body.appendChild(c);
+    return c;
+  };
+  const a = mk(120); const b = mk(200);
+  panel.querySelectorAll = () => [a, b];
+  root.activeElement = a;
+  panel._listeners.keydown[0]({ key: 'Tab', shiftKey: false, preventDefault() {}, stopPropagation() {} });
+  assert.equal(b._focusCalls.length, 1);
+  assert.equal(body.scrollTop, 50, 'a visible control must not move the panel body');
+});
+
+test('ck-ui.js never calls scrollIntoView', () => {
+  // It walks every scrollable ancestor, the host document included.
+  assert.doesNotMatch(UI_SRC, /\.scrollIntoView\s*\(/,
+    'scrollIntoView() can move the host page; adjust .ck-panel__body scrollTop instead');
 });

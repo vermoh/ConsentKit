@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.27
+Stable tag: 0.5.28
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -147,6 +147,20 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.28 =
+* Settings panel: opening it, tabbing inside it and closing it no longer move
+  the page. All three focus calls pass preventScroll, so a plain focus() can no
+  longer scroll the panel, the next control or the element you clicked before
+  into view and leave the visitor somewhere else on the site. A consent panel
+  must never move the host page. Browsers that ignore the option focus exactly
+  as before.
+* Settings panel: the Tab trap still keeps the focused control in sight. Since
+  preventScroll also stops the panel's own scrolling body from following focus,
+  the trap now brings a control above or below the visible part of the body into
+  view by adjusting that element's scrollTop (measured with
+  getBoundingClientRect). It never calls scrollIntoView(), which would move the
+  host page after all.
 
 = 0.5.27 =
 * Tracker database: app.targeting.md -> marketing, the exact host. Targeting

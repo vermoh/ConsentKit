@@ -443,7 +443,7 @@ test('a row the core stored renders through the same two resolvers', () => {
 
 /* ------------------------------------------------------------------ version */
 
-test('the client version literal is 0.5.27 in the core', () => {
+test('the client version literal is 0.5.28 in the core', () => {
   const core = readFileSync(join(REPO, 'src', 'ck-core.js'), 'utf8');
-  assert.match(core, /version: '0\.5\.27',/, 'src/ck-core.js was not bumped');
+  assert.match(core, /version: '0\.5\.28',/, 'src/ck-core.js was not bumped');
 });

@@ -5,6 +5,25 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.28
+
+- **The settings panel never moves the host page.** Its three `focus()` calls —
+  the panel itself when it opens, the Tab trap cycling between its controls, and
+  the element the visitor came from when it closes — now pass
+  `{ preventScroll: true }`. A plain `focus()` scrolls the focused node into
+  view, and on a page with its own scroll position that could leave the visitor
+  somewhere else on the site after opening or closing the settings: a consent
+  panel has no business moving the page it sits on. Browsers that do not know
+  the option ignore it and focus exactly as before.
+- **…and the Tab trap still keeps the focused control in sight.** With
+  `preventScroll` the browser no longer scrolls anything on focus, including
+  the panel's own scrolling body. So after moving focus the trap brings a
+  control that sits above or below the visible part of `.ck-panel__body` into
+  view by adjusting that element's `scrollTop`, measured with
+  `getBoundingClientRect` against the body. It never calls `scrollIntoView()`,
+  which would walk up to the host document and move the page after all.
+  Controls in the panel's head and foot are always visible and are left alone.
+
 ## 0.5.27
 
 - Tracker database: **a Moldovan ad platform, the YouTube player's attestation

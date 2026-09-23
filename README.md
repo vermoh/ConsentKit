@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.27).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.28).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -1252,19 +1252,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.27, rebuilt 2026-09-18, uncompressed — gzip on the server cuts
+ConsentKit 0.5.28, rebuilt 2026-09-23, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 382,742 | 121,663 | 356,451 |
-| `ready/ru-bar.txt` | ru, ro, en | 384,926 | 122,632 | 358,449 |
-| `ready/ru-box.txt` | ru, ro, en | 384,941 | 122,638 | 358,464 |
-| `ready/ru-box-right.txt` | ru, ro, en | 384,950 | 122,645 | 358,473 |
-| `ready/ru-modal.txt` | ru, ro, en | 384,934 | 122,638 | 358,457 |
-| `ready/eu-bar.txt` | 34 languages | 436,860 | 142,262 | 410,403 |
+| `ready/en-bar.txt` | en | 385,264 | 122,511 | 358,973 |
+| `ready/ru-bar.txt` | ru, ro, en | 387,448 | 123,484 | 360,971 |
+| `ready/ru-box.txt` | ru, ro, en | 387,463 | 123,489 | 360,986 |
+| `ready/ru-box-right.txt` | ru, ro, en | 387,472 | 123,496 | 360,995 |
+| `ready/ru-modal.txt` | ru, ro, en | 387,456 | 123,489 | 360,979 |
+| `ready/eu-bar.txt` | 34 languages | 439,382 | 143,106 | 412,925 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1455,6 +1455,25 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.28
+
+- **The settings panel never moves the host page.** Its three `focus()` calls —
+  the panel itself when it opens, the Tab trap cycling between its controls, and
+  the element the visitor came from when it closes — now pass
+  `{ preventScroll: true }`. A plain `focus()` scrolls the focused node into
+  view, and on a page with its own scroll position that could leave the visitor
+  somewhere else on the site after opening or closing the settings: a consent
+  panel has no business moving the page it sits on. Browsers that do not know
+  the option ignore it and focus exactly as before.
+- **…and the Tab trap still keeps the focused control in sight.** With
+  `preventScroll` the browser no longer scrolls anything on focus, including
+  the panel's own scrolling body. So after moving focus the trap brings a
+  control that sits above or below the visible part of `.ck-panel__body` into
+  view by adjusting that element's `scrollTop`, measured with
+  `getBoundingClientRect` against the body. It never calls `scrollIntoView()`,
+  which would walk up to the host document and move the page after all.
+  Controls in the panel's head and foot are always visible and are left alone.
 
 ### 0.5.27
 
@@ -2015,7 +2034,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.27), not a released product.** It is honest about
+**This is a prototype (v0.5.28), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

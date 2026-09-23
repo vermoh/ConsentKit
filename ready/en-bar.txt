@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.27
+ * Версия ConsentKit: 0.5.28
  * Дата сборки:      2026-09-23
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
@@ -2804,7 +2804,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.27',
+    version: '0.5.28',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.
@@ -6834,6 +6834,7 @@
 
     nodes.panelScrim = scrim;
     nodes.panel = p;
+    nodes.panelBody = body;                // the one scrolling region, see revealInPanelBody
     root.appendChild(scrim);
     root.appendChild(p);
   }
@@ -6881,7 +6882,46 @@
     if (e.shiftKey) next = idx <= 0 ? list[list.length - 1] : list[idx - 1];
     else next = (idx === -1 || idx === list.length - 1) ? list[0] : list[idx + 1];
     e.preventDefault();
-    next.focus();
+    /* preventScroll on all three focus calls in this file (here, openPanel and
+       closePanel): a consent panel must never move the host page. A plain
+       focus() scrolls the focused node into view, and the node it lands on —
+       the panel, the next control, or whatever the visitor clicked before —
+       can sit anywhere in the page's own scroll box, so opening or closing the
+       settings used to be able to leave the visitor somewhere else on the
+       site. Browsers that ignore the option simply focus as before. */
+    next.focus({ preventScroll: true });
+    revealInPanelBody(next);
+  }
+
+  /* The other half of preventScroll in the Tab trap. The panel itself is
+     overflow:hidden and .ck-panel__body is its only scrolling region (the
+     category list, the service switches, «Дополнительно»), so a control
+     tabbed to below or above the body's visible part would be focused out of
+     sight. Bring it into view by moving THAT element's scrollTop, measured
+     with getBoundingClientRect against the body — never scrollIntoView(),
+     which walks every scrollable ancestor up to and including the host
+     document, the very movement preventScroll exists to stop. Nodes outside
+     the body (the close button in the head, the buttons in the foot) are
+     always visible and are left alone. */
+  function revealInPanelBody(node) {
+    var body = nodes.panelBody;
+    if (!body || !node || typeof node.getBoundingClientRect !== 'function' ||
+        typeof body.getBoundingClientRect !== 'function') return;
+    var inside = false;
+    for (var n = node.parentNode; n; n = n.parentNode) {
+      if (n === body) { inside = true; break; }
+    }
+    if (!inside) return;
+    try {
+      var b = body.getBoundingClientRect();
+      var r = node.getBoundingClientRect();
+      var pad = 8;                          // breathing room, not flush with the edge
+      if (r.top < b.top || (r.bottom - r.top) > (b.bottom - b.top)) {
+        body.scrollTop = Math.max(0, (body.scrollTop || 0) - (b.top - r.top) - pad);
+      } else if (r.bottom > b.bottom) {
+        body.scrollTop = (body.scrollTop || 0) + (r.bottom - b.bottom) + pad;
+      }
+    } catch (e) { /* noop: focus has already moved, only the reveal is lost */ }
   }
 
   /* ---------------------------------------------------------------- actions */
@@ -6969,7 +7009,7 @@
     nodes.panelScrim.classList.remove('ck-hidden');
     nodes.panel.classList.remove('ck-hidden');
     panelOpen = true;
-    try { nodes.panel.focus(); } catch (e) {}
+    try { nodes.panel.focus({ preventScroll: true }); } catch (e) {}   // never scroll the host page, see onPanelKeydown
   }
 
   function closePanel(skipRestore) {
@@ -6979,7 +7019,8 @@
     nodes.panel.classList.add('ck-hidden');
     panelOpen = false;
     if (wasOpen && !skipRestore && lastFocus && typeof lastFocus.focus === 'function') {
-      try { if (lastFocus.isConnected !== false) lastFocus.focus(); } catch (e) {}
+      // Restoring focus must not scroll the page back to the invoker either.
+      try { if (lastFocus.isConnected !== false) lastFocus.focus({ preventScroll: true }); } catch (e) {}
     }
     lastFocus = null;
   }

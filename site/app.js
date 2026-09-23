@@ -25,6 +25,89 @@
   'use strict';
 
   /* ══════════════════════════════════════════════════════════════════
+     Scroll guard — FIRST, before anything else on the page runs.
+
+     Reported 23.09.2026: opened from a link in the Facebook in-app browser
+     on a phone, the landing came up already scrolled down to «Живое демо»
+     (#demo) instead of at the top. It could not be reproduced in Chromium
+     or WebKit emulation, so this is a defensive fix aimed at the usual
+     suspects rather than a proven cause:
+
+     — the browser restoring an old scroll position (an in-app webview
+       reuses its history more eagerly than a real browser does), which
+       scrollRestoration = 'manual' switches off;
+     — Facebook's redirect artifact `#_=_`, appended to the URL on the way
+       in. It names no element, but it is not ours either, so it is removed
+       from the address bar here (path and query kept; the ?lang= cleanup in
+       rememberLang() below then reads the already-clean hash and keeps it,
+       so the two replaceState calls compose instead of fighting);
+     — anything else that moved the page before it was shown.
+
+     The reset to the top is deliberately narrow. It runs ONCE, at
+     DOMContentLoaded, and only when (a) the URL carries no anchor of ours —
+     a real #demo / #pricing / #check / #q7 link must land where it points,
+     and openFaqFromHash() keeps handling the FAQ ones — and (b) the visitor
+     has not touched the page yet. A visitor who already started scrolling a
+     slow-loading page chose that position; yanking them back to the top
+     would be a worse bug than the one reported. After that moment the
+     position is never touched again.
+     ══════════════════════════════════════════════════════════════════ */
+  (function scrollGuard() {
+    try {
+      if (window.history && 'scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+    } catch (e) { /* read-only in some webviews: the reset below still helps */ }
+
+    try {
+      if (window.location.hash === '#_=_' && window.history && window.history.replaceState) {
+        window.history.replaceState(window.history.state, '',
+          window.location.pathname + (window.location.search || ''));
+      }
+    } catch (e) { /* the address bar keeps #_=_ — it names no element, harmless */ }
+
+    if (!window.addEventListener || !document.addEventListener) return;
+
+    var touched = false;
+    var EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'];
+    var opts = { passive: true, capture: true };
+    function onInteract() { touched = true; }
+    function unlisten() {
+      for (var i = 0; i < EVENTS.length; i++) {
+        try { window.removeEventListener(EVENTS[i], onInteract, opts); } catch (e) { /* noop */ }
+      }
+    }
+    for (var i = 0; i < EVENTS.length; i++) {
+      try { window.addEventListener(EVENTS[i], onInteract, opts); } catch (e) { /* noop */ }
+    }
+
+    // Read at decision time, not at script start: the hash is what the
+    // browser will scroll to, whatever it was when this file was parsed.
+    function hasOwnAnchor() {
+      var id = '';
+      try { id = String(window.location.hash || '').replace(/^#/, ''); } catch (e) { return false; }
+      if (!id) return false;
+      if (/^q\d+$/.test(id)) return true;          // FAQ answers, rendered by renderFaq()
+      try { id = decodeURIComponent(id); } catch (e) { /* keep it raw */ }
+      return !!document.getElementById(id);        // #demo, #pricing, #check, …
+    }
+
+    function decide() {
+      unlisten();
+      if (touched || hasOwnAnchor()) return;
+      var y = 0;
+      try { y = window.pageYOffset || document.documentElement.scrollTop || 0; } catch (e) { return; }
+      if (y > 0) { try { window.scrollTo(0, 0); } catch (e) { /* noop */ } }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', decide);
+    } else {
+      decide();
+    }
+  })();
+
+  /* ══════════════════════════════════════════════════════════════════
      OWNER-EDITABLE CONSTANTS — the only place each value appears.
      ══════════════════════════════════════════════════════════════════ */
 
