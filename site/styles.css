@@ -2313,6 +2313,11 @@ section { padding: 96px 0; }
   border-radius: 0 0 var(--radius) var(--radius);
 }
 
+/* SPEC-V1.28 §7: «Почему не бесплатный плагин» — one plain .card under the
+   table, spaced off it; no colour of its own. */
+.cmp-why { margin-top: 28px; }
+.cmp-why h3 { font-size: 1.05rem; margin: 0 0 .45em; }
+
 /* ── §3 rounded blocks instead of full-bleed strips ─────────────────── */
 
 /* V1.14.1 painted #check red and #numbers cream edge to edge. §1.24 keeps

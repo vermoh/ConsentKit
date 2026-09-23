@@ -36,7 +36,7 @@ for (const name of VENDORED) {
    template, so a missing script tag would hit every language at once — but a
    test that only reads site/index.html would still pass if someone rendered
    the other two from a different source. */
-const PAGES = ['index.html', join('ru', 'index.html'), join('ro', 'index.html')];
+const PAGES = ['index.html', join('ru', 'index.html'), join('en', 'index.html')];
 
 for (const page of PAGES) {
   test(`site/${page.replace(/\\/g, '/')} references every vendored file`, () => {

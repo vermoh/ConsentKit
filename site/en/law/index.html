@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rules and cookies</title>
+<meta name="description" content="Plain-language explanations of the cookie rules that apply to sites in Moldova and Romania: consent, GDPR, Google Consent Mode v2 and what happens without a banner.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://consentkit.ecomconsult.net/en/law">
+<link rel="alternate" hreflang="ro" href="https://consentkit.ecomconsult.net/law">
+<link rel="alternate" hreflang="ru" href="https://consentkit.ecomconsult.net/ru/law">
+<link rel="alternate" hreflang="en" href="https://consentkit.ecomconsult.net/en/law">
+<link rel="alternate" hreflang="x-default" href="https://consentkit.ecomconsult.net/law">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ConsentKit">
+<meta property="og:url" content="https://consentkit.ecomconsult.net/en/law">
+<meta property="og:title" content="Rules and cookies">
+<meta property="og:description" content="Plain-language explanations of the cookie rules that apply to sites in Moldova and Romania: consent, GDPR, Google Consent Mode v2 and what happens without a banner.">
+<meta property="og:image" content="https://consentkit.ecomconsult.net/og.png">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ro_RO">
+<meta property="og:locale:alternate" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#141414">
+<script>window.dataLayer = window.dataLayer || [];</script>
+<link rel="stylesheet" href="/styles.css?v=3bf98745">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to main content</a>
+
+<!-- Owner, 07.09.2026: «а можем сделать меню как на user-first.studio?» — the
+     floating dark capsule. The header is no longer a full-width bar that tries
+     to list the site: it is one dark pill, inset 12px from the top, holding
+     three things only — the menu button, the mark, and the one red CTA. Every
+     section link moved into the panel the button opens, which is what let all
+     SEVEN of them come back: the capsule has room for none, so none of them
+     has to compete for the row, and «Демо», «Что умеет» and «Разработчикам»
+     stop being header-orphans that only the footer remembered. -->
+<header class="site-head">
+  <div class="capsule">
+    <!-- A real <button>, not a checkbox hack or a link to «#menu»: the panel
+         is a disclosure, and aria-expanded is the only thing that tells a
+         screen reader whether it is open. -->
+    <!-- The accessible name is «Меню» — the same word the button shows, which
+         WCAG 2.5.3 requires: a voice-control user says what they can read.
+         It is spelled out in aria-label rather than left to the label span,
+         because below 560 that span is not displayed and the icon alone would
+         leave the button nameless. «Разделы» stays on the panel's own
+         navigation landmark, which is what it actually describes. -->
+    <button class="capsule-menu" type="button"
+            aria-expanded="true" aria-controls="site-menu"
+            aria-label="Menu" data-i18n-aria-label="navMenu">
+      <svg class="capsule-burger" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+        <path d="M2.5 5h15M2.5 10h15M2.5 15h15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span data-i18n="navMenu">Menu</span>
+    </button>
+
+    <!-- The product logo (owner, 08.09.2026, Logo_consent.svg): the red
+         shield mark and the «consent kit» wordmark. The mark keeps its own
+         red — it is the brand, not a call to action, and §3's count of red
+         things in screen one treats it as the logo it is. The wordmark is
+         drawn in currentColor so it takes the capsule's ink in both themes;
+         the vendor file had it white, for a dark ground only. -->
+    <a class="capsule-brand" href="/en#main" aria-label="ConsentKit">
+      <svg class="brand-mark" viewBox="0 0 101 100" width="26" height="26" aria-hidden="true" focusable="false">
+        <path d="M48.1352 0.0724027C59.5911 -0.398475 75.0634 1.45535 87.7689 5.27162C94.5421 7.30605 98.5677 13.8621 98.6459 20.9337C98.766 31.8041 98.9633 42.7023 98.726 53.5675C98.5332 62.3913 94.5788 70.6746 87.8549 76.3917C80.453 82.6853 70.1701 90.94 60.8109 96.7404C54.6703 100.546 47.0482 100.573 40.9047 96.7716C31.4512 90.9229 21.1766 82.5604 13.8168 76.1925C7.1686 70.4403 3.325 62.1502 3.15859 53.3605C2.95543 42.6272 3.12041 31.8706 3.22695 21.1329C3.29837 13.9347 7.46074 7.26398 14.3568 5.19936C25.2921 1.92574 37.2786 0.387711 48.1352 0.0724027ZM29.7279 39.4005C26.4194 39.4006 23.7368 42.0833 23.7367 45.3917C23.7367 48.7003 26.4194 51.3829 29.7279 51.3829H71.8939C75.2025 51.3829 77.8842 48.7003 77.8842 45.3917C77.8841 42.0833 75.2024 39.4006 71.8939 39.4005H29.7279Z" fill="#FF4242"/>
+      </svg>
+      <svg class="brand-word" viewBox="116 0 361 100" height="22" aria-hidden="true" focusable="false">
+        <path d="M126.789 61.4936C126.789 63.7336 127.141 65.6856 127.845 67.3496C128.613 68.9496 129.989 69.7496 131.973 69.7496C134.021 69.7496 135.397 68.9496 136.101 67.3496C136.869 65.7496 137.253 63.7016 137.253 61.2056V59.0936H147.621V60.4376C147.621 67.0296 146.245 71.8296 143.493 74.8376C140.741 77.8456 136.869 79.3496 131.877 79.3496C127.077 79.3496 123.269 77.8776 120.453 74.9336C117.701 71.9896 116.325 67.2536 116.325 60.7256V40.9496C116.325 34.4856 117.797 29.7496 120.741 26.7416C123.685 23.6696 127.557 22.1336 132.357 22.1336C137.477 22.1336 141.285 23.6376 143.781 26.6456C146.341 29.6536 147.621 34.4536 147.621 41.0456V42.1976H137.253V40.3736C137.253 37.8776 136.869 35.8296 136.101 34.2296C135.397 32.5656 134.021 31.7336 131.973 31.7336C129.989 31.7336 128.613 32.5656 127.845 34.2296C127.141 35.8936 126.789 37.8456 126.789 40.0856V61.4936ZM175.688 39.9896C175.688 37.7496 175.24 35.8296 174.344 34.2296C173.512 32.5656 172.104 31.7336 170.12 31.7336C168.072 31.7336 166.6 32.5336 165.704 34.1336C164.808 35.6696 164.36 37.5576 164.36 39.7976V61.4936C164.36 63.7336 164.808 65.6856 165.704 67.3496C166.6 68.9496 168.04 69.7496 170.024 69.7496C172.072 69.7496 173.512 68.9816 174.344 67.4456C175.24 65.8456 175.688 63.9256 175.688 61.6856V39.9896ZM153.896 41.3336C153.896 34.7416 155.336 29.9096 158.216 26.8376C161.16 23.7016 165.192 22.1336 170.312 22.1336C175.112 22.1336 178.952 23.6696 181.832 26.7416C184.776 29.8136 186.248 34.5496 186.248 40.9496V60.1496C186.248 66.6776 184.744 71.5096 181.736 74.6456C178.728 77.7816 174.76 79.3496 169.832 79.3496C164.968 79.3496 161.096 77.8136 158.216 74.7416C155.336 71.6696 153.896 66.9336 153.896 60.5336V41.3336ZM192.789 22.8056H202.965L203.637 27.6056C204.341 26.2616 205.461 25.0136 206.997 23.8616C208.597 22.7096 210.613 22.1336 213.045 22.1336C216.693 22.1336 219.605 23.5416 221.781 26.3576C224.021 29.1096 225.141 33.0776 225.141 38.2616V78.6776H214.581V39.7016C214.581 38.1016 214.421 36.7896 214.101 35.7656C213.781 34.7416 213.365 33.9416 212.853 33.3656C212.405 32.7256 211.861 32.3096 211.221 32.1176C210.581 31.8616 209.909 31.7336 209.205 31.7336C207.285 31.7336 205.813 32.5016 204.789 34.0376C203.829 35.5736 203.349 37.6216 203.349 40.1816V78.6776H192.789V22.8056ZM262.962 64.1816C262.962 66.8696 262.546 69.1736 261.714 71.0936C260.882 73.0136 259.73 74.5816 258.258 75.7976C256.85 77.0136 255.186 77.9096 253.266 78.4856C251.346 79.0616 249.298 79.3496 247.122 79.3496C244.882 79.3496 242.802 78.9976 240.882 78.2936C238.962 77.5256 237.298 76.4056 235.89 74.9336C234.482 73.4616 233.362 71.5736 232.53 69.2696C231.762 66.9656 231.378 64.2776 231.378 61.2056H241.746C241.746 63.8936 242.226 66.0056 243.186 67.5416C244.146 69.0136 245.522 69.7496 247.314 69.7496C248.786 69.7496 250.002 69.2696 250.962 68.3096C251.986 67.3496 252.466 65.9736 252.402 64.1816C252.338 62.4536 251.794 60.9816 250.77 59.7656C249.746 58.4856 248.466 57.3016 246.93 56.2136C245.394 55.1256 243.73 54.0696 241.938 53.0456C240.21 51.9576 238.578 50.7416 237.042 49.3976C235.57 48.0536 234.322 46.4856 233.298 44.6936C232.338 42.8376 231.858 40.6296 231.858 38.0696C231.858 35.1256 232.242 32.6616 233.01 30.6776C233.842 28.6296 234.962 26.9976 236.37 25.7816C237.778 24.5016 239.442 23.6056 241.362 23.0936C243.282 22.5176 245.33 22.2296 247.506 22.2296C251.986 22.2296 255.602 23.7016 258.354 26.6456C261.17 29.5256 262.578 34.0696 262.578 40.2776H252.21C252.21 37.7816 251.826 35.7656 251.058 34.2296C250.354 32.6296 249.074 31.8296 247.218 31.8296C245.746 31.8296 244.562 32.3416 243.666 33.3656C242.834 34.3896 242.418 35.7336 242.418 37.3976C242.418 38.8056 242.93 40.0536 243.954 41.1416C244.978 42.2296 246.226 43.2856 247.698 44.3096C249.234 45.2696 250.898 46.3256 252.69 47.4776C254.482 48.5656 256.114 49.8776 257.586 51.4136C259.122 52.8856 260.402 54.6776 261.426 56.7896C262.45 58.8376 262.962 61.3016 262.962 64.1816ZM279.512 61.2056C279.512 63.5736 279.896 65.5896 280.664 67.2536C281.432 68.9176 282.808 69.7496 284.792 69.7496C288.248 69.7496 289.976 67.2536 289.976 62.2616H300.344V62.7416C300.344 65.7496 299.928 68.3096 299.096 70.4216C298.264 72.5336 297.144 74.2616 295.736 75.6056C294.328 76.8856 292.664 77.8456 290.744 78.4856C288.824 79.0616 286.808 79.3496 284.696 79.3496C279.896 79.3496 276.088 77.8776 273.272 74.9336C270.456 71.9896 269.048 67.2536 269.048 60.7256V41.1416C269.048 34.6136 270.52 29.8136 273.464 26.7416C276.472 23.6696 280.376 22.1336 285.176 22.1336C295.288 22.1336 300.344 28.6936 300.344 41.8136V54.6776H279.512V61.2056ZM290.168 44.6936V40.1816C290.168 37.7496 289.784 35.7336 289.016 34.1336C288.312 32.5336 286.936 31.7336 284.888 31.7336C283.864 31.7336 283 31.9896 282.296 32.5016C281.656 32.9496 281.112 33.5896 280.664 34.4216C280.28 35.1896 279.992 36.0856 279.8 37.1096C279.608 38.0696 279.512 39.0616 279.512 40.0856V44.6936H290.168ZM307.003 22.8056H317.179L317.851 27.6056C318.555 26.2616 319.675 25.0136 321.211 23.8616C322.811 22.7096 324.827 22.1336 327.259 22.1336C330.907 22.1336 333.819 23.5416 335.995 26.3576C338.235 29.1096 339.355 33.0776 339.355 38.2616V78.6776H328.795V39.7016C328.795 38.1016 328.635 36.7896 328.315 35.7656C327.995 34.7416 327.579 33.9416 327.067 33.3656C326.619 32.7256 326.075 32.3096 325.435 32.1176C324.795 31.8616 324.123 31.7336 323.419 31.7336C321.499 31.7336 320.027 32.5016 319.003 34.0376C318.043 35.5736 317.563 37.6216 317.563 40.1816V78.6776H307.003V22.8056ZM343.768 22.8056H349.72V9.46161H360.28V22.8056H369.208V33.5576H360.28V60.7256C360.28 62.5816 360.472 64.1176 360.856 65.3336C361.24 66.4856 361.752 67.4136 362.392 68.1176C363.032 68.7576 363.768 69.2056 364.6 69.4616C365.432 69.7176 366.264 69.8456 367.096 69.8456C367.8 69.8456 368.376 69.7176 368.824 69.4616V78.9656C367.864 79.0936 366.936 79.1896 366.04 79.2536C365.144 79.3816 364.28 79.4456 363.448 79.4456C359.16 79.4456 355.8 78.0696 353.368 75.3176C350.936 72.5656 349.72 67.8936 349.72 61.3016V33.5576H343.768V22.8056ZM407.118 78.6776H396.654V2.16561H407.118V46.0376H410.766L418.35 22.8056H429.486L419.598 49.9736L429.486 78.6776H418.254L410.958 56.6936H407.118V78.6776ZM432.915 22.8056H443.571V78.6776H432.915V22.8056ZM438.195 3.02961C439.987 3.02961 441.491 3.57361 442.707 4.66161C443.923 5.68561 444.531 7.22161 444.531 9.26961C444.531 11.3176 443.923 12.8856 442.707 13.9736C441.491 14.9976 439.987 15.5096 438.195 15.5096C436.467 15.5096 434.995 14.9656 433.779 13.8776C432.627 12.7896 432.051 11.2536 432.051 9.26961C432.051 7.22161 432.627 5.68561 433.779 4.66161C434.995 3.57361 436.467 3.02961 438.195 3.02961ZM448.303 22.8056H454.255V9.46161H464.815V22.8056H473.743V33.5576H464.815V60.7256C464.815 62.5816 465.007 64.1176 465.391 65.3336C465.775 66.4856 466.287 67.4136 466.927 68.1176C467.567 68.7576 468.303 69.2056 469.135 69.4616C469.967 69.7176 470.799 69.8456 471.631 69.8456C472.335 69.8456 472.911 69.7176 473.359 69.4616V78.9656C472.399 79.0936 471.471 79.1896 470.575 79.2536C469.679 79.3816 468.815 79.4456 467.983 79.4456C463.695 79.4456 460.335 78.0696 457.903 75.3176C455.471 72.5656 454.255 67.8936 454.255 61.3016V33.5576H448.303V22.8056Z" fill="currentColor"/>
+      </svg>
+    </a>
+
+    <!-- SPEC V1.14 §2.4: still ONE primary button on the page, and it is still
+         the free check. It keeps the SHORT label (V1.14.1 §1.1) — at 375 the
+         capsule has to stay one row, and six words never did. -->
+    <a class="btn btn--sm btn--primary capsule-cta" href="/en#check" data-i18n="ctaCheckShort">Check your site</a>
+  </div>
+
+  <!-- The panel. Authored VISIBLE and aria-expanded="true", because that is
+       the truthful state with JavaScript off: a visitor without JS sees the
+       links sitting under the capsule and every one of them works. The inline
+       script below closes it before first paint, so nobody with JS sees a
+       flash of an open menu — including on the law pages, which slice this
+       same block. `hidden` therefore never appears in the built HTML. -->
+  <div class="menu-panel" id="site-menu">
+    <nav class="head-nav" aria-label="Sections" data-i18n-aria-label="navSections">
+      <a href="/en#how" data-i18n="navHow">How it works</a>
+      <a href="/en#demo" data-i18n="navDemo">Demo</a>
+      <a href="/en#features" data-i18n="navFeatures">Features</a>
+      <a href="/en#pricing" data-i18n="navPricing">Pricing</a>
+      <a href="/en#faq" data-i18n="navFaq">FAQ</a>
+      <a href="/en/law" data-i18n="navLaw">Rules</a>
+      <a href="/en#dev" data-i18n="navDev">Developers</a>
+    </nav>
+
+    <div class="menu-foot">
+      <!-- Owner, 07.09.2026: the languages sit where a visitor looks for them —
+           now inside the menu, beside the door to the dashboard. Each language
+           is still a real link to its own URL, so the switch stays crawlable
+           and works without JavaScript exactly as before. -->
+      <div class="lang-switch" role="group" aria-label="Page language">
+        <a class="lang-btn" href="/law" data-lang="ro" hreflang="ro" lang="ro" aria-pressed="false">RO</a>
+        <a class="lang-btn" href="/ru/law" data-lang="ru" hreflang="ru" lang="ru" aria-pressed="false">RU</a>
+        <a class="lang-btn" href="/en/law" data-lang="en" hreflang="en" lang="en" aria-current="page" aria-pressed="true">EN</a>
+      </div>
+
+      <a class="head-link" href="https://app.ecomconsult.net" data-cta="header-cabinet" data-i18n="ctaCabinetShort">Dashboard</a>
+    </div>
+  </div>
+</header>
+<script>
+/* Close the menu before the first paint. Authoring the panel open (above) is
+   what keeps it reachable without JavaScript; this one statement is the whole
+   difference between "no JS" and "JS", and it runs inline rather than from
+   app.js so the panel is never painted open and then snapped shut. */
+(function () {
+  var b = document.querySelector('.capsule-menu');
+  var p = document.getElementById('site-menu');
+  if (!b || !p) return;
+  p.hidden = true;
+  b.setAttribute('aria-expanded', 'false');
+})();
+</script>
+
+
+<main id="main" class="law">
+  <section>
+    <div class="wrap wrap--narrow">
+      <h1>Rules and cookies</h1>
+      <p class="section-lede">Four short articles about the rules a site owner actually runs into. Written for people who own sites, not for lawyers.</p>
+      <p class="law-dated">Correct as of September 2026. General information, not legal advice.</p>
+      <div class="cards law-list">
+        <article class="card">
+          <h2><a href="/en/law/cookies-and-the-law-in-moldova">Cookies and the law in Moldova</a></h2>
+          <p>What the rules on cookies mean for a site in Moldova: consent before tracking, Law 195/2024 on personal data, and which sites the EU rules reach.</p>
+        </article>
+        <article class="card">
+          <h2><a href="/en/law/gdpr-for-moldovan-and-romanian-sites">GDPR for sites in Moldova and Romania that work with the EU</a></h2>
+          <p>When GDPR applies to a site outside the EU, what changes for a Romanian site, and the short list of things a small site actually has to do.</p>
+        </article>
+        <article class="card">
+          <h2><a href="/en/law/google-consent-mode-v2-in-plain-words">Google Consent Mode v2 in plain words</a></h2>
+          <p>What Consent Mode v2 is, what the four signals mean, why refusals do not empty your reports, and how to tell it is working.</p>
+        </article>
+        <article class="card">
+          <h2><a href="/en/law/what-happens-without-a-banner">What happens if there is no banner</a></h2>
+          <p>The realistic consequences of running a site with no cookie consent: complaints, fines, Google's own requirements, and the order things usually happen in.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band law-check">
+    <div class="wrap wrap--narrow">
+
+      <form class="check" data-check-form novalidate>
+        <!-- Step 1: the address and the consent tick. No e-mail — SPEC V1.13
+             §2.2 asks for it only after the scan has something to report. -->
+        <div class="check__step check__step--1">
+          <p class="check__field">
+            <label data-i18n="checkDomainLabel">Site address</label>
+            <input type="text" name="domain" inputmode="url" autocomplete="url"
+                   placeholder="example.com" data-i18n-placeholder="checkDomainPlaceholder" required>
+          </p>
+
+          <p class="check__agree">
+            <label>
+              <input type="checkbox" name="agree" required>
+              <span data-i18n="checkAgree">This is my site, or I work on it under a contract</span>
+            </label>
+          </p>
+
+          <p class="check__submit">
+            <button type="submit" class="btn btn--primary" data-i18n="checkSubmit">Check</button>
+          </p>
+        </div>
+
+        <!-- Step 2: revealed by app.js once the poll reports `done`. Hidden
+             with the `hidden` attribute rather than a class, so it is out of
+             the accessibility tree too while there is nothing to send. -->
+        <div class="check__step check__step--2" hidden>
+          <p class="check__teaser" data-check-teaser></p>
+          <p class="check__ask" data-i18n="checkAskEmail">Where should we send the full result?</p>
+
+          <p class="check__field">
+            <label data-i18n="checkEmailLabel">Your email</label>
+            <input type="email" name="email" autocomplete="email"
+                   placeholder="you@example.com" data-i18n-placeholder="checkEmailPlaceholder">
+          </p>
+
+          <p class="check__submit">
+            <button type="button" class="btn btn--primary" data-check-email data-i18n="checkEmailSubmit">Send</button>
+          </p>
+        </div>
+
+        <!-- Honeypot. Off-screen rather than display:none — a bot that reads
+             computed styles skips hidden fields, and a field that is never
+             painted but is still in the layout catches the ones that fill
+             everything. tabindex=-1 and autocomplete=off keep it away from a
+             real visitor's keyboard and password manager. aria-hidden so a
+             screen reader is not asked to fill an invisible box. -->
+        <div class="check__hp" aria-hidden="true">
+          <label>Company</label>
+          <input type="text" name="hp" value="" tabindex="-1" autocomplete="off">
+        </div>
+
+        <p class="check__state" role="status" aria-live="polite"></p>
+        <!-- Shown by app.js only while the scan is actually running: a
+             «это займёт пару минут» line is reassuring during the wait and
+             noise at every other moment. -->
+        <p class="check__wait" data-check-wait hidden data-i18n="checkRunningNote">This usually takes a couple of minutes. You can leave the page open.</p>
+
+        <p class="check__note" data-i18n="checkNote">We only read public pages. The result appears here, the details go to your email.</p>
+      </form>
+        
+    </div>
+  </section>
+</main>
+
+
+<footer class="site-foot">
+  <div class="wrap foot-grid">
+    <div>
+      <p class="foot-brand"><a href="https://ecomconsult.net" rel="noopener">E-COM CONSULT PLUS</a></p>
+      <p class="foot-small" data-i18n="footLegal">E-COM CONSULT PLUS, Moldova. ConsentKit is open source under the MIT licence.</p>
+    </div>
+    <!-- No developer links here. GitHub, npm and the installation guide are
+         the whole content of «Для разработчиков» one section up; repeating
+         them in the footer made the utility row read as a second, worse copy
+         of that section. What is left is what only the footer can offer: a
+         way to reach us, and the dashboard. -->
+    <!-- The three sections V1.14.1 §1.1 took out of the header live here, as
+         that section requires: «на них ведут якоря внутри страницы и подвал».
+         Authored as bare #anchors, as the nav is: on a law page the build
+         rewrites both the header's and the footer's anchors to travel back to
+         the home page first. -->
+    <nav class="foot-links" aria-label="Links" data-i18n-aria-label="footLinksLabel">
+      <a href="/en#demo" data-i18n="navDemo">Demo</a>
+      <a href="/en#features" data-i18n="navFeatures">Features</a>
+      <a href="/en#dev" data-i18n="navDev">Developers</a>
+      <a href="mailto:info@ecomconsult.net" data-i18n="footWrite">Write to us</a>
+      <a href="https://app.ecomconsult.net" data-cta="footer-cabinet" data-i18n="footCabinet">Dashboard</a>
+    </nav>
+    <!-- The «Правила» group. Its own nav so the articles read as a section of
+         the site rather than four more links in the utility row. -->
+    <nav class="foot-links foot-links--law" aria-label="Rules" data-i18n-aria-label="navLaw">
+      <a href="/en/law" class="foot-links__head" data-i18n="navLaw">Rules</a>
+      <a href="/en/law" data-i18n="lawIndexTitle">Rules and cookies</a>
+    </nav>
+  </div>
+</footer>
+
+
+<script>window.__CK_SITE_I18N={"htmlLang":"en","docTitle":"ConsentKit — cookie consent banner for your site","docDesc":"A cookie consent banner you can install in ten minutes. It asks your visitors before any tracker starts. 34 languages, Google Consent Mode v2, a cookie scanner and a consent log. Open source, MIT.","skip":"Skip to main content","navSections":"Sections","navMenu":"Menu","pageLanguage":"Page language","navDemo":"Demo","navHow":"How it works","navFeatures":"Features","navPricing":"Pricing","navFaq":"FAQ","navDev":"Developers","ctaCabinet":"Open the dashboard","ctaCabinetShort":"Dashboard","heroLine1":"The banner goes up in ten minutes on any site. Your visitor answers first, and only then do the trackers start.","mockText":"Necessary cookies keep the site working. The rest are used only if you allow them.","mockSettings":"Customize","heroNote":"Free forever: one site, one banner language, two manual scans a month.","demoTitle":"Live demo","demoLede":"This is a real banner, not a screenshot. Change the layout, position, theme, colour and language — the banner changes at once.","fieldLayout":"Layout","layoutBar":"Bar","layoutBox":"Corner","layoutModal":"Centred window","fieldBannerLang":"Banner language","langAuto":"Same as the page","btnShowAgain":"Show again","demoHint":"Clears the saved choice and shows the banner again.","statusUndecided":"Choice: the visitor has not answered yet.","statusDecided":"Choice: {cats}.","statusNone":"nothing beyond necessary","statusBroken":"The demo did not start — please reload the page.","howTitle":"How it works","how1Title":"Paste the banner line","how1Text":"One line in the head — in your builder settings, in the site template or through a tag manager. No build step, no dependencies.","how2Title":"Press “Check”","how2Text":"The dashboard finds the line on your site: that both verifies the domain and confirms the install.","how3Title":"Run a scan","how3Text":"The scanner walks the site, finds third-party services and cookies and offers a ready-made table for the banner.","how4Title":"Adjust the banner","how4Text":"The first version publishes itself. Adjust the colours, texts and table in the dashboard if you want to.","featTitle":"Features","feat1Title":"Trackers stay silent until asked","feat1Text":"Analytics and ads do not start until your visitor presses a button.","feat2Title":"The scanner finds cookies and keeps the declaration current","feat2Text":"The scanner walks your pages, collects the cookies and trackers, and refreshes the list every week. When a new service appears on the site, you read about it in the dashboard.","feat3Title":"Consent you can prove","feat3Text":"Every visitor answer is stored in case you are ever asked.","feat5Title":"Your ads keep working","feat5Text":"A refusal does not switch Google off entirely: it counts without cookies and without identifying the visitor.","feat6Title":"Installs on any site in 10 minutes","feat6Text":"A site builder, WordPress, a shop, a tag manager or plain HTML. The dashboard shows straight away what the visitor will see.","feat7Title":"Your words, your company","feat7Text":"Your company details, the address for requests and the links to your policies — in the banner and in the settings window. On paid plans, your own text in any of the 34 languages; the rest the visitor sees in their own.","feat8Title":"The dashboard in three languages","feat8Text":"Russian, Romanian and English — the interface, the mail and the scanner's hints. Your visitor sees the cookies in their own language.","feat9Title":"A team with roles","feat9Text":"Colleagues and contractors work on the site under their own addresses: an editor configures, an observer only looks.","feat10Title":"Ready for the law, point by point","feat10Text":"36 checks in the dashboard: the scanner confirms some of them, the rest is a short to-do list with hints.","priceTitle":"Pricing","priceLede":"A plan is billed to your account: Starter per connected site, Business in packs of 10 sites. Moving to a cheaper plan never breaks anything: the banner keeps working, automatic scans stop, and the attribution line comes back.","priceFoot":"Prices in euro, excluding VAT. Legal entity: E-COM CONSULT PLUS, Moldova.","perMonth":"/ mo","perSitePerMonth":"per site / mo","byAgreement":"by agreement","planFree":"Free","planStarter":"Starter","planBusiness":"Business","planAgency":"Agency","planFreeNote":"Free forever","planStarterNote":"For a single site","planBusinessNote":"10 sites per pack, then by the pack","planAgencyNote":"No site limit","planCtaFree":"Start free","planCtaPaid":"Open the dashboard","planCtaAgency":"Get in touch","recommended":"Most popular","priceTableCaption":"ConsentKit plans compared: price, sites, scans, consent log, alerts, languages and support for every plan.","priceScrollHint":"Scroll the table sideways to see every plan.","rowPlan":"Plan","rowPrice":"Price","rowCta":"Getting started","rowSites":"Sites","rowBranding":"“Made by E-COM Consult” line","rowScans":"Scans","rowDecisions":"Decisions logged per month","rowLog":"Consent log","rowAutoUpdate":"Cookie declaration in the banner updates itself after a scan","rowAlerts":"Email when a new tracker appears","rowLangs":"Banner languages","rowTeam":"Team: access for colleagues","teamUnlimited":"unlimited","teamUpTo":"up to {n} people","rowSupport":"Support","sitesOne":"1","sitesOneEach":"1 (each billed separately)","sitesUpTo":"up to {n}","sitesUnlimited":"unlimited","decisionsUnlimited":"unlimited","brandingRequired":"required","brandingOptional":"can be turned off","scansScheduled":"automatic weekly + {n} a day on demand","scansManualOnly":"{n} a day on demand","scansManualMonthly":"{n} a month on demand","unitScanOne":"{n} manual scan","unitScanFew":"{n} manual scans","unitScanMany":"{n} manual scans","logDays":"{n}, no download","logDaysCsv":"{n}, downloadable file","logMonths":"{n}, no download","logMonthsCsv":"{n}, downloadable file","unitDayOne":"{n} day","unitDayFew":"{n} days","unitDayMany":"{n} days","unitMonthOne":"{n} month","unitMonthFew":"{n} months","unitMonthMany":"{n} months","yes":"yes","no":"no","langsAll":"all 34","langsOne":"one","supportFree":"documentation","supportStarter":"e-mail","supportBusiness":"e-mail, 1 business day","supportAgency":"dedicated manager","whoTitle":"Who it is for","who1Title":"Sites on builders","who1Text":"There is nowhere to upload files, so we hand you the whole block instead. Paste it into the field for code in the head — one paste, no plugins.","who2Title":"WordPress and WooCommerce","who2Text":"The plugin installs by copying a folder and is configured in the admin. It works with caching plugins too: the banner does not depend on PHP.","who4Title":"Agencies and your own sites","who4Text":"Many sites in one dashboard, access for colleagues with roles, scheduled scans and alerts about new trackers. Terms by agreement.","faqTitle":"Frequently asked questions","faq":[["What is cookie consent and why is it needed?","A cookie is a small note a site leaves in your visitor’s browser. Under EU rules anything not needed to run the site itself may only start after the visitor agrees, and you have to be able to prove they did. ConsentKit asks, waits for the answer and saves the decision for you."],["Does ConsentKit really block everything before consent?","Almost everything, right away: the official Google Analytics, Yandex Metrica, Meta, TikTok and Hotjar snippets are stopped automatically, and Google receives Consent Mode v2 signals before any tag loads. Rarer are trackers written into the page by hand as a plain \u003cscript src\u003e tag: the browser starts fetching those, so each one has to be marked once with type=\"text/plain\". The dashboard shows you exactly which ones and explains what to do."],["Where is the data stored?","On servers in Lithuania, in the European Union. The company: E-COM CONSULT PLUS, Moldova. We store the fact of consent and what the person chose, not information about the visitor."],["Can I use it without the dashboard?","Yes, and free of charge. The software is open under the MIT licence: download the files, put them on your site and set it up by hand, with no sign-up. The dashboard is for people who would rather press buttons than edit files."],["How do I turn off the “Made by E-COM Consult” line?","On paid plans a switch in the site settings turns it off; on the free plan it stays. If you installed the banner yourself, without the dashboard, you can remove the line in your own copy’s settings. We charge for the dashboard, the scans and keeping the log, not for hiding a line."],["What about scanning sites that are not mine?","You may only scan your own sites, or client sites you have been asked to look after. That is why a site has to be verified in the dashboard before the first scan. The scanner treads lightly and does not put load on your site."],["What counts as one site?","One site is one domain with everything on it: example.com and all of its pages. A separate domain is a separate site, even if it belongs to you and looks the same."],["What about subdomains?","Subdomains of a connected domain — shop.example.com, blog.example.com — are covered by the same site and do not use up your limit. They share the banner and the consent log with the main domain."],["VAT and invoices?","Payment goes through Creem, which issues the invoice and handles VAT for your country. Prices on this page are excluding VAT; the final amount is shown at checkout, and the invoice arrives by email."],["Can I cancel?","Yes, from the dashboard, at any time. The plan stays active until the end of the period you have already paid for, and nothing is charged after that."],["Does moving to a cheaper plan break anything?","Nothing breaks: the banner keeps working and decisions keep being recorded. Scheduled scans stop, the developer line comes back, and the consent log keeps the shorter retention of the new plan. On Free, in addition, the banner shows one language, the log is limited to 3 000 decisions a month and on-demand scans to 2 a month. The site itself never goes down."],["What happens if a site goes over 3 000 decisions a month?","A decision is one visitor’s answer to the banner: accept, reject or withdrawal of consent. Above 3 000 a month the banner keeps working exactly as before, and every decision is still recorded in the log — nothing changes on your site. Only the dashboard changes: until the 1st of next month, or until you move to a paid plan, the log, the answer statistics and on-demand scans are closed there. We email you twice — at 80% and at 100% of the limit. This applies to the Free plan only: paid plans have no monthly cap on decisions."]],"footLegal":"E-COM CONSULT PLUS, Moldova. ConsentKit is open source under the MIT licence.","footLinksLabel":"Links","footWrite":"Write to us","footCabinet":"Dashboard","devTitle":"For developers","devLede":"Three tags to load the client and one call to configure it — no build step and no dashboard.","devFacts":"Open source under MIT, zero dependencies, 34 languages, Google Consent Mode v2.","devOwnAnalytics":"Analytics on this site is switched on only after you answer the banner.","devDocs":"Installation guide","navLaw":"Rules","lawDated":"Correct as of September 2026. General information, not legal advice.","lawIndexTitle":"Rules and cookies","lawIndexDesc":"Plain-language explanations of the cookie rules that apply to sites in Moldova and Romania: consent, GDPR, Google Consent Mode v2 and what happens without a banner.","lawIndexLede":"Four short articles about the rules a site owner actually runs into. Written for people who own sites, not for lawyers.","checkCaption":"Free check","checkTitle":"Check your site for free","checkLede":"We will show you which services and cookies load before consent. Public pages only.","checkDomainLabel":"Site address","checkDomainPlaceholder":"example.com","checkEmailLabel":"Your email","checkEmailPlaceholder":"you@example.com","checkAgree":"This is my site, or I work on it under a contract","checkSubmit":"Check","checkNote":"We only read public pages. The result appears here, the details go to your email.","checkRecent":"This site was already checked today.","checkLimit":"Too many checks from your address, please try tomorrow.","checkError":"We could not reach us. Check your connection and try again.","checkInvalid":"Please check the site address.","checkNeedDomain":"Enter your site address.","checkNeedEmail":"Enter the address to send the result to.","checkNeedAgree":"Tick the box to continue.","checkSending":"Sending…","statsTitle":"Numbers","statsSites":"sites connected","statsConsents":"consents recorded","statsLanguages":"banner languages","statsVersion":"banner version","statsUpdated":"updated {month} {day}, {year}","statsMonths":["January","February","March","April","May","June","July","August","September","October","November","December"],"priceCheaper":"Cheaper than a single letter from a lawyer.","checkRunning":"Checking {domain}…","checkRunningNote":"This usually takes a couple of minutes. You can leave the page open.","checkDone":"Done: {services} third-party services, {before} of them before consent, {cookies} cookies.","checkAskEmail":"Where should we send the full result?","checkEmailSubmit":"Send","checkMailQueued":"The email will arrive within a few minutes.","checkRecentMailed":"This site was already checked today — the full result has already been sent.","checkMailLimit":"Too many requests for this address, please try tomorrow.","checkMailed":"The full result for this site has already been sent.","checkScanError":"We could not check the site. Please try again later.","fitTitle":"Works with any site","fit1Title":"Site builders","fit1Text":"Tilda, Wix, Squarespace, Webflow and others — one line in the site settings.","fit2Title":"WordPress and WooCommerce","fit2Text":"A plugin, or one line in the head.","fit3Title":"Online shops","fit3Text":"Shopify, OpenCart, PrestaShop and others — one line in the template.","fit4Title":"Your own site or an agency","fit4Text":"One line in the template, many sites in one dashboard.","fieldPosition":"Position","posBottom":"Bottom","posTop":"Top","posBottomLeft":"Bottom left","posBottomRight":"Bottom right","posCenter":"Centre","fieldTheme":"Theme","themeAuto":"Follow the browser","themeLight":"Light","themeDark":"Dark","fieldAccent":"Colour","accentBlue":"Blue","accentGreen":"Green","accentViolet":"Violet","accentOrange":"Orange","gcmLine":"What Google sees: analytics_storage — {analytics}, ad_storage — {ads}.","gcmDenied":"denied","gcmGranted":"granted","gcmNote":"In Consent Mode, Google services run before consent without cookies and without identifying the visitor.","statsServices":"services in our database with ready descriptions","statsMinutes":"minutes to install","checkRegistered":"This site is already connected to ConsentKit — open the dashboard.","heroTitleLead":"Your site follows EU rules, and your ads and analytics keep","heroTitleAccent":"working","ctaCheck":"Check your site for free","ctaCheckShort":"Check your site","marqueeTitle":"How it looks on different sites","marqueeLede":"The same banner: bar, box or modal, light and dark theme, the visitor’s language and your site’s colour.","marqueeLabel":"Banner examples on different sites","starterTitle":"Starter","starterPriceUnit":"per site per month","starterPoint1":"Cancel at any time","starterPoint2":"The “Made by…” line can be turned off","starterPoint3":"Scheduled scans and alerts","factsTitle":"The product in short","factCheckFree":"site check is free","factCheckFreeNum":"Always","accentRed":"Red","sitesPack":"10 per pack, and you can add packs","perPackPerMonth":"per 10 sites / mo","heroPill1Num":"10 minutes","heroPill1Label":"to install","heroPill2Num":"€0","heroPill2Label":"forever","heroShotAlt":"The ConsentKit banner on a client site","pcard1Num":"36","pcard1Label":"points","pcard2Num":"every week","pcard2Label":"automatic scan","pcard3Num":"every answer","pcard3Label":"in the log","pcard4Num":"34","pcard4Label":"languages","pcard5Num":"1","pcard5Label":"page","pcard6Num":"10 minutes","pcard6Label":"to install","pcard5Title":"A cookie declaration on a public page of its own","pcard5Text":"The list of cookies, with what each one is for and how long it is kept, lives on its own page. The link goes in the site footer and in the banner settings window.","pshot1Alt":"The “GDPR readiness” card in the dashboard: seven areas and the list of points","pshot2Alt":"Connecting a site: the scanner works through its phases and shows what it found","pshot3Alt":"How visitors answer: shares, bars and a chart by day","pshot4Alt":"Banner texts in the dashboard: the language picker and the title and description fields","pshot5Alt":"The public “Cookies on this site” page with the list of cookies","pshot6Alt":"The “What the visitor sees” preview: the live banner inside the editor","featMoreTitle":"And also","compareTitle":"Build it yourself or take it ready-made","compareLede":"The same thing can be assembled by hand. Below is what that would mean, and what is already done for you.","cmpColSelf":"On your own","cmpColUs":"ConsentKit","cmpTableCaption":"Build it yourself or take it ready-made","cmpRow1":"Installing the banner","cmpRow1Self":"Markup, a blocking script, testing","cmpRow1Us":"One line in head, 10 minutes","cmpRow2":"Banner languages","cmpRow2Self":"Translate every text","cmpRow2Us":"34 languages at once (on paid plans)","cmpRow3":"The cookie list","cmpRow3Self":"Collect and update it by hand","cmpRow3Us":"The scanner finds and updates it","cmpRow4":"Consent log","cmpRow4Self":"Your own database and export","cmpRow4Us":"Every answer, export to CSV","cmpRow5":"Ready for the law","cmpRow5Self":"Check against the text of the law","cmpRow5Us":"36 points in the dashboard, some checked by the scanner","cmpRow6":"Updates","cmpRow6Self":"Follow the changes yourself","cmpRow6Us":"They arrive from the server","cmpWhyTitle":"Why not a free plugin","cmpWhyText":"A free plugin will show a banner too, and for many sites that is enough. ConsentKit is built for Moldova: readiness for Law 195/2024 is broken down into 36 points in the dashboard, on paid plans Romanian and Russian sit in one banner, support is local, and the invoice for your accountant arrives by email. And everything is set up in a separate dashboard, not in your site’s admin panel.","mockTitle":"Cookies on this site","mockAccept":"Accept all","mockReject":"Reject all"};</script>
+<script src="/app.js?v=3709c678"></script>
+<script src="/analytics.js?v=466ca4a0"></script>
+</body>
+</html>

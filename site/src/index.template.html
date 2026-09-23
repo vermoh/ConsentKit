@@ -172,7 +172,7 @@
         <p class="hero-cta">
           <a class="btn btn--primary" href="#check" data-i18n="ctaCheck">Проверить сайт бесплатно</a>
         </p>
-        <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, все 34 языка, один скан в день вручную.</p>
+        <p class="hero-note" data-i18n="heroNote">Бесплатный тариф навсегда: один сайт, один язык баннера, два скана в месяц вручную.</p>
       </div>
 
       <!-- SPEC V1.24 §5: the grey skeleton replica is replaced by a photograph
@@ -714,7 +714,7 @@
             <span class="fact-pill__label" data-i18n="pcard4Label">языка</span>
           </p>
           <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
-          <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. Свой текст на любом из 34 языков, остальные посетитель видит на своём.</p>
+          <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. На платных тарифах — свой текст на любом из 34 языков, остальные посетитель видит на своём.</p>
           <div class="pcard__shot">
             <img src="/img/cabinet-texts.webp" width="1114" height="1240"
                  loading="lazy" decoding="async"
@@ -816,7 +816,7 @@
           <tr>
             <th scope="row" data-i18n="cmpRow2">Языки баннера</th>
             <td data-i18n="cmpRow2Self">Переводить каждый текст</td>
-            <td class="is-featured" data-i18n="cmpRow2Us">34 языка сразу</td>
+            <td class="is-featured" data-i18n="cmpRow2Us">34 языка сразу (на платных тарифах)</td>
           </tr>
           <tr>
             <th scope="row" data-i18n="cmpRow3">Список cookie</th>
@@ -841,6 +841,17 @@
           </tbody>
         </table>
       </div>
+
+      <!-- SPEC-V1.28 §7: why ConsentKit rather than a free plugin, in one card
+           under the table. Same rule as the table above: no product is named
+           and none is graded — the first sentence grants that a free plugin
+           is enough for many sites, and the rest is facts about US. Not a
+           seventh row and not `is-featured`: the §4 test pins six rows and
+           seven highlighted cells. -->
+      <article class="card cmp-why">
+        <h3 data-i18n="cmpWhyTitle">Почему не бесплатный плагин</h3>
+        <p data-i18n="cmpWhyText">Бесплатный плагин тоже покажет баннер, и многим сайтам этого хватает.</p>
+      </article>
     </div>
   </section>
 

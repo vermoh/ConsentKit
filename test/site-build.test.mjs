@@ -1,6 +1,6 @@
 /* The three rendered pages must be exactly what site/src/ says they are.
  *
- * site/index.html, site/ru/index.html and site/ro/index.html are GENERATED from
+ * site/index.html (ro), site/ru/index.html and site/en/index.html are GENERATED from
  * site/src/index.template.html plus site/src/i18n/{en,ru,ro}.json. Nothing else
  * notices when someone edits a rendered page by hand: the edit survives until
  * the next build silently reverts it, and in the meantime one language says
@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 
 import {
-  LANGS, DEFAULT_LANG, SRC_DIR, SITE_DIR, TEMPLATE,
+  LANGS, DEFAULT_LANG, SRC_DIR, SITE_DIR, TEMPLATE, ROOT_BYPASS, staleOutputs,
   readDict, readTemplate, renderPage, renderSitemap, buildAll, outputs,
   pageUrl, jsonForScript, runtimeDict,
   readPages, pageSiblings, lawUrl, lawPath, lawIndexUrl, lawOutputs,
@@ -38,6 +38,15 @@ for (const f of buildAll()) {
     );
   });
 }
+
+/* Owner, 23.09.2026: the root flipped from EN to RO, which orphaned site/ro/
+   and the four English slug directories under site/law/. The build removes
+   generated output it no longer emits; a leftover would keep deploying and
+   answering 200 at a URL nothing links to (and /ro/* is a 301 anyway). */
+test('no generated page is left behind that the build no longer emits', () => {
+  assert.deepEqual(staleOutputs().map((s) => s.label), [],
+    'stale generated output — run: node tools/build-site.mjs');
+});
 
 /* ------------------------------------------------------------ determinism */
 
@@ -360,14 +369,59 @@ test('the language switcher links to all three pages on every page', () => {
   for (const l of LANGS) {
     const html = renderPage(template, l.code);
     for (const other of LANGS) {
-      const href = other.dir ? '/' + other.dir : '/';
-      assert.match(html, new RegExp(`<a class="lang-btn" href="${href.replace(/\//g, '\\/')}"`),
+      /* The root carries ?lang=ro so the root's language redirects in
+         site/vercel.json (all `missing: lang`) let an explicit choice through. */
+      const href = other.dir ? '/' + other.dir : '/' + ROOT_BYPASS;
+      const esc = href.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+      assert.match(html, new RegExp(`<a class="lang-btn" href="${esc}"`),
         `the ${l.code} page's switcher does not link to ${href}`);
     }
     // The switcher must be plain links, not the old JS-driven buttons.
     assert.doesNotMatch(html, /<button[^>]*class="lang-btn"/,
       `the ${l.code} page still renders the switcher as buttons`);
   }
+});
+
+/* Owner, 23.09.2026: / is Romanian and detects the visitor's language; the
+   old /ro URLs are 301s. Pinned here because vercel.json is hand-edited and a
+   detection rule without `missing: lang` would trap a visitor who picks
+   Romanian in the switcher on the page they are trying to leave. */
+test('site/vercel.json: /ro is a 301 to the root, and only / detects language', () => {
+  const cfg = JSON.parse(readFileSync(join(SITE_DIR, 'vercel.json'), 'utf8'));
+  const rules = cfg.redirects || [];
+  const find = (src) => rules.filter((r) => r.source === src);
+
+  assert.deepEqual(find('/ro').map((r) => [r.destination, r.statusCode]), [['/', 301]]);
+  assert.deepEqual(find('/ro/:path*').map((r) => [r.destination, r.statusCode]), [['/:path*', 301]]);
+
+  const detect = rules.filter((r) => (r.has || []).some((h) => h.key === 'ck-lang' || h.key === 'accept-language'));
+  assert.equal(detect.length, 4, 'expected two cookie rules and two Accept-Language rules');
+  for (const r of detect) {
+    assert.equal(r.source, '/', `a language rule matches ${r.source} — deep links must stay put`);
+    assert.equal(r.permanent, false, 'language detection must not be a permanent redirect');
+    assert.ok((r.missing || []).some((m) => m.type === 'query' && m.key === 'lang'),
+      `the rule to ${r.destination} can not be bypassed with ?lang=`);
+    assert.ok(['/ru', '/en'].includes(r.destination), `unexpected destination ${r.destination}`);
+    const header = (r.has || []).find((h) => h.key === 'accept-language');
+    if (header) {
+      assert.ok(header.value.startsWith('^'), 'the Accept-Language regex must be anchored');
+      assert.ok((r.missing || []).some((m) => m.type === 'cookie' && m.key === 'ck-lang'),
+        'Accept-Language may only decide when there is no ck-lang cookie');
+    }
+  }
+  // Cookie rules come first, so a remembered choice beats the browser.
+  const firstHeader = rules.findIndex((r) => (r.has || []).some((h) => h.key === 'accept-language'));
+  const lastCookie = rules.map((r) => (r.has || []).some((h) => h.key === 'ck-lang')).lastIndexOf(true);
+  assert.ok(lastCookie < firstHeader, 'the ck-lang rules must precede the Accept-Language rules');
+
+  // The regexes do what the comment says (anchored, first language wins).
+  const re = (dest) => new RegExp(detect.find((r) => r.destination === dest &&
+    r.has.some((h) => h.key === 'accept-language')).has[0].value);
+  assert.ok(re('/ru').test('ru-RU,ru;q=0.9,en-US;q=0.8'));
+  assert.ok(re('/ru').test('ru'));
+  assert.ok(!re('/ru').test('ro-RO,ru;q=0.9'), 'a Romanian-first browser must stay on /');
+  assert.ok(re('/en').test('en-US,en;q=0.9'));
+  assert.ok(!re('/en').test('ro,en;q=0.8'));
 });
 
 /* --------------------------------------------------------- asset paths */

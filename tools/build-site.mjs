@@ -11,9 +11,9 @@
  *   site/src/index.template.html   structure, with {{PLACEHOLDERS}}
  *   site/src/i18n/{en,ru,ro}.json  the copy, one file per language
  *   src/ck-locales.js              de/fr/it/es strings for the banner marquee
- *        ->  site/index.html       (en, canonical /)
+ *        ->  site/index.html       (ro, canonical /)
  *            site/ru/index.html    (ru, canonical /ru)
- *            site/ro/index.html    (ro, canonical /ro)
+ *            site/en/index.html    (en, canonical /en)
  *
  * The output is a pure function of those inputs: building twice produces
  * byte-identical files (no timestamps, no ordering by hash iteration), which is
@@ -23,7 +23,7 @@
  *   --check  verify only, exit 1 on drift (no writes)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createContext, runInContext } from 'node:vm';
@@ -38,15 +38,33 @@ export const TEMPLATE = join(SRC_DIR, 'index.template.html');
 
 export const ORIGIN = 'https://consentkit.ecomconsult.net';
 
-/* EN is the default language and owns the root URL; ru/ro live one directory
-   down. `dir` is '' for the root so join() below yields site/index.html. */
+/* RO is the default language and owns the root URL (owner, 23.09.2026 — it
+   used to be EN, with Romanian at /ro); ru/en live one directory down. `dir`
+   is '' for the root so join() below yields site/index.html.
+
+   The old /ro and /ro/<path> URLs are 301s to the root in site/vercel.json, and
+   the root alone detects the visitor's language there (ck-lang cookie first,
+   then Accept-Language). Deep links are never redirected by language. */
 export const LANGS = [
-  { code: 'en', dir: '', label: 'EN', ogLocale: 'en_US' },
+  { code: 'ro', dir: '', label: 'RO', ogLocale: 'ro_RO' },
   { code: 'ru', dir: 'ru', label: 'RU', ogLocale: 'ru_RU' },
-  { code: 'ro', dir: 'ro', label: 'RO', ogLocale: 'ro_RO' }
+  { code: 'en', dir: 'en', label: 'EN', ogLocale: 'en_US' }
 ];
 
-export const DEFAULT_LANG = 'en';
+export const DEFAULT_LANG = 'ro';
+
+/* The query a link to the ROOT carries in the language switcher. The root is
+   the one URL site/vercel.json may redirect by language (cookie ck-lang, then
+   Accept-Language), and every one of those rules is `missing: lang` — so a
+   visitor who explicitly picks Romanian from /ru is not bounced straight back
+   to /ru by the cookie that page just wrote. app.js removes the parameter
+   again with history.replaceState once it has stored the new choice.
+   Canonical, hreflang and the sitemap stay the bare `/`. */
+export const ROOT_BYPASS = '?lang=' + DEFAULT_LANG;
+
+export function switchPath(dir) {
+  return dir ? pagePath(dir) : pagePath(dir) + ROOT_BYPASS;
+}
 
 /* ---------------------------------------------------------- theme, before paint */
 
@@ -226,7 +244,7 @@ export function pagePath(dir) {
 /* ------------------------------------------------------------- law pages */
 
 /* SPEC V1.11 §3: each dictionary carries a `pages` array, and every entry
-   renders one article under site/<lang>/law/<slug>/ (EN at site/law/<slug>/).
+   renders one article under site/<lang>/law/<slug>/ (RO at site/law/<slug>/).
  *
  * The slug is per-language — /ru/law/cookie-moldova and /en/law/cookie-moldova
  * may differ — so the three translations of one article are tied together by
@@ -322,7 +340,7 @@ export function readTemplate() {
 function langSwitch(current, paths) {
   const rows = LANGS.map((l) => {
     const on = l.code === current;
-    const href = paths ? paths[l.code] : pagePath(l.dir);
+    const href = paths ? paths[l.code] : switchPath(l.dir);
     /* data-lang is the analytics hook (SPEC-V1.26 §2, ck_lang_switch). The
        event needs the language this link LEADS to, and reading it off the
        label would mean matching on visible text; hreflang already carries it
@@ -340,7 +358,8 @@ function langSwitch(current, paths) {
 }
 
 /* Every page advertises all three languages plus x-default, and x-default is
-   EN — the root URL, which is what a visitor with an unmatched language gets. */
+   RO — the root URL, which is what a visitor with an unmatched language gets
+   (the root's language redirects only fire for a ru/en cookie or browser). */
 function hreflangBlock(urls) {
   const lines = LANGS.map((l) =>
     '<link rel="alternate" hreflang="' + l.code + '" href="' +
@@ -1001,7 +1020,7 @@ export function outputs() {
 }
 
 /* The «Правила» hub and the four articles, per language: site/law/<slug>/ for
-   EN at the root, site/<lang>/law/<slug>/ for ru and ro. A directory with an
+   RO at the root, site/<lang>/law/<slug>/ for ru and en. A directory with an
    index.html rather than a flat <slug>.html, so Vercel's cleanUrls serves the
    article at /law/<slug> — the URL canonical and hreflang advertise. */
 export function lawOutputs() {
@@ -1020,6 +1039,54 @@ export function lawOutputs() {
     }
   }
   return files;
+}
+
+/* Generated pages the build no longer emits. When the default language moved
+   from EN to RO (23.09.2026) the whole of site/ro/ became dead, and site/law/
+   was left holding the four ENGLISH slug directories next to the new Romanian
+   ones — both would keep deploying (and 200-ing) forever if nothing removed
+   them. So the build owns its old output too, within a tight fence:
+     - a two-letter directory directly under site/ that is not a current
+       language dir, and
+     - a <langroot>/law/<slug>/ directory whose slug no language emits there,
+   and in both cases only when an index.html inside carries the build's own
+   marker (the inlined __CK_SITE_I18N dictionary). A hand-made directory, or
+   img/, fonts/, vendor/, src/, is never a candidate. */
+const GENERATED_MARK = 'window.__CK_SITE_I18N=';
+
+function isGenerated(dir) {
+  const f = join(dir, 'index.html');
+  if (existsSync(f) && readFileSync(f, 'utf8').includes(GENERATED_MARK)) return true;
+  // A dead language root may hold only its law/ tree.
+  const law = join(dir, 'law', 'index.html');
+  return existsSync(law) && readFileSync(law, 'utf8').includes(GENERATED_MARK);
+}
+
+function subdirs(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
+}
+
+export function staleOutputs() {
+  const stale = [];
+  const langDirs = new Set(LANGS.map((l) => l.dir).filter(Boolean));
+  for (const name of subdirs(SITE_DIR)) {
+    if (!/^[a-z]{2}$/.test(name) || langDirs.has(name)) continue;
+    const path = join(SITE_DIR, name);
+    if (isGenerated(path)) stale.push({ path, label: `site/${name}/` });
+  }
+  for (const l of LANGS) {
+    const base = l.dir ? join(SITE_DIR, l.dir, 'law') : join(SITE_DIR, 'law');
+    const slugs = new Set(readPages(l.code).map((p) => p.slug));
+    for (const name of subdirs(base)) {
+      if (slugs.has(name)) continue;
+      const path = join(base, name);
+      if (isGenerated(path)) {
+        stale.push({ path, label: (l.dir ? `site/${l.dir}/law/` : 'site/law/') + name + '/' });
+      }
+    }
+  }
+  return stale;
 }
 
 export function buildAll() {
@@ -1057,6 +1124,16 @@ function main() {
       mkdirSync(dirname(f.path), { recursive: true });
       writeFileSync(f.path, f.content, 'utf8');
       console.log(`  write ${f.label}`);
+    }
+  }
+
+  for (const s of staleOutputs()) {
+    drift++;
+    if (check) {
+      console.error(`  STALE ${s.label} (no longer generated)`);
+    } else {
+      rmSync(s.path, { recursive: true, force: true });
+      console.log(`  rm    ${s.label}`);
     }
   }
 

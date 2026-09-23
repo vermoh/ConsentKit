@@ -55,11 +55,15 @@
 
   var PRICE_UNITS = { free: 'month', starter: 'site_month', business: 'month', agency: 'month' };
 
+  // SPEC-V1.28: Free gets three ceilings the paid plans do not have — 3 000
+  // decisions a month in the log, one banner language, two on-demand scans a
+  // month (with the per-day figure raised to 2 so both fit in one day). null
+  // means «no limit», exactly as the API sends it.
   var PLAN_LIMITS = {
-    free:     { scansManualPerDay: 1,  scheduledScans: false, alerts: false, brandingOff: false, journalCsv: false, journalRetentionDays: 30,   team: { members: 1 } },
-    starter:  { scansManualPerDay: 5,  scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 365,  team: { members: 1 } },
-    business: { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 730,  team: { members: 5 } },
-    agency:   { scansManualPerDay: 30, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 1095, team: { members: null } }
+    free:     { scansManualPerDay: 2,  scansManualPerMonth: 2,    decisionsPerMonth: 3000, languages: 1,    scheduledScans: false, alerts: false, brandingOff: false, journalCsv: false, journalRetentionDays: 30,   team: { members: 1 } },
+    starter:  { scansManualPerDay: 5,  scansManualPerMonth: null, decisionsPerMonth: null, languages: null, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 365,  team: { members: 1 } },
+    business: { scansManualPerDay: 30, scansManualPerMonth: null, decisionsPerMonth: null, languages: null, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 730,  team: { members: 5 } },
+    agency:   { scansManualPerDay: 30, scansManualPerMonth: null, decisionsPerMonth: null, languages: null, scheduledScans: true,  alerts: true,  brandingOff: true,  journalCsv: true,  journalRetentionDays: 1095, team: { members: null } }
   };
 
   /* ══════════════════════════════════════════════════════════════════
@@ -73,8 +77,10 @@
      object, and there is no runtime language switch to keep them in step.
 
      The language is read from the document, never from a stored preference
-     or the browser's own setting: the URL already decides it, and remembering
-     a choice would make /ru render English for a returning visitor.
+     or the browser's own setting: the URL already decides it. The ck-lang
+     cookie written below does not change that — it never alters what a page
+     renders, it only lets site/vercel.json send a returning visitor who opens
+     the bare root (/) to the language they last read.
      ══════════════════════════════════════════════════════════════════ */
 
   var I18N = (typeof window !== 'undefined' && window.__CK_SITE_I18N) || {};
@@ -90,6 +96,38 @@
     var l = '';
     try { l = String(document.documentElement.lang || '').toLowerCase(); } catch (e) {}
     return (l === 'ru' || l === 'ro') ? l : 'en';
+  })();
+
+  /* The visitor's language, remembered for the ROOT redirect only (owner,
+     23.09.2026). / is Romanian; site/vercel.json redirects it to /ru or /en
+     when this cookie says so, and — only when there is no cookie at all — when
+     Accept-Language starts with ru or en. Every page writes the language it
+     IS, so reading any page (or picking one in the switcher) is the choice.
+
+     A strictly necessary preference cookie: it holds two letters, is read by
+     our own host and nothing else, and is declared in the demo banner's
+     cookie table below (category necessary, 1 year).
+
+     The switcher's link to Romanian is /?lang=ro, because every redirect rule
+     is `missing: lang` — otherwise a visitor leaving /ru for Romanian would be
+     bounced straight back by the ru cookie that page just wrote. Once the
+     cookie says ro, the parameter has done its job and is taken out of the
+     address bar; every other parameter (UTMs that analytics.js reads next)
+     and the #fragment stay exactly as they were. */
+  (function rememberLang() {
+    try {
+      document.cookie = 'ck-lang=' + lang + '; path=/; max-age=31536000; SameSite=Lax';
+    } catch (e) { /* cookies blocked: the root simply falls back to Accept-Language */ }
+    try {
+      var search = String(window.location.search || '');
+      if (!/[?&]lang=/.test(search) || !window.history || !window.history.replaceState) return;
+      var kept = search.replace(/^\?/, '').split('&').filter(function (kv) {
+        return kv && kv.split('=')[0] !== 'lang';
+      });
+      var url = window.location.pathname + (kept.length ? '?' + kept.join('&') : '') +
+        (window.location.hash || '');
+      window.history.replaceState(window.history.state, '', url);
+    } catch (e) { /* the address bar keeps ?lang= — harmless */ }
   })();
 
   /* I18N is one flat dictionary — the build inlined the language this page
@@ -183,6 +221,9 @@
         {
           sites: SITE_LIMITS[plan],
           scansManualPerDay: limits.scansManualPerDay,
+          scansManualPerMonth: limits.scansManualPerMonth,
+          decisionsPerMonth: limits.decisionsPerMonth,
+          languages: limits.languages,
           scheduledScans: limits.scheduledScans,
           alerts: limits.alerts,
           brandingOff: limits.brandingOff,
@@ -196,6 +237,12 @@
 
   function isNum(v) { return typeof v === 'number' && isFinite(v); }
   function isBool(v) { return typeof v === 'boolean'; }
+  /* SPEC-V1.28's three Free ceilings are optional in the payload: an API older
+     than V1.28 sends none of them, and its plans really have no such limit, so
+     a missing or malformed field reads as null («no limit») — never as the
+     constant above, which would be the per-field mix of sources this file
+     refuses to show. */
+  function optNum(v) { return isNum(v) ? v : null; }
 
   /* All-or-nothing: one malformed plan discards the whole response, because a
      per-plan fallback is exactly the mix of sources this must never show. */
@@ -223,6 +270,9 @@
       byId[p.plan] = planDescriptor(p.plan, p.priceEur, p.priceUnit, {
         sites: l.sites,
         scansManualPerDay: l.scansManualPerDay,
+        scansManualPerMonth: optNum(l.scansManualPerMonth),
+        decisionsPerMonth: optNum(l.decisionsPerMonth),
+        languages: optNum(l.languages),
         scheduledScans: l.scheduledScans,
         alerts: l.alerts,
         brandingOff: l.brandingOff,
@@ -296,7 +346,19 @@
     // agree, so the count goes through plural() in both and the dictionary
     // decides whether a word is attached to it.
     if (d.limits.scheduledScans) return fill('scansScheduled', n);
+    // SPEC-V1.28 §4: Free's real ceiling is the monthly one (it is checked
+    // first on the server), so when a plan has it, it is the number shown.
+    var perMonth = d.limits.scansManualPerMonth;
+    if (isNum(perMonth)) return t('scansManualMonthly').replace('{n}', plural(perMonth, 'unitScan'));
     return t('scansManualOnly').replace('{n}', plural(n, 'unitScan'));
+  }
+
+  // SPEC-V1.28 §1: decisions (banner answers) recorded per calendar month.
+  // The log never stops recording — the ceiling only closes the dashboard's
+  // view of it, which the FAQ spells out.
+  function decisionsText(d) {
+    var n = d.limits.decisionsPerMonth;
+    return isNum(n) ? groupDigits(n) : t('decisionsUnlimited');
   }
 
   function logText(d) {
@@ -315,6 +377,7 @@
     ['rowSites',    sitesText],
     ['rowBranding', function (d) { return t(d.limits.brandingOff ? 'brandingOptional' : 'brandingRequired'); }],
     ['rowScans',    scansText],
+    ['rowDecisions', decisionsText],
     ['rowLog',      logText],
     // V1.8-C: on every plan with scheduled scans the scanner appends the cookies
     // it finds to the PUBLISHED banner and switches the category on — the same
@@ -325,8 +388,9 @@
     // so 1 means «only you»; null is the agency's «no limit». A payload from
     // an API older than V1.17 has no `team` at all and reads as «only you».
     ['rowTeam',     teamText],
-    // Not in the payload — the same for every plan, so it stays dictionary-only.
-    ['rowLangs',    function () { return t('langsAll'); }],
+    // SPEC-V1.28 §3: `languages` is 1 on Free (one fixed banner language) and
+    // null on every paid plan, which keeps all 34.
+    ['rowLangs',    function (d) { return t(d.limits.languages === 1 ? 'langsOne' : 'langsAll'); }],
     ['rowSupport',  function (d) { return t('support' + cap(d.plan)); }]
   ];
 
@@ -1197,7 +1261,7 @@
     var l = demo.bannerLang;
     /* SPEC V1.25 §1 — the site itself runs the mode it recommends.
 
-       This site IS the case 'page' was added for: /ru/ and /ro/ are real pages
+       This site IS the case 'page' was added for: /, /ru and /en are real pages
        carrying `<html lang>`, and before this a visitor with a Russian browser
        got a Russian banner on the Romanian page. 'page' sends the banner to the
        page's own attribute first, so the banner now matches the page the way
@@ -1259,12 +1323,15 @@
   function cookieTable() {
     var COPY = {
       en: { choice: ['Stores the visitor’s choice so the banner does not ask again.', '12 months'],
+            lang: ['Remembers the site language you chose.', '1 year'],
             stats: 'Site visit statistics', ads: 'Advertising and measuring its effectiveness',
             y2: '2 years', d90: '90 days' },
       ru: { choice: ['Хранит выбор посетителя, чтобы не спрашивать снова.', '12 месяцев'],
+            lang: ['Запоминает выбранный язык сайта.', '1 год'],
             stats: 'Статистика посещений сайта', ads: 'Реклама и оценка её эффективности',
             y2: '2 года', d90: '90 дней' },
       ro: { choice: ['Păstrează alegerea vizitatorului, ca bannerul să nu întrebe din nou.', '12 luni'],
+            lang: ['Reține limba site-ului pe care ați ales-o.', '1 an'],
             stats: 'Statistici privind vizitarea site-ului', ads: 'Publicitate și măsurarea eficienței ei',
             y2: '2 ani', d90: '90 de zile' }
     };
@@ -1272,6 +1339,9 @@
     return [
       { name: 'ck_consent', category: 'necessary', provider: 'ConsentKit',
         purpose: c.choice[0], expiry: c.choice[1] },
+      /* The site's own language cookie (see rememberLang above). */
+      { name: 'ck-lang', category: 'necessary', provider: 'ConsentKit',
+        purpose: c.lang[0], expiry: c.lang[1] },
       { name: '_ga', category: 'analytics', provider: 'Google Analytics', purpose: c.stats, expiry: c.y2 },
       { name: '_ga_' + GA4_STREAM, category: 'analytics', provider: 'Google Analytics', purpose: c.stats, expiry: c.y2 },
       { name: '_fbp', category: 'marketing', provider: 'Meta Pixel', purpose: c.ads, expiry: c.d90 },

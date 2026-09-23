@@ -5,6 +5,42 @@
   "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/ro", "destination": "/", "statusCode": 301 },
+    { "source": "/ro/:path*", "destination": "/:path*", "statusCode": 301 },
+    { "source": "/law/cookies-and-the-law-in-moldova", "destination": "/en/law/cookies-and-the-law-in-moldova", "statusCode": 301 },
+    { "source": "/law/gdpr-for-moldovan-and-romanian-sites", "destination": "/en/law/gdpr-for-moldovan-and-romanian-sites", "statusCode": 301 },
+    { "source": "/law/google-consent-mode-v2-in-plain-words", "destination": "/en/law/google-consent-mode-v2-in-plain-words", "statusCode": 301 },
+    { "source": "/law/what-happens-without-a-banner", "destination": "/en/law/what-happens-without-a-banner", "statusCode": 301 },
+    {
+      "source": "/",
+      "has": [{ "type": "cookie", "key": "ck-lang", "value": "^ru$" }],
+      "missing": [{ "type": "query", "key": "lang" }],
+      "destination": "/ru",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "cookie", "key": "ck-lang", "value": "^en$" }],
+      "missing": [{ "type": "query", "key": "lang" }],
+      "destination": "/en",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "header", "key": "accept-language", "value": "^ru([-;,].*)?$" }],
+      "missing": [{ "type": "cookie", "key": "ck-lang" }, { "type": "query", "key": "lang" }],
+      "destination": "/ru",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "header", "key": "accept-language", "value": "^en([-;,].*)?$" }],
+      "missing": [{ "type": "cookie", "key": "ck-lang" }, { "type": "query", "key": "lang" }],
+      "destination": "/en",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

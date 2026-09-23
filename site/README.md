@@ -14,9 +14,9 @@ site/
     i18n/en.json             the copy, one file per language …
     i18n/ru.json
     i18n/ro.json
-  index.html      GENERATED — English, canonical /
+  index.html      GENERATED — Romanian, canonical /
   ru/index.html   GENERATED — Russian, canonical /ru
-  ro/index.html   GENERATED — Romanian, canonical /ro
+  en/index.html   GENERATED — English, canonical /en
   sitemap.xml     GENERATED — all three URLs
   styles.css      all styling (system font stack only)
   app.js          pricing render, demo wiring, owner constants
@@ -161,17 +161,42 @@ Three languages, three URLs, **no runtime language switching**:
 
 | Language | URL | Source of the copy |
 |---|---|---|
-| English (default) | `/` | `site/src/i18n/en.json` |
+| Romanian (default) | `/` | `site/src/i18n/ro.json` |
 | Russian | `/ru` | `site/src/i18n/ru.json` |
-| Romanian | `/ro` | `site/src/i18n/ro.json` |
+| English | `/en` | `site/src/i18n/en.json` |
+
+The «Правила» pages follow the same scheme: `/law/<slug>` is Romanian,
+`/ru/law/<slug>` and `/en/law/<slug>` the other two. Until 23.09.2026 English
+owned the root and Romanian lived at `/ro`; `vercel.json` now answers `/ro` and
+`/ro/<path>` with a 301 to the same path at the root, and the four old English
+`/law/<slug>` URLs with a 301 to `/en/law/<slug>`.
 
 `tools/build-site.mjs` renders `site/src/index.template.html` once per language
 and writes the whole dictionary into a `<script>` block on the page, so each URL
 is static HTML with its own `<html lang>`, `<title>`, meta description, `og:`
 pair, canonical and `hreflang` alternates (plus `x-default` → `/`). The
-switcher is three plain links. `app.js` reads
-`document.documentElement.lang` for the plural rules and the demo banner's
-language, and nothing else.
+switcher is three plain links; the one to the Romanian root is `/?lang=ro`
+(see below). `app.js` reads `document.documentElement.lang` for the plural
+rules and the demo banner's language, and writes it into the `ck-lang` cookie.
+
+### Language detection on `/`
+
+Only the home page `/` is redirected by language, and only temporarily (307),
+by the `redirects` in `vercel.json`:
+
+1. cookie `ck-lang=ru` → `/ru`, cookie `ck-lang=en` → `/en` (`ro` or anything
+   else stays on `/`);
+2. no `ck-lang` cookie and `Accept-Language` starting with `ru` → `/ru`,
+   starting with `en` → `/en` — the first listed language wins.
+
+Every rule is skipped when the URL carries `?lang=`, which is why the switcher's
+Romanian link is `/?lang=ro`: without it a visitor leaving `/ru` would be sent
+straight back by the `ru` cookie. `app.js` writes
+`ck-lang=<page lang>; path=/; max-age=31536000; SameSite=Lax` on every page load
+and then drops `lang=` from the address bar with `history.replaceState`. The
+cookie is a strictly necessary preference cookie and is declared in the demo
+banner's cookie table. Deep links (`/ru/law/…`, `/law/…`) are never redirected
+by language.
 
 ### Editing copy
 
@@ -179,7 +204,7 @@ language, and nothing else.
 2. Rebuild and verify:
 
 ```sh
-node tools/build-site.mjs          # render site/{,ru/,ro/}index.html + sitemap.xml
+node tools/build-site.mjs          # render site/{,ru/,en/}index.html + sitemap.xml, remove stale output
 node tools/build-site.mjs --check  # verify only, exits 1 on drift
 npm test                           # test/site-build.test.mjs
 ```
@@ -215,7 +240,7 @@ the plural rules were written deliberately (including the «de» linker from 20
 up), but idiom, marketing tone and terminology choices — «urmăritori» for
 trackers, «panou de control» for the dashboard, «consimțământ» throughout —
 have not been checked by a native speaker. Have one read it before treating
-`/ro` as finished marketing copy.
+the root `/` as finished marketing copy.
 
 ## Local preview
 
@@ -224,14 +249,15 @@ npx --yes http-server site -p 8790
 ```
 
 Then open <http://localhost:8790/>, <http://localhost:8790/ru/> and
-<http://localhost:8790/ro/>. Add `-c-1` to disable caching while editing, and
+<http://localhost:8790/en/>. Add `-c-1` to disable caching while editing, and
 re-run `node tools/build-site.mjs` after every change to `site/src/` — the server
 serves the generated files, not the template.
 
 Two caveats, both invisible locally:
 
-- `vercel.json` headers are **not** applied by a plain static server, so anything
-  header-dependent has to be checked on a Vercel preview deployment.
+- `vercel.json` headers and redirects (including the language detection on
+  `/`) are **not** applied by a plain static server, so anything that depends
+  on them has to be checked on a Vercel preview deployment.
 - A plain static server resolves `/ru` and `/ru/` alike, while Vercel's
   `cleanUrls` + `trailingSlash: false` redirects one to the other. The canonical
   form is the one without the slash.
