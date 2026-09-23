@@ -420,6 +420,10 @@ test('Cloudflare Web Analytics is analytics, not infrastructure (§8)', () => {
   const { CK } = env;
   assert.equal(CK._categoryForUrl('https://static.cloudflareinsights.com/beacon.min.js'), 'analytics');
   assert.ok(!CK._isInfra('static.cloudflareinsights.com'));
+  // 0.5.29: the entry is the bare cloudflareinsights.com, because the beacon
+  // posts its measurements to /cdn-cgi/rum on the parent domain itself.
+  assert.equal(CK._categoryForUrl('https://cloudflareinsights.com/cdn-cgi/rum'), 'analytics');
+  assert.ok(!CK._isInfra('cloudflareinsights.com'));
   assert.ok(!CK._infra().includes('cloudflare.com'),
     'a bare cloudflare.com entry would wave the analytics beacon through');
 

@@ -5,6 +5,61 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.29
+
+- Tracker database: **three EU/regional ad-tech vendors, two Google ad-serving
+  auxiliaries, an audience panel, two more consent managers and a handful of
+  embedded features.**
+  `eskimi.com` → marketing, the **bare domain**: Eskimi (Vilnius, Lithuania) is
+  a DSP whose tag reads `__tcfapi` / the gdpr consent string and syncs ids with
+  partners, spread across `dsp.`, `dsp-media.` and `dsp-ap.` (`/v2/gtr`),
+  `sspjs.` (`esadt.js`), `ittpx.` (`/sync`, the cookie-sync pixel) and `ittr.`.
+  `stpd.cloud` → marketing: Setupad (Riga, Latvia), the `/saas/<id>`
+  ad-monetisation loader. `admixer.net` → marketing: Admixer (Kyiv), the ad
+  network's `cdn.admixer.net/loader2.js`. Each domain is dedicated to ad
+  serving, so each entry is bare.
+  `2mdn.net` and `adtrafficquality.google` → marketing, following the
+  `doubleclick.net` decision: the DoubleClick creative library (`s0.2mdn.net`)
+  and the «sodar» invalid-traffic probes (`ep1.`/`ep2.adtrafficquality.google`)
+  that AdSense and Ad Manager tags fire.
+  `gemius.pl` → analytics, the **bare domain**: Gemius (Warsaw, Poland)
+  audience measurement — `rexdot.js` on the `garo.`/`gamd.hit` hosts,
+  `fpdata.js` adding a fingerprint, and `ls.hit.gemius.pl/lsget.html`, an
+  iframe that stores and syncs the visitor identifier.
+  `stat-api.meteofor.com` → analytics, the **exact host**: the Meteofor weather
+  widget's usage beacon (`/r6`). The vendor's country was not verified.
+  `cloudflareinsights.com` → analytics, **replacing** the exact
+  `static.cloudflareinsights.com`: the script loads from `static.`, but the
+  beacon posts to `cloudflareinsights.com/cdn-cgi/rum` on the parent, which the
+  exact entry never covered. The CDN half of Cloudflare stays infrastructure.
+  `fundingchoicesmessages.google.com` (exact), `cdn-cookieyes.com` and
+  `log.cookieyes.com` (the CookieYes banner and its consent-log beacon) →
+  **necessary**: consent managers, never held behind consent for the
+  `transcend-cdn.com` reason, and named so the audit reports a second consent
+  tool on the page.
+  `api.staylive.tv` → functional: StayLive AB (Stockholm), a sports video
+  player embedded as an iframe — a subscription service with no ad tracking
+  known, so the `vimeo.com` decision rather than the `youtube.com` one.
+  `tile.openstreetmap.org` → functional (covers `a.`/`b.`/`c.`): OpenStreetMap
+  map tiles, requested only when a map renders — the `maps.googleapis.com`
+  decision. `ui-avatars.com` → functional: it generates avatar images from a
+  name passed in the URL, so a person's name leaves the site; it sets no
+  cookies. `assistant.ecomconsult.net` → functional: E-COM Consult's own
+  «Mon Rêve» shopping-assistant widget for Horoshop shops, which sets no
+  tracking cookies.
+- Infrastructure (§8), static assets only: `lh3.googleusercontent.com` (Google
+  user-content images), `code.createjs.com` (the CreateJS library CDN),
+  `images.unsplash.com`, `static.meteofor.st` and `rss-img.meteofor.st` (the
+  Meteofor widget's own assets — its beacon is analytics, above) and
+  `video-images-cdn.staylive.tv` (StayLive thumbnails).
+- Deliberately **not** classified: `lexaro.boutique`, `luna-label.shop`,
+  `new-fashion.boutique`, `menswear.lexaromoda.com` and `store.lexaromoda.com`
+  — one shop network's own image hosts, shared between its sites, which is
+  site-specific and not a vendor; `moldfootball.com` and `www.ligatv.md` —
+  other Moldovan sites embedded by the audited one, sites rather than vendors.
+  `auth.wikimedia.org`, `meta.wikimedia.org` and `cdn.polyfill.io` stay as
+  0.5.27 decided.
+
 ## 0.5.28
 
 - **The settings panel never moves the host page.** Its three `focus()` calls —

@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.28
+Stable tag: 0.5.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers 153 known tracker hosts and
+  requests them. This is on by default and covers 167 known tracker hosts and
   14 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (153 hosts, 14 path rules) and matches by
+* The tracker database is a snapshot (167 hosts, 14 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,42 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.29 =
+* Tracker database: eskimi.com, stpd.cloud and admixer.net -> marketing. Eskimi
+  (Vilnius) is a DSP whose tag reads the TCF consent string and syncs ids with
+  partners across its dsp., dsp-media., dsp-ap., sspjs., ittpx. and ittr.
+  subdomains; Setupad (Riga) is an ad-monetisation loader (/saas/<id>); Admixer
+  (Kyiv) is an ad network (cdn.admixer.net/loader2.js). Each domain is
+  dedicated to ad serving, so each entry is the bare domain.
+* Tracker database: 2mdn.net and adtrafficquality.google -> marketing,
+  following doubleclick.net: the DoubleClick creative library (s0.2mdn.net) and
+  the "sodar" invalid-traffic probes (ep1./ep2.) fired by AdSense and Ad Manager.
+* Tracker database: gemius.pl -> analytics. Gemius (Warsaw) audience
+  measurement: rexdot.js on the garo./gamd. hit hosts, fpdata.js fingerprinting
+  and the ls.hit.gemius.pl/lsget.html identifier-sync iframe.
+* Tracker database: stat-api.meteofor.com -> analytics, the exact host: the
+  Meteofor weather widget's usage beacon (/r6). Vendor country not verified.
+* Tracker database: cloudflareinsights.com -> analytics, replacing the exact
+  static.cloudflareinsights.com. The beacon posts to
+  cloudflareinsights.com/cdn-cgi/rum on the parent, which the old entry missed.
+* Tracker database: fundingchoicesmessages.google.com, cdn-cookieyes.com and
+  log.cookieyes.com -> necessary. Google Funding Choices and CookieYes (its
+  banner and its consent-log beacon) are other vendors' consent managers, and
+  blocking a consent manager behind consent is circular.
+* Tracker database: api.staylive.tv, tile.openstreetmap.org, ui-avatars.com and
+  assistant.ecomconsult.net -> functional. The StayLive sports player (no ad
+  tracking known, so the vimeo.com decision), OpenStreetMap map tiles, avatar
+  images generated from a name in the URL (a person's name leaves the site; no
+  cookies), and E-COM Consult's own "Mon Reve" shopping assistant for Horoshop
+  shops (no tracking cookies).
+* Infrastructure: lh3.googleusercontent.com, code.createjs.com,
+  images.unsplash.com, static.meteofor.st, rss-img.meteofor.st and
+  video-images-cdn.staylive.tv -- static assets only, so no category.
+* Deliberately not classified: lexaro.boutique, luna-label.shop,
+  new-fashion.boutique, menswear.lexaromoda.com and store.lexaromoda.com (one
+  shop network's own image hosts -- site-specific, not a vendor), and
+  moldfootball.com and www.ligatv.md (other sites embedded by the audited one).
 
 = 0.5.28 =
 * Settings panel: opening it, tabbing inside it and closing it no longer move

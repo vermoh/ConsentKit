@@ -1,7 +1,7 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.28
+ * Версия ConsentKit: 0.5.29
  * Дата сборки:      2026-09-23
  * Языки:            bg, ca, cs, da, de, el, en, es, et, fi, fr, ga, hr, hu, is, it, lt, lv, mk, mt, nb, nl, no, pl, pt, ro, ru, sk, sl, sq, sr, sv, tr, uk
  * Язык баннера:     auto (по языку браузера посетителя)
@@ -117,10 +117,18 @@
     'datadoghq.com': 'analytics',             // RUM
     'datadoghq-browser-agent.com': 'analytics',
     'vercel-insights.com': 'analytics',    // Vercel Web Analytics
-    // Cloudflare Web Analytics. Subdomain only, and deliberately NOT in
-    // INFRA_DB: the rest of Cloudflare's edge is infrastructure, but this one
-    // beacon is a measurement product (§8 names it by hand for that reason).
-    'static.cloudflareinsights.com': 'analytics',
+    // Cloudflare Web Analytics. Deliberately NOT in INFRA_DB: the rest of
+    // Cloudflare's edge is infrastructure, but this beacon is a measurement
+    // product (§8 names it by hand for that reason).
+    //
+    // The BARE domain since 0.5.29, replacing the exact
+    // static.cloudflareinsights.com: that host only serves beacon.min.js, and
+    // the beacon then posts its measurements to cloudflareinsights.com
+    // /cdn-cgi/rum on the parent itself, which the exact entry never covered.
+    // The domain is dedicated to the product, so the bare entry is the right
+    // scope — it still covers static. by suffix, and it says nothing about
+    // cloudflare.com, whose CDN hosts stay in INFRA_DB.
+    'cloudflareinsights.com': 'analytics',
     // Tilda's stats endpoint. The REST of tildaapi.one is platform plumbing and
     // sits in INFRA_DB host by host; this one subdomain measures visitors, so it
     // is classified here instead. There is deliberately NO bare `tildaapi.one`
@@ -148,6 +156,28 @@
     // dead product left in a page is exactly what an audit exists to surface.
     // The domain serves nothing but the tool, so the bare entry is right.
     'googleoptimize.com': 'analytics',
+    // Gemius (Warsaw, Poland) — audience measurement. The tag (rexdot.js on
+    // garo.hit.gemius.pl / gamd.hit.gemius.pl) counts page views against a
+    // visitor identifier, fpdata.js adds a browser fingerprint, and
+    // ls.hit.gemius.pl /lsget.html is an iframe whose only job is to store and
+    // sync that identifier across sites. Counting visitors against a
+    // persistent id is measurement, so `analytics` — the mc.yandex.ru
+    // decision, made on a Polish panel.
+    //
+    // The BARE domain, because the tag is spread across numbered and regional
+    // hit subdomains (garo., gamd., ls.hit., …) that no exact list keeps up
+    // with. It also classifies the vendor's own site, and that costs nothing:
+    // a link to gemius.pl is not something a shop page carries.
+    'gemius.pl': 'analytics',
+    // Meteofor — the usage beacon of its embeddable weather widget
+    // (stat-api.meteofor.com /r6), which reports each widget view back to the
+    // vendor. The widget itself draws from static.meteofor.st and
+    // rss-img.meteofor.st, both in INFRA_DB below as plain asset hosts; this
+    // one host counts, so it is `analytics`. The vendor's country was NOT
+    // verified when this entry was written. The EXACT host: meteofor.com is
+    // the vendor's own weather site, and a bare entry would be a claim about
+    // it too.
+    'stat-api.meteofor.com': 'analytics',
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
@@ -169,6 +199,16 @@
     'analytics.tiktok.com': 'marketing',
     'googleadservices.com': 'marketing',
     'doubleclick.net': 'marketing',
+    // Two auxiliaries of Google's ad serving, filed with the doubleclick.net
+    // decision directly above because they are requested by the same ad tags
+    // and by nothing else. 2mdn.net is the DoubleClick creative library
+    // (s0.2mdn.net serves the ad creatives and the rendering code around them).
+    // adtrafficquality.google carries the «sodar» invalid-traffic probes
+    // (ep1./ep2.adtrafficquality.google) that AdSense and Ad Manager tags fire
+    // to fingerprint the browser for fraud scoring. Both domains are dedicated
+    // to ad serving, so the bare entries are the right scope.
+    '2mdn.net': 'marketing',
+    'adtrafficquality.google': 'marketing',
     'googlesyndication.com': 'marketing',
     'criteo.com': 'marketing',
     'criteo.net': 'marketing',
@@ -290,6 +330,25 @@
     // and a bare entry would rule `marketing` on a mere link to it — the same
     // split as w.soundcloud.com against soundcloud.com above.
     'app.targeting.md': 'marketing',
+    // Three EU/regional ad-tech vendors, found on audited sites 23.09.2026.
+    // Each domain is dedicated to ad serving, so each bare entry is the right
+    // scope, and each also covers the vendor's own site — which is a fair
+    // price, because a shop page has no reason to link to an ad exchange.
+    //
+    // Eskimi (Vilnius, Lithuania) — a DSP. Its tag reads __tcfapi / the gdpr
+    // consent string and syncs ids with partners, and it is spread across
+    // dsp., dsp-media. and dsp-ap. (/v2/gtr), sspjs. (esadt.js), ittpx.
+    // (/sync, the cookie-sync pixel) and ittr. — bare precisely so the next
+    // subdomain is covered without a release. Id syncing between exchanges IS
+    // the advertising profile, so `marketing`.
+    'eskimi.com': 'marketing',
+    // Setupad (Riga, Latvia) — an ad-monetisation platform: stpd.cloud
+    // /saas/<id> is the loader that fills the publisher's ad slots, i.e. the
+    // same decision as googlesyndication.com above.
+    'stpd.cloud': 'marketing',
+    // Admixer (Kyiv) — an ad network; cdn.admixer.net /loader2.js loads its
+    // ad slots. Same decision, same scope.
+    'admixer.net': 'marketing',
 
     // --- functional ----------------------------------------------------
     'intercom.io': 'functional',
@@ -432,6 +491,32 @@
     // advertising profile, so it is neither analytics nor marketing. The domain
     // is dedicated to the product, so the bare entry is the right scope.
     'trustindex.io': 'functional',
+    // StayLive (StayLive AB, Stockholm) — a sports video platform, embedded as
+    // a player iframe that talks to api.staylive.tv. It is a subscription
+    // service with no advertising tracking known, so it follows the vimeo.com
+    // decision above and not the youtube.com one: a visitor who declines
+    // functional loses the video and nothing else. The EXACT host: staylive.tv
+    // is the vendor's own site, and its thumbnail host
+    // video-images-cdn.staylive.tv sits in INFRA_DB as a plain image CDN.
+    'api.staylive.tv': 'functional',
+    // OpenStreetMap map tiles (a./b./c.tile.openstreetmap.org), requested only
+    // when a map the owner embedded renders — the maps.googleapis.com decision
+    // above, on the open map. Bare on tile.openstreetmap.org, which covers the
+    // three tile servers by suffix and nothing else: openstreetmap.org itself
+    // is the project's own site and stays unclassified.
+    'tile.openstreetmap.org': 'functional',
+    // UI Avatars — generates an avatar image from a name passed IN THE URL
+    // (ui-avatars.com/api/?name=…), so a person's name leaves the site with
+    // every request. It sets no cookie and builds no profile, which makes it a
+    // feature rather than measurement; `functional`, and not INFRA_DB, because
+    // personal data in the request is exactly what an owner must be told about.
+    'ui-avatars.com': 'functional',
+    // E-COM Consult's own «Mon Rêve» shopping-assistant widget for Horoshop
+    // shops. It sets no tracking cookies; it is a feature the shop owner chose,
+    // like the chat widgets above, so `functional`. The EXACT host:
+    // ecomconsult.net also carries consent.ecomconsult.net, which is our
+    // consent service and sits in INFRA_DB as such.
+    'assistant.ecomconsult.net': 'functional',
 
     // --- necessary -----------------------------------------------------
     // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
@@ -512,6 +597,21 @@
     // else), so the bare registrable domain is the right scope here, the way
     // recaptcha.net is above.
     'transcend-cdn.com': 'necessary',
+    // Two more consent managers, never held for the transcend-cdn.com reason
+    // directly above: a consent tool cannot wait on the decision it exists to
+    // ask for, and naming it lets the audit report a second one on the page.
+    //
+    // Google Funding Choices — Google's consent-message CMP
+    // (fundingchoicesmessages.google.com). The EXACT host, and it must stay
+    // exact: google.com is a normal site, and a bare entry would rule on all of
+    // it at once.
+    'fundingchoicesmessages.google.com': 'necessary',
+    // CookieYes. cdn-cookieyes.com serves the banner script and is dedicated to
+    // the product, so the bare domain is the right scope. log.cookieyes.com is
+    // its consent-log beacon — the record of the visitor's own choice — and is
+    // named as the EXACT host, because cookieyes.com is the vendor's own site.
+    'cdn-cookieyes.com': 'necessary',
+    'log.cookieyes.com': 'necessary',
     'paypal.com': 'necessary',
     'paypalobjects.com': 'necessary',         // PayPal button assets
     'paynet.md': 'necessary',                 // Moldovan payment gateway
@@ -740,7 +840,7 @@
   // Suffix-matched, exactly like HOST_DB. Membership here is not a claim that a
   // host is harmless in general — it is a claim that it serves the site's own
   // assets. Anything that MEASURES belongs in HOST_DB with a real category
-  // instead: static.cloudflareinsights.com is the worked example (§8 calls it
+  // instead: cloudflareinsights.com is the worked example (§8 calls it
   // out by name), and it sits above as `analytics` for that reason. Because
   // categoryForUrl is consulted before the strict allowlist, a host in both
   // places is classified, not waved through — so a bare `cloudflare.com` here
@@ -833,6 +933,28 @@
     // unclassified in both tables on purpose, the way ecom.md does above.
     'upload.wikimedia.org',
     'thumb.wikimedia.org',
+    // CreateJS's library CDN (code.createjs.com serves createjs.min.js and its
+    // siblings) — the page's own code, the code.jquery.com case above. The
+    // EXACT host: createjs.com is the project's own site.
+    'code.createjs.com',
+    // Hot-linked photos and profile pictures, the i.imgur.com case above:
+    // images.unsplash.com serves Unsplash photos, and lh3.googleusercontent.com
+    // serves Google user-content images (profile pictures, Photos/Drive
+    // embeds). EXACT hosts: unsplash.com is the site itself, and
+    // googleusercontent.com also carries hosted content that is not a picture.
+    'images.unsplash.com',
+    'lh3.googleusercontent.com',
+    // The Meteofor weather widget's own assets — static.meteofor.st (its
+    // script, styles and icons) and rss-img.meteofor.st (the weather pictures).
+    // The widget's usage BEACON, stat-api.meteofor.com, counts views and sits
+    // in HOST_DB as `analytics`; these two only draw it. Exact hosts, so the
+    // bare meteofor.st is not waved through.
+    'static.meteofor.st',
+    'rss-img.meteofor.st',
+    // StayLive's video thumbnails. The PLAYER's API, api.staylive.tv, is
+    // `functional` in HOST_DB; this host serves only the poster images — the
+    // ytimg.com argument below, host for host.
+    'video-images-cdn.staylive.tv',
     // cdn.polyfill.io is DELIBERATELY ABSENT, and this note is here because
     // this run of general asset CDNs is where a reader would look for it.
     //
@@ -2804,7 +2926,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.28',
+    version: '0.5.29',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

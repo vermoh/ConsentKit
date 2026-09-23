@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.28).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.29).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -739,9 +739,9 @@ builder's own CDN breaks the page without protecting anyone; the hosted service
 also leaves them out of scan reports, since there is nothing for a site owner to
 decide. Membership is a claim that a host delivers the site's own assets, not
 that it is harmless in general — anything that *measures* keeps a real consent
-category instead, which is why `static.cloudflareinsights.com` (Cloudflare Web
+category instead, which is why `cloudflareinsights.com` (Cloudflare Web
 Analytics) is classified as `analytics` and blocked before consent even though
-the rest of Cloudflare's CDN is infrastructure. The list holds **40 entries**.
+the rest of Cloudflare's CDN is infrastructure. The list holds **56 entries**.
 Both lists are matched by suffix and returned as copies, so reading them cannot
 widen what strict mode allows.
 
@@ -905,15 +905,15 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **153 hosts** and **14 path rules**, matched by suffix (a
+The database ships **167 hosts** and **14 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 153 | 52 `marketing`, 48 `functional`, 34 `analytics`, 19 `necessary` |
+| `HOST_DB` | 167 | 57 `marketing`, 52 `functional`, 36 `analytics`, 22 `necessary` |
 | `PATH_DB` | 14 | 6 `functional`, 4 `marketing`, 2 `analytics`, 2 `necessary` |
-| `INFRA_DB` | 50 | not a category — see [Infrastructure](#infrastructure) |
+| `INFRA_DB` | 56 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
 TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
@@ -1252,19 +1252,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.28, rebuilt 2026-09-23, uncompressed — gzip on the server cuts
+ConsentKit 0.5.29, rebuilt 2026-09-23, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 385,264 | 122,511 | 358,973 |
-| `ready/ru-bar.txt` | ru, ro, en | 387,448 | 123,484 | 360,971 |
-| `ready/ru-box.txt` | ru, ro, en | 387,463 | 123,489 | 360,986 |
-| `ready/ru-box-right.txt` | ru, ro, en | 387,472 | 123,496 | 360,995 |
-| `ready/ru-modal.txt` | ru, ro, en | 387,456 | 123,489 | 360,979 |
-| `ready/eu-bar.txt` | 34 languages | 439,382 | 143,106 | 412,925 |
+| `ready/en-bar.txt` | en | 393,077 | 124,969 | 366,786 |
+| `ready/ru-bar.txt` | ru, ro, en | 395,261 | 125,932 | 368,784 |
+| `ready/ru-box.txt` | ru, ro, en | 395,276 | 125,936 | 368,799 |
+| `ready/ru-box-right.txt` | ru, ro, en | 395,285 | 125,943 | 368,808 |
+| `ready/ru-modal.txt` | ru, ro, en | 395,269 | 125,937 | 368,792 |
+| `ready/eu-bar.txt` | 34 languages | 447,195 | 145,553 | 420,738 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1455,6 +1455,61 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.29
+
+- Tracker database: **three EU/regional ad-tech vendors, two Google ad-serving
+  auxiliaries, an audience panel, two more consent managers and a handful of
+  embedded features.**
+  `eskimi.com` → marketing, the **bare domain**: Eskimi (Vilnius, Lithuania) is
+  a DSP whose tag reads `__tcfapi` / the gdpr consent string and syncs ids with
+  partners, spread across `dsp.`, `dsp-media.` and `dsp-ap.` (`/v2/gtr`),
+  `sspjs.` (`esadt.js`), `ittpx.` (`/sync`, the cookie-sync pixel) and `ittr.`.
+  `stpd.cloud` → marketing: Setupad (Riga, Latvia), the `/saas/<id>`
+  ad-monetisation loader. `admixer.net` → marketing: Admixer (Kyiv), the ad
+  network's `cdn.admixer.net/loader2.js`. Each domain is dedicated to ad
+  serving, so each entry is bare.
+  `2mdn.net` and `adtrafficquality.google` → marketing, following the
+  `doubleclick.net` decision: the DoubleClick creative library (`s0.2mdn.net`)
+  and the «sodar» invalid-traffic probes (`ep1.`/`ep2.adtrafficquality.google`)
+  that AdSense and Ad Manager tags fire.
+  `gemius.pl` → analytics, the **bare domain**: Gemius (Warsaw, Poland)
+  audience measurement — `rexdot.js` on the `garo.`/`gamd.hit` hosts,
+  `fpdata.js` adding a fingerprint, and `ls.hit.gemius.pl/lsget.html`, an
+  iframe that stores and syncs the visitor identifier.
+  `stat-api.meteofor.com` → analytics, the **exact host**: the Meteofor weather
+  widget's usage beacon (`/r6`). The vendor's country was not verified.
+  `cloudflareinsights.com` → analytics, **replacing** the exact
+  `static.cloudflareinsights.com`: the script loads from `static.`, but the
+  beacon posts to `cloudflareinsights.com/cdn-cgi/rum` on the parent, which the
+  exact entry never covered. The CDN half of Cloudflare stays infrastructure.
+  `fundingchoicesmessages.google.com` (exact), `cdn-cookieyes.com` and
+  `log.cookieyes.com` (the CookieYes banner and its consent-log beacon) →
+  **necessary**: consent managers, never held behind consent for the
+  `transcend-cdn.com` reason, and named so the audit reports a second consent
+  tool on the page.
+  `api.staylive.tv` → functional: StayLive AB (Stockholm), a sports video
+  player embedded as an iframe — a subscription service with no ad tracking
+  known, so the `vimeo.com` decision rather than the `youtube.com` one.
+  `tile.openstreetmap.org` → functional (covers `a.`/`b.`/`c.`): OpenStreetMap
+  map tiles, requested only when a map renders — the `maps.googleapis.com`
+  decision. `ui-avatars.com` → functional: it generates avatar images from a
+  name passed in the URL, so a person's name leaves the site; it sets no
+  cookies. `assistant.ecomconsult.net` → functional: E-COM Consult's own
+  «Mon Rêve» shopping-assistant widget for Horoshop shops, which sets no
+  tracking cookies.
+- Infrastructure (§8), static assets only: `lh3.googleusercontent.com` (Google
+  user-content images), `code.createjs.com` (the CreateJS library CDN),
+  `images.unsplash.com`, `static.meteofor.st` and `rss-img.meteofor.st` (the
+  Meteofor widget's own assets — its beacon is analytics, above) and
+  `video-images-cdn.staylive.tv` (StayLive thumbnails).
+- Deliberately **not** classified: `lexaro.boutique`, `luna-label.shop`,
+  `new-fashion.boutique`, `menswear.lexaromoda.com` and `store.lexaromoda.com`
+  — one shop network's own image hosts, shared between its sites, which is
+  site-specific and not a vendor; `moldfootball.com` and `www.ligatv.md` —
+  other Moldovan sites embedded by the audited one, sites rather than vendors.
+  `auth.wikimedia.org`, `meta.wikimedia.org` and `cdn.polyfill.io` stay as
+  0.5.27 decided.
 
 ### 0.5.28
 
@@ -2034,7 +2089,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.28), not a released product.** It is honest about
+**This is a prototype (v0.5.29), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

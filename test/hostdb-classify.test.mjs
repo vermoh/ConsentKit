@@ -94,6 +94,16 @@ const CASES = [
   ['https://app.targeting.md/api/t.js', 'marketing'],
   ['https://app.targeting.md/api/collect', 'marketing'],
   ['https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/GenerateIT', 'marketing'],
+  // Owner's findings 23.09.2026 (audits): three EU/regional ad-tech vendors —
+  // Eskimi's DSP and cookie sync, Setupad's loader, Admixer's loader — and two
+  // auxiliaries of Google's ad serving that follow the doubleclick.net entry.
+  ['https://dsp.eskimi.com/v2/gtr', 'marketing'],
+  ['https://sspjs.eskimi.com/esadt.js', 'marketing'],
+  ['https://ittpx.eskimi.com/sync', 'marketing'],
+  ['https://stpd.cloud/saas/1234', 'marketing'],
+  ['https://cdn.admixer.net/scripts3/loader2.js', 'marketing'],
+  ['https://s0.2mdn.net/instream/html5/ima3.js', 'marketing'],
+  ['https://ep1.adtrafficquality.google/getconfig/sodar?sv=200', 'marketing'],
 
   // --- analytics: owner's findings 11.09.2026 (audits) ---------------------
   // Convia — the DoFollow agency's visitor tracker, on the product's own
@@ -103,6 +113,15 @@ const CASES = [
   ['https://t.convia.dofollow.md/v1/track', 'analytics'],
   ['https://monolytics.app/tracker.js', 'analytics'],
   ['https://www.googleoptimize.com/optimize.js', 'analytics'],
+  // Owner's findings 23.09.2026 (audits): the Gemius audience panel, the
+  // Meteofor widget's usage beacon, and Cloudflare Web Analytics' RUM endpoint
+  // on the parent domain — the reason that entry is now bare.
+  ['https://garo.hit.gemius.pl/rexdot.js', 'analytics'],
+  ['https://gamd.hit.gemius.pl/fpdata.js', 'analytics'],
+  ['https://ls.hit.gemius.pl/lsget.html', 'analytics'],
+  ['https://stat-api.meteofor.com/r6', 'analytics'],
+  ['https://cloudflareinsights.com/cdn-cgi/rum', 'analytics'],
+  ['https://static.cloudflareinsights.com/beacon.min.js', 'analytics'],
 
   // --- functional by PATH: a self-hosted Bitrix24 CRM form ------------------
   // The finding was rdp.ecosanteh.md; any host works, because that is the point
@@ -148,6 +167,13 @@ const CASES = [
   // CDN, named as the exact host and nothing broader.
   ['https://druidapi.druidplatform.com/api/services/app/Bot/LoadConfiguration', 'functional'],
   ['https://prod-druid-apc.azureedge.net/widget.js', 'functional'],
+  // Owner's findings 23.09.2026 (audits): the StayLive sports player's API,
+  // OpenStreetMap tiles, avatar images generated from a name, and E-COM
+  // Consult's own shopping-assistant widget.
+  ['https://api.staylive.tv/v1/videos/123', 'functional'],
+  ['https://a.tile.openstreetmap.org/12/2345/1456.png', 'functional'],
+  ['https://ui-avatars.com/api/?name=Ion+Popescu', 'functional'],
+  ['https://assistant.ecomconsult.net/widget.js', 'functional'],
 
   // --- necessary: named, never held ----------------------------------------
   ['https://browser.sentry-cdn.com/7.0.0/bundle.min.js', 'necessary'],
@@ -160,6 +186,11 @@ const CASES = [
   ['https://app.localseo.md/scripts/dynamic_optimization.js', 'necessary'],
   ['https://sa.searchatlas.com/api/v2/otto-url-details', 'necessary'],
   ['https://transcend-cdn.com/cm/abc123/airgap.js', 'necessary'],
+  // Owner's findings 23.09.2026: two more consent managers — Google Funding
+  // Choices and CookieYes, the banner script and its consent-log beacon.
+  ['https://fundingchoicesmessages.google.com/i/pub-1234567890?ers=1', 'necessary'],
+  ['https://cdn-cookieyes.com/client_data/abc123/script.js', 'necessary'],
+  ['https://log.cookieyes.com/api/v1/log', 'necessary'],
   ['https://sentry.io/api/1/store/', 'necessary'],
   ['https://www.paypal.com/sdk/js?client-id=x', 'necessary'],
   ['https://www.paypalobjects.com/js/external/api.js', 'necessary'],
@@ -695,4 +726,192 @@ test('the 0.5.27 non-additions stay out of both tables', () => {
     'both Webflow hosts are named in full; the bare parent is not');
   assert.ok(!CK._isInfra('targeting.md'), 'the Targeting vendor site is in neither table');
   assert.ok(!CK._isInfra('searchatlas.com'), 'nor is the Search Atlas vendor site');
+});
+
+/* --------------------------------------------------- 0.5.29 additions */
+
+test('the EU ad-tech vendors are marketing on every subdomain their tags use', () => {
+  /* Eskimi (Vilnius) — a DSP whose tag reads __tcfapi / the gdpr string and
+     syncs ids with partners; Setupad (Riga) — the /saas/<id> header-bidding
+     loader; Admixer (Kyiv) — an ad network's loader. Each domain is dedicated
+     to ad serving, so each entry is bare, and Eskimi's is bare precisely
+     because its tag is spread across six subdomains — these assertions are
+     the list of them. */
+  const CK = loadCore();
+  for (const url of [
+    'https://dsp.eskimi.com/v2/gtr',
+    'https://dsp-media.eskimi.com/v2/gtr',
+    'https://dsp-ap.eskimi.com/v2/gtr',
+    'https://sspjs.eskimi.com/esadt.js',
+    'https://ittpx.eskimi.com/sync?pid=1',
+    'https://ittr.eskimi.com/t',
+    'https://stpd.cloud/saas/1234',
+    'https://cdn.admixer.net/scripts3/loader2.js',
+  ]) {
+    assert.equal(CK._categoryForUrl(url), 'marketing', `${url} feeds an ad exchange`);
+  }
+  for (const host of ['eskimi.com', 'stpd.cloud', 'admixer.net']) {
+    assert.ok(!CK._isInfra(host), `${host} is ad tech, never infrastructure`);
+  }
+});
+
+test('the Google ad-serving auxiliaries follow doubleclick.net, and Funding Choices does not', () => {
+  /* 2mdn.net (the DoubleClick creative library) and adtrafficquality.google
+     (the «sodar» invalid-traffic probes AdSense and Ad Manager fire) are
+     requested by the ad tags and nothing else, so they take the
+     doubleclick.net decision. fundingchoicesmessages.google.com is Google's
+     consent-message CMP: a consent manager, so `necessary`, and the EXACT host
+     — google.com itself must stay unclassified. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://s0.2mdn.net/instream/html5/ima3.js'), 'marketing',
+    'an ad creative follows the ad server');
+  for (const ep of ['ep1', 'ep2']) {
+    assert.equal(CK._categoryForUrl(`https://${ep}.adtrafficquality.google/getconfig/sodar?sv=200`), 'marketing',
+      `the ${ep} sodar probe fingerprints the browser for the ad tag`);
+  }
+  assert.equal(CK._categoryForUrl('https://ad.doubleclick.net/ddm/trackclk/N123'), 'marketing',
+    'the decision they follow is unchanged');
+  assert.equal(CK._categoryForUrl('https://fundingchoicesmessages.google.com/i/pub-1234567890?ers=1'), 'necessary',
+    "Google's consent message is never held behind consent");
+  assert.equal(CK._categoryForUrl('https://www.google.com/'), null,
+    'and google.com as a whole is untouched by it');
+});
+
+test('Gemius is measurement on its hit hosts and its identifier-sync iframe', () => {
+  /* Gemius (Warsaw) — audience measurement. rexdot.js counts page views on the
+     garo./gamd. hit hosts, fpdata.js adds a fingerprint, and
+     ls.hit.gemius.pl/lsget.html is an iframe that stores and syncs the visitor
+     identifier across sites. Bare, because the hit hosts are numbered and
+     regional and no exact list keeps up. */
+  const CK = loadCore();
+  for (const url of [
+    'https://garo.hit.gemius.pl/rexdot.js',
+    'https://gamd.hit.gemius.pl/gemius.js',
+    'https://gamd.hit.gemius.pl/fpdata.js',
+    'https://ls.hit.gemius.pl/lsget.html?mode=new',
+  ]) {
+    assert.equal(CK._categoryForUrl(url), 'analytics', `${url} measures the visitor`);
+  }
+  assert.ok(!CK._isInfra('gemius.pl'), 'a measurement panel is never infrastructure');
+});
+
+test('Cloudflare Web Analytics is caught on the parent domain its beacon posts to', () => {
+  /* 0.5.29 widens the exact static.cloudflareinsights.com to the bare
+     cloudflareinsights.com: the script loads from static., but the beacon posts
+     to cloudflareinsights.com/cdn-cgi/rum on the parent, which the exact entry
+     never matched. The CDN half of Cloudflare must stay infrastructure. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://cloudflareinsights.com/cdn-cgi/rum'), 'analytics',
+    'the RUM endpoint itself is the measurement');
+  assert.equal(CK._categoryForUrl('https://static.cloudflareinsights.com/beacon.min.js'), 'analytics',
+    'and the beacon script stays covered by suffix');
+  assert.ok(!CK._isInfra('cloudflareinsights.com'), 'a measurement product is not infrastructure');
+  assert.equal(CK._categoryForUrl('https://cdnjs.cloudflare.com/ajax/libs/x/x.js'), null,
+    'cdnjs must stay uncategorised');
+  assert.ok(CK._isInfra('cdnjs.cloudflare.com'), 'and waved through as infrastructure');
+  assert.ok(CK._isInfra('challenges.cloudflare.com'), 'as must the Turnstile challenge host');
+});
+
+test('CookieYes is a consent manager on both of its hosts, and its vendor site is not', () => {
+  /* The transcend-cdn.com reasoning: a consent manager cannot wait on the
+     decision it exists to ask for. cdn-cookieyes.com is dedicated to the
+     product (bare); log.cookieyes.com is its consent-log beacon and is the
+     EXACT host, because cookieyes.com is the vendor's own site. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://cdn-cookieyes.com/client_data/abc123/script.js'), 'necessary',
+    'the banner script must load');
+  assert.equal(CK._categoryForUrl('https://log.cookieyes.com/api/v1/log'), 'necessary',
+    'and so must the record of the visitor’s choice');
+  assert.equal(CK._categoryForUrl('https://www.cookieyes.com/pricing/'), null,
+    "the vendor's own site must stay unclassified");
+  for (const host of ['cdn-cookieyes.com', 'log.cookieyes.com']) {
+    assert.ok(!CK._isInfra(host), `${host} is a third party the owner chose, not asset delivery`);
+  }
+});
+
+test('the 0.5.29 features are functional, and their asset hosts are infrastructure', () => {
+  /* StayLive's player API (the vimeo.com decision) beside its thumbnail CDN;
+     OpenStreetMap tiles (the maps.googleapis.com decision) on all three tile
+     servers; UI Avatars, which sends a name in the URL and is therefore named
+     rather than waved through; and E-COM Consult's own shopping assistant,
+     which must not drag our consent host out of INFRA_DB with it. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://api.staylive.tv/v1/videos/123'), 'functional',
+    'the StayLive player is a feature the owner embedded');
+  assert.equal(CK._categoryForUrl('https://video-images-cdn.staylive.tv/thumbs/123.jpg'), null,
+    'its thumbnails are pictures');
+  assert.ok(CK._isInfra('video-images-cdn.staylive.tv'), 'and are waved through');
+  assert.equal(CK._categoryForUrl('https://staylive.tv/'), null,
+    "the vendor's own site must stay unclassified");
+  for (const s of ['a', 'b', 'c']) {
+    assert.equal(CK._categoryForUrl(`https://${s}.tile.openstreetmap.org/12/2345/1456.png`), 'functional',
+      `${s}.tile.openstreetmap.org serves the map the owner embedded`);
+  }
+  assert.equal(CK._categoryForUrl('https://www.openstreetmap.org/'), null,
+    "the project's own site is not the tile servers");
+  assert.equal(CK._categoryForUrl('https://ui-avatars.com/api/?name=Ion+Popescu'), 'functional',
+    'a name in the URL is personal data leaving the site, so it is named');
+  assert.ok(!CK._isInfra('ui-avatars.com'), 'and never waved through as a plain image host');
+  assert.equal(CK._categoryForUrl('https://assistant.ecomconsult.net/widget.js'), 'functional',
+    'our own shopping assistant is a feature the shop chose');
+  assert.ok(CK._isInfra('consent.ecomconsult.net'), 'our consent service stays infrastructure');
+  assert.equal(CK._categoryForUrl('https://consent.ecomconsult.net/v1/config'), null,
+    'and carries no category');
+});
+
+test('the 0.5.29 infrastructure hosts carry no category and are waved through', () => {
+  /* Static assets only: Google user-content images, the CreateJS library CDN,
+     Unsplash photos, the Meteofor widget's own assets (its beacon is
+     analytics, pinned beside them) and StayLive's thumbnails. */
+  const CK = loadCore();
+  const HOSTS = [
+    'lh3.googleusercontent.com',
+    'code.createjs.com',
+    'images.unsplash.com',
+    'static.meteofor.st',
+    'rss-img.meteofor.st',
+    'video-images-cdn.staylive.tv',
+  ];
+  for (const host of HOSTS) {
+    assert.ok(CK._infra().includes(host), `${host} is missing from _infra()`);
+    assert.ok(CK._isInfra(host), `_isInfra(${host}) should be true`);
+    assert.equal(CK._categoryForUrl('https://' + host + '/x.png'), null,
+      `${host} must carry no category`);
+  }
+  assert.equal(CK._categoryForUrl('https://stat-api.meteofor.com/r6'), 'analytics',
+    "the widget's usage beacon counts views and is not an asset");
+  assert.ok(!CK._isInfra('stat-api.meteofor.com'), 'so it is not waved through with them');
+});
+
+test('the 0.5.29 non-additions stay out of both tables', () => {
+  /* Recorded as a test because a deliberate absence is invisible otherwise.
+
+     lexaro.boutique, luna-label.shop, new-fashion.boutique,
+     menswear.lexaromoda.com and store.lexaromoda.com are one shop network's
+     own image hosts, shared between its sites — site-specific, not a vendor.
+     moldfootball.com and www.ligatv.md are other Moldovan sites the audited
+     one embeds — sites, not vendors. The 0.5.27 decisions (the Wikimedia login
+     pair, cdn.polyfill.io) are re-asserted unchanged. And the bare parents of
+     every exact host added in this release stay absent: each of them carries
+     the vendor's own site. */
+  const CK = loadCore();
+  for (const host of [
+    'lexaro.boutique', 'luna-label.shop', 'new-fashion.boutique',
+    'menswear.lexaromoda.com', 'store.lexaromoda.com',
+    'moldfootball.com', 'www.ligatv.md',
+    'auth.wikimedia.org', 'meta.wikimedia.org', 'cdn.polyfill.io',
+  ]) {
+    assert.ok(!CK._isInfra(host), `${host} must not be waved through`);
+    assert.equal(CK._categoryForUrl('https://' + host + '/x.jpg'), null,
+      `${host} must carry no category either`);
+  }
+  for (const parent of [
+    'cookieyes.com', 'meteofor.com', 'meteofor.st', 'staylive.tv',
+    'googleusercontent.com', 'unsplash.com', 'createjs.com',
+    'ecomconsult.net', 'openstreetmap.org', 'google.com',
+  ]) {
+    assert.ok(!CK._infra().includes(parent), `the bare ${parent} must not appear in _infra()`);
+    assert.equal(CK._categoryForUrl('https://' + parent + '/'), null,
+      `the bare ${parent} must carry no category`);
+  }
 });
