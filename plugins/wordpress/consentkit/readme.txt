@@ -4,7 +4,7 @@ Tags: gdpr, cookie banner, consent, privacy, consent mode
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.5.29
+Stable tag: 0.5.30
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,8 +27,8 @@ How the blocking works:
   are only materialized after consent for that category.
 * Tracker tags written directly into the page are rewritten into that same
   markup **on the server**, before the HTML is sent, so the browser never
-  requests them. This is on by default and covers 167 known tracker hosts and
-  14 path rules.
+  requests them. This is on by default and covers 176 known tracker hosts and
+  18 path rules.
 * Scripts injected by other code are intercepted automatically when their URL
   matches the same built-in database of known tracker domains (Google
   Analytics, Facebook, Yandex Metrica, Hotjar, TikTok, chat widgets).
@@ -51,7 +51,7 @@ Other features:
 * The server-side markup only knows the hosts in the built-in database, and it
   does not rewrite inline scripts — an inline tracker snippet still needs
   manual markup or a GTM trigger.
-* The tracker database is a snapshot (167 hosts, 14 path rules) and matches by
+* The tracker database is a snapshot (176 hosts, 18 path rules) and matches by
   domain. Trackers served from your own domain or from an unlisted vendor need
   manual `data-ck` markup.
 * Scripts that already executed cannot be unloaded. After a withdrawal the page
@@ -147,6 +147,32 @@ policy, your legal basis, your processors and your record keeping.
 3. Settings → ConsentKit admin screen.
 
 == Changelog ==
+
+= 0.5.30 =
+* Tracker database, four new path rules: www.google.com/maps? -> functional
+  (the ?q=...&output=embed form of the Google Maps iframe, which the existing
+  /maps/ rule missed); google.com/ccm/collect -> marketing (the Google tag's
+  conversion-measurement ping, carrying the Ads _gcl_au id);
+  yandex.ru/map-widget/ -> functional (the Yandex Maps iframe widget);
+  accounts.google.com/gsi/ -> functional (Sign in with Google and One Tap).
+  On a site that uses Google sign-in, the sign-in button stays inactive until
+  the visitor accepts functional.
+* Tracker database: maps.yandex.ru -> functional, the .ru twin of the Yandex
+  Maps tile servers.
+* Tracker database: cmp.inmobi.com, inmobi-choice.io, privacy-center.org
+  (Didomi) and kookiok.com -> necessary. Other vendors' consent managers, and
+  blocking a consent manager behind consent is circular. Never the bare
+  inmobi.com: InMobi is also an ad exchange.
+* Tracker database: verbox.ru and me-talk.ru (live chats) and
+  speedtestcustom.com (Ookla's embeddable speed test) -> functional.
+* Tracker database: w.usabilla.com -> analytics. The Usabilla feedback button's
+  loader sends load beacons before any interaction.
+* Infrastructure: cdn.omd.md, maxcdn.bootstrapcdn.com,
+  lh4.googleusercontent.com, img.icons8.com, i.postimg.cc and i.pravatar.cc --
+  static assets only, so no category.
+* Deliberately not classified: www.google.com/js/th/ (initiator not verified),
+  api.ipify.org (an IP-echo service whose purpose depends on the calling site)
+  and one site's own Cloudflare Worker on workers.dev.
 
 = 0.5.29 =
 * Tracker database: eskimi.com, stpd.cloud and admixer.net -> marketing. Eskimi

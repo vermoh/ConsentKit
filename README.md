@@ -29,7 +29,7 @@ Vanilla ES2020, zero dependencies, no build step.
 - **Equal-weight buttons, no pre-ticked boxes** — the consent invariants are
   fixed by design, see [CONTRIBUTING.md](https://github.com/vermoh/ConsentKit/blob/main/CONTRIBUTING.md)
 
-> **Status: prototype (v0.5.29).** The core, the UI and the demo are verified in
+> **Status: prototype (v0.5.30).** The core, the UI and the demo are verified in
 > a browser and covered by an automated suite (`npm test`); several distribution
 > paths are not yet tested against live systems. See
 > [Project status](#project-status) before shipping this to production.
@@ -741,7 +741,7 @@ decide. Membership is a claim that a host delivers the site's own assets, not
 that it is harmless in general — anything that *measures* keeps a real consent
 category instead, which is why `cloudflareinsights.com` (Cloudflare Web
 Analytics) is classified as `analytics` and blocked before consent even though
-the rest of Cloudflare's CDN is infrastructure. The list holds **56 entries**.
+the rest of Cloudflare's CDN is infrastructure. The list holds **62 entries**.
 Both lists are matched by suffix and returned as copies, so reading them cannot
 widen what strict mode allows.
 
@@ -905,15 +905,15 @@ document.head.appendChild(s);
 Blocked elements are marked `data-ck-blocked` and their URL is remembered, so
 granting consent later loads them without a reload.
 
-The database ships **167 hosts** and **14 path rules**, matched by suffix (a
+The database ships **176 hosts** and **18 path rules**, matched by suffix (a
 bare registrable domain also covers its subdomains) and by substring
 respectively:
 
 | Table | Entries | By category |
 |---|---|---|
-| `HOST_DB` | 167 | 57 `marketing`, 52 `functional`, 36 `analytics`, 22 `necessary` |
-| `PATH_DB` | 14 | 6 `functional`, 4 `marketing`, 2 `analytics`, 2 `necessary` |
-| `INFRA_DB` | 56 | not a category — see [Infrastructure](#infrastructure) |
+| `HOST_DB` | 176 | 57 `marketing`, 56 `functional`, 37 `analytics`, 26 `necessary` |
+| `PATH_DB` | 18 | 9 `functional`, 5 `marketing`, 2 `analytics`, 2 `necessary` |
+| `INFRA_DB` | 62 | not a category — see [Infrastructure](#infrastructure) |
 
 Recognised hosts include Google Analytics, Facebook, Yandex Metrica, Hotjar,
 TikTok and DoubleClick. The GTM **container** is deliberately not blocked (the
@@ -1252,19 +1252,19 @@ external requests. Rebuild them with `tools/build-inline.mjs` (see
 [`tools/README.md`](https://github.com/vermoh/ConsentKit/blob/main/tools/README.md)); each block's header records the exact
 command that produced it.
 
-ConsentKit 0.5.29, rebuilt 2026-09-23, uncompressed — gzip on the server cuts
+ConsentKit 0.5.30, rebuilt 2026-10-05, uncompressed — gzip on the server cuts
 this roughly threefold. Every block includes the branding extension and the
 attribution line; `--no-branding` drops both the code and the config and takes
 **~26 KB** back off:
 
 | Block | Languages | Bytes | gzip | `--no-branding` |
 |---|---|---|---|---|
-| `ready/en-bar.txt` | en | 393,077 | 124,969 | 366,786 |
-| `ready/ru-bar.txt` | ru, ro, en | 395,261 | 125,932 | 368,784 |
-| `ready/ru-box.txt` | ru, ro, en | 395,276 | 125,936 | 368,799 |
-| `ready/ru-box-right.txt` | ru, ro, en | 395,285 | 125,943 | 368,808 |
-| `ready/ru-modal.txt` | ru, ro, en | 395,269 | 125,937 | 368,792 |
-| `ready/eu-bar.txt` | 34 languages | 447,195 | 145,553 | 420,738 |
+| `ready/en-bar.txt` | en | 398,725 | 126,691 | 372,434 |
+| `ready/ru-bar.txt` | ru, ro, en | 400,909 | 127,645 | 374,432 |
+| `ready/ru-box.txt` | ru, ro, en | 400,924 | 127,650 | 374,447 |
+| `ready/ru-box-right.txt` | ru, ro, en | 400,933 | 127,657 | 374,456 |
+| `ready/ru-modal.txt` | ru, ro, en | 400,917 | 127,652 | 374,440 |
+| `ready/eu-bar.txt` | 34 languages | 452,843 | 147,221 | 426,386 |
 
 The blocks are dominated by the core and the UI (roughly 97 KB and 129 KB of
 source respectively, comments included — the builder concatenates the sources
@@ -1455,6 +1455,60 @@ node demo/mock-api.mjs          # http://localhost:8788
 Client versions. The WordPress plugin tracks the same numbers and keeps its own
 notes in
 [`plugins/wordpress/consentkit/readme.txt`](https://github.com/vermoh/ConsentKit/blob/main/plugins/wordpress/consentkit/readme.txt).
+
+### 0.5.30
+
+- Tracker database: **Google's sign-in, embed and conversion paths, four more
+  consent managers, two Russian live chats, a speed test and a feedback
+  button.**
+  Four new path rules (`PATH_DB`), each keeping the host in the key so a site's
+  own route of the same name is never caught:
+  `www.google.com/maps?` → functional: the `?q=…&output=embed` form of the
+  Google Maps iframe, which the existing `www.google.com/maps/` never matched
+  (audits reported it as an iframe on `www.google.com`).
+  `google.com/ccm/collect` → marketing: the Google tag's conversion-measurement
+  ping, carrying `auid` from the Ads `_gcl_au` cookie and `ae=g` — verified on
+  05.10.2026, fired by `gtm.js` after consent with `gcs=G111`. The scanner
+  already treats `/ccm` as a Consent Mode endpoint, so naming it does not create
+  false «before consent» rows on Consent Mode sites.
+  `yandex.ru/map-widget/` → functional: the Yandex Maps iframe widget (still no
+  bare `yandex.ru`).
+  `accounts.google.com/gsi/` → functional: Google Identity Services — the
+  «Sign in with Google» button and One Tap (`client`, `button`, `style`), never
+  the bare host. **On a site that uses it, the Google sign-in button stays
+  inactive until the visitor accepts functional.**
+  `maps.yandex.ru` → functional, the **bare domain**: the `.ru` twin of
+  `maps.yandex.net` (`core-renderer-tiles.maps.yandex.ru`).
+  `cmp.inmobi.com` (covers `api.cmp.inmobi.com`), `inmobi-choice.io` (the
+  InMobi Choice visit beacon), `privacy-center.org` (Didomi's SDK,
+  `sdk.privacy-center.org`) and `kookiok.com` (the KookiOk free banner: `cdn.`
+  `consent.js` and the `api.` impressions beacon) → **necessary**: consent
+  managers, never held for the `transcend-cdn.com` reason. There is
+  deliberately **no** bare `inmobi.com`: InMobi is also an ad exchange, and a
+  `necessary` entry there would whitelist its ad hosts.
+  `verbox.ru` (Verbox, `admin.verbox.ru/support/support.js`) and `me-talk.ru`
+  (MeTalk, `widget.` and `static.`) → functional: live chats, the chat-widget
+  decision. `speedtestcustom.com` → functional: Ookla's embeddable custom speed
+  test (e.g. a `moldtc.speedtestcustom.com` iframe) — the feature the page
+  offers.
+  `w.usabilla.com` → analytics, the **exact host**: the Usabilla feedback
+  button (Usabilla B.V., Amsterdam, now part of SurveyMonkey). Its loader sends
+  `w.usabilla.com/a/t?m=b` load beacons before any interaction, which makes it
+  measurement and not only a feature.
+- Infrastructure (§8), static assets only: `cdn.omd.md` (Orange Moldova's own
+  asset CDN serving JS libraries — the `prod-cdn.prod.asbis.io` precedent),
+  `maxcdn.bootstrapcdn.com` (BootstrapCDN, the exact host),
+  `lh4.googleusercontent.com` (next to `lh3.`; the bare
+  `googleusercontent.com` stays out), `img.icons8.com`, `i.postimg.cc` and
+  `i.pravatar.cc` (placeholder avatars, no name passed).
+- Deliberately **not** classified: `www.google.com/js/th/` — its initiator
+  could not be verified and it is not reCAPTCHA's path, so it stays unknown
+  rather than guessed; `api.ipify.org` — an IP-echo service whose purpose
+  depends on the calling site's own code;
+  `sivven-pc-chat.ivanitamaxim286.workers.dev` — one site's own Cloudflare
+  Worker (the bare `workers.dev` stays out of every table). The Lexaro shop
+  network's hosts, `moldfootball.com`, `www.ligatv.md`, `auth.wikimedia.org`,
+  `meta.wikimedia.org` and `cdn.polyfill.io` stay as decided.
 
 ### 0.5.29
 
@@ -2089,7 +2143,7 @@ notes in
 
 ## Project status
 
-**This is a prototype (v0.5.29), not a released product.** It is honest about
+**This is a prototype (v0.5.30), not a released product.** It is honest about
 what has been verified and what has not.
 
 ### Verified

@@ -1,8 +1,8 @@
 <script>
 /* ConsentKit — инлайн-сборка. Вставьте весь этот блок в <head> сайта.
  *
- * Версия ConsentKit: 0.5.29
- * Дата сборки:      2026-09-23
+ * Версия ConsentKit: 0.5.30
+ * Дата сборки:      2026-10-05
  * Языки:            en (встроенные, пакет локалей не нужен)
  * Язык баннера:     en (задан жёстко)
  * Вид:              bar / bottom, тема auto, акцент #2B50D8
@@ -178,6 +178,13 @@
     // the vendor's own weather site, and a bare entry would be a claim about
     // it too.
     'stat-api.meteofor.com': 'analytics',
+    // Usabilla (Usabilla B.V., Amsterdam; now part of SurveyMonkey) — the
+    // feedback button. It looks like a feature, but its loader sends load
+    // beacons (w.usabilla.com/a/t?m=b) on every page view, BEFORE the visitor
+    // has touched the button at all — that is measurement, so `analytics`, not
+    // `functional`. The EXACT host w.usabilla.com, which serves both the loader
+    // and the beacon: usabilla.com is the vendor's own site.
+    'w.usabilla.com': 'analytics',
 
     // --- marketing -----------------------------------------------------
     'connect.facebook.net': 'marketing',
@@ -419,7 +426,12 @@
     // the map, not a visitor profile, and it is held and released with the
     // widget it belongs to. maps.yandex.net carries the tile servers
     // (core-renderer-tiles.maps.yandex.net); the domain is dedicated to maps,
-    // so the bare entry is the right scope for both.
+    // so the bare entry is the right scope for both. maps.yandex.ru (since
+    // 0.5.30) is its .ru twin — the same tile servers as
+    // core-renderer-tiles.maps.yandex.ru — and is bare on maps.yandex.ru, which
+    // covers the tile hosts by suffix and says nothing about yandex.ru itself.
+    // The iframe form of the same map (yandex.ru/map-widget/) cannot be named
+    // by host and is path-scoped in PATH_DB below.
     //
     // yastatic.net is Yandex's static CDN, and it is the one entry here most
     // likely to be mistaken for infrastructure — it is NOT. Unlike tildacdn.*
@@ -435,6 +447,7 @@
     // site, and a bare entry would rule on all of it at once.
     'api-maps.yandex.ru': 'functional',
     'maps.yandex.net': 'functional',
+    'maps.yandex.ru': 'functional',
     'yastatic.net': 'functional',
 
     // Vimeo — an embedded player. Unlike YouTube it does not feed an ad
@@ -517,6 +530,19 @@
     // ecomconsult.net also carries consent.ecomconsult.net, which is our
     // consent service and sits in INFRA_DB as such.
     'assistant.ecomconsult.net': 'functional',
+    // Two Russian live-chat widgets, the same decision as the chat widgets
+    // above (jivosite.com, livechatinc.com): a support chat the owner chose, so
+    // a visitor who declines functional loses the chat and nothing else.
+    // Verbox loads from admin.verbox.ru (/support/support.js); MeTalk from its
+    // widget. and static. hosts. Each domain is dedicated to its chat product,
+    // so each bare entry is the right scope.
+    'verbox.ru': 'functional',
+    'me-talk.ru': 'functional',
+    // Ookla's embeddable custom speed test (e.g. moldtc.speedtestcustom.com as
+    // an iframe on a Moldovan ISP's page). The test IS the feature the page
+    // offers, so `functional`. Bare: every customer gets its own subdomain, and
+    // the domain serves nothing but those embeds.
+    'speedtestcustom.com': 'functional',
 
     // --- necessary -----------------------------------------------------
     // recaptcha.net is Google's alternate reCAPTCHA domain, served for regions
@@ -612,6 +638,24 @@
     // named as the EXACT host, because cookieyes.com is the vendor's own site.
     'cdn-cookieyes.com': 'necessary',
     'log.cookieyes.com': 'necessary',
+    // Four more consent managers (0.5.30), never held for the same
+    // transcend-cdn.com reason, each named at the narrowest scope that is true.
+    //
+    // InMobi Choice. cmp.inmobi.com serves the CMP and covers
+    // api.cmp.inmobi.com by suffix; inmobi-choice.io carries its visit beacon
+    // and is dedicated to the CMP, so it is bare. There must NEVER be a bare
+    // 'inmobi.com': InMobi is also an ad exchange, and a `necessary` entry on
+    // the whole domain would whitelist its ad hosts — held by nothing, and
+    // reported as plumbing.
+    'cmp.inmobi.com': 'necessary',
+    'inmobi-choice.io': 'necessary',
+    // Didomi — its SDK loads from sdk.privacy-center.org; the domain is
+    // dedicated to the CMP, so the bare entry is the right scope.
+    'privacy-center.org': 'necessary',
+    // KookiOk — a free consent banner: cdn.kookiok.com serves consent.js and
+    // api.kookiok.com records banner impressions. The domain is dedicated to
+    // the product, so bare.
+    'kookiok.com': 'necessary',
     'paypal.com': 'necessary',
     'paypalobjects.com': 'necessary',         // PayPal button assets
     'paynet.md': 'necessary',                 // Moldovan payment gateway
@@ -675,8 +719,26 @@
     // the visitor's country, so google.com covers the embed case; the ccTLD
     // hosts appear for /maps/ links, which the first key covers on www.google
     // .com and which are ordinary navigation elsewhere.
+    //
+    // 'www.google.com/maps?' (since 0.5.30) is the OTHER embed form,
+    // www.google.com/maps?q=…&output=embed, which audits report as an iframe on
+    // www.google.com (2 cabinet sites, 11 audits). Neither key above matches
+    // it: the first needs a slash after /maps and the second needs /embed.
     'www.google.com/maps/': 'functional',
+    'www.google.com/maps?': 'functional',
     'google.com/maps/embed': 'functional',   // also maps.google.com
+    // Yandex Maps as an iframe widget (yandex.ru/map-widget/v1/?…) — the
+    // api-maps.yandex.ru decision in HOST_DB, made by path because yandex.ru is
+    // a normal site and can never be named as a whole host.
+    'yandex.ru/map-widget/': 'functional',
+    // Google Identity Services — the «Sign in with Google» button and One Tap
+    // (accounts.google.com/gsi/client, /gsi/button, /gsi/style). A sign-in
+    // widget the owner chose, so `functional`, and path-scoped because
+    // accounts.google.com is Google's own login and must never be named as a
+    // whole host. Said plainly, since it is a visible consequence: on a site
+    // that uses it, the Google sign-in button stays inactive until the visitor
+    // accepts functional.
+    'accounts.google.com/gsi/': 'functional',
     // Google Ads pings that carry no cookie of their own but still report a
     // visit to the ad platform — the remarketing/conversion beacons a gtag or
     // Ads tag fires against www.google.<tld>. They reach doubleclick.net too,
@@ -687,6 +749,14 @@
     // fragment matches every host.
     '/pagead/1p-user-list/': 'marketing',
     '/pagead/1p-conversion/': 'marketing',
+    // The Google tag's conversion-measurement ping, google.com/ccm/collect. It
+    // carries `auid` from the Ads _gcl_au cookie and `ae=g`; verified
+    // 05.10.2026 on ecomconsult.net, fired by gtm.js after consent with
+    // gcs=G111. The host stays IN the key, so www.google.com/ccm/collect
+    // matches and a site's own /ccm/collect route does not. The scanner treats
+    // /ccm as a Consent Mode endpoint (isConsentModeHost), so naming it does
+    // not produce false «before consent» rows on Consent Mode sites.
+    'google.com/ccm/collect': 'marketing',
     '/ads/ga-audiences': 'marketing',
     '/trackers/ga.js': 'analytics',
     '/trackers/pixel.js': 'marketing',
@@ -915,6 +985,16 @@
     // asbis.io carries the group's own sites, and its self-hosted Sentry is
     // named separately in HOST_DB as `necessary`.
     'prod-cdn.prod.asbis.io',
+    // Orange Moldova's own asset CDN, serving the JS libraries its site runs
+    // on — the prod-cdn.prod.asbis.io precedent directly above: a company's own
+    // asset host on its own domain. The EXACT host, so omd.md is not waved
+    // through with it.
+    'cdn.omd.md',
+    // BootstrapCDN (maxcdn.bootstrapcdn.com serves bootstrap.min.css/js and
+    // Font Awesome) — the page's own code, the code.jquery.com case above. The
+    // EXACT host, like code.jquery.com: bootstrapcdn.com is the project's own
+    // site.
+    'maxcdn.bootstrapcdn.com',
     // The Phosphor icon files an Elfsight widget loads. Icon FILES only, the
     // same class of asset as the Iconify pair above — this entry classifies
     // NOTHING about the Elfsight widget platform itself, which is a separate
@@ -942,8 +1022,19 @@
     // serves Google user-content images (profile pictures, Photos/Drive
     // embeds). EXACT hosts: unsplash.com is the site itself, and
     // googleusercontent.com also carries hosted content that is not a picture.
+    // lh4.googleusercontent.com (0.5.30) is the same image service on a sibling
+    // shard, named host for host for the same reason.
     'images.unsplash.com',
     'lh3.googleusercontent.com',
+    'lh4.googleusercontent.com',
+    // Three more hot-linked image hosts (0.5.30), the same case:
+    // img.icons8.com serves Icons8 icons and illustrations, i.postimg.cc
+    // serves images uploaded to Postimages, and i.pravatar.cc serves
+    // placeholder avatars with no name passed — unlike ui-avatars.com in
+    // HOST_DB. EXACT hosts: each bare domain is the vendor's own site.
+    'img.icons8.com',
+    'i.postimg.cc',
+    'i.pravatar.cc',
     // The Meteofor weather widget's own assets — static.meteofor.st (its
     // script, styles and icons) and rss-img.meteofor.st (the weather pictures).
     // The widget's usage BEACON, stat-api.meteofor.com, counts views and sits
@@ -2926,7 +3017,7 @@
   // Public API
   // ---------------------------------------------------------------------------
   var ConsentKit = {
-    version: '0.5.29',
+    version: '0.5.30',
     config: config,
 
     /* SPEC V1.19 §1.4 — the geo decision for this page load.

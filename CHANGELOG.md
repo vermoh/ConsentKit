@@ -5,6 +5,60 @@
 Client versions. The WordPress plugin tracks the same numbers and keeps
 its own notes in `plugins/wordpress/consentkit/readme.txt`.
 
+## 0.5.30
+
+- Tracker database: **Google's sign-in, embed and conversion paths, four more
+  consent managers, two Russian live chats, a speed test and a feedback
+  button.**
+  Four new path rules (`PATH_DB`), each keeping the host in the key so a site's
+  own route of the same name is never caught:
+  `www.google.com/maps?` → functional: the `?q=…&output=embed` form of the
+  Google Maps iframe, which the existing `www.google.com/maps/` never matched
+  (audits reported it as an iframe on `www.google.com`).
+  `google.com/ccm/collect` → marketing: the Google tag's conversion-measurement
+  ping, carrying `auid` from the Ads `_gcl_au` cookie and `ae=g` — verified on
+  05.10.2026, fired by `gtm.js` after consent with `gcs=G111`. The scanner
+  already treats `/ccm` as a Consent Mode endpoint, so naming it does not create
+  false «before consent» rows on Consent Mode sites.
+  `yandex.ru/map-widget/` → functional: the Yandex Maps iframe widget (still no
+  bare `yandex.ru`).
+  `accounts.google.com/gsi/` → functional: Google Identity Services — the
+  «Sign in with Google» button and One Tap (`client`, `button`, `style`), never
+  the bare host. **On a site that uses it, the Google sign-in button stays
+  inactive until the visitor accepts functional.**
+  `maps.yandex.ru` → functional, the **bare domain**: the `.ru` twin of
+  `maps.yandex.net` (`core-renderer-tiles.maps.yandex.ru`).
+  `cmp.inmobi.com` (covers `api.cmp.inmobi.com`), `inmobi-choice.io` (the
+  InMobi Choice visit beacon), `privacy-center.org` (Didomi's SDK,
+  `sdk.privacy-center.org`) and `kookiok.com` (the KookiOk free banner: `cdn.`
+  `consent.js` and the `api.` impressions beacon) → **necessary**: consent
+  managers, never held for the `transcend-cdn.com` reason. There is
+  deliberately **no** bare `inmobi.com`: InMobi is also an ad exchange, and a
+  `necessary` entry there would whitelist its ad hosts.
+  `verbox.ru` (Verbox, `admin.verbox.ru/support/support.js`) and `me-talk.ru`
+  (MeTalk, `widget.` and `static.`) → functional: live chats, the chat-widget
+  decision. `speedtestcustom.com` → functional: Ookla's embeddable custom speed
+  test (e.g. a `moldtc.speedtestcustom.com` iframe) — the feature the page
+  offers.
+  `w.usabilla.com` → analytics, the **exact host**: the Usabilla feedback
+  button (Usabilla B.V., Amsterdam, now part of SurveyMonkey). Its loader sends
+  `w.usabilla.com/a/t?m=b` load beacons before any interaction, which makes it
+  measurement and not only a feature.
+- Infrastructure (§8), static assets only: `cdn.omd.md` (Orange Moldova's own
+  asset CDN serving JS libraries — the `prod-cdn.prod.asbis.io` precedent),
+  `maxcdn.bootstrapcdn.com` (BootstrapCDN, the exact host),
+  `lh4.googleusercontent.com` (next to `lh3.`; the bare
+  `googleusercontent.com` stays out), `img.icons8.com`, `i.postimg.cc` and
+  `i.pravatar.cc` (placeholder avatars, no name passed).
+- Deliberately **not** classified: `www.google.com/js/th/` — its initiator
+  could not be verified and it is not reCAPTCHA's path, so it stays unknown
+  rather than guessed; `api.ipify.org` — an IP-echo service whose purpose
+  depends on the calling site's own code;
+  `sivven-pc-chat.ivanitamaxim286.workers.dev` — one site's own Cloudflare
+  Worker (the bare `workers.dev` stays out of every table). The Lexaro shop
+  network's hosts, `moldfootball.com`, `www.ligatv.md`, `auth.wikimedia.org`,
+  `meta.wikimedia.org` and `cdn.polyfill.io` stay as decided.
+
 ## 0.5.29
 
 - Tracker database: **three EU/regional ad-tech vendors, two Google ad-serving

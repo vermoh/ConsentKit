@@ -24,6 +24,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
+import { readDbs } from '../tools/export-hostdb.mjs';
+
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 function loadCore() {
@@ -104,6 +106,9 @@ const CASES = [
   ['https://cdn.admixer.net/scripts3/loader2.js', 'marketing'],
   ['https://s0.2mdn.net/instream/html5/ima3.js', 'marketing'],
   ['https://ep1.adtrafficquality.google/getconfig/sodar?sv=200', 'marketing'],
+  // 0.5.30 (audits): the Google tag's conversion-measurement ping, named by
+  // path with the host kept in the key.
+  ['https://www.google.com/ccm/collect?en=page_view&auid=123.456&ae=g&gcs=G111', 'marketing'],
 
   // --- analytics: owner's findings 11.09.2026 (audits) ---------------------
   // Convia — the DoFollow agency's visitor tracker, on the product's own
@@ -122,6 +127,9 @@ const CASES = [
   ['https://stat-api.meteofor.com/r6', 'analytics'],
   ['https://cloudflareinsights.com/cdn-cgi/rum', 'analytics'],
   ['https://static.cloudflareinsights.com/beacon.min.js', 'analytics'],
+  // 0.5.30 (audits): the Usabilla feedback button's load beacon, sent before
+  // any interaction — measurement, not only a feature.
+  ['https://w.usabilla.com/a/t?m=b', 'analytics'],
 
   // --- functional by PATH: a self-hosted Bitrix24 CRM form ------------------
   // The finding was rdp.ecosanteh.md; any host works, because that is the point
@@ -174,6 +182,19 @@ const CASES = [
   ['https://a.tile.openstreetmap.org/12/2345/1456.png', 'functional'],
   ['https://ui-avatars.com/api/?name=Ion+Popescu', 'functional'],
   ['https://assistant.ecomconsult.net/widget.js', 'functional'],
+  // 0.5.30 (audits): the Google Maps embed in its ?q= form, the Yandex Maps
+  // iframe widget and its .ru tile servers, «Sign in with Google», two Russian
+  // live chats and Ookla's embeddable custom speed test.
+  ['https://www.google.com/maps?q=Chisinau&output=embed', 'functional'],
+  ['https://yandex.ru/map-widget/v1/?um=constructor%3Aabc&source=constructor', 'functional'],
+  ['https://core-renderer-tiles.maps.yandex.ru/tiles?l=map&x=1&y=2&z=3', 'functional'],
+  ['https://accounts.google.com/gsi/client', 'functional'],
+  ['https://accounts.google.com/gsi/button?theme=outline&size=large', 'functional'],
+  ['https://accounts.google.com/gsi/style', 'functional'],
+  ['https://admin.verbox.ru/support/support.js?h=abc', 'functional'],
+  ['https://widget.me-talk.ru/widget.js', 'functional'],
+  ['https://static.me-talk.ru/widget/main.css', 'functional'],
+  ['https://moldtc.speedtestcustom.com/', 'functional'],
 
   // --- necessary: named, never held ----------------------------------------
   ['https://browser.sentry-cdn.com/7.0.0/bundle.min.js', 'necessary'],
@@ -191,6 +212,14 @@ const CASES = [
   ['https://fundingchoicesmessages.google.com/i/pub-1234567890?ers=1', 'necessary'],
   ['https://cdn-cookieyes.com/client_data/abc123/script.js', 'necessary'],
   ['https://log.cookieyes.com/api/v1/log', 'necessary'],
+  // 0.5.30 (audits): four more consent managers — InMobi Choice (the CMP and
+  // its visit beacon), Didomi's SDK and the KookiOk free banner.
+  ['https://cmp.inmobi.com/choice/abc123/www.example.md/choice.js?tag_version=V3', 'necessary'],
+  ['https://api.cmp.inmobi.com/geoip', 'necessary'],
+  ['https://inmobi-choice.io/visit', 'necessary'],
+  ['https://sdk.privacy-center.org/abc123/loader.js?target=www.example.md', 'necessary'],
+  ['https://cdn.kookiok.com/consent.js', 'necessary'],
+  ['https://api.kookiok.com/impressions', 'necessary'],
   ['https://sentry.io/api/1/store/', 'necessary'],
   ['https://www.paypal.com/sdk/js?client-id=x', 'necessary'],
   ['https://www.paypalobjects.com/js/external/api.js', 'necessary'],
@@ -909,6 +938,173 @@ test('the 0.5.29 non-additions stay out of both tables', () => {
     'cookieyes.com', 'meteofor.com', 'meteofor.st', 'staylive.tv',
     'googleusercontent.com', 'unsplash.com', 'createjs.com',
     'ecomconsult.net', 'openstreetmap.org', 'google.com',
+  ]) {
+    assert.ok(!CK._infra().includes(parent), `the bare ${parent} must not appear in _infra()`);
+    assert.equal(CK._categoryForUrl('https://' + parent + '/'), null,
+      `the bare ${parent} must carry no category`);
+  }
+});
+
+/* --------------------------------------------------- 0.5.30 additions */
+
+test('the Google embed, sign-in and conversion paths are named by path and google.com is not', () => {
+  /* Three PATH_DB keys on Google hosts, each with the host kept IN the key so
+     a site's own route of the same name is never caught:
+       www.google.com/maps?    the ?q=…&output=embed form of the Maps iframe,
+                               which neither /maps/ nor /maps/embed matched;
+       accounts.google.com/gsi/ Google Identity Services («Sign in with
+                               Google», One Tap) — functional, so on a site
+                               using it the sign-in button stays inactive
+                               until the visitor accepts functional;
+       google.com/ccm/collect  the Google tag's conversion-measurement ping
+                               (auid from _gcl_au, ae=g) — marketing. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://www.google.com/maps?q=Chisinau&output=embed'), 'functional',
+    'the ?q= embed is the map the owner put on the page');
+  assert.equal(CK._categoryForUrl('https://www.google.com/maps/embed?pb=!1m18'), 'functional',
+    'the /maps/embed form is unchanged');
+  assert.equal(CK._categoryForUrl('https://shop.example.md/maps?q=store'), null,
+    "a site's own /maps? route is just a route");
+  for (const p of ['client', 'button?theme=outline', 'style']) {
+    assert.equal(CK._categoryForUrl(`https://accounts.google.com/gsi/${p}`), 'functional',
+      `accounts.google.com/gsi/${p} is the sign-in widget`);
+  }
+  assert.equal(CK._categoryForUrl('https://accounts.google.com/'), null,
+    "Google's login host as a whole is never named");
+  assert.equal(CK._categoryForUrl('https://accounts.google.com/o/oauth2/v2/auth?client_id=x'), null,
+    'and neither is its OAuth flow outside /gsi/');
+  assert.ok(!CK._isInfra('accounts.google.com'), 'nor is it waved through');
+  assert.equal(CK._categoryForUrl('https://www.google.com/ccm/collect?en=page_view&auid=1.2&ae=g&gcs=G111'), 'marketing',
+    'the conversion ping reports a visit to the ad platform');
+  assert.equal(CK._categoryForUrl('https://shop.example.md/ccm/collect'), null,
+    "a site's own /ccm/collect is not Google's");
+  assert.equal(CK._categoryForUrl('https://www.google.com/'), null,
+    'and google.com as a whole stays unclassified');
+});
+
+test('Yandex Maps is named on its .ru tiles and its iframe widget, and yandex.ru is not', () => {
+  /* maps.yandex.ru is the .ru twin of maps.yandex.net (the tile servers,
+     core-renderer-tiles.maps.yandex.ru); yandex.ru/map-widget/ is the iframe
+     form of the same map, path-scoped because yandex.ru is a normal site. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://core-renderer-tiles.maps.yandex.ru/tiles?l=map&x=1&y=2&z=3'), 'functional',
+    'the .ru tile servers draw the embedded map');
+  assert.equal(CK._categoryForUrl('https://yandex.ru/map-widget/v1/?um=constructor%3Aabc'), 'functional',
+    'the iframe widget is the same map');
+  assert.equal(CK._categoryForUrl('https://yandex.ru/'), null, 'yandex.ru itself stays unclassified');
+  assert.equal(CK._categoryForUrl('https://yandex.ru/search/?text=x'), null, 'and so does the rest of it');
+  assert.equal(CK._categoryForUrl('https://mc.yandex.ru/metrika/tag.js'), 'analytics',
+    'Metrica keeps its own entry, untouched');
+  assert.ok(!CK._isInfra('maps.yandex.ru'), 'a map is a feature, not infrastructure');
+});
+
+test('the 0.5.30 consent managers are necessary, and InMobi the ad exchange is not', () => {
+  /* The transcend-cdn.com reasoning: a consent manager cannot wait on the
+     decision it exists to ask for. cmp.inmobi.com is the narrow scope on
+     purpose — InMobi is also an ad exchange, and a `necessary` bare
+     inmobi.com would whitelist its ad hosts. */
+  const CK = loadCore();
+  for (const url of [
+    'https://cmp.inmobi.com/choice/abc123/www.example.md/choice.js?tag_version=V3',
+    'https://api.cmp.inmobi.com/geoip',
+    'https://inmobi-choice.io/visit',
+    'https://sdk.privacy-center.org/abc123/loader.js?target=www.example.md',
+    'https://cdn.kookiok.com/consent.js',
+    'https://api.kookiok.com/impressions',
+  ]) {
+    assert.equal(CK._categoryForUrl(url), 'necessary', `${url} is a consent manager`);
+  }
+  for (const url of ['https://www.inmobi.com/', 'https://api.w.inmobi.com/showad/v3', 'https://inmobi.com/']) {
+    assert.equal(CK._categoryForUrl(url), null, `${url} is not the CMP and must not inherit its category`);
+  }
+  for (const host of ['cmp.inmobi.com', 'inmobi-choice.io', 'privacy-center.org', 'kookiok.com']) {
+    assert.ok(!CK._isInfra(host), `${host} is a third party the owner chose, not asset delivery`);
+  }
+});
+
+test('the 0.5.30 features are functional and Usabilla is measurement', () => {
+  /* Verbox and MeTalk are live chats (the jivosite.com decision); Ookla's
+     custom speed test is the feature the page offers. Usabilla's feedback
+     button would be a feature too, but its loader sends load beacons before
+     any interaction, so it is analytics. */
+  const CK = loadCore();
+  for (const url of [
+    'https://admin.verbox.ru/support/support.js?h=abc',
+    'https://widget.me-talk.ru/widget.js',
+    'https://static.me-talk.ru/widget/main.css',
+    'https://moldtc.speedtestcustom.com/',
+  ]) {
+    assert.equal(CK._categoryForUrl(url), 'functional', `${url} is a feature the owner embedded`);
+  }
+  assert.equal(CK._categoryForUrl('https://w.usabilla.com/a/t?m=b'), 'analytics',
+    'a load beacon sent before any click is measurement');
+  assert.equal(CK._categoryForUrl('https://w.usabilla.com/abc123.js'), 'analytics',
+    'and so is the loader that sends it');
+  assert.equal(CK._categoryForUrl('https://usabilla.com/'), null, "the vendor's own site stays unclassified");
+  for (const host of ['verbox.ru', 'me-talk.ru', 'speedtestcustom.com', 'w.usabilla.com']) {
+    assert.ok(!CK._isInfra(host), `${host} carries a category and is never waved through`);
+  }
+});
+
+test('the 0.5.30 infrastructure hosts carry no category and are waved through', () => {
+  /* Static assets only: Orange Moldova's own asset CDN (the
+     prod-cdn.prod.asbis.io precedent), BootstrapCDN, a sibling shard of the
+     Google user-content image host, and three hot-linked image hosts —
+     i.pravatar.cc among them because no name is passed, unlike ui-avatars.com
+     which stays functional. */
+  const CK = loadCore();
+  const HOSTS = [
+    'cdn.omd.md',
+    'maxcdn.bootstrapcdn.com',
+    'lh4.googleusercontent.com',
+    'img.icons8.com',
+    'i.postimg.cc',
+    'i.pravatar.cc',
+  ];
+  for (const host of HOSTS) {
+    assert.ok(CK._infra().includes(host), `${host} is missing from _infra()`);
+    assert.ok(CK._isInfra(host), `_isInfra(${host}) should be true`);
+    assert.equal(CK._categoryForUrl('https://' + host + '/x.png'), null,
+      `${host} must carry no category`);
+  }
+  assert.equal(CK._categoryForUrl('https://ui-avatars.com/api/?name=Ion+Popescu'), 'functional',
+    'an avatar built from a name stays named');
+});
+
+test('the 0.5.30 non-additions stay out of every table', () => {
+  /* Recorded as a test because a deliberate absence is invisible otherwise.
+
+     www.google.com/js/th/ — its initiator could not be verified, and it is not
+     reCAPTCHA's path; it stays named as unknown rather than guessed.
+     api.ipify.org — an IP-echo service whose purpose depends on the calling
+     site's own code. sivven-pc-chat.ivanitamaxim286.workers.dev — one site's
+     own Cloudflare Worker; the bare workers.dev must never enter any table,
+     because it is every Worker on the internet at once. The repeats already
+     decided (the Lexaro shop network's hosts, moldfootball.com, www.ligatv.md,
+     the Wikimedia login pair, cdn.polyfill.io) are re-asserted unchanged, and
+     the bare parents of this release's exact and narrow entries stay absent. */
+  const CK = loadCore();
+  assert.equal(CK._categoryForUrl('https://www.google.com/js/th/abc123.js'), null,
+    'www.google.com/js/th/ stays unknown');
+  for (const host of [
+    'api.ipify.org',
+    'sivven-pc-chat.ivanitamaxim286.workers.dev', 'workers.dev',
+    'lexaro.boutique', 'luna-label.shop', 'new-fashion.boutique',
+    'menswear.lexaromoda.com', 'store.lexaromoda.com',
+    'moldfootball.com', 'www.ligatv.md',
+    'auth.wikimedia.org', 'meta.wikimedia.org', 'cdn.polyfill.io',
+  ]) {
+    assert.ok(!CK._isInfra(host), `${host} must not be waved through`);
+    assert.equal(CK._categoryForUrl('https://' + host + '/x.js'), null,
+      `${host} must carry no category either`);
+  }
+  const { hosts, paths } = readDbs();
+  for (const key of [...Object.keys(hosts), ...Object.keys(paths), ...CK._infra()]) {
+    assert.ok(!/(^|\.)workers\.dev(\/|$)/.test(key), `${key}: workers.dev must stay out of every table`);
+  }
+  for (const parent of [
+    'inmobi.com', 'yandex.ru', 'usabilla.com', 'bootstrapcdn.com', 'omd.md',
+    'icons8.com', 'postimg.cc', 'pravatar.cc', 'googleusercontent.com',
   ]) {
     assert.ok(!CK._infra().includes(parent), `the bare ${parent} must not appear in _infra()`);
     assert.equal(CK._categoryForUrl('https://' + parent + '/'), null,
