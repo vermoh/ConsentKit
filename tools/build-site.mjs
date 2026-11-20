@@ -864,20 +864,22 @@ export function readClientLocales() {
    Russian on the Russian cards) or a client locale code, in which case the
    strings come from ck-locales.js verbatim.
 
-   Accents: #E63939 leads — SPEC V1.14 §1 puts the brand red first — followed
+   Accents: the red leads — SPEC V1.14 §1 puts the brand red first — followed
    by the four other demo swatches, so the strip matches the colours the demo
-   below actually offers. */
+   below actually offers. The red is #D63838, not the brand #E63939 (owner
+   20.11.2026: contrast): white on #E63939 is 4.19:1, on #D63838 4.69:1, so
+   every replica button label in the strip clears AA (V1.30 §5). */
 export const MARQUEE_CARDS = [
-  { layout: 'box',   theme: 'light', lang: 'self', accent: '#E63939' },
+  { layout: 'box',   theme: 'light', lang: 'self', accent: '#D63838' },
   { layout: 'bar',   theme: 'dark',  lang: 'de',   accent: '#127C56' },
   { layout: 'modal', theme: 'light', lang: 'fr',   accent: '#6B3FCB' },
   { layout: 'bar',   theme: 'light', lang: 'self', accent: '#2B50D8' },
   { layout: 'box',   theme: 'dark',  lang: 'it',   accent: '#C2570C' },
-  { layout: 'modal', theme: 'dark',  lang: 'es',   accent: '#E63939' },
+  { layout: 'modal', theme: 'dark',  lang: 'es',   accent: '#D63838' },
   { layout: 'bar',   theme: 'light', lang: 'ro',   accent: '#127C56' },
   { layout: 'box',   theme: 'light', lang: 'en',   accent: '#6B3FCB' },
   { layout: 'modal', theme: 'light', lang: 'ru',   accent: '#2B50D8' },
-  { layout: 'bar',   theme: 'dark',  lang: 'self', accent: '#E63939' }
+  { layout: 'bar',   theme: 'dark',  lang: 'self', accent: '#D63838' }
 ];
 
 /* The four strings one card needs, resolved from whichever source owns them. */
@@ -969,6 +971,15 @@ export function renderMarquee(dict, lang) {
   ].join('\n');
 }
 
+/* V1.30 §3.1, owner 20.11.2026: the hero picture shows our banner and the
+   cabinet's «Как отвечают посетители» card, so each page language gets its
+   own composition — a Russian card on the Romanian page read as a mistake.
+   site/img/ is not content-hashed (§0), hence a name per language. */
+export function heroImage(lang) {
+  if (!['ro', 'ru', 'en'].includes(lang)) throw new Error(`no hero picture for ${lang}`);
+  return '/img/hero-v130-' + lang + '.webp';
+}
+
 export function renderPage(template, lang) {
   const entry = LANGS.find((l) => l.code === lang);
   if (!entry) throw new Error(`unknown language ${lang}`);
@@ -995,6 +1006,7 @@ export function renderPage(template, lang) {
     BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
     MARQUEE: renderMarquee(dict, lang),
+    HERO_IMG: heroImage(lang),
     I18N_SCRIPT: i18nScript
   };
 

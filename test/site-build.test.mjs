@@ -286,6 +286,24 @@ test('the pricing renderer builds a real table with a caption and scoped headers
   assert.match(app, /tabIndex\s*=\s*0/, 'the scroll wrapper is not keyboard-focusable');
 });
 
+/* Owner 20.11.2026: the page has exactly one red filled button — the free
+   check. The highlighted Starter column used to get a btn--primary «Открыть
+   кабинет»; now every plan's CTA is the same outline button. Asserted on the
+   ctaLink() body itself, since no test executes the renderer. */
+test('the pricing renderer emits no red filled button, the featured column included', () => {
+  const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
+  const body = app.match(/function ctaLink\(d\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(body, 'app.js has no ctaLink(d) — the pricing CTA moved, move this test with it');
+  assert.doesNotMatch(body[0], /btn--primary/,
+    'the pricing CTA can still be btn--primary — the free check is the only red filled button');
+  assert.match(body[0], /el\('a', 'btn btn--sm btn--ghost'\)/,
+    'every pricing CTA should be the outline btn--ghost');
+  // And nowhere else in the pricing renderer either.
+  const render = app.match(/function renderPricing\(\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(render, 'app.js has no renderPricing()');
+  assert.doesNotMatch(render[0], /btn--primary/, 'renderPricing() draws a red filled button');
+});
+
 /* P3-9: the client's floating re-open button is fixed at the bottom-left of the
    viewport and used to sit on top of a pricing card — now on the table's label
    column and its leftmost CTA.
@@ -1405,9 +1423,10 @@ test('the marquee is 8–10 cards covering every layout, both themes and several
   const themes = new Set(MARQUEE_CARDS.map((c) => c.theme));
   assert.ok(themes.has('light') && themes.has('dark'), 'the marquee is single-theme');
 
-  // §1: the brand red leads the deck.
-  assert.equal(MARQUEE_CARDS[0].accent, '#E63939',
-    'the first marquee card must carry the brand red');
+  // §1: the red leads the deck. #D63838 rather than the brand #E63939 —
+  // owner 20.11.2026: contrast (white on #E63939 is 4.19:1, below AA).
+  assert.equal(MARQUEE_CARDS[0].accent, '#D63838',
+    'the first marquee card must carry the red');
   assert.ok(new Set(MARQUEE_CARDS.map((c) => c.accent)).size >= 4,
     'the marquee should show several accents');
 

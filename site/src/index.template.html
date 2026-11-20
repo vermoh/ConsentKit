@@ -173,12 +173,15 @@
       </div>
 
       <!-- §3.1: a composed picture — a fictional shop page running OUR real
-           banner (rendered by site/vendor/ck-*.js, box layout, Romanian), with
-           the dashboard's «Как отвечают посетители» card in front of it. The
-           window frame is part of the picture now, so the page draws none.
+           banner (rendered by site/vendor/ck-*.js, box layout), with the
+           dashboard's «Как отвечают посетители» card in front of it. One
+           picture per page language (owner 20.11.2026): the banner and the
+           cabinet card speak the page's language, so the build fills the
+           src with hero-v130-<ro|ru|en>.webp. The window frame is part of the
+           picture, so the page draws none.
            eager + fetchpriority="high": it is the first screen's own image. -->
       <figure class="hero-shot">
-        <img class="hero-img" src="/img/hero-v130.webp"
+        <img class="hero-img" src="{{HERO_IMG}}"
              width="1152" height="700"
              loading="eager" decoding="async" fetchpriority="high"
              alt="Сайт-пример с баннером ConsentKit и карточка кабинета «Как отвечают посетители»" data-i18n-alt="heroShotAlt">

@@ -494,9 +494,13 @@
   var FEATURED = 'starter';
 
   /* The CTA that used to sit at the foot of each card. Same three cases, and
-     the agency one is still the only link that leaves for mailto:. */
+     the agency one is still the only link that leaves for mailto:. Every
+     column gets the same outline button, the featured Starter one included
+     (owner 20.11.2026): the page keeps exactly one red filled button, the
+     free check — the highlighted column is marked by its sand fill and dark
+     frame, not by a second red call to action. */
   function ctaLink(d) {
-    var a = el('a', 'btn btn--sm ' + (d.plan === FEATURED ? 'btn--primary' : 'btn--ghost'));
+    var a = el('a', 'btn btn--sm btn--ghost');
     /* The analytics hook (SPEC-V1.26 §2, ck_plan_click). Stamped here rather
        than matched on the label, which is translated three ways and changes
        between the free/paid/agency branches below. The price travels with it

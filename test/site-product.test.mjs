@@ -6,7 +6,8 @@
  * that nothing else in the suite watches:
  *
  *   · seven .webp screenshots in site/img/, referenced from the built pages
- *     (since V1.30 the hero's is hero-v130.webp, a composed picture);
+ *     (since V1.30 the hero's is a composed picture, one per language:
+ *     hero-v130-ro/ru/en.webp);
  *   · six .pcard articles, each with a fact pill, a heading and an image;
  *   · #compare with six rows, in three languages, no Cyrillic in ro/en
  *     (since V1.30 a block inside «Тарифы», not a section of its own);
@@ -34,11 +35,14 @@ import {
    being referenced would still be «present» to a glob, and a file the
    template names but nobody shipped is the failure that matters. */
 /* V1.30 §3.1: the hero's screenshot of a client site (hero-site.webp) is
-   replaced by hero-v130.webp — a fictional shop running our real banner, with
-   the dashboard's answers card in front. A new name, because site/img/ is not
+   replaced by a composed picture — a fictional shop running our real banner,
+   with the dashboard's answers card in front. Owner 20.11.2026: one picture
+   per page language (the banner and the card speak the page's language), so
+   the hero is not in SHOTS — every page references every SHOTS file — but in
+   HERO_SHOTS below, one per page. New names, because site/img/ is not
    content-hashed (§0). */
+const HERO_SHOTS = { ro: 'hero-v130-ro.webp', ru: 'hero-v130-ru.webp', en: 'hero-v130-en.webp' };
 const SHOTS = [
-  ['hero-v130.webp', 'heroShotAlt'],
   ['cabinet-readiness.webp', 'pshot1Alt'],
   ['cabinet-scan.webp', 'pshot2Alt'],
   ['cabinet-stats.webp', 'pshot3Alt'],
@@ -52,8 +56,8 @@ const SHOTS = [
    starts costing more than the page it advertises. */
 const MAX_BYTES = 250 * 1024;
 
-test('§0: the seven product screenshots exist in site/img/ and stay small', () => {
-  for (const [file] of SHOTS) {
+test('§0: the product screenshots and the three hero pictures exist in site/img/ and stay small', () => {
+  for (const file of [...Object.values(HERO_SHOTS), ...SHOTS.map(([f]) => f)]) {
     const path = join(SITE_DIR, 'img', file);
     assert.ok(existsSync(path), `site/img/${file} is missing`);
     const bytes = statSync(path).size;
@@ -70,7 +74,7 @@ test('§0: every screenshot is referenced from every built page, with a real alt
     const html = renderPage(template, code);
     const dict = readDict(code);
 
-    for (const [file, altKey] of SHOTS) {
+    for (const [file, altKey] of [[HERO_SHOTS[code], 'heroShotAlt'], ...SHOTS]) {
       /* Root-absolute, always. /ru and /ro are SUBFOLDERS: a relative
          "img/cabinet-scan.webp" on /ru resolves to /ru/img/… and 404s, which
          is the same trap the «assets are referenced absolutely» test guards
@@ -307,9 +311,20 @@ test('§5: the hero has one primary button and no route to the demo', () => {
        real banner on a fictional shop page with the dashboard card in front.
        The browser window and its three dots are drawn INTO the picture, so the
        page no longer wraps it in a frame of its own. It is the first screen's
-       image: eager, high priority, its box reserved by width and height. */
-    const img = hero.match(/<img class="hero-img" src="\/img\/hero-v130\.webp"[^>]*>/);
-    assert.ok(img, `the ${code} hero does not show hero-v130.webp`);
+       image: eager, high priority, its box reserved by width and height.
+       Owner 20.11.2026: each page shows its OWN language's picture — the
+       banner and the cabinet card in it speak that language — and never
+       another page's, nor the old single hero-v130.webp with a Russian card. */
+    const own = HERO_SHOTS[code];
+    assert.ok(own, `no hero picture is listed for ${code}`);
+    const img = hero.match(new RegExp(`<img class="hero-img" src="/img/${own.replace(/\./g, '\\.')}"[^>]*>`));
+    assert.ok(img, `the ${code} hero does not show its own ${own}`);
+    for (const [other, file] of Object.entries(HERO_SHOTS)) {
+      if (other === code) continue;
+      assert.ok(!html.includes(file), `the ${code} page references the ${other} hero picture ${file}`);
+    }
+    assert.ok(!html.includes('hero-v130.webp'),
+      `the ${code} page still references the single-language hero-v130.webp`);
     assert.match(img[0], /loading="eager"/, `the ${code} hero picture is lazy`);
     assert.match(img[0], /fetchpriority="high"/, `the ${code} hero picture is not high priority`);
     assert.match(img[0], /width="1152" height="700"/, `the ${code} hero picture has no reserved box`);

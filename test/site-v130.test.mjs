@@ -310,22 +310,15 @@ test('§5: the address placeholder clears 4.5:1 on its field', () => {
   }
 });
 
-/* §5 «кнопки в макетах ленты: текст на заливке ≥ 4,5:1». The owner kept the
-   marquee as it was (V1.30 §6.1), brand red #E63939 leading the deck (pinned
-   in test/site-build.test.mjs). On that red no label reaches 4.5:1 — white
-   4.19, #161616 4.32 — so the three red cards are an OPEN owner decision and
-   are named here rather than hidden; every other fill, and every outline
-   label, has to clear AA. */
-const MARQUEE_RED_OPEN = '#E63939';
-
-test('§5: the marquee replica buttons read at 4.5:1 (the brand red is the named exception)', () => {
+/* §5 «кнопки в макетах ленты: текст на заливке ≥ 4,5:1». No exceptions: the
+   red cards moved from the brand #E63939 (white on it 4.19:1) to #D63838
+   (4.69:1) — owner 20.11.2026: contrast. Every fill, and every outline label,
+   has to clear AA. */
+test('§5: the marquee replica buttons read at 4.5:1, every card, no exceptions', () => {
   for (const c of MARQUEE_CARDS) {
-    if (c.accent === MARQUEE_RED_OPEN) continue;
     assert.ok(ratio('#FFFFFF', c.accent) >= 4.5,
       `white on the ${c.accent} marquee card is ${ratio('#FFFFFF', c.accent).toFixed(2)}:1`);
   }
-  assert.ok(ratio('#FFFFFF', MARQUEE_RED_OPEN) < 4.5,
-    'if white on #E63939 ever clears AA, drop the open exception above');
   // Outline labels: --shot-accent-ink on a light card, the title ink on a dark one.
   assert.match(CSS, /--shot-accent-ink: #B82E2D;/);
   assert.ok(ratio('#B82E2D', '#FFFFFF') >= 4.5, 'the light replica outline label does not clear AA');
