@@ -20,6 +20,8 @@ site/
   sitemap.xml     GENERATED — all three URLs
   styles.css      all styling (system font stack only)
   app.js          pricing render, demo wiring, owner constants
+  hero.js         the first screen's live cycle (pause, count) — no consent client
+  icons/          Lucide line icons (ISC, LICENSE.txt), inlined by the build
   vendor/         the client the demo runs on — generated, do not edit
     ck-core.js
     ck-locales.js

@@ -990,12 +990,18 @@ test('the trust line hides the counts while there are too few sites', () => {
       assert.match(line[1], new RegExp(`<span class="trust-item" data-trust="${slot}" hidden></span>`),
         `the ${code} trust line ships the ${slot} slot filled or visible`);
     }
-    assert.ok(line[1].includes(trustServicesText(dict, code)),
+    /* UPDATED for SPEC V1.30.1 B2 — each item's opening number now sits in
+       its own <span class="trust-num"> (weight 600, tabular figures), so the
+       copy is compared as TEXT, tags removed; the wrap itself is asserted. */
+    const lineText = line[1].replace(/<[^>]+>/g, '');
+    assert.ok(lineText.includes(trustServicesText(dict, code)),
       `the ${code} trust line does not carry the build's services count`);
-    assert.ok(line[1].includes(String(SITE_STATS.services)),
+    assert.ok(lineText.includes(String(SITE_STATS.services)),
       `the ${code} trust line does not show stats.json's ${SITE_STATS.services}`);
-    assert.ok(line[1].includes(dict.trustLanguages),
+    assert.ok(lineText.includes(dict.trustLanguages),
       `the ${code} trust line does not carry the language count`);
+    assert.match(line[1], new RegExp(`<span class="trust-num">${SITE_STATS.services}</span>`),
+      `the ${code} trust line does not set the services number apart`);
     // The «Цифры» section is gone, not merely hidden.
     assert.doesNotMatch(html, /id="numbers"|id="stats"/,
       `the ${code} page still carries the «Цифры» block`);
@@ -1467,7 +1473,9 @@ test('the marquee cards say what the real client says, in each language', () => 
     assert.ok(strip.includes(dict.mockAccept),
       `the ${code} marquee has no card in the page's own language`);
     /* V1.24 §5: the hero's replica is now a screenshot, so the marquee is the
-       ONLY consumer left of mockText and mockSettings. Asserted here so that
+       ONLY consumer left of mockText and mockSettings. (V1.30.1 B1 brought a
+       second one back: the live first screen's banner replica reads all five
+       mock* keys through data-i18n.) Asserted here so that
        the exemption those two keys were given in the unused-key scanner above
        is backed by a real check rather than by a promise. */
     for (const key of ['mockText', 'mockSettings']) {
@@ -2141,7 +2149,10 @@ test('every page references its assets with the current content hash', () => {
       // The law pages carry no demo, so they load no vendor client.
       const referenced = html.includes('"' + asset + '?v=');
       if (!referenced) {
-        assert.ok(asset.startsWith('/vendor/'),
+        /* UPDATED for SPEC V1.30.1 B1 — /hero.js drives the home page's
+           first screen, which the law pages do not have. */
+        const homeOnly = asset === '/hero.js' && !outputs().some((o) => o.path === f.path);
+        assert.ok(asset.startsWith('/vendor/') || homeOnly,
           `${f.label} does not reference ${asset} at all`);
         continue;
       }

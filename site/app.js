@@ -756,7 +756,23 @@
   function setTrust(name, n, base) {
     var item = document.querySelector('#trust [data-trust="' + name + '"]');
     if (!item) return;
-    item.textContent = plural(n, base).replace(String(n), groupDigits(n));
+    var num = groupDigits(n);
+    var text = plural(n, base).replace(String(n), num);
+    var at = text.indexOf(num);
+    /* V1.30.1 B2: the number in its own span (weight 600), exactly as the
+       build sets the services count apart; built from text nodes, so the
+       dictionary string is never parsed as HTML. */
+    item.textContent = '';
+    if (at < 0) {
+      item.textContent = text;
+    } else {
+      var b = document.createElement('span');
+      b.className = 'trust-num';
+      b.textContent = num;
+      item.appendChild(document.createTextNode(text.slice(0, at)));
+      item.appendChild(b);
+      item.appendChild(document.createTextNode(text.slice(at + num.length)));
+    }
     item.hidden = false;
   }
 

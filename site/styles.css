@@ -2632,12 +2632,13 @@ body {
    (`overflow: clip`, which unlike hidden makes no scroll container and leaves
    the sticky capsule alone) so a glow can never widen the page on a phone.
 
-   Strength is the layer's opacity: .14 for the brand-red one under the hero
-   picture, .05 for the neutral white ones behind «Что умеет» and «Тарифы».
-   Worst case for text (the glow's peak): on the hero lift under 14% #E63939
-   (#371F1F) --ink is 13.6:1, --ink-soft 7.3:1, --accent-ink 5.5:1; on the
-   page ground under 5% white (#202020) --ink-soft is 7.8:1. All AA, and
-   test/site-v130.test.mjs recomputes them. */
+   Strength is the layer's opacity: .06 for the one under the hero picture
+   (white since 20.11.2026 — it was the brand red at .14), .05 for the
+   neutral white ones behind «Что умеет» and «Тарифы». Worst case for text
+   (the glow's peak): on the hero lift under 6% white (#292929) --ink is
+   13.0:1, --ink-soft 6.9:1, --accent-ink 5.2:1; on the page ground under 5%
+   white (#202020) --ink-soft is 7.8:1. All AA, and test/site-v130.test.mjs
+   recomputes them. */
 .hero,
 #features,
 #pricing {
@@ -2655,14 +2656,20 @@ body {
   pointer-events: none;
 }
 /* Under the hero picture, up and to the right of its centre: a radius of
-   about 60% of the container across (the box is 120% of it wide). */
+   about 60% of the container across (the box is 120% of it wide).
+   UPDATED 20.11.2026 (owner, after slop-scan flagged it as `radial-halo`): a
+   chromatic glow on a dark page reads as generated, so this one is neutral
+   white like the two below — a touch stronger (.06) than theirs, because it
+   sits on the hero lift and mostly behind the picture, where only its edges
+   show. Its peak over the lift is #292929: --ink 13.0:1, --ink-soft 6.9:1,
+   --accent-ink 5.2:1. */
 .hero-shot::before {
   left: 0;
   right: -20%;
   top: -48%;
   bottom: 4%;
-  background: radial-gradient(ellipse closest-side, var(--accent-deco), transparent);
-  opacity: .14;
+  background: radial-gradient(ellipse closest-side, #FFFFFF, transparent);
+  opacity: .06;
 }
 /* Behind the two long sections: neutral light, centred over the top of the
    section where the heading and the first row sit. */
@@ -2784,3 +2791,391 @@ body {
   .fact-pill { max-width: 100%; flex-wrap: wrap; }
 }
 .check__agree input { width: 24px; height: 24px; margin-top: 0; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SPEC V1.30.1 — шаг B: живой первый экран, иконки и цифры
+   ══════════════════════════════════════════════════════════════════════
+   Last, after step A, for the same reason as the two layers before it: the
+   rules the tests read by name earlier in the file stay where they are.
+   Still no blurred box-shadow and no new red: the stage's own colours are
+   the shop's (a fictional client site), the banner replica's (our client's
+   light theme with that shop's accent) and the dashboard's dark theme —
+   pictures of other surfaces, like the marquee cards. */
+
+/* ── B1 the stage ───────────────────────────────────────────────────────
+   One design pixel of the 1152×700 composition is --u: 1/1152 of the
+   figure's width, so the whole stage scales with its container exactly as
+   the picture it replaces did, with no script (container query units; a
+   browser without them gets a viewport estimate instead). aspect-ratio
+   reserves the box before a single child paints. */
+.hero-shot { container-type: inline-size; }
+.hl {
+  --u: calc(min(100vw - 48px, 1152px) / 1152);
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1152 / 700;
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-user-select: none;
+  user-select: none;
+}
+@supports (width: 1cqw) {
+  .hl { --u: calc(100cqw / 1152); }
+}
+.hl i { display: block; font-style: normal; }
+
+/* The browser window around the shop. */
+.hl-win {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(900 * var(--u));
+  height: calc(664 * var(--u));
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #3A3A3A;
+  border-radius: calc(16 * var(--u));
+  background: #2A2A2A;
+}
+.hl-bar {
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--u));
+  height: calc(40 * var(--u));
+  padding: 0 calc(16 * var(--u));
+}
+.hl-bar i { width: calc(11 * var(--u)); height: calc(11 * var(--u)); border-radius: 50%; background: #4A4A4A; }
+.hl-url {
+  flex: 0 1 calc(360 * var(--u));
+  height: calc(24 * var(--u));
+  margin-left: calc(18 * var(--u));
+  padding: 0 calc(12 * var(--u));
+  border-radius: calc(8 * var(--u));
+  background: #1F1F1F;
+  color: #9A9A9A;
+  font-size: calc(12 * var(--u));
+  line-height: calc(24 * var(--u));
+}
+
+/* The shop: «Atelier Nord», a fictional handmade-goods store. */
+.hl-shop {
+  position: relative;
+  height: calc(100% - calc(40 * var(--u)));
+  overflow: hidden;
+  background: #F7F4EF;
+  color: #23201C;
+  font-size: calc(15 * var(--u));
+}
+.hl-shop span { display: block; }
+.hl-top {
+  display: flex;
+  align-items: center;
+  gap: calc(28 * var(--u));
+  padding: calc(18 * var(--u)) calc(32 * var(--u));
+  border-bottom: 1px solid #E6DFD4;
+  background: #FBF9F5;
+}
+.hl-shop .hl-logo {
+  margin-right: auto;
+  font: 600 calc(22 * var(--u))/1 Georgia, "Times New Roman", serif;
+  letter-spacing: .02em;
+}
+.hl-logo em { color: #7A6A55; }
+.hl-shop .hl-nav { display: flex; gap: calc(22 * var(--u)); font-size: calc(14 * var(--u)); color: #4A433A; }
+.hl-shop .hl-cart {
+  padding: calc(8 * var(--u)) calc(14 * var(--u));
+  border: 1px solid #23201C;
+  border-radius: 999px;
+  font-size: calc(14 * var(--u));
+}
+.hl-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: calc(28 * var(--u));
+  align-items: center;
+  padding: calc(30 * var(--u)) calc(32 * var(--u)) calc(22 * var(--u));
+}
+.hl-kicker {
+  margin: 0 0 calc(10 * var(--u));
+  color: #7A6A55;
+  font-size: calc(12 * var(--u));
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.hl-h {
+  margin: 0 0 calc(14 * var(--u));
+  font: 500 calc(40 * var(--u))/1.08 Georgia, "Times New Roman", serif;
+  letter-spacing: -.01em;
+}
+.hl-sub { max-width: calc(290 * var(--u)); margin: 0 0 calc(20 * var(--u)); color: #5B5247; }
+.hl-shop .hl-shopbtn {
+  display: inline-block;
+  padding: calc(12 * var(--u)) calc(20 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: #1F3D33;
+  color: #FFFFFF;
+  font-size: calc(14 * var(--u));
+  font-weight: 600;
+}
+.hl-photo {
+  position: relative;
+  height: calc(250 * var(--u));
+  overflow: hidden;
+  border-radius: calc(18 * var(--u));
+  background: radial-gradient(120% 90% at 30% 20%, #E9DCC8 0%, #D9C4A6 55%, #C7AE8B 100%);
+}
+.hl-shelf { position: absolute; left: 0; right: 0; bottom: 0; height: calc(26 * var(--u)); background: rgba(60, 45, 30, .12); }
+.hl-vase { position: absolute; bottom: calc(26 * var(--u)); }
+.hl-vase--1 {
+  left: 18%; width: calc(96 * var(--u)); height: calc(150 * var(--u));
+  border-radius: 48% 48% 40% 40% / 60% 60% 34% 34%;
+  background: linear-gradient(160deg, #F4EEE4, #D8CDBE);
+}
+.hl-vase--2 {
+  left: 44%; width: calc(120 * var(--u)); height: calc(104 * var(--u));
+  border-radius: 50% 50% 44% 44% / 58% 58% 40% 40%;
+  background: linear-gradient(160deg, #3E5A4F, #23382F);
+}
+.hl-vase--3 {
+  left: 70%; width: calc(70 * var(--u)); height: calc(190 * var(--u));
+  border-radius: 40% 40% 36% 36% / 30% 30% 22% 22%;
+  background: linear-gradient(160deg, #B4704C, #8C4F33);
+}
+.hl-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(18 * var(--u));
+  padding: calc(8 * var(--u)) calc(32 * var(--u)) calc(32 * var(--u));
+}
+.hl-pic { position: relative; height: calc(150 * var(--u)); margin: 0 0 calc(10 * var(--u)); overflow: hidden; border-radius: calc(14 * var(--u)); }
+.hl-pic::after { content: ""; position: absolute; left: 50%; bottom: calc(22 * var(--u)); transform: translateX(-50%); }
+.hl-item:nth-child(1) .hl-pic { background: linear-gradient(150deg, #E6EDE8, #C9D7CE); }
+.hl-item:nth-child(2) .hl-pic { background: linear-gradient(150deg, #F1E3D6, #DFC3A9); }
+.hl-item:nth-child(3) .hl-pic { background: linear-gradient(150deg, #E4E1EC, #C9C3D9); }
+.hl-item:nth-child(4) .hl-pic { background: linear-gradient(150deg, #EFE8D9, #D9CBAE); }
+.hl-item:nth-child(1) .hl-pic::after { width: calc(64 * var(--u)); height: calc(56 * var(--u)); border-radius: calc(8 * var(--u)) calc(8 * var(--u)) calc(26 * var(--u)) calc(26 * var(--u)); background: #F6F3EE; }
+.hl-item:nth-child(2) .hl-pic::after { width: calc(90 * var(--u)); height: calc(40 * var(--u)); border-radius: calc(6 * var(--u)) calc(6 * var(--u)) calc(46 * var(--u)) calc(46 * var(--u)); background: #8C4F33; }
+.hl-item:nth-child(3) .hl-pic::after { width: calc(52 * var(--u)); height: calc(98 * var(--u)); border-radius: 40% 40% 30% 30%; background: #5A5276; }
+.hl-item:nth-child(4) .hl-pic::after { width: calc(110 * var(--u)); height: calc(22 * var(--u)); bottom: calc(40 * var(--u)); border-radius: 50%; background: #3E5A4F; }
+.hl-name { font-size: calc(14 * var(--u)); }
+.hl-price { color: #7A6A55; font-size: calc(13 * var(--u)); }
+
+/* The banner replica: our client's box layout, bottom-left, light theme,
+   with the shop's own green as the accent — the sizes measured off the real
+   client rendering in this very shop (box 540 wide, 24 padding, title 20/700,
+   text 14, three equal 44px buttons). */
+.hl-banner {
+  position: absolute;
+  left: calc(16 * var(--u));
+  bottom: calc(16 * var(--u));
+  width: calc(540 * var(--u));
+  box-sizing: border-box;
+  padding: calc(24 * var(--u));
+  border: 1px solid #DFE3EA;
+  border-radius: calc(10 * var(--u));
+  background: #FFFFFF;
+  color: #1B2437;
+}
+.hl-shop .hl-b-title {
+  margin: 0 0 calc(8 * var(--u));
+  font-size: calc(20 * var(--u));
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.hl-shop .hl-b-text { margin: 0 0 calc(22 * var(--u)); color: #5B6478; font-size: calc(14 * var(--u)); }
+.hl-shop .hl-b-actions { display: flex; gap: calc(8 * var(--u)); }
+.hl-shop .hl-b-btn {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: calc(44 * var(--u));
+  box-sizing: border-box;
+  padding: calc(11 * var(--u)) calc(12 * var(--u));
+  border: 1px solid #1F3D33;
+  border-radius: calc(8 * var(--u));
+  background: #1F3D33;
+  color: #FFFFFF;
+  font-size: calc(14 * var(--u));
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.hl-shop .hl-b-btn--outline { background: transparent; color: #1F3D33; }
+
+/* The cursor: a dot, not an arrow — it shows where the press lands, nothing
+   more. Its resting place is on «Принять всё», just under the label so the
+   word stays legible during the press (the buttons are pinned to the
+   banner's foot, so that point does not move with the copy); it is
+   invisible until the timeline brings it in. */
+.hl-cursor {
+  position: absolute;
+  left: calc(132 * var(--u));
+  bottom: calc(42 * var(--u));
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
+  box-sizing: border-box;
+  border: calc(2 * var(--u)) solid #FFFFFF;
+  border-radius: 50%;
+  background: rgba(35, 32, 28, .85);
+  opacity: 0;
+}
+
+/* The dashboard card, in the cabinet's dark theme (its own tokens: surface
+   #1C1F27, muted #232733, text #E6E8EF / #9AA3B8, accent fill #3F5FD9). */
+.hl-card {
+  position: absolute;
+  right: 0;
+  top: calc(112 * var(--u));
+  width: calc(600 * var(--u));
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: calc(12 * var(--u));
+  background: #1C1F27;
+  color: #E6E8EF;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+}
+.hl-card span { display: block; }
+.hl-c-head {
+  padding: calc(20 * var(--u)) calc(26 * var(--u));
+  border-bottom: 1px solid #2E3341;
+  font-size: calc(19 * var(--u));
+  font-weight: 600;
+}
+.hl-c-body { display: flex; flex-direction: column; gap: calc(18 * var(--u)); padding: calc(22 * var(--u)) calc(26 * var(--u)) calc(26 * var(--u)); }
+.hl-shares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(14 * var(--u)); }
+.hl-share { padding: calc(16 * var(--u)) calc(18 * var(--u)); border-radius: calc(9 * var(--u)); background: #232733; }
+.hl-share-v { font-size: calc(34 * var(--u)); line-height: 1.1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.hl-share-l { margin-top: calc(4 * var(--u)); color: #9AA3B8; font-size: calc(14.5 * var(--u)); }
+.hl-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: #9AA3B8;
+  font-size: calc(14.5 * var(--u));
+}
+.hl-card .hl-total-n { color: #E6E8EF; font-size: calc(17 * var(--u)); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hl-chart { display: block; width: 100%; height: calc(64 * var(--u)); margin-top: calc(-6 * var(--u)); overflow: visible; }
+.hl-day { fill: #283055; }
+.hl-day-accept { fill: #3F5FD9; }
+.hl-today { transform-box: fill-box; transform-origin: 50% 100%; }
+.hl-cats { display: flex; flex-direction: column; gap: calc(12 * var(--u)); }
+.hl-cat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: calc(6 * var(--u));
+  font-size: calc(14.5 * var(--u));
+}
+.hl-cat-n { color: #9AA3B8; font-variant-numeric: tabular-nums; }
+.hl-card .hl-track { grid-column: 1 / -1; height: calc(9 * var(--u)); overflow: hidden; border-radius: 999px; background: #232733; }
+.hl-card .hl-fill { height: 100%; border-radius: 999px; background: #3F5FD9; }
+
+/* ── B1 the cycle ───────────────────────────────────────────────────────
+   8 s: the banner is up; at 0.8 s the dot comes in and travels to «Принять
+   всё»; at 2.1 s it presses; the banner leaves; at 2.8 s the card's total
+   gains one (hero.js, on the total's own tick) and today's bar grows; then
+   the card rests, and from 7.3 s the banner returns for the next visitor —
+   about 6 s of action and 2 s of pause, ending on the frame it began with.
+
+   Attached ONLY under no-preference and only once hero.js has added
+   .hl--live: the global reduce rule at the top of this file would snap a
+   timeline to its end state rather than stop it, and without the script
+   there is nothing to count. Everything moves by transform, opacity or
+   colour — no box changes size, so the cycle cannot shift the layout.
+   .hl--paused (tab hidden, stage off screen) freezes every part at once,
+   so they never drift out of step. */
+@media (prefers-reduced-motion: no-preference) {
+  .hl--live .hl-banner { animation: hl-banner 8s cubic-bezier(.2, .7, .2, 1) infinite; }
+  .hl--live .hl-cursor { animation: hl-cursor 8s ease-in-out infinite; }
+  .hl--live .hl-b-btn--accept { animation: hl-press 8s linear infinite; }
+  .hl--live .hl-total-n { animation: hl-tick 8s ease-out 2.8s infinite; }
+  .hl--live .hl-today { transition: transform .6s cubic-bezier(.2, .7, .2, 1); }
+  .hl--live .hl-today .hl-day-accept { animation: hl-flash 8s ease-out 2.8s infinite; }
+  /* !important on purpose: each part's `animation` shorthand above resets
+     the play state at a higher specificity than a pause rule could reach. */
+  .hl--paused,
+  .hl--paused * { animation-play-state: paused !important; }
+}
+@keyframes hl-banner {
+  0%, 28%   { opacity: 1; transform: translateY(0); }
+  33%, 91%  { opacity: 0; transform: translateY(calc(16 * var(--u))); }
+  97%, 100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes hl-cursor {
+  0%, 10%   { opacity: 0; transform: translate(calc(300 * var(--u)), calc(-190 * var(--u))) scale(1); }
+  13%       { opacity: 1; transform: translate(calc(300 * var(--u)), calc(-190 * var(--u))) scale(1); }
+  25.5%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  27%       { opacity: 1; transform: translate(0, 0) scale(.72); }
+  29.5%     { opacity: 1; transform: translate(0, 0) scale(1); }
+  35%, 100% { opacity: 0; transform: translate(0, 0) scale(1); }
+}
+@keyframes hl-press {
+  0%, 25.5%  { transform: scale(1); background-color: #1F3D33; }
+  27%        { transform: scale(.95); background-color: #142A23; }
+  30%, 100%  { transform: scale(1); background-color: #1F3D33; }
+}
+@keyframes hl-tick {
+  0%        { color: #AEBCFF; }
+  30%, 100% { color: #E6E8EF; }
+}
+@keyframes hl-flash {
+  0%        { fill: #9AACFF; }
+  30%, 100% { fill: #3F5FD9; }
+}
+
+/* ── B2 icons ───────────────────────────────────────────────────────────
+   Lucide line icons, inlined by the build (site/icons/, ISC licence beside
+   them): 24px, stroke 1.5, in --ink-soft. Never red. */
+.icon {
+  display: block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--ink-soft);
+}
+
+/* «Как это работает»: the icon replaces the red numbered disc. The number
+   stays in the markup as text — hidden from the eye, read by a screen reader
+   (the list's own markers are switched off, so it is the only number). */
+.step-head { display: block; margin: 0 0 16px; }
+.step-n {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  background: none;
+}
+.steps li { position: relative; }
+
+/* «И ещё»: the icon above each fact's heading. */
+.feat .icon { margin: 0 0 16px; }
+
+/* The platforms in the check block: the icon in a column of its own beside
+   the title and the line under it. --ink-soft here too, on the red band as
+   everywhere (decorative, so no contrast floor; the title beside it carries
+   the meaning). align-content: start keeps the title and its line together
+   when a row is stretched to its taller neighbour's height. */
+.fit__list li,
+.check-band .fit__list li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+  align-content: start;
+}
+.fit__list .icon { grid-row: 1 / span 2; }
+
+/* ── B2 numbers ─────────────────────────────────────────────────────────
+   The big figures — the pills' numbers and the trust line's — at weight 600
+   in tabular figures (the trust line's whole run is tabular already). */
+.fact-pill__num { font-weight: 600; font-variant-numeric: tabular-nums; }
+.trust-num { font-weight: 600; font-variant-numeric: tabular-nums; }

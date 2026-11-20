@@ -172,20 +172,84 @@
         </p>
       </div>
 
-      <!-- §3.1: a composed picture — a fictional shop page running OUR real
-           banner (rendered by site/vendor/ck-*.js, box layout), with the
-           dashboard's «Как отвечают посетители» card in front of it. One
-           picture per page language (owner 20.11.2026): the banner and the
-           cabinet card speak the page's language, so the build fills the
-           src with hero-v1301-<ro|ru|en>.webp (V1.30.1: the card re-shot in
-           the cabinet's dark theme). The window frame is part of the
-           picture, so the page draws none.
-           eager + fetchpriority="high": it is the first screen's own image. -->
-      <figure class="hero-shot">
-        <img class="hero-img" src="{{HERO_IMG}}"
-             width="1152" height="700"
-             loading="eager" decoding="async" fetchpriority="high"
-             alt="Сайт-пример с баннером ConsentKit и карточка кабинета «Как отвечают посетители»" data-i18n-alt="heroShotAlt">
+      <!-- §3.1 / V1.30.1 B1: the live first screen. Not a picture any more —
+           the same composition in markup: a fictional shop (CSS only, its own
+           copy stays Romanian, as in the shot it replaces), a STATIC replica of
+           our banner in the page's language (the dictionary's mock* strings,
+           the ones the marquee cards use), and the dashboard's «Как отвечают
+           посетители» card, dark, numbers from the build.
+
+           Without JavaScript, and under prefers-reduced-motion, this markup IS
+           the frame: banner shown, nothing moves. site/hero.js only adds
+           .hl--live, and a CSS timeline (gated on no-preference) runs the
+           cycle: a cursor dot presses «Принять всё», the banner goes, the
+           card's total gains one and today's bar grows.
+
+           The real client is NOT run here: the page's own banner and the demo
+           already use it, and a second instance could write ck_consent or send
+           a beacon. Nothing in this block can — there is no button, link or
+           script in it (spans only), and the whole stage is aria-hidden and
+           inert, so neither a screen reader nor the keyboard meets a fake
+           banner. The figure speaks once, through its label.
+
+           Every length is in --u (one design pixel of the 1152×700 stage), so
+           the stage scales with its container like the picture did — and its
+           box is reserved by aspect-ratio before anything paints (CLS 0). -->
+      <figure class="hero-shot" role="img" aria-label="Сайт-пример с баннером ConsentKit и карточка кабинета «Как отвечают посетители»" data-i18n-aria-label="heroShotAlt">
+        <div class="hl" data-hero-live aria-hidden="true" inert>
+          <div class="hl-win">
+            <div class="hl-bar"><i></i><i></i><i></i><span class="hl-url">atelier-nord.example</span></div>
+            <div class="hl-shop" lang="ro">
+              <div class="hl-top">
+                <span class="hl-logo">Atelier <em>Nord</em></span>
+                <span class="hl-nav"><span>Ceramică</span><span>Textile</span><span>Lumină</span><span>Despre noi</span></span>
+                <span class="hl-cart">Coș (0)</span>
+              </div>
+              <div class="hl-hero">
+                <div class="hl-copy">
+                  <span class="hl-kicker">Colecția de toamnă</span>
+                  <span class="hl-h">Obiecte lucrate de mână pentru casă</span>
+                  <span class="hl-sub">Ceramică, textile și lămpi din ateliere mici. Livrare în toată țara.</span>
+                  <span class="hl-shopbtn">Vezi colecția</span>
+                </div>
+                <div class="hl-photo"><i class="hl-shelf"></i><i class="hl-vase hl-vase--1"></i><i class="hl-vase hl-vase--2"></i><i class="hl-vase hl-vase--3"></i></div>
+              </div>
+              <div class="hl-grid">
+                <div class="hl-item"><i class="hl-pic"></i><span class="hl-name">Cană din gresie</span><span class="hl-price">Nou</span></div>
+                <div class="hl-item"><i class="hl-pic"></i><span class="hl-name">Bol pentru salată</span><span class="hl-price">Bestseller</span></div>
+                <div class="hl-item"><i class="hl-pic"></i><span class="hl-name">Vază mată</span><span class="hl-price">Ediție limitată</span></div>
+                <div class="hl-item"><i class="hl-pic"></i><span class="hl-name">Platou oval</span><span class="hl-price">Nou</span></div>
+              </div>
+              <div class="hl-banner" lang="{{LANG}}">
+                <span class="hl-b-title" data-i18n="mockTitle">Cookie на этом сайте</span>
+                <span class="hl-b-text" data-i18n="mockText">Необходимые cookie нужны, чтобы сайт работал. Остальные включаются только с вашего согласия.</span>
+                <span class="hl-b-actions">
+                  <span class="hl-b-btn hl-b-btn--accept" data-i18n="mockAccept">Принять всё</span>
+                  <span class="hl-b-btn" data-i18n="mockReject">Отклонить всё</span>
+                  <span class="hl-b-btn hl-b-btn--outline" data-i18n="mockSettings">Настроить</span>
+                </span>
+              </div>
+              <i class="hl-cursor"></i>
+            </div>
+          </div>
+          <div class="hl-card" lang="{{LANG}}">
+            <div class="hl-c-head" data-i18n="heroCardTitle">Как отвечают посетители</div>
+            <div class="hl-c-body">
+              <div class="hl-shares">
+                <div class="hl-share"><span class="hl-share-v">59&nbsp;%</span><span class="hl-share-l" data-i18n="heroCardAccept">Принимают всё</span></div>
+                <div class="hl-share"><span class="hl-share-v">18&nbsp;%</span><span class="hl-share-l" data-i18n="heroCardReject">Отклоняют</span></div>
+                <div class="hl-share"><span class="hl-share-v">23&nbsp;%</span><span class="hl-share-l" data-i18n="heroCardCustom">Выбирают сами</span></div>
+              </div>
+              <div class="hl-total"><span class="hl-total-l" data-i18n="heroCardTotal">Ответов за 30 дней</span><span class="hl-total-n" data-hl-count>{{HERO_TOTAL}}</span></div>
+              {{HERO_CHART}}
+              <div class="hl-cats">
+                <div class="hl-cat"><span class="hl-cat-l" data-i18n="heroCardFunctional">Функциональные разрешают</span><span class="hl-cat-n">79&nbsp;%</span><i class="hl-track"><i class="hl-fill" style="width: 79%"></i></i></div>
+                <div class="hl-cat"><span class="hl-cat-l" data-i18n="heroCardAnalytics">Аналитику разрешают</span><span class="hl-cat-n">74&nbsp;%</span><i class="hl-track"><i class="hl-fill" style="width: 74%"></i></i></div>
+                <div class="hl-cat"><span class="hl-cat-l" data-i18n="heroCardMarketing">Маркетинг разрешают</span><span class="hl-cat-n">62&nbsp;%</span><i class="hl-track"><i class="hl-fill" style="width: 62%"></i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </figure>
     </div>
   </section>
@@ -279,18 +343,22 @@
       <div class="fit">
         <ul class="fit__list">
           <li id="who-builders">
+            {{ICON:layout-template}}
             <span class="fit__title" data-i18n="fit1Title">Конструкторы</span>
             <span class="fit__text" data-i18n="fit1Text">Tilda, Wix, Squarespace, Webflow и другие: одна строка в поле для кода в head, без плагинов.</span>
           </li>
           <li id="who-wordpress">
+            {{ICON:plug}}
             <span class="fit__title" data-i18n="fit2Title">WordPress и WooCommerce</span>
             <span class="fit__text" data-i18n="fit2Text">Плагин или одна строка в head. Работает и с кэширующими плагинами.</span>
           </li>
           <li>
+            {{ICON:shopping-bag}}
             <span class="fit__title" data-i18n="fit3Title">Интернет-магазины</span>
             <span class="fit__text" data-i18n="fit3Text">Shopify, OpenCart, PrestaShop и другие: одна строка в шаблоне.</span>
           </li>
           <li id="who-agency">
+            {{ICON:building-2}}
             <span class="fit__title" data-i18n="fit4Title">Свой сайт или агентство</span>
             <span class="fit__text" data-i18n="fit4Text">Много сайтов в одном кабинете, доступ для коллег с ролями и сканы по расписанию.</span>
           </li>
@@ -543,18 +611,22 @@
       <h3 class="feat-more__head" data-i18n="featMoreTitle">И ещё</h3>
       <div class="feat-more">
         <article class="feat">
+          {{ICON:circle-pause}}
           <h3 data-i18n="feat1Title">Счётчики молчат до ответа</h3>
           <p data-i18n="feat1Text">Аналитика и реклама не запускаются, пока посетитель не нажал кнопку.</p>
         </article>
         <article class="feat">
+          {{ICON:megaphone}}
           <h3 data-i18n="feat5Title">Реклама продолжает работать</h3>
           <p data-i18n="feat5Text">Отказ не выключает Google целиком: он считает без cookie и без опознавания посетителя.</p>
         </article>
         <article class="feat">
+          {{ICON:languages}}
           <h3 data-i18n="feat8Title">Кабинет на трёх языках</h3>
           <p data-i18n="feat8Text">Русский, румынский и английский — интерфейс, письма и подсказки сканера. Посетитель видит cookie на своём языке.</p>
         </article>
         <article class="feat">
+          {{ICON:users}}
           <h3 data-i18n="feat9Title">Команда с ролями</h3>
           <p data-i18n="feat9Text">Коллеги и подрядчики работают с сайтом под своими адресами: редактор настраивает, наблюдатель только смотрит.</p>
         </article>
@@ -572,10 +644,14 @@
            scan → adjust. The first banner version publishes itself, so step 4
            is a tweak, not a required action. `steps--4` narrows the track so
            all four fit on one desktop row instead of orphaning the fourth
-           onto a second row. -->
+           onto a second row.
+           V1.30.1 B2: the red numbered discs became one Lucide line icon per
+           step (an ICON placeholder the build inlines, licence in site/icons/). The
+           number stays as text in .step-n, visually hidden but read out, so
+           the order survives for a screen reader. -->
       <ol class="steps steps--4">
         <li>
-          <span class="step-n" aria-hidden="true">1</span>
+          <span class="step-head">{{ICON:code-xml}}<span class="step-n">1</span></span>
           <h3 data-i18n="how1Title">Вставьте строку баннера</h3>
           <p data-i18n="how1Text">Одна строка в head — в настройках конструктора, в шаблоне сайта или через диспетчер тегов. Без сборки и зависимостей.</p>
           <!-- 1 — a field holding one line, and a «copy» button beside it. -->
@@ -589,7 +665,7 @@
           </svg>
         </li>
         <li>
-          <span class="step-n" aria-hidden="true">2</span>
+          <span class="step-head">{{ICON:circle-check}}<span class="step-n">2</span></span>
           <h3 data-i18n="how2Title">Нажмите «Проверить»</h3>
           <p data-i18n="how2Text">Кабинет найдёт строку на вашем сайте: это и подтверждение домена, и проверка установки.</p>
           <!-- 2 — a card with a green tick: «баннер работает». -->
@@ -603,7 +679,7 @@
           </svg>
         </li>
         <li>
-          <span class="step-n" aria-hidden="true">3</span>
+          <span class="step-head">{{ICON:scan-search}}<span class="step-n">3</span></span>
           <h3 data-i18n="how3Title">Запустите скан</h3>
           <p data-i18n="how3Text">Сканер обойдёт сайт, найдёт сторонние сервисы и cookie и предложит готовую таблицу для баннера.</p>
           <!-- 3 — a three-row table, each row ending in a category pill. -->
@@ -620,7 +696,7 @@
           </svg>
         </li>
         <li>
-          <span class="step-n" aria-hidden="true">4</span>
+          <span class="step-head">{{ICON:sliders-horizontal}}<span class="step-n">4</span></span>
           <h3 data-i18n="how4Title">Настройте баннер</h3>
           <p data-i18n="how4Text">Первая версия публикуется сама. При желании поправьте цвета, тексты и таблицу в кабинете.</p>
           <!-- 4 — an editor: two switches on the left, a banner preview right. -->
@@ -849,6 +925,9 @@
 <script src="/vendor/ck-debug.js"></script>
 {{I18N_SCRIPT}}
 <script src="/app.js"></script>
+<!-- V1.30.1 B1: the first screen's cycle. Its own file and ?v=, so the page
+     can measure it (≤ 4 KB gzip); it never touches the consent client. -->
+<script src="/hero.js"></script>
 <!-- SPEC-V1.26 §2: last, so ConsentKit and the page are both wired
      before it reads the consent state and decorates the links. -->
 <script src="/analytics.js"></script>

@@ -120,6 +120,7 @@ export const DATALAYER_BOOT =
 export const VERSIONED_ASSETS = [
   '/styles.css',
   '/app.js',
+  '/hero.js',
   '/analytics.js',
   '/vendor/ck-core.js',
   '/vendor/ck-locales.js',
@@ -140,7 +141,7 @@ export function assetHash(urlPath) {
 export function versionAssets(html) {
   const known = new Set(VERSIONED_ASSETS);
   return html.replace(
-    /\b(href|src)="(\/(?:styles\.css|app\.js|analytics\.js|vendor\/[a-z0-9-]+\.js))"/g,
+    /\b(href|src)="(\/(?:styles\.css|app\.js|hero\.js|analytics\.js|vendor\/[a-z0-9-]+\.js))"/g,
     (m, attr, path) => {
       if (!known.has(path)) return m;
       return attr + '="' + path + '?v=' + assetHash(path) + '"';
@@ -971,17 +972,86 @@ export function renderMarquee(dict, lang) {
   ].join('\n');
 }
 
-/* V1.30 §3.1, owner 20.11.2026: the hero picture shows our banner and the
-   cabinet's «Как отвечают посетители» card, so each page language gets its
-   own composition — a Russian card on the Romanian page read as a mistake.
-   site/img/ is not content-hashed (§0), hence a name per language.
-   V1.30.1 A2: the card in it is re-shot in the cabinet's dark theme, and a
-   changed picture is a new name (hero-v130-* → hero-v1301-*). */
+/* V1.30 §3.1 / V1.30.1 B1: the first screen's picture is no longer a file.
+   It is a composition in the template's own markup — a fictional shop with a
+   static replica of our banner, and the dashboard's «Как отвечают посетители»
+   card — so it speaks the page's language through the dictionary like the
+   rest of the page, and site/hero.js can animate it. The only build-time part
+   is the card's daily chart: thirty days of answers, drawn here so the bars
+   and the total line can never disagree.
+
+   HERO_DAILY is [all answers, «принять всё»] per day, oldest first; the last
+   day is today, still under way, and it is the bar hero.js grows. The totals
+   sum to HERO_TOTAL, the number the card prints; the accept parts are ~59 %,
+   the share the card's first tile shows. A small shop's month (a dozen
+   answers a day, 381 in all) rather than a big one: at this scale one more
+   answer is a step of the bar a visitor can actually see. */
 export const SHOT_LANGS = ['ro', 'ru', 'en'];
 
-export function heroImage(lang) {
-  if (!SHOT_LANGS.includes(lang)) throw new Error(`no hero picture for ${lang}`);
-  return '/img/hero-v1301-' + lang + '.webp';
+export const HERO_DAILY = [
+  [11, 6], [13, 8], [12, 7], [14, 8], [16, 9], [9, 5], [8, 5],
+  [12, 7], [14, 8], [15, 9], [13, 8], [17, 10], [10, 6], [9, 5],
+  [12, 7], [14, 8], [16, 9], [13, 8], [18, 11], [11, 6], [9, 5],
+  [13, 8], [15, 9], [16, 9], [14, 8], [17, 10], [11, 6], [10, 6],
+  [13, 8], [6, 4]
+];
+export const HERO_TOTAL = HERO_DAILY.reduce((n, [all]) => n + all, 0);
+
+/* The chart as SVG: a 300×64 box stretched to the card's width
+   (preserveAspectRatio="none", as the dashboard draws its own), the busiest
+   day at full height. Each day is the lighter column of all answers with the
+   accept-all part over it — the dashboard's two-rect bar. Today's pair sits in
+   its own <g data-hl-today="N"> so hero.js can scale it from its foot. */
+export function heroChart() {
+  const W = 300;
+  const H = 64;
+  const slot = W / HERO_DAILY.length;
+  const max = Math.max(...HERO_DAILY.map(([all]) => all));
+  const r = (v) => Math.round(v * 100) / 100;
+  const bars = HERO_DAILY.map(([all, accept], i) => {
+    const x = r(i * slot);
+    const w = r(slot - 2);
+    const ha = r((all / max) * H);
+    const hb = r((accept / max) * H);
+    const pair = '<rect class="hl-day" x="' + x + '" y="' + r(H - ha) + '" width="' + w + '" height="' + ha + '"/>' +
+      '<rect class="hl-day-accept" x="' + x + '" y="' + r(H - hb) + '" width="' + w + '" height="' + hb + '"/>';
+    return i === HERO_DAILY.length - 1
+      ? '<g class="hl-today" data-hl-today="' + all + '">' + pair + '</g>'
+      : pair;
+  });
+  return '<svg class="hl-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" focusable="false">' +
+    bars.join('') + '</svg>';
+}
+
+/* V1.30.1 B2: the line icons — Lucide (ISC), one standalone .svg per icon in
+   site/icons/ with the licence beside them (site/icons/LICENSE.txt), the way
+   Onest sits beside OFL.txt. The template names an icon as {{ICON:name}}; the
+   build inlines the file's shapes into one <svg> of ours: 24px, stroke 1.5,
+   currentColor (the stylesheet paints it --ink-soft), hidden from assistive
+   tech — every icon sits beside a heading that says the same thing. Inline,
+   so an icon is never a request. */
+export const ICON_DIR = join(SITE_DIR, 'icons');
+
+export function iconSvg(name) {
+  if (!/^[a-z0-9-]+$/.test(name)) throw new Error(`bad icon name "${name}"`);
+  const file = join(ICON_DIR, name + '.svg');
+  if (!existsSync(file)) throw new Error(`site/icons/${name}.svg is missing ({{ICON:${name}}})`);
+  const inner = readFileSync(file, 'utf8').match(/<svg\b[^>]*>([\s\S]*?)<\/svg>/);
+  if (!inner) throw new Error(`site/icons/${name}.svg is not an <svg>`);
+  return '<svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    inner[1].trim() + '</svg>';
+}
+
+/* V1.30.1 B2: the trust line's numbers in their own span (weight 600,
+   tabular figures — the stylesheet). Done on the rendered line rather than in
+   the dictionary: «34 языка баннера» stays one translatable string, and the
+   live counts app.js adds later get the same span from setTrust(). Only a
+   number that OPENS an item is wrapped; the empty live slots match nothing. */
+export function markTrustNumbers(html) {
+  return html.replace(/(<p class="hero-trust" id="trust">)([\s\S]*?)(<\/p>)/, (m, open, body, close) =>
+    open + body.replace(/(<span class="trust-item"[^>]*>)(\d[\d\u00A0]*)/g,
+      '$1<span class="trust-num">$2</span>') + close);
 }
 
 /* V1.30.1 A2: the six «Что умеет» screenshots, one file per page language
@@ -1030,7 +1100,8 @@ export function renderPage(template, lang) {
     BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
     MARQUEE: renderMarquee(dict, lang),
-    HERO_IMG: heroImage(lang),
+    HERO_CHART: heroChart(),
+    HERO_TOTAL: String(HERO_TOTAL),
     ...Object.fromEntries(Object.entries(SHOT_BASES).map(([key, base]) => [key, shotImage(base, lang)])),
     I18N_SCRIPT: i18nScript
   };
@@ -1038,10 +1109,12 @@ export function renderPage(template, lang) {
   for (const [key, value] of Object.entries(map)) {
     html = html.split('{{' + key + '}}').join(value);
   }
+  html = html.replace(/\{\{ICON:([^}]*)\}\}/g, (m, name) => iconSvg(name));
+  html = markTrustNumbers(html);
 
   html = versionAssets(html);
 
-  const left = html.match(/\{\{[A-Z_]+\}\}/);
+  const left = html.match(/\{\{[A-Z_]+(?::[^}]*)?\}\}/);
   if (left) throw new Error(`unsubstituted placeholder ${left[0]} in the ${lang} page`);
 
   // Belt and braces, exactly like build-inline.mjs: an unescaped "</script"

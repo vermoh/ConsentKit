@@ -268,11 +268,18 @@ test('V1.30.1 A1: the glows are pointer-less gradients behind the content', () =
   assert.match(host[0], /isolation: isolate/);
   assert.match(host[0], /overflow: clip/);
 
-  // Under the hero picture: the brand decoration red, at most .14.
+  /* Under the hero picture.
+     UPDATED 20.11.2026 (owner, step A review): slop-scan flagged the brand-red
+     glow as `radial-halo` — a chromatic glow on a dark page reads as
+     generated — so it is neutral white now, like the two section glows, at
+     no more than .06, and no longer red in any form. */
   const hero = rule('.hero-shot::before');
-  assert.match(hero, /radial-gradient\(ellipse closest-side, var\(--accent-deco\), transparent\)/,
-    'the hero glow is not --accent-deco fading out');
-  assert.ok(Number(hero.match(/opacity: ([\d.]+)/)[1]) <= 0.14, 'the hero glow is stronger than .14');
+  assert.match(hero, /radial-gradient\(ellipse closest-side, #FFFFFF, transparent\)/,
+    'the hero glow is not neutral white fading out');
+  assert.doesNotMatch(hero, /--accent|#E63939|#D63838|#B82E2D/i, 'the hero glow is red again');
+  const heroOpacity = Number(hero.match(/opacity: ([\d.]+)/)[1]);
+  assert.ok(heroOpacity <= 0.06, `the hero glow is at ${heroOpacity} — the owner capped it at .06`);
+  assert.ok(heroOpacity >= 0.04, `the hero glow is at ${heroOpacity} — too faint to see behind the picture`);
   // Behind «Что умеет» and «Тарифы»: neutral white, at most .05.
   // (Its own rule, after a comment — not the shared one that opens with the hero.)
   const neutral = (LAYER_1301.match(/\*\/\n#features::before,\n#pricing::before \{[^}]*\}/) || [''])[0];
@@ -291,7 +298,10 @@ test('V1.30.1 A1: text over the glows still clears AA', () => {
     const g = parseInt(ground.slice(1 + i, 3 + i), 16);
     return Math.round(t * a + g * (1 - a)).toString(16).padStart(2, '0');
   }).join('');
-  const heroPeak = mix('#E63939', 0.14, '#1B1B1B');   // the hero lift
+  /* UPDATED 20.11.2026: the hero glow is white now; the opacity is read
+     from the stylesheet, so a stronger glow cannot slip past this check. */
+  const heroAlpha = Number(LAYER_1301.match(/\n\.hero-shot::before \{[^}]*opacity: ([\d.]+)/)[1]);
+  const heroPeak = mix('#FFFFFF', heroAlpha, '#1B1B1B');   // the hero lift
   for (const ink of ['#F2F2F2', '#B3B3B3', '#FF6B6B']) {
     assert.ok(ratio(ink, heroPeak) >= 4.5, `${ink} over the hero glow is ${ratio(ink, heroPeak).toFixed(2)}:1`);
   }

@@ -5,11 +5,10 @@
  * «Своими силами / ConsentKit» table. All three depend on files and structure
  * that nothing else in the suite watches:
  *
- *   · seven .webp screenshots in site/img/, referenced from the built pages
- *     (since V1.30 the hero's is a composed picture, one per language;
- *     since V1.30.1 every one of the seven is one file per page language,
- *     the dashboard shot in its dark theme: hero-v1301-ro.webp,
- *     cabinet-stats-ro.webp and so on);
+ *   · six .webp screenshots in site/img/, referenced from the built pages,
+ *     one file per page language, the dashboard shot in its dark theme
+ *     (cabinet-stats-ro.webp and so on). The hero's picture was a seventh
+ *     until V1.30.1 B1 made the first screen live markup;
  *   · six .pcard articles, each with a fact pill, a heading and an image;
  *   · #compare with six rows, in three languages, no Cyrillic in ro/en
  *     (since V1.30 a block inside «Тарифы», not a section of its own);
@@ -49,7 +48,12 @@ import {
    language, the cabinet in its dark theme speaking that language (the cookie
    declaration stays the light public page it is). SHOTS holds the BASE name;
    a page references `<base>-<its language>.webp` and no other language's. */
-const HERO_SHOTS = { ro: 'hero-v1301-ro.webp', ru: 'hero-v1301-ru.webp', en: 'hero-v1301-en.webp' };
+/* UPDATED for SPEC V1.30.1 B1 — the first screen is no longer a picture
+   but the same composition in markup (shop, banner replica, cabinet card;
+   see test/site-v1301b.test.mjs), so the three hero-v1301-*.webp files are
+   gone from site/img/ and from these lists. Their old names stay here only
+   so the hero test below can insist that no page still asks for one. */
+const OLD_HERO_SHOTS = ['hero-v1301-ro.webp', 'hero-v1301-ru.webp', 'hero-v1301-en.webp'];
 const SHOTS = [
   ['cabinet-readiness', 'pshot1Alt'],
   ['cabinet-scan', 'pshot2Alt'],
@@ -82,10 +86,9 @@ function webpSize(path) {
    starts costing more than the page it advertises. */
 const MAX_BYTES = 250 * 1024;
 
-test('§0: the product screenshots and the three hero pictures exist in site/img/ and stay small', () => {
-  const files = [...Object.values(HERO_SHOTS),
-    ...SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code)))];
-  assert.equal(files.length, 3 + 6 * 3);
+test('§0: the product screenshots exist in site/img/ and stay small', () => {
+  const files = SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code)));
+  assert.equal(files.length, 6 * 3);
   for (const file of files) {
     const path = join(SITE_DIR, 'img', file);
     assert.ok(existsSync(path), `site/img/${file} is missing`);
@@ -103,8 +106,7 @@ test('§0: every screenshot is referenced from every built page, with a real alt
     const html = renderPage(template, code);
     const dict = readDict(code);
 
-    for (const [file, altKey] of [[HERO_SHOTS[code], 'heroShotAlt'],
-      ...SHOTS.map(([base, key]) => [shotFile(base, code), key])]) {
+    for (const [file, altKey] of SHOTS.map(([base, key]) => [shotFile(base, code), key])) {
       /* Root-absolute, always. /ru and /ro are SUBFOLDERS: a relative
          "img/cabinet-scan.webp" on /ru resolves to /ru/img/… and 404s, which
          is the same trap the «assets are referenced absolutely» test guards
@@ -166,10 +168,10 @@ test('§0: every screenshot is referenced from every built page, with a real alt
 
 test('§0 / V1.30.1 A2: site/img/ holds exactly the pictures the pages use', () => {
   /* Images are not hashed, so an old name that lingers is not harmless: it
-     is a second copy someone can link to. The folder is the hero trio and the
-     six per-language screenshots, nothing else. */
-  const want = new Set([...Object.values(HERO_SHOTS),
-    ...SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code)))]);
+     is a second copy someone can link to. The folder is the six
+     per-language screenshots, nothing else (V1.30.1 B1: the hero trio went
+     with the picture). */
+  const want = new Set(SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code))));
   const have = readdirSync(join(SITE_DIR, 'img')).filter((f) => !f.startsWith('.'));
   for (const f of have) assert.ok(want.has(f), `site/img/${f} is not referenced by any page`);
   assert.equal(have.length, want.size, `site/img/ holds ${have.length} files, the pages use ${want.size}`);
@@ -376,32 +378,36 @@ test('§5: the hero has one primary button and no route to the demo', () => {
     assert.match(html, /<nav class="head-nav"[\s\S]*?href="#demo"/,
       `the ${code} menu no longer offers the demo`);
 
-    /* UPDATED for SPEC V1.30 §3.1 — the hero picture is a composition of our
-       real banner on a fictional shop page with the dashboard card in front.
-       The browser window and its three dots are drawn INTO the picture, so the
-       page no longer wraps it in a frame of its own. It is the first screen's
-       image: eager, high priority, its box reserved by width and height.
-       Owner 20.11.2026: each page shows its OWN language's picture — the
-       banner and the cabinet card in it speak that language — and never
-       another page's, nor the old single hero-v130.webp with a Russian card.
-       V1.30.1 A2: nor the light-card hero-v130-<lang>.webp it replaced. */
-    const own = HERO_SHOTS[code];
-    assert.ok(own, `no hero picture is listed for ${code}`);
-    const img = hero.match(new RegExp(`<img class="hero-img" src="/img/${own.replace(/\./g, '\\.')}"[^>]*>`));
-    assert.ok(img, `the ${code} hero does not show its own ${own}`);
-    for (const [other, file] of Object.entries(HERO_SHOTS)) {
-      if (other === code) continue;
-      assert.ok(!html.includes(file), `the ${code} page references the ${other} hero picture ${file}`);
+    /* UPDATED for SPEC V1.30.1 B1 — the hero picture (V1.30 §3.1: a
+       fictional shop running our banner, the dashboard card in front, one
+       file per language) became that same composition in MARKUP: no <img>,
+       no file, and no old picture of any language left behind. What the
+       picture's tag guaranteed is kept in the new shape: the frame is in the
+       served HTML (first paint, no request), its box is reserved, and it is
+       labelled once in the page's language. The composition's own contract —
+       inert replica, no consent client, reduced motion — is
+       test/site-v1301b.test.mjs. */
+    const fig = hero.match(/<figure class="hero-shot"[^>]*>/);
+    assert.ok(fig, `the ${code} hero has no figure`);
+    assert.match(fig[0], /role="img"/, `the ${code} hero composition is not one image to assistive tech`);
+    const label = readDict(code).heroShotAlt.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    assert.ok(fig[0].includes(`aria-label="${label}"`),
+      `the ${code} hero is not labelled with its own heroShotAlt`);
+    assert.match(hero, /<div class="hl" data-hero-live aria-hidden="true" inert>/,
+      `the ${code} hero has no live composition`);
+    assert.doesNotMatch(hero, /<img\b/, `the ${code} hero still shows a picture`);
+    for (const file of OLD_HERO_SHOTS) {
+      assert.ok(!html.includes(file), `the ${code} page still references ${file}`);
+      assert.ok(!existsSync(join(SITE_DIR, 'img', file)), `site/img/${file} is still there`);
     }
     assert.ok(!html.includes('hero-v130.webp'),
       `the ${code} page still references the single-language hero-v130.webp`);
     assert.ok(!/hero-v130-(ro|ru|en)\.webp/.test(html),
       `the ${code} page still references a V1.30 hero picture with the light cabinet card`);
-    assert.match(img[0], /loading="eager"/, `the ${code} hero picture is lazy`);
-    assert.match(img[0], /fetchpriority="high"/, `the ${code} hero picture is not high priority`);
-    assert.match(img[0], /width="1152" height="700"/, `the ${code} hero picture has no reserved box`);
     /* The old screenshot of a client's site is gone from the page, and the
-       skeleton replica before it must not come back either. */
+       marquee's skeleton replica is not the hero's banner either: the live
+       one has its own measured component (.hl-banner). */
     assert.ok(!html.includes('hero-site.webp'), `the ${code} page still references hero-site.webp`);
     assert.ok(!/class="shot-banner"/.test(hero),
       `the ${code} hero carries a skeleton replica beside the picture`);
