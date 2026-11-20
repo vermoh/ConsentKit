@@ -67,6 +67,11 @@ const shotFile = (base, code) => `${base}-${code}.webp`;
    The close-up ships at 800 only — the source is 784px, and its 2× upscale
    added weight, not detail (the spec's own fallback). */
 const SHIELD_FILES = ['shield-glass-600.webp', 'shield-glass-1200.webp', 'shield-closeup-800.webp'];
+/* SPEC V1.30.3 §1: the five CABINET screenshots again, shot in the cabinet's
+   light theme, shown when the page is light (the declaration is the public
+   page, light in both themes, so it has no twin). */
+const LIGHT_SHOTS = SHOTS.filter(([base]) => base !== 'declaration');
+const lightShotFile = (base, code) => `${base}-light-${code}.webp`;
 
 /* The pixel size of a .webp, read from its header — the three container
    shapes libwebp writes: simple lossy (VP8), lossless (VP8L) and extended
@@ -177,11 +182,48 @@ test('§0 / V1.30.1 A2: site/img/ holds exactly the pictures the pages use', () 
      with the picture). */
   /* UPDATED for SPEC V1.30.2 §0 — plus the owner's two shield pictures,
      one set for every language (test/site-v1302.test.mjs owns their use). */
+  /* UPDATED for SPEC V1.30.3 §1 — plus the light twins of the five cabinet
+     screenshots, one per language. */
   const want = new Set([...SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code))),
+    ...LIGHT_SHOTS.flatMap(([base]) => LANGS.map(({ code }) => lightShotFile(base, code))),
     ...SHIELD_FILES]);
   const have = readdirSync(join(SITE_DIR, 'img')).filter((f) => !f.startsWith('.'));
   for (const f of have) assert.ok(want.has(f), `site/img/${f} is not referenced by any page`);
   assert.equal(have.length, want.size, `site/img/ holds ${have.length} files, the pages use ${want.size}`);
+});
+
+/* SPEC V1.30.3 §1: in the light theme the bento shows the cabinet's light
+   theme. Each of the five cabinet cards carries two <img>: the dark one and,
+   right after it, its light twin — same alt (from the dictionary), same box,
+   both lazy. The stylesheet displays one of them; a lazy image that is not
+   displayed is never fetched, so each visitor downloads one set. */
+test('V1.30.3 §1: the light cabinet screenshots exist, pair with the dark ones, and load only in light', () => {
+  const template = readTemplate();
+  for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    for (const [base] of LIGHT_SHOTS) {
+      const dark = shotFile(base, code);
+      const light = lightShotFile(base, code);
+      const path = join(SITE_DIR, 'img', light);
+      assert.ok(existsSync(path), `site/img/${light} is missing`);
+      assert.ok(statSync(path).size < MAX_BYTES, `site/img/${light} is over 250 KB`);
+      assert.deepEqual(webpSize(path), webpSize(join(SITE_DIR, 'img', dark)),
+        `${light} is not the pixel size of ${dark}`);
+      const pair = html.match(new RegExp(`(<img class="shot-dark" src="/img/${dark}"[^>]*>)\\s*(<img class="shot-light" src="/img/${light}"[^>]*>)`));
+      assert.ok(pair, `the ${code} page does not set ${light} right after ${dark}`);
+      const attrs = (tag) => tag.replace(/^<img class="[^"]+" src="[^"]+"/, '');
+      assert.equal(attrs(pair[2]), attrs(pair[1]), `${light} does not share the dark image's box, alt and loading`);
+      assert.match(pair[2], /loading="lazy"/, `${light} is not lazy`);
+    }
+    // The declaration has no twin.
+    assert.doesNotMatch(html, /declaration-light-/, `the ${code} page asks for a light declaration`);
+  }
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  assert.match(css, /\.pcard__shot img\.shot-light \{ display: none; \}/, 'the light shots are displayed by default');
+  assert.match(css, /:root\[data-theme="light"\] \.pcard__shot img\.shot-dark \{ display: none; \}/,
+    'the dark shots stay displayed in the light theme');
+  assert.match(css, /:root\[data-theme="light"\] \.pcard__shot img\.shot-light \{ display: block; \}/,
+    'the light shots are not shown in the light theme');
 });
 
 /* ------------------------------------------------------ §1 product cards */

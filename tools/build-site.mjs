@@ -68,30 +68,49 @@ export function switchPath(dir) {
 
 /* ---------------------------------------------------------- theme, before paint */
 
-/* Owner, 14.09.2026: the site is DARK ONLY. The «Тема» switch in the menu is
- * gone, and so is the inline boot script that used to stand here — it read a
- * stored choice out of localStorage and stamped data-theme on <html> before
- * the first paint so a chosen theme would not flash. With one theme there is
- * no choice to store, nothing to read and nothing to flash, so the script,
- * its storage key and its try/catch all went with the switch.
+/* Owner, 20.11.2026 (SPEC V1.30.3 §1), replacing the «dark only» rule of
+ * 14.09.2026: the site is DARK BY DEFAULT for everyone, whatever the system
+ * says — prefers-color-scheme is not consulted anywhere — and LIGHT only when
+ * the visitor presses the moon/sun button in the capsule. The choice lives in
+ * localStorage under THEME_KEY ('dark' | 'light').
  *
- * What replaces it is two static metas, and they still have to be in <head>
- * ABOVE the stylesheet link: color-scheme tells the browser to paint its own
- * form controls and scrollbars dark from the very first paint rather than
- * drawing a light set and restyling, and theme-color hands mobile Chrome and
- * Safari the page's own --bg for the address bar. They are one constant
- * rather than a literal in three head builders (the template's map and the
- * two law-page head arrays) so the landing and /law cannot drift apart. */
+ * Two pieces, both in <head> ABOVE the stylesheet link:
+ *
+ *   THEME_META  the dark defaults as static metas. color-scheme tells the
+ *               browser to paint its own controls and scrollbars dark from the
+ *               first paint; theme-color hands mobile Chrome and Safari the
+ *               page's --bg for the address bar. Without JavaScript they are
+ *               the whole story, and the page is dark.
+ *   THEME_BOOT  one inline statement, AFTER the dataLayer declaration (that
+ *               one must stay the first script on the page, SPEC-V1.26 §2).
+ *               It reads the stored choice inside try/catch (storage can be
+ *               blocked or throw), stamps data-theme on <html> — always, "dark"
+ *               or "light", so the stylesheet can tell «JS ran» from «no JS»
+ *               and show the toggle only when it can work — and, for light,
+ *               rewrites the two metas. It runs before the stylesheet is even
+ *               requested, so a light visitor never sees a dark frame.
+ *
+ * They are constants rather than literals in three head builders (the
+ * template's map and the two law-page head arrays) so /law cannot drift. */
+export const THEME_KEY = 'ck-site-theme';
+export const THEME_COLORS = { dark: '#141414', light: '#F2F0E9' };
+
 export const THEME_META =
   '<meta name="color-scheme" content="dark">\n' +
-  '<meta name="theme-color" content="#141414">';
+  '<meta name="theme-color" content="' + THEME_COLORS.dark + '">';
+
+export const THEME_BOOT =
+  '<script>(function(){var t="dark";try{if(localStorage.getItem("' + THEME_KEY + '")==="light")t="light"}catch(e){}' +
+  'var d=document.documentElement;d.setAttribute("data-theme",t);' +
+  'if(t==="light"){var m=document.querySelector(\'meta[name="color-scheme"]\');if(m)m.setAttribute("content","light");' +
+  'm=document.querySelector(\'meta[name="theme-color"]\');if(m)m.setAttribute("content","' + THEME_COLORS.light + '")}})();</script>';
 
 /* ------------------------------------------------------- dataLayer, first */
 
 /* SPEC-V1.26 §2: `window.dataLayer` must be declared by the FIRST statement of
  * the FIRST script on the page — before the vendor client, before anything.
- * (It used to have to beat the theme boot script too; that script is gone
- * with the theme switch, and the metas that replaced it run no JavaScript.)
+ * The theme boot script (THEME_BOOT, SPEC V1.30.3 §1) is placed right AFTER
+ * this one, so the declaration is still the first statement of the first script.
  *
  * WHY IT CANNOT LIVE IN analytics.js. ck-core.js pushes its Consent Mode
  * default at PARSE TIME, and it loads five scripts earlier than analytics.js.
@@ -643,7 +662,9 @@ export function renderLawPage(template, lang, page) {
 
   const head = applyDict(slice(template, 'HEADER'), dict, lang)
     .replace('{{LANG_SWITCH}}', langSwitch(lang, paths))
-    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
+    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)))
+    // V1.30.3: the capsule's theme toggle carries two line icons.
+    .replace(/\{\{ICON:([^}]*)\}\}/g, (m, name) => iconSvg(name));
   const foot = footerFor(template, dict, lang, entry);
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
 
@@ -686,6 +707,7 @@ export function renderLawPage(template, lang, page) {
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
     THEME_META,
     DATALAYER_BOOT,
+    THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
     '<body>',
@@ -744,7 +766,9 @@ export function renderLawIndex(template, lang) {
 
   const head = applyDict(slice(template, 'HEADER'), dict, lang)
     .replace('{{LANG_SWITCH}}', langSwitch(lang, paths))
-    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
+    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)))
+    // V1.30.3: the capsule's theme toggle carries two line icons.
+    .replace(/\{\{ICON:([^}]*)\}\}/g, (m, name) => iconSvg(name));
   const foot = footerFor(template, dict, lang, entry);
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
   /* Same rewrite as the article pages, header and footer alike — see the
@@ -784,6 +808,7 @@ export function renderLawIndex(template, lang) {
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
     THEME_META,
     DATALAYER_BOOT,
+    THEME_BOOT,
     '<link rel="stylesheet" href="/styles.css">',
     '</head>',
     '<body>',
@@ -1045,7 +1070,11 @@ export function iconSvg(name) {
     inner[1].trim() + '</svg>';
 }
 
-/* V1.30.1 B2: the trust line's numbers in their own span (weight 600,
+/* NOTE (SPEC V1.30.3 §3): the data cards are built with their numbers
+   already in <span class="trust-num"> (renderFigures), so on the home pages
+   this pass now finds nothing to wrap; it stays as the guard for any plain
+   trust item that opens with a number.
+   V1.30.1 B2: the trust line's numbers in their own span (weight 600,
    tabular figures — the stylesheet). Done on the rendered line rather than in
    the dictionary: «34 языка баннера» stays one translatable string, and the
    live counts app.js adds later get the same span from setTrust(). Only a
@@ -1059,21 +1088,170 @@ export function markTrustNumbers(html) {
       '$1<span class="trust-num">$2</span>') + close);
 }
 
+/* SPEC V1.30.3 §3: the band of big numbers becomes four data cards after
+   eclar.md — a 40px number, one phrase, and a small chart the BUILD draws as
+   inline SVG (no library, no request, deterministic, so building twice is
+   byte-identical). The charts are decoration (aria-hidden): the number and
+   the phrase carry the meaning. They paint with classes the stylesheet maps
+   to tokens, so they follow both themes; no red (the accent is reserved).
+
+   The structure is still the trust line's: <div class="figures" id="trust">
+   holding <p class="trust-item"> children (no <div> inside, the hidden
+   consents slot first, data-trust="services" on the catalogue card) — app.js
+   fills the live slot exactly as before.
+
+     accept     the share of «Принять всё» from the first screen's example card
+                (HERO_SHARES — the same invented sample, marked «пример»), as
+                a ring of the three answers;
+     services   the catalogue count from site/src/stats.json, one dot each;
+     readiness  the 36 points as a segmented ring, 7 of them done — the state
+                the readiness screenshot in «Что умеет» shows;
+     languages  bubbles with language codes, «+N» for the rest of the 34. */
+export const HERO_SHARES = { accept: 59, reject: 18, custom: 23 };
+export const READINESS_POINTS = 36;
+export const READINESS_DONE = 7;
+export const BANNER_LANGUAGES = 34;
+
+const svgNum = (v) => String(Math.round(v * 100) / 100);
+
+/* A ring of arcs on one circle: each segment is a dash of its value on a
+   pathLength of `total`, with a small gap so the parts read apart. */
+function figRing(segments, total, gap, label) {
+  let at = 0;
+  const arcs = segments.map(([v, cls]) => {
+    const len = Math.max(v - gap, 0.2);
+    const arc = '<circle class="' + cls + '" cx="60" cy="60" r="46" pathLength="' + total + '" ' +
+      'stroke-dasharray="' + svgNum(len) + ' ' + svgNum(total - len) + '" stroke-dashoffset="' + svgNum(-at) + '"/>';
+    at += v;
+    return arc;
+  }).join('');
+  return '<svg class="fig__chart fig__chart--ring" data-chart="' + label + '" viewBox="0 0 120 120" width="120" height="120" ' +
+    'aria-hidden="true" focusable="false"><g transform="rotate(-90 60 60)" fill="none" stroke-width="13">' + arcs + '</g></svg>';
+}
+
+export function figAcceptChart(shares = HERO_SHARES) {
+  return figRing([[shares.accept, 'fig-a'], [shares.reject, 'fig-b'], [shares.custom, 'fig-c']], 100, 1.6, 'accept');
+}
+
+export function figReadinessChart(points = READINESS_POINTS, done = READINESS_DONE) {
+  const segs = [];
+  for (let i = 0; i < points; i++) segs.push([1, i < done ? 'fig-a' : 'fig-c']);
+  return figRing(segs, points, 0.28, 'readiness');
+}
+
+/* One dot per service, eighteen to a row. */
+export function figServicesChart(n = SITE_STATS.services) {
+  const cols = 18;
+  const rows = Math.ceil(n / cols);
+  const dots = [];
+  for (let i = 0; i < n; i++) {
+    dots.push('<circle cx="' + ((i % cols) * 10 + 5) + '" cy="' + (Math.floor(i / cols) * 10 + 5) + '" r="3.2"/>');
+  }
+  return '<svg class="fig__chart fig__chart--dots" data-chart="services" data-dots="' + n + '" viewBox="0 0 ' + cols * 10 + ' ' + rows * 10 + '" ' +
+    'width="' + cols * 10 + '" height="' + rows * 10 + '" aria-hidden="true" focusable="false"><g class="fig-a">' + dots.join('') + '</g></svg>';
+}
+
+/* Hand-placed bubbles (no two overlap), the page languages first. */
+export const FIG_BUBBLES = [
+  ['ro', 34, 50, 30], ['ru', 92, 40, 25], ['en', 140, 56, 22], ['de', 180, 30, 17],
+  ['fr', 186, 72, 14]
+];
+export function figLanguagesChart(total = BANNER_LANGUAGES) {
+  const rest = total - FIG_BUBBLES.length;
+  const all = FIG_BUBBLES.concat([['+' + rest, 98, 82, 13]]);
+  const bubbles = all.map(([code, cx, cy, r], i) =>
+    '<g class="' + (i === 0 ? 'fig-bubble fig-bubble--lead' : 'fig-bubble') + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/>' +
+    '<text x="' + cx + '" y="' + cy + '" font-size="' + svgNum(r * 0.62) + '" text-anchor="middle" dominant-baseline="central">' +
+    escapeHtml(code) + '</text></g>').join('');
+  return '<svg class="fig__chart fig__chart--bubbles" data-chart="languages" viewBox="0 0 204 96" width="204" height="96" ' +
+    'aria-hidden="true" focusable="false">' + bubbles + '</svg>';
+}
+
+/* «86 сервисов в базе» -> the opening number apart, the phrase after it. */
+function figSplit(text) {
+  const m = String(text).match(/^(\d[\d ]*)\s+([\s\S]*)$/);
+  if (!m) throw new Error(`a figure card's text does not open with its number: «${text}»`);
+  return [m[1], m[2]];
+}
+
+export function renderFigures(dict, lang) {
+  const card = (attrs, num, text, chart, note) =>
+    '        <p class="trust-item fig"' + attrs + '><span class="trust-num">' + num + '</span> ' +
+    '<span class="fig__text">' + escapeHtml(text) + '</span>' + chart +
+    (note ? '<span class="fig__note">' + escapeHtml(note) + '</span>' : '') + '</p>';
+  const [sNum, sText] = figSplit(trustServicesText(dict, lang));
+  const [rNum, rText] = figSplit(dict.figReadiness);
+  const [lNum, lText] = figSplit(dict.trustLanguages);
+  if (rNum !== String(READINESS_POINTS)) throw new Error(`${lang}.json figReadiness does not say ${READINESS_POINTS}`);
+  if (lNum !== String(BANNER_LANGUAGES)) throw new Error(`${lang}.json trustLanguages does not say ${BANNER_LANGUAGES}`);
+  return [
+    '        <p class="trust-item" data-trust="consents" hidden></p>',
+    card(' data-fig="accept"', HERO_SHARES.accept + '<span class="fig__unit">%</span>', dict.figAccept,
+      figAcceptChart(), dict.figExample),
+    card(' data-trust="services" data-fig="services"', escapeHtml(sNum), sText, figServicesChart()),
+    card(' data-fig="readiness"', escapeHtml(rNum), rText, figReadinessChart()),
+    card(' data-fig="languages"', escapeHtml(lNum), lText, figLanguagesChart())
+  ].join('\n');
+}
+
 /* SPEC V1.30.2 §4.3: the «Работает с» row under the first screen — where the
    one line goes in. Platforms the banner is installed on (nominative use of
    their names), never a competitor and never a client. Set as type in the
    page's own font, monochrome --ink-soft: no logo files, so nothing to fetch
    and nothing to license. Same names in every language. */
-export const PLATFORMS = ['Tilda', 'WordPress', 'WooCommerce', 'Shopify', 'OpenCart', 'Wix',
-  'Webflow', 'Google Tag Manager'];
+/* Owner's addition, 20.11.2026: real logos. Simple Icons 16.38.0 (CC0-1.0,
+   site/icons/brands/LICENSE.md; trademarks belong to their owners, used
+   nominatively — site/icons/brands/README.md). Each logo is inlined (no
+   request), monochrome currentColor (the stylesheet paints it --ink-soft in
+   both themes), aria-hidden; the platform's name stands beside it as text,
+   so the row reads the same to a screen reader. Tilda and OpenCart have no
+   mark in Simple Icons and are set as their names alone. */
+export const BRAND_DIR = join(SITE_DIR, 'icons', 'brands');
+export const PLATFORMS = [
+  { name: 'Tilda' },
+  { name: 'WordPress', logo: 'wordpress' },
+  { name: 'WooCommerce', logo: 'woocommerce', wordmark: [0, 9.58, 24, 4.84] },
+  { name: 'Shopify', logo: 'shopify' },
+  { name: 'OpenCart' },
+  { name: 'Wix', logo: 'wix', wordmark: [0, 7.35, 24, 9.29] },
+  { name: 'Webflow', logo: 'webflow' },
+  { name: 'Squarespace', logo: 'squarespace' },
+  { name: 'PrestaShop', logo: 'prestashop' },
+  { name: 'Google Tag Manager', logo: 'googletagmanager' }
+];
+
+/* Two of the marks are WORDMARKS (WooCommerce, Wix): the logo already spells
+   the name, so it stands alone, drawn to its own measured box (getBBox of the
+   Simple Icons path, so it is not a sliver in a 24×24 square), and the name
+   stays in the markup for a screen reader only. */
+export function brandSvg(slug, box) {
+  if (!/^[a-z0-9]+$/.test(slug)) throw new Error(`bad brand slug "${slug}"`);
+  const file = join(BRAND_DIR, slug + '.svg');
+  if (!existsSync(file)) throw new Error(`site/icons/brands/${slug}.svg is missing`);
+  const inner = readFileSync(file, 'utf8').match(/<svg\b[^>]*viewBox="0 0 24 24"[^>]*>([\s\S]*?)<\/svg>/);
+  if (!inner) throw new Error(`site/icons/brands/${slug}.svg is not a 24×24 <svg>`);
+  const shapes = inner[1].replace(/<title>[\s\S]*?<\/title>/g, '').trim();
+  if (box) {
+    const h = 16;
+    const w = Math.round((box[2] / box[3]) * h);
+    return '<svg class="brand brand--wordmark" width="' + w + '" height="' + h + '" viewBox="' + box.join(' ') + '" ' +
+      'fill="currentColor" aria-hidden="true" focusable="false">' + shapes + '</svg>';
+  }
+  return '<svg class="brand" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ' +
+    'aria-hidden="true" focusable="false">' + shapes + '</svg>';
+}
 
 export function renderPlatforms() {
-  return PLATFORMS.map((name) => '          <li class="platform">' + escapeHtml(name) + '</li>').join('\n');
+  return PLATFORMS.map(({ name, logo, wordmark }) =>
+    '          <li class="platform' + (logo ? '' : ' platform--text') + '">' +
+    (logo ? brandSvg(logo, wordmark) : '') +
+    '<span class="platform__name' + (wordmark ? ' platform__name--sr' : '') + '">' + escapeHtml(name) + '</span></li>').join('\n');
 }
 
 /* V1.30.1 A2: the six «Что умеет» screenshots, one file per page language
    like the hero — the cabinet in its dark theme speaking the page's language
-   (the declaration stays the light public page it is). Each placeholder in
+   (the declaration stays the light public page it is). V1.30.3 adds the
+   light-theme twins below (LIGHT_SHOT_KEYS). Each placeholder in
    the template names its base; every language's file has the same pixel
    size, so the width/height the template carries hold for all three. */
 export const SHOT_BASES = {
@@ -1084,6 +1262,15 @@ export const SHOT_BASES = {
   SHOT_DECLARATION: 'declaration',
   SHOT_PREVIEW: 'cabinet-preview'
 };
+
+/* SPEC V1.30.3 §1: the same five cabinet cards in the cabinet's LIGHT theme
+   (cabinet-<base>-light-<lang>.webp), shown when the page is light. The
+   declaration has no twin: it is the public page, light in both themes. */
+export const LIGHT_SHOT_KEYS = ['SHOT_READINESS', 'SHOT_SCAN', 'SHOT_STATS', 'SHOT_TEXTS', 'SHOT_PREVIEW'];
+
+export function lightShotImage(base, lang) {
+  return shotImage(base, lang).replace(/-([a-z]{2})\.webp$/, '-light-$1.webp');
+}
 
 export function shotImage(base, lang) {
   if (!SHOT_LANGS.includes(lang)) throw new Error(`no screenshots for ${lang}`);
@@ -1111,9 +1298,11 @@ export function renderPage(template, lang) {
     OG_LOCALE_ALT: ogLocaleAlt(lang),
     LANG_SWITCH: langSwitch(lang),
     DATALAYER_BOOT,
+    THEME_META,
+    THEME_BOOT,
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
     VERSION: escapeHtml(VERSION),
-    TRUST_SERVICES: escapeHtml(trustServicesText(dict, lang)),
+    FIGURES: renderFigures(dict, lang),
     BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
     MARQUEE: renderMarquee(dict, lang),
@@ -1121,6 +1310,7 @@ export function renderPage(template, lang) {
     HERO_TOTAL: String(HERO_TOTAL),
     PLATFORMS: renderPlatforms(),
     ...Object.fromEntries(Object.entries(SHOT_BASES).map(([key, base]) => [key, shotImage(base, lang)])),
+    ...Object.fromEntries(LIGHT_SHOT_KEYS.map((key) => [key + '_LIGHT', lightShotImage(SHOT_BASES[key], lang)])),
     I18N_SCRIPT: i18nScript
   };
 

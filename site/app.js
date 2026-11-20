@@ -1585,6 +1585,7 @@
     renderStats();
     wireReveal();
     wireCheckForms();
+    wireHeroCheck();
     fillLanguageSelect();
     fillPositionSelect();
     fillAccentSwatches();
@@ -1760,10 +1761,113 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
+     The theme toggle — SPEC V1.30.3 §1
+
+     Dark by default; light only by this button. The head's boot script has
+     already applied a stored choice before the first paint (THEME_BOOT in
+     tools/build-site.mjs) — this only answers the click: flip data-theme on
+     <html>, the two metas with it, aria-pressed, and store the choice. The
+     ONE key this file may write (a test holds it to that); storage can be
+     blocked or throw, so the write is in try/catch and a failed write still
+     switches the page for this visit.
+     ══════════════════════════════════════════════════════════════════ */
+
+  var THEME_KEY = 'ck-site-theme';
+  var THEME_COLORS = { dark: '#141414', light: '#F2F0E9' };
+
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    var cs = $('meta[name="color-scheme"]');
+    if (cs) cs.setAttribute('content', theme);
+    var tc = $('meta[name="theme-color"]');
+    if (tc) tc.setAttribute('content', THEME_COLORS[theme]);
+    $$('.theme-toggle').forEach(function (b) {
+      b.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+    });
+  }
+
+  function wireTheme() {
+    var buttons = $$('.theme-toggle');
+    if (!buttons.length) return;
+    applyTheme(currentTheme());
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var next = currentTheme() === 'light' ? 'dark' : 'light';
+        applyTheme(next);
+        try { window.localStorage.setItem(THEME_KEY, next); } catch (e) { /* this visit only */ }
+      });
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     The headline check — SPEC V1.30.3 §2
+
+     «Проверю [ваш-сайт.md] и покажу…» in the first screen is a front end to
+     the one check form in #check: on submit it copies the address, the tick
+     and its honeypot into that form, takes the visitor to #check (where the
+     result appears), and runs the same submitCheck(). The address is copied
+     with an `input` event, so analytics.js sees the form's own domain field
+     change exactly as if it had been typed there.
+     ══════════════════════════════════════════════════════════════════ */
+
+  function wireHeroCheck() {
+    var target = $('#check form[data-check-form]');
+    $$('form[data-hero-check]').forEach(function (hero) {
+      if (!target || hero.getAttribute('data-hero-wired')) return;
+      hero.setAttribute('data-hero-wired', '1');
+      /* Mirrored as it is typed, not only on submit: analytics.js counts the
+         first keystroke in the form's own domain field (ck_scan_start), and
+         a visitor who types here and then scrolls to #check finds the same
+         address waiting in the form. */
+      var heroField = $('.hero-check__input', hero);
+      if (heroField) heroField.addEventListener('input', function () {
+        var dEl = $('input[name="domain"]', target);
+        if (!dEl) return;
+        dEl.value = heroField.value.trim();
+        try { dEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) { /* old browser */ }
+      });
+      hero.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var field = $('.hero-check__input', hero);
+        var agree = $('[data-hero-agree]', hero);
+        var hp = $('[data-hero-hp]', hero);
+        var dEl = $('input[name="domain"]', target);
+        var aEl = $('input[name="agree"]', target);
+        var hEl = $('input[name="hp"]', target);
+        if (field && dEl && field.value.trim()) {
+          dEl.value = field.value.trim();
+          try { dEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) { /* old browser */ }
+        }
+        if (agree && aEl && agree.checked) aEl.checked = true;
+        if (hp && hEl && hp.value) hEl.value = hp.value;
+
+        var section = document.getElementById('check');
+        if (section && section.scrollIntoView) section.scrollIntoView({ block: 'start' });
+
+        submitCheck(target);
+        // submitCheck focuses the field it needs when something is missing;
+        // otherwise the status line is where the answer will be read out.
+        if (!target.contains(document.activeElement)) {
+          var state = $('.check__state', target);
+          if (state) {
+            state.setAttribute('tabindex', '-1');
+            try { state.focus({ preventScroll: true }); } catch (e) { state.focus(); }
+          }
+        }
+      });
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
      Boot
      ══════════════════════════════════════════════════════════════════ */
 
   wireMenu();
+  wireTheme();
   wireDemo();
 
   // First init before the UI's setTimeout(...,0) fallback mount, so the very

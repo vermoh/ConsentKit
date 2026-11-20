@@ -20,16 +20,14 @@
 {{OG_LOCALE_ALT}}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<!-- Dark-only since 14.09.2026 (owner's decision). These two say so BEFORE
-     the stylesheet loads: color-scheme makes the browser paint its own form
-     controls and scrollbars dark from the first paint instead of flashing a
-     light set, and theme-color hands mobile Chrome and Safari the page's own
-     background for the address bar. There used to be an inline boot script
-     here reading a stored theme choice out of localStorage; with one theme
-     there is nothing to read, so it is gone and with it its try/catch. -->
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#141414">
+<!-- SPEC V1.30.3 §1 (owner, 20.11.2026): dark by default, light by the
+     visitor's own toggle; the system preference is not consulted. The metas
+     are the dark defaults (all a no-JS visitor ever gets); the boot script,
+     after the dataLayer declaration and before the stylesheet, applies a
+     stored light choice before the first paint. Both from build-site.mjs. -->
+{{THEME_META}}
 {{DATALAYER_BOOT}}
+{{THEME_BOOT}}
 <link rel="stylesheet" href="/styles.css">
 {{JSON_LD}}
 </head>
@@ -84,6 +82,17 @@
     <!-- SPEC V1.14 §2.4: still ONE primary button on the page, and it is still
          the free check. It keeps the SHORT label (V1.14.1 §1.1) — at 375 the
          capsule has to stay one row, and six words never did. -->
+    <!-- SPEC V1.30.3 §1: the theme toggle. A real toggle button: its name
+         («Светлая тема») never changes, aria-pressed says whether it is on.
+         The sun shows while the page is dark (press for light), the moon
+         while it is light. Hidden until the head's boot script has stamped
+         data-theme on <html> — without JavaScript it could not work, so it is
+         not offered. app.js flips the theme and stores the choice. -->
+    <button class="theme-toggle" type="button" aria-pressed="false"
+            aria-label="Светлая тема" data-i18n-aria-label="themeToggle">
+      <span class="theme-toggle__sun">{{ICON:sun}}</span><span class="theme-toggle__moon">{{ICON:moon}}</span>
+    </button>
+
     <a class="btn btn--sm btn--primary capsule-cta" href="#check" data-i18n="ctaCheckShort">Проверить сайт</a>
   </div>
 
@@ -161,9 +170,42 @@
              in the line of type. -->
         <h1><span data-i18n="heroTitleLead">Cookie-баннер,</span>&#8288;<img class="h1-shield" src="/img/shield-glass-600.webp" width="600" height="644" decoding="async" alt="" aria-hidden="true"> <span data-i18n="heroTitleLead2">с которым</span> <span class="h1-tail" data-i18n="heroTitleTail">реклама и аналитика продолжают</span> <em class="h1-accent" data-i18n="heroTitleAccent">работать</em></h1>
         <p class="lede" data-i18n="heroLine1">Счётчики ждут ответа посетителя, каждое решение сохраняется в журнале. Ставится одной строкой за 10 минут.</p>
-        <p class="hero-cta">
-          <a class="btn btn--primary" href="#check" data-i18n="ctaCheck">Проверить сайт бесплатно</a>
-        </p>
+        <!-- SPEC V1.30.3 §2: the headline check — a live sentence after eclar.md
+             («Продам [1 000] евро…»): «Проверю [ваш-сайт.md] и покажу, что на
+             нём грузится до согласия», the address a real field inside the
+             line, set as an underlined value, with the one primary button
+             under it. Without JavaScript the sentence still reads whole (the
+             field shows its placeholder).
+
+             It is a FRONT END to the one check form, not a second form: the
+             form itself stays authored once, in #check (CHECKFORM — the law
+             pages reuse it, and every «Проверить сайт» link lands on it).
+             app.js copies the address, the tick and the honeypot into that
+             form, runs the same submit handler, and takes the visitor to
+             #check, where the result appears. Nothing here has a name=, so
+             nothing here is ever sent on its own. The consent tick appears
+             once an address is typed (CSS :has; always shown where :has is
+             not supported). -->
+        <form class="hero-check" data-hero-check action="#check" method="get" novalidate>
+          <p class="hero-check__line">
+            <span data-i18n="heroCheckLead">Проверю</span>
+            <input class="hero-check__input" type="text" inputmode="url" autocomplete="url"
+                   autocapitalize="off" spellcheck="false" size="12"
+                   placeholder="ваш-сайт.md" data-i18n-placeholder="heroCheckPlaceholder"
+                   aria-label="Адрес сайта" data-i18n-aria-label="checkDomainLabel">
+            <span data-i18n="heroCheckTail">и покажу, что на нём грузится до согласия</span>
+          </p>
+          <p class="hero-cta">
+            <button type="submit" class="btn btn--primary" data-i18n="ctaCheck">Проверить сайт бесплатно</button>
+          </p>
+          <p class="hero-check__agree">
+            <label>
+              <input type="checkbox" data-hero-agree>
+              <span data-i18n="checkAgree">Это мой сайт или я работаю с ним по договору</span>
+            </label>
+          </p>
+          <span class="check__hp" aria-hidden="true"><input type="text" value="" tabindex="-1" autocomplete="off" data-hero-hp></span>
+        </form>
         <!-- SPEC V1.30.2 §4.5: the trust line that sat here moved into the
              band of big numbers before «Что умеет» (#figures). -->
       </div>
@@ -557,11 +599,10 @@
        a young service never advertises a small number. -->
   <section id="figures" aria-label="ConsentKit в цифрах" data-i18n-aria-label="figuresLabel">
     <div class="wrap">
+      <!-- SPEC V1.30.3 §3: four data cards after eclar.md — number, phrase,
+           a small chart the build draws (renderFigures in build-site.mjs). -->
       <div class="figures" id="trust">
-        <p class="trust-item" data-trust="consents" hidden></p>
-        <p class="trust-item" data-trust="services">{{TRUST_SERVICES}}</p>
-        <p class="trust-item" data-i18n="trustLanguages">34 языка баннера</p>
-        <p class="trust-item" data-i18n="figReadiness">36 пунктов готовности</p>
+{{FIGURES}}
       </div>
     </div>
   </section>
@@ -575,6 +616,12 @@
         </div>
         <p class="section-lede" data-i18n="featLede">Снимки настоящего кабинета: так он выглядит после подключения сайта.</p>
       </div>
+      <!-- SPEC V1.30.3 §1: each cabinet screenshot twice — the cabinet's dark
+           theme and its light one — and the stylesheet shows the one that
+           matches the page (display: none on the other). Both are lazy, and a
+           lazy image that is not displayed is never fetched, so a dark visitor
+           downloads no light file and the reverse. The declaration is the
+           public page, light in both. -->
       <div class="pcards">
         <article class="pcard pcard--cream">
           <p class="fact-pill">
@@ -584,7 +631,10 @@
           <h3 data-i18n="feat10Title">Готовность к закону по пунктам</h3>
           <p data-i18n="feat10Text">36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="{{SHOT_READINESS}}" width="1600" height="1202"
+            <img class="shot-dark" src="{{SHOT_READINESS}}" width="1600" height="1202"
+                 loading="lazy" decoding="async"
+                 alt="Карточка «Готовность к GDPR» в кабинете: семь зон и список пунктов" data-i18n-alt="pshot1Alt">
+            <img class="shot-light" src="{{SHOT_READINESS_LIGHT}}" width="1600" height="1202"
                  loading="lazy" decoding="async"
                  alt="Карточка «Готовность к GDPR» в кабинете: семь зон и список пунктов" data-i18n-alt="pshot1Alt">
           </div>
@@ -597,7 +647,10 @@
           <h3 data-i18n="feat2Title">Сканер сам находит cookie и обновляет декларацию</h3>
           <p data-i18n="feat2Text">Обходим страницы сайта, собираем список cookie и трекеров и обновляем его каждую неделю. Новый сервис на сайте — вы узнаёте о нём из кабинета.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="{{SHOT_SCAN}}" width="1600" height="762"
+            <img class="shot-dark" src="{{SHOT_SCAN}}" width="1600" height="762"
+                 loading="lazy" decoding="async"
+                 alt="Подключение сайта: сканер идёт по фазам и показывает найденное" data-i18n-alt="pshot2Alt">
+            <img class="shot-light" src="{{SHOT_SCAN_LIGHT}}" width="1600" height="762"
                  loading="lazy" decoding="async"
                  alt="Подключение сайта: сканер идёт по фазам и показывает найденное" data-i18n-alt="pshot2Alt">
           </div>
@@ -610,7 +663,10 @@
           <h3 data-i18n="feat3Title">Согласие можно доказать</h3>
           <p data-i18n="feat3Text">Каждый ответ посетителя сохраняется на случай проверки.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="{{SHOT_STATS}}" width="1600" height="922"
+            <img class="shot-dark" src="{{SHOT_STATS}}" width="1600" height="922"
+                 loading="lazy" decoding="async"
+                 alt="Как отвечают посетители: доли ответов, полосы и график по дням" data-i18n-alt="pshot3Alt">
+            <img class="shot-light" src="{{SHOT_STATS_LIGHT}}" width="1600" height="922"
                  loading="lazy" decoding="async"
                  alt="Как отвечают посетители: доли ответов, полосы и график по дням" data-i18n-alt="pshot3Alt">
           </div>
@@ -623,7 +679,10 @@
           <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
           <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. На платных тарифах — свой текст на любом из 34 языков, остальные посетитель видит на своём.</p>
           <div class="pcard__shot">
-            <img src="{{SHOT_TEXTS}}" width="1120" height="1242"
+            <img class="shot-dark" src="{{SHOT_TEXTS}}" width="1120" height="1242"
+                 loading="lazy" decoding="async"
+                 alt="Тексты баннера в кабинете: выбор языка и поля заголовка и описания" data-i18n-alt="pshot4Alt">
+            <img class="shot-light" src="{{SHOT_TEXTS_LIGHT}}" width="1120" height="1242"
                  loading="lazy" decoding="async"
                  alt="Тексты баннера в кабинете: выбор языка и поля заголовка и описания" data-i18n-alt="pshot4Alt">
           </div>
@@ -649,7 +708,10 @@
           <h3 data-i18n="feat6Title">Ставится на любой сайт за 10 минут</h3>
           <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML. В кабинете сразу видно, как баннер увидит посетитель.</p>
           <div class="pcard__shot">
-            <img src="{{SHOT_PREVIEW}}" width="1120" height="1352"
+            <img class="shot-dark" src="{{SHOT_PREVIEW}}" width="1120" height="1352"
+                 loading="lazy" decoding="async"
+                 alt="Предпросмотр «Как увидит посетитель»: живой баннер в редакторе" data-i18n-alt="pshot6Alt">
+            <img class="shot-light" src="{{SHOT_PREVIEW_LIGHT}}" width="1120" height="1352"
                  loading="lazy" decoding="async"
                  alt="Предпросмотр «Как увидит посетитель»: живой баннер в редакторе" data-i18n-alt="pshot6Alt">
           </div>

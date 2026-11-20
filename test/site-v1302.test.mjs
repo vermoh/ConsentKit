@@ -21,7 +21,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -254,28 +254,70 @@ test('§4.2: buttons are pills, 52px tall and 44px small', () => {
   assert.match(btn, /min-height: 52px/);
   assert.match(LAYER, /\n\.btn--sm \{ min-height: 44px; \}/);
   // Still one red: the secondary pill is dark with a thin light edge.
-  assert.match(LAYER, /\n\.btn--ghost:not\(:hover\) \{ border-color: rgba\(255, 255, 255, \.16\); \}/);
+  /* UPDATED for SPEC V1.30.3 §1 — the edge is the --edge-ghost token (dark:
+     white at .16, as before; light: ink at .22). */
+  assert.match(LAYER, /\n\.btn--ghost:not\(:hover\) \{ border-color: var\(--edge-ghost\); \}/);
+  assert.match(CSS, /^\s+--edge-ghost:\s+rgba\(255, 255, 255, \.16\);/m);
 });
 
 /* --------------------------------------------------- §4.3 «Работает с» */
 
+/* UPDATED 20.11.2026 (owner): real logos — Simple Icons 16.38.0 (CC0-1.0)
+   for the eight platforms the collection has, Tilda and OpenCart as text. */
 test('§4.3: the platform row sits under the first screen, makes no request, names no competitor', () => {
-  assert.equal(PLATFORMS.length, 8);
+  assert.equal(PLATFORMS.length, 10);
+  const withLogo = PLATFORMS.filter((p) => p.logo);
+  assert.deepEqual(PLATFORMS.filter((p) => p.wordmark).map((p) => p.name), ['WooCommerce', 'Wix']);
+  assert.match(CSS, /\n\.platform__name--sr \{[^}]*clip-path: inset\(50%\);/, 'the wordmarks\' names are not kept for screen readers');
+  assert.deepEqual(PLATFORMS.filter((p) => !p.logo).map((p) => p.name), ['Tilda', 'OpenCart'],
+    'only Tilda and OpenCart may go without a logo — Simple Icons has none for them');
+  // The logos are files beside their CC0 licence and a note on the marks.
+  const BRANDS = join(SITE_DIR, 'icons', 'brands');
+  const lic = readFileSync(join(BRANDS, 'LICENSE.md'), 'utf8');
+  assert.match(lic, /CC0 1\.0 Universal/, 'site/icons/brands/LICENSE.md is not the CC0 text');
+  const readme = readFileSync(join(BRANDS, 'README.md'), 'utf8');
+  assert.match(readme, /Simple Icons/);
+  assert.match(readme, /belong to their owners/);
+  assert.match(readme, /nominative/);
+  const files = readdirSync(BRANDS).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4)).sort();
+  assert.deepEqual(files, withLogo.map((p) => p.logo).sort(), 'site/icons/brands holds a logo the row does not use, or misses one');
+
   for (const [code, html, dict] of pages()) {
     const hero = html.match(/<section class="hero">[\s\S]*?\n  <\/section>/)[0];
     const row = hero.match(/<div class="platforms">[\s\S]*?<\/div>/);
     assert.ok(row, `${code}: no platform row in the first screen`);
     assert.ok(hero.indexOf('<div class="platforms">') > hero.indexOf('</figure>'), `${code}: the row is not under the composition`);
     assert.ok(row[0].includes(`>${esc(dict.platformsLabel)}</p>`), `${code}: the row has no label`);
-    for (const name of PLATFORMS) assert.ok(row[0].includes(`<li class="platform">${name}</li>`), `${code}: ${name} is missing`);
-    assert.doesNotMatch(row[0], /\b(src|href|srcset)=|url\(/, `${code}: the platform row asks for a resource`);
+    const items = [...row[0].matchAll(/<li class="platform[^"]*">([\s\S]*?)<\/li>/g)].map((m) => m[1]);
+    assert.equal(items.length, PLATFORMS.length, `${code}: the row does not list ${PLATFORMS.length} platforms`);
+    PLATFORMS.forEach((p, i) => {
+      /* Every platform has its name as TEXT — the accessible name of the
+         item: visible beside a symbol, screen-reader-only beside a wordmark
+         (WooCommerce, Wix — the logo already spells it). */
+      const nameSpan = p.wordmark ? '<span class="platform__name platform__name--sr">' : '<span class="platform__name">';
+      assert.ok(items[i].includes(`${nameSpan}${p.name}</span>`), `${code}: ${p.name} has no name in text`);
+      const svg = items[i].match(/<svg[\s\S]*?<\/svg>/);
+      if (p.logo) {
+        assert.ok(svg, `${code}: ${p.name} has no logo`);
+        assert.match(svg[0], p.wordmark
+          ? /^<svg class="brand brand--wordmark" width="\d+" height="16" viewBox="[\d. ]+" fill="currentColor" aria-hidden="true" focusable="false">/
+          : /^<svg class="brand" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">/,
+          `${code}: ${p.name}'s logo is not a decorative inline currentColor svg`);
+        assert.doesNotMatch(svg[0], /<title>|fill="#|stroke="#/, `${code}: ${p.name}'s logo carries a title or a colour of its own`);
+      } else {
+        assert.equal(svg, null, `${code}: ${p.name} has a logo it should not have`);
+      }
+    });
+    assert.doesNotMatch(row[0], /\b(src|href|srcset)=|url\(|<use\b|<image\b/, `${code}: the platform row asks for a resource`);
     for (const name of ['Cookiebot', 'CookieYes', 'Osano', 'Termly', 'Usercentrics', 'OneTrust',
                         'Iubenda', 'Complianz', 'KookiOk', 'consentkit.us']) {
       assert.ok(!row[0].includes(name), `${code}: the platform row names ${name}`);
     }
     if (code !== 'ru') assert.doesNotMatch(dict.platformsLabel, CYRILLIC);
   }
+  // Monochrome --ink-soft in both themes: the text and the logo both.
   assert.match(LAYER, /\n\.platform \{[^}]*color: var\(--ink-soft\)/);
+  assert.match(CSS, /\n\.platform \.brand \{[^}]*color: var\(--ink-soft\)/);
 });
 
 /* --------------------------------------------------- §4.4 section heads */
@@ -314,17 +356,14 @@ test('§4.4: five section heads carry a label and a two-tone heading, in three l
 
 /* --------------------------------------------- §4.5 the band of numbers */
 
-test('§4.5: the band of big numbers is one dark card before «Что умеет»', () => {
+/* UPDATED for SPEC V1.30.3 §3 — the band is four data cards now (the
+   charts are tested in test/site-v1303.test.mjs); still before «Что умеет». */
+test('§4.5: the band of big numbers sits before «Что умеет», as cards', () => {
   for (const [code, html] of pages()) {
     assert.ok(html.indexOf('<section id="figures"') < html.indexOf('<section id="features"'),
       `${code}: the band is not before «Что умеет»`);
     assert.ok(html.indexOf('<section id="figures"') > html.indexOf('<section id="demo"'));
   }
-  const band = LAYER.match(/\n\.figures \{[^}]*\}/)[0];
-  assert.match(band, /background: var\(--surface\)/);
-  assert.match(band, /border-radius: var\(--r-block\)/);
-  const num = LAYER.match(/\n#trust \.trust-num \{[^}]*\}/)[0];
-  assert.match(num, /font-size: 64px/);
   // Weight 600 and tabular figures come from the B2 rule every .trust-num has.
   assert.match(CSS, /\n\.trust-num \{ font-weight: 600; font-variant-numeric: tabular-nums; \}/);
 });
@@ -333,7 +372,9 @@ test('§4.5: the band of big numbers is one dark card before «Что умеет
 
 test('§2.3: prices at 40px, the Starter edge is light, the «why» is a quote', () => {
   assert.match(LAYER, /\n#plans \.plan-price__num \{[^}]*font-size: 40px;[^}]*font-weight: 600;[^}]*tabular-nums/);
-  assert.match(LAYER, /#plans \.plan-table \.is-featured \{ border-left-color: rgba\(255, 255, 255, \.14\);/);
+  // UPDATED for SPEC V1.30.3 §1 — a token, white at .14 in the dark theme.
+  assert.match(LAYER, /#plans \.plan-table \.is-featured \{ border-left-color: var\(--edge-featured\);/);
+  assert.match(CSS, /^\s+--edge-featured:\s+rgba\(255, 255, 255, \.14\);/m);
   assert.match(LAYER, /\n\.cmp-why \{[^}]*border-left: 2px solid var\(--line\)/);
   for (const [code, html, dict] of pages()) {
     const head = sectionOf(html, 'pricing').match(/<div class="section-head[\s\S]*?\n      <\/div>/)[0];

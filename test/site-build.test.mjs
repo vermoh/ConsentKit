@@ -25,7 +25,7 @@ import {
   VERSION, BUILD_DATE, updatedText,
   SITE_STATS, pluralForm, trustServicesText,
   MARQUEE_CARDS, renderMarquee, readClientLocales,
-  VERSIONED_ASSETS, assetHash, THEME_META
+  VERSIONED_ASSETS, assetHash, THEME_META, THEME_BOOT, THEME_KEY, THEME_COLORS
 } from '../tools/build-site.mjs';
 
 /* ------------------------------------------------------------ the outputs */
@@ -167,7 +167,10 @@ test('no dictionary key is unused', () => {
                          there and never by the template or app.js. The
                          consents and sites forms ARE read by app.js through
                          plural(n, 'trustConsents' / 'trustSites'). */
-                      'trustServicesOne', 'trustServicesFew', 'trustServicesMany'];
+                      'trustServicesOne', 'trustServicesFew', 'trustServicesMany',
+                      /* SPEC V1.30.3 §3: the four data cards are drawn by the
+                         build (renderFigures), which reads these four. */
+                      'trustLanguages', 'figReadiness', 'figAccept', 'figExample'];
 
   const used = new Set(BUILD_KEYS);
   for (const m of template.matchAll(/\bdata-i18n="([^"]+)"/g)) used.add(m[1]);
@@ -641,21 +644,26 @@ test('app.js no longer switches language at runtime', () => {
   assert.doesNotMatch(app, /navigator\.language/,
     'app.js still guesses the language from the browser');
 
-  /* app.js must not touch localStorage AT ALL. It used to be allowed exactly
-     one key — the site theme (owner, 07.09.2026) — but the site is dark-only
-     since 14.09.2026 and the «Тема» switch that wrote it is gone, so the
-     permitted set is now empty and the guard is the stronger form of the same
-     intent: nothing about this page is a stored preference.
+  /* app.js stores no LANGUAGE (history: one theme key from 07.09.2026,
+     none while the site was dark-only from 14.09.2026, one theme key again
+     from SPEC V1.30.3 — asserted below).
 
      A language preference in storage is the exact bug this test exists for: it
      would make /ru render English for a returning visitor, because the URL
      would say Russian and the stored key would say otherwise. */
+  /* UPDATED for SPEC V1.30.3 §1 — the theme toggle is back (dark by
+     default, light by the visitor's choice), so app.js may write exactly ONE
+     key again: the theme, through the THEME_KEY constant, which must be
+     'ck-site-theme' and nothing else. It never READS storage — the head's
+     boot script applies the stored choice before the first paint. */
   const keys = [...app.matchAll(/localStorage\.(?:get|set|remove)Item\(\s*([A-Za-z_$][\w$]*|'[^']*'|"[^"]*")/g)]
     .map((m) => m[1]);
-  assert.deepEqual(keys, [],
-    `app.js reads or writes localStorage with ${keys.join(', ')} — it may store nothing`);
-  assert.doesNotMatch(app, /ck-site-theme/,
-    'app.js still carries the site-theme storage key — the switch it served is gone');
+  assert.deepEqual(keys, ['THEME_KEY'],
+    `app.js touches localStorage with ${keys.join(', ')} — only the theme choice may be stored`);
+  assert.match(app, /var THEME_KEY = 'ck-site-theme';/, 'app.js stores the theme under another key');
+  assert.doesNotMatch(app, /localStorage\.getItem/, 'app.js reads storage — the boot script does that');
+  assert.match(app, /try \{ window\.localStorage\.setItem\(THEME_KEY, next\); \} catch/,
+    'the theme write is not wrapped in try/catch');
 });
 
 test("the demo banner runs language: 'page'", () => {
@@ -1004,7 +1012,10 @@ test('the trust line hides the counts while there are too few sites', () => {
     assert.match(line[1], /<p class="trust-item" data-trust="consents" hidden><\/p>/,
       `the ${code} band ships the consents slot filled or visible`);
     assert.doesNotMatch(line[1], /data-trust="sites"/, `the ${code} band still has a sites slot`);
-    assert.equal((line[1].match(/<p class="trust-item"/g) || []).length, 4, `the ${code} band does not hold four values`);
+    /* UPDATED for SPEC V1.30.3 §3 — four data cards after the hidden
+       live slot: five <p class="trust-item">, four of them cards. */
+    assert.equal((line[1].match(/<p class="trust-item[ "]/g) || []).length, 5, `the ${code} band does not hold the slot and four cards`);
+    assert.equal((line[1].match(/<p class="trust-item fig"/g) || []).length, 4, `the ${code} band does not hold four data cards`);
     assert.ok(line[1].replace(/<[^>]+>/g, '').includes(dict.figReadiness.replace(/^36 ?/, '')),
       `the ${code} band does not carry the 36 readiness points`);
     assert.match(line[1], /<span class="trust-num">36<\/span>/, `the ${code} band does not set 36 apart`);
@@ -1543,11 +1554,17 @@ test('the page has one primary button, and it is the free check', () => {
     const html = renderPage(template, code);
 
     const toCheck = (html.match(/href="#check"[^>]*>/g) || []).length;
-    /* UPDATED for SPEC V1.30.2 §2.4 — exactly THREE: the capsule, the hero
-       and the new final screen before #dev, which repeats the same button by
-       the owner's decision. Still exact: a fourth copy is the regression. */
-    assert.equal(toCheck, 3,
-      `the ${code} page points at #check ${toCheck} times; V1.30.2 keeps the capsule, the hero and the final screen`);
+    /* UPDATED for SPEC V1.30.2 §2.4 — the capsule, the hero and the final
+       screen. UPDATED again for SPEC V1.30.3 §2 — the hero's button is now
+       the SUBMIT of the headline check (a front end to the one form in
+       #check), so the links to #check are TWO: the capsule and the final
+       screen. Still exact: a third link is the regression. */
+    assert.equal(toCheck, 2,
+      `the ${code} page points at #check ${toCheck} times; V1.30.3 keeps the capsule and the final screen`);
+    const heroCheck = html.match(/<form class="hero-check" data-hero-check[^>]*>[\s\S]*?<\/form>/);
+    assert.ok(heroCheck, `the ${code} first screen has no headline check`);
+    assert.match(heroCheck[0], /<button type="submit" class="btn btn--primary"[^>]*>/,
+      `the ${code} headline check does not submit with the primary button`);
     assert.doesNotMatch(html, /class="section-cta"/,
       `the ${code} page still repeats the check button under a section`);
 
@@ -1559,12 +1576,14 @@ test('the page has one primary button, and it is the free check', () => {
        carries a primary «Открыть кабинет», as it did before V1.30.) */
     const PRIMARY = /<(a|button)\b[^>]*class="btn[^"]*btn--primary[^"]*"[^>]*>/g;
     const form = html.match(/<form class="check" data-check-form[\s\S]*?<\/form>/)[0];
-    const outside = [...html.replace(form, '').matchAll(PRIMARY)].map((m) => m[0]);
-    assert.equal(outside.length, 3,
-      `the ${code} page has ${outside.length} primary buttons outside the form: ${outside.join(' | ')}`);
+    const outside = [...html.replace(form, '').replace(heroCheck[0], '').matchAll(PRIMARY)].map((m) => m[0]);
+    assert.equal(outside.length, 2,
+      `the ${code} page has ${outside.length} primary buttons outside the two forms: ${outside.join(' | ')}`);
     for (const tag of outside) {
       assert.match(tag, /href="#check"/, `the ${code} page has a primary button that is not the check: ${tag}`);
     }
+    assert.equal([...heroCheck[0].matchAll(PRIMARY)].length, 1,
+      `the ${code} headline check carries more than its one button`);
     assert.equal([...form.matchAll(PRIMARY)].length, 2,
       `the ${code} check form does not carry exactly its two step buttons`);
 
@@ -2085,74 +2104,164 @@ test('§1.3: the chip is short and only refuses to wrap from 560 up', () => {
      styles.css whether or not the hero is still the thing using it. */
 });
 
-/* ──────────────────────────────────── dark only (owner, 14.09.2026) */
+/* ─────────────── dark by default, light by choice (SPEC V1.30.3 §1) */
 
-/* The site used to ship two palettes and a «Тема» switch in the menu panel
-   that chose between them, which cost this file three tests: one proving the
-   two dark homes (the prefers-color-scheme one and the forced
-   :root[data-theme="dark"] one) had not drifted apart, one proving the three
-   buttons were present in every language, and one proving the stored choice
-   reached <html> before the stylesheet so the page never flashed.
+/* REPLACES the «dark only» guards of 14.09.2026. The owner brought a light
+   theme back on 20.11.2026 — but not the old mechanism: dark stays the look
+   everyone gets whatever their system says (prefers-color-scheme is not used
+   anywhere), and light is only the visitor's own choice, made with the
+   capsule's toggle, stored under one key and applied before the first paint.
+   These three tests hold that shape: the default and the boot order, the two
+   palettes as one token set, and AA in both. */
 
-   The owner removed the switch and kept the dark look, so all three are gone
-   with the thing they guarded — there is no second palette to drift from, no
-   control to render and no stored choice to apply before paint. What replaces
-   them is the guard below: the mechanism must not come BACK by halves. A
-   single stray `@media (prefers-color-scheme: light)` or a `data-theme` hook
-   re-added "just for this one block" is exactly how a site that is supposed
-   to have one look grows a second one nobody tests. */
-test('the site is dark-only: no theme mechanism survives anywhere', () => {
-  /* styles.css names neither the media feature nor the attribute — not in a
-     rule and not in a comment, so the scan needs no parser to be honest.
-     Scoped to the SITE's stylesheet: site/vendor/* is the banner's own code,
-     and the banner keeps its themes (it renders on clients' sites). */
+/* The token blocks, read the way the browser cascades them: every
+   declaration in a top-level `:root {` block (dark), and every declaration
+   in the `:root[data-theme="light"] {` block (light). */
+function themeTokens(source) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');   // comments name tokens too
+  const dark = {};
+  for (const m of css.matchAll(/^:root \{([\s\S]*?)^\}/gm)) {
+    for (const d of m[1].matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)) dark[d[1]] = d[2].trim();
+  }
+  const lightBlock = css.match(/^:root\[data-theme="light"\] \{([\s\S]*?)^\}/m);
+  const light = {};
+  if (lightBlock) {
+    for (const d of lightBlock[1].matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)) light[d[1]] = d[2].trim();
+  }
+  return { dark, light, lightBlock: lightBlock && lightBlock[1] };
+}
+const isColour = (v) => /^(#[0-9a-f]{3,8}|rgba?\()/i.test(v);
+
+test('the site is dark by default; light is the visitor\'s toggle, applied before paint', () => {
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
-  assert.doesNotMatch(css, /prefers-color-scheme/,
-    'styles.css reacts to the system theme again — the site is dark-only');
-  assert.doesNotMatch(css, /data-theme/,
-    'styles.css carries a data-theme hook again — the switch that set it is gone');
 
-  /* …and it states the one theme it has, so the browser paints its own form
-     controls and scrollbars to match instead of flashing a light set. */
-  assert.match(css, /color-scheme:\s*dark/,
-    'styles.css does not declare color-scheme: dark on :root');
+  /* No reaction to the system theme — not in a rule and not in a comment. */
+  assert.doesNotMatch(css, /prefers-color-scheme/,
+    'styles.css reacts to the system theme — the default is dark for everyone');
+  assert.match(css, /^:root \{\s*color-scheme: dark;/m, ':root is not dark by default');
+  const { lightBlock } = themeTokens(css);
+  assert.ok(lightBlock, 'styles.css has no :root[data-theme="light"] palette');
+  assert.match(lightBlock, /color-scheme: light;/, 'the light palette does not set color-scheme: light');
+  // The only theme hook is the attribute the boot script sets on <html>.
+  for (const m of css.matchAll(/data-theme(?:="?([a-z]*)"?)?/g)) {
+    assert.ok(!m[1] || m[1] === 'light', `styles.css names data-theme="${m[1]}" — only light is a theme of its own`);
+  }
+
+  /* The boot script: the stored choice inside try/catch, data-theme always
+     stamped (so the toggle can show only when JS ran), the metas rewritten
+     for light; nothing about the system preference. */
+  assert.match(THEME_BOOT, /^<script>\(function\(\)\{var t="dark";try\{if\(localStorage\.getItem\("ck-site-theme"\)==="light"\)t="light"\}catch\(e\)\{\}/,
+    'the boot script does not default to dark and read the stored choice in try/catch');
+  assert.match(THEME_BOOT, /setAttribute\("data-theme",t\)/, 'the boot script does not stamp data-theme');
+  assert.doesNotMatch(THEME_BOOT, /matchMedia|prefers-color-scheme/, 'the boot script consults the system theme');
+  assert.equal(THEME_KEY, 'ck-site-theme');
 
   for (const f of [...outputs(), ...lawOutputs()]) {
     const html = readFileSync(f.path, 'utf8');
+    const head = html.slice(0, html.indexOf('</head>'));
+    // The built HTML is dark: no theme attribute until the script runs.
+    assert.match(html, /<html lang="[a-z]{2}">/, `${f.label} ships a theme on <html>`);
 
-    assert.doesNotMatch(html, /theme-switch/,
-      `${f.label} still renders the theme switch in the menu panel`);
-    assert.doesNotMatch(html, /ck-site-theme/,
-      `${f.label} still carries the theme storage key — nothing may store a theme`);
-    assert.doesNotMatch(html, /data-theme/,
-      `${f.label} still carries a data-theme hook`);
-
-    /* The metas that replaced the boot script, and the same ordering rule the
-       script had to obey: both stand in <head> ABOVE the stylesheet link, so
-       the browser knows the page is dark before it has the CSS that says so. */
-    const cs = html.indexOf('<meta name="color-scheme" content="dark">');
-    assert.ok(cs > -1, `${f.label} does not declare a dark color-scheme`);
-    assert.match(html, /<meta name="theme-color" content="#141414">/,
-      `${f.label} does not hand the browser chrome the page's own background`);
-
-    const sheet = html.search(/<link rel="stylesheet" href="\/styles\.css/);
+    // Metas, then dataLayer (first script), then the theme boot, then the CSS.
+    const cs = head.indexOf(THEME_META);
+    const dl = head.indexOf('<script>window.dataLayer');
+    const boot = head.indexOf(THEME_BOOT);
+    const sheet = head.search(/<link rel="stylesheet" href="\/styles\.css/);
+    assert.ok(cs > -1, `${f.label} does not carry the shared dark metas`);
+    assert.ok(boot > -1, `${f.label} does not carry the theme boot script in <head>`);
     assert.ok(sheet > -1, `${f.label} does not load the stylesheet`);
-    assert.ok(cs < sheet,
-      `${f.label} declares color-scheme after the stylesheet link`);
-    assert.ok(cs < html.indexOf('</head>'),
-      `${f.label} declares color-scheme outside <head>`);
+    assert.ok(cs < dl && dl < boot && boot < sheet,
+      `${f.label}: the order must be metas → dataLayer → theme boot → stylesheet`);
+
+    /* The toggle: in the capsule on every page (the law pages slice the same
+       header), a real toggle button with a name of its own and two icons. */
+    const toggle = html.match(/<button class="theme-toggle" type="button" aria-pressed="false"\s+aria-label="([^"]+)"[\s\S]*?<\/button>/);
+    assert.ok(toggle, `${f.label} has no theme toggle in the capsule`);
+    assert.ok(toggle[1].trim().length > 3, `${f.label}'s theme toggle has no accessible name`);
+    assert.equal((toggle[0].match(/<svg class="icon"/g) || []).length, 2, `${f.label}'s toggle lacks its sun and moon`);
+    assert.doesNotMatch(html, /\{\{ICON:/, `${f.label} has an unresolved icon`);
   }
+
+  /* Without JavaScript the toggle could not work, so it is not shown. */
+  assert.match(css, /\.theme-toggle \{[^}]*display: none;/, 'the toggle shows without JavaScript');
+  assert.match(css, /:root\[data-theme\] \.theme-toggle \{ display: inline-grid; \}/,
+    'the toggle does not appear once the boot script ran');
+  assert.match(css, /\.theme-toggle \{[^}]*width: 44px;[^}]*height: 44px;/, 'the toggle is not a 44×44 target');
 });
 
-/* The metas are one constant rather than a literal repeated in the template's
-   map and the two law-page head builders, so /law cannot drift from /. */
-test('the dark metas are built from one shared constant', () => {
-  assert.match(THEME_META, /<meta name="color-scheme" content="dark">/);
-  assert.match(THEME_META, /<meta name="theme-color" content="#141414">/);
+test('the two palettes are one token set, and every text pair is AA in both', () => {
+  const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
+  const { dark, light } = themeTokens(css);
+
+  /* Same set: every colour token of the dark :root has a light value, and
+     the light block introduces nothing the dark one lacks. */
+  const darkColours = Object.keys(dark).filter((k) => isColour(dark[k])).sort();
+  assert.deepEqual(Object.keys(light).sort(), darkColours,
+    'the light palette and the dark one do not declare the same colour tokens');
+
+  const lum = (hex) => {
+    const c = hex.replace('#', '');
+    const v = [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16) / 255)
+      .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  };
+  const ratio = (a, b) => {
+    const [l1, l2] = [lum(a), lum(b)];
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  };
+  // Text token on ground token. Every pair the page sets text on.
+  const PAIRS = [
+    ['--ink', '--bg'], ['--ink', '--cream'], ['--ink', '--surface'], ['--ink', '--surface-2'],
+    ['--ink-soft', '--bg'], ['--ink-soft', '--cream'], ['--ink-soft', '--surface'], ['--ink-soft', '--surface-2'],
+    ['--accent-ink', '--bg'], ['--accent-ink', '--cream'], ['--accent-ink', '--surface'],
+    ['--bg', '--ink'],                         // the inverted «Что умеет» card
+    ['--on-accent', '--accent'], ['--on-band', '--band'], ['--on-band-strong', '--band'],
+    ['--state-ok', '--surface'], ['--state-warn', '--surface'], ['--placeholder', '--surface'],
+    ['--code-ink', '--code-bg'],
+    ['--bad-ink', '--bad-bg'], ['--ok-ink', '--ok-bg'],
+    ['--capsule-ink', '--capsule-bg'], ['--capsule-ink-soft', '--capsule-bg'],
+    ['--capsule-ink', '--capsule-hover'], ['--capsule-ink-soft', '--capsule-hover'],
+    ['--hl-card-ink', '--hl-card-bg'], ['--hl-card-soft', '--hl-card-bg'], ['--hl-card-soft', '--hl-card-muted'],
+    ['--hl-card-ink', '--hl-card-muted'], ['--hl-url-ink', '--hl-url-bg']
+  ];
+  for (const [name, palette] of [['dark', dark], ['light', light]]) {
+    for (const [fg, bg] of PAIRS) {
+      const a = palette[fg];
+      const b = palette[bg];
+      assert.match(a || '', /^#[0-9a-f]{6}$/i, `${name}: ${fg} is not a plain hex (${a})`);
+      assert.match(b || '', /^#[0-9a-f]{6}$/i, `${name}: ${bg} is not a plain hex (${b})`);
+      const r = ratio(a, b);
+      assert.ok(r >= 4.5, `${name}: ${fg} ${a} on ${bg} ${b} is ${r.toFixed(2)}:1, under AA`);
+    }
+    // The focus ring (the fill red) is a non-text indicator: 3:1 on the page.
+    assert.ok(ratio(palette['--accent'], palette['--bg']) >= 3,
+      `${name}: the focus ring does not reach 3:1 on the page`);
+  }
+
+  /* The reds are the dark theme's in the light one too (§1): the fill, the
+     band and the decoration. Only the text red changes, to stay AA. */
+  for (const t of ['--accent', '--band', '--accent-deco', '--on-accent', '--on-band']) {
+    assert.equal(light[t].toUpperCase(), dark[t].toUpperCase(), `the light theme changes ${t}`);
+  }
+  assert.equal(light['--bg'].toUpperCase(), '#F2F0E9', 'the light page is not eClar\'s #F2F0E9');
+  assert.equal(light['--ink'].toUpperCase(), '#141414');
+  assert.equal(light['--accent-ink'].toUpperCase(), '#B82E2D');
+});
+
+/* The metas and the boot script are constants shared by the template's head
+   and the two law-page head builders, so /law cannot drift from /. */
+test('the theme head is built from shared constants', () => {
+  assert.equal(THEME_META, '<meta name="color-scheme" content="dark">\n<meta name="theme-color" content="#141414">');
+  assert.equal(THEME_COLORS.dark, '#141414');
+  assert.equal(THEME_COLORS.light, '#F2F0E9');
+  assert.match(THEME_BOOT, /content","#F2F0E9"/, 'the boot script does not hand light browsers the light --bg');
+  const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
+  assert.match(app, /var THEME_COLORS = \{ dark: '#141414', light: '#F2F0E9' \};/,
+    'app.js and the build disagree on the theme-color values');
   for (const f of [...outputs(), ...lawOutputs()]) {
     const html = readFileSync(f.path, 'utf8');
-    assert.ok(html.includes(THEME_META),
-      `${f.label} does not carry the shared dark metas verbatim`);
+    assert.ok(html.includes(THEME_META), `${f.label} does not carry the shared metas verbatim`);
+    assert.ok(html.includes(THEME_BOOT), `${f.label} does not carry the shared boot script verbatim`);
   }
 });
 

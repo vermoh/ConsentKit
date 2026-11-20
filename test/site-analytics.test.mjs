@@ -102,10 +102,9 @@ test('dataLayer is declared by the first statement of the first script', () => {
          Asserting merely "declared before the first push" would pass with the
          vendor client ahead of it — and the vendor client pushes Consent Mode
          at parse time, which is the push that must find the array already
-         there. (Until 14.09.2026 the theme boot script was the other thing
-         this had to beat; the site is dark-only now, that script is gone, and
-         the metas that replaced it run no JavaScript — so being the first
-         <script> is the whole of the ordering claim.) */
+         there. (SPEC V1.30.3 brought a theme boot script back; it is placed
+         right AFTER this declaration, and test/site-build.test.mjs holds that
+         order — so being the first <script> is still the whole claim.) */
       const firstTag = html.slice(first, html.indexOf('</script>', first) + 9);
       assert.match(firstTag, /^<script>window\.dataLayer = window\.dataLayer \|\| \[\];<\/script>$/,
         `${label}'s first script is not the dataLayer declaration: ${firstTag.slice(0, 120)}`);

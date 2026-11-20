@@ -276,8 +276,12 @@ test('V1.30.1 A1: the glows are pointer-less gradients behind the content', () =
      glow as `radial-halo` — a chromatic glow on a dark page reads as
      generated — so it is neutral white now, like the two section glows, at
      no more than .06, and no longer red in any form. */
+  /* UPDATED for SPEC V1.30.3 §1 — the white is the --glow token now, and
+     the token is white in both themes (asserted here so it cannot drift). */
+  assert.match(CSS, /--glow:\s*#FFFFFF;[\s\S]*:root\[data-theme="light"\] \{[\s\S]*?--glow:\s*#FFFFFF;/,
+    'the glow is not white in both themes');
   const hero = rule('.hero-shot::before');
-  assert.match(hero, /radial-gradient\(ellipse closest-side, #FFFFFF, transparent\)/,
+  assert.match(hero, /radial-gradient\(ellipse closest-side, var\(--glow\), transparent\)/,
     'the hero glow is not neutral white fading out');
   assert.doesNotMatch(hero, /--accent|#E63939|#D63838|#B82E2D/i, 'the hero glow is red again');
   const heroOpacity = Number(hero.match(/opacity: ([\d.]+)/)[1]);
@@ -286,7 +290,7 @@ test('V1.30.1 A1: the glows are pointer-less gradients behind the content', () =
   // Behind «Что умеет» and «Тарифы»: neutral white, at most .05.
   // (Its own rule, after a comment — not the shared one that opens with the hero.)
   const neutral = (LAYER_1301.match(/\*\/\n#features::before,\n#pricing::before \{[^}]*\}/) || [''])[0];
-  assert.match(neutral, /radial-gradient\(ellipse closest-side, #FFFFFF, transparent\)/,
+  assert.match(neutral, /radial-gradient\(ellipse closest-side, var\(--glow\), transparent\)/,
     'the section glows are not neutral white');
   assert.ok(Number(neutral.match(/opacity: ([\d.]+)/)[1]) <= 0.05, 'the section glows are stronger than .05');
   // The glow under each screenshot is pointer-less too.
@@ -315,14 +319,20 @@ test('V1.30.1 A1: text over the glows still clears AA', () => {
 });
 
 test('V1.30.1 A1: cards have a translucent edge and a 1px top highlight', () => {
+  /* UPDATED for SPEC V1.30.3 §1 — the edge and the highlight are tokens
+     (--edge, --edge-hi, --shot-edge) so the light theme can answer them;
+     their DARK values are still the ones this test pinned. */
   const edge = LAYER_1301.match(/\n\.pcard,\n\.feat \{[^}]*\}/);
   assert.ok(edge, 'the card edge rule is missing');
-  assert.match(edge[0], /border: 1px solid rgba\(255, 255, 255, \.08\)/);
-  assert.match(edge[0], /box-shadow: inset 0 1px 0 rgba\(255, 255, 255, \.06\)/);
-  // The screenshot frame: 1px, white at .1, radius 12.
+  assert.match(edge[0], /border: 1px solid var\(--edge\)/);
+  assert.match(edge[0], /box-shadow: inset 0 1px 0 var\(--edge-hi\)/);
+  assert.match(CSS, /^\s+--edge:\s+rgba\(255, 255, 255, \.08\);/m);
+  assert.match(CSS, /^\s+--edge-hi:\s+rgba\(255, 255, 255, \.06\);/m);
+  // The screenshot frame: 1px, white at .1 (dark), radius 12.
   const shot = LAYER_1301.match(/\n\.pcards \.pcard__shot \{[^}]*\}/);
   assert.ok(shot, 'the screenshot frame rule is missing');
-  assert.match(shot[0], /border: 1px solid rgba\(255, 255, 255, \.1\)/);
+  assert.match(shot[0], /border: 1px solid var\(--shot-edge\)/);
+  assert.match(CSS, /^\s+--shot-edge:\s+rgba\(255, 255, 255, \.1\);/m);
   assert.match(shot[0], /border-radius: 12px/);
 });
 
@@ -355,7 +365,12 @@ test('V1.30.1 A3: «Что умеет» is a 12-column bento on a computer, one 
 
 /* UPDATED for SPEC V1.30.2 §4.2 — buttons leave the field radius for a
    value of their own: a pill (--r-pill, 999px), as on heroui. Fields stay 12. */
-test('§2.2: one radius scale — 12 fields, pill buttons, 20 cards, 28 blocks', () => {
+/* UPDATED for SPEC V1.30.3 §3 — one more step at the top, eClar's large
+   radius: --r-big, 40px, for the data cards and the bento (28 on a phone). */
+test('§2.2: one radius scale — 12 fields, pill buttons, 20 cards, 28 blocks, 40 big', () => {
+  assert.match(CSS, /--r-big:\s*40px/);
+  assert.match(CSS, /\n\.pcard \{ border-radius: var\(--r-big\); \}/);
+  assert.match(CSS, /#trust \.trust-item\.fig,\n#trust \[data-trust="consents"\]:not\(\[hidden\]\) \{[^}]*border-radius: var\(--r-big\);/);
   assert.match(CSS, /--r-field:\s*12px/);
   assert.match(CSS, /--r-card:\s*20px/);
   assert.match(CSS, /--r-block:\s*28px/);
@@ -454,12 +469,17 @@ test('§0/§4: the copy keeps its tone rules', () => {
 test('§5: the address placeholder clears 4.5:1 on its field', () => {
   const rule = CSS.match(/\.check__field input::placeholder \{[^}]*\}/);
   assert.ok(rule, 'the placeholder has no colour of its own');
-  const color = rule[0].match(/color:\s*(#[0-9A-Fa-f]{6})/)[1];
+  assert.match(rule[0], /color: var\(--placeholder\)/, 'the placeholder is not the --placeholder token');
   assert.match(rule[0], /opacity: 1/, 'the browser may still fade the placeholder');
-  // The field is --surface on the band, the page ground on the law pages.
-  for (const ground of ['#1F1F1F', '#141414']) {
-    assert.ok(ratio(color, ground) >= 4.5,
-      `the placeholder ${color} on ${ground} is ${ratio(color, ground).toFixed(2)}:1`);
+  /* UPDATED for SPEC V1.30.3 §1 — one value per theme. The field is
+     --surface on the band, the page ground on the law pages. */
+  const dark = CSS.match(/^\s+--placeholder:\s+(#[0-9A-Fa-f]{6});/m)[1];
+  const light = CSS.match(/:root\[data-theme="light"\] \{[\s\S]*?--placeholder:\s+(#[0-9A-Fa-f]{6});/)[1];
+  for (const [color, grounds] of [[dark, ['#1F1F1F', '#141414']], [light, ['#FFFFFF', '#F2F0E9']]]) {
+    for (const ground of grounds) {
+      assert.ok(ratio(color, ground) >= 4.5,
+        `the placeholder ${color} on ${ground} is ${ratio(color, ground).toFixed(2)}:1`);
+    }
   }
 });
 
