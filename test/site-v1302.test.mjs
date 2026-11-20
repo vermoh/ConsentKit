@@ -263,24 +263,35 @@ test('§4.2: buttons are pills, 52px tall and 44px small', () => {
 /* --------------------------------------------------- §4.3 «Работает с» */
 
 /* UPDATED 20.11.2026 (owner): real logos — Simple Icons 16.38.0 (CC0-1.0)
-   for the eight platforms the collection has, Tilda and OpenCart as text. */
+   for the eight platforms the collection has, Tilda and OpenCart as text.
+   UPDATED for SPEC V1.30.4 §2: Tilda and OpenCart have marks too (Tilda's
+   own, OpenCart's public-domain wordmark from Commons) — all ten are inline
+   SVG, no placeholder names, nothing fetched. */
 test('§4.3: the platform row sits under the first screen, makes no request, names no competitor', () => {
   assert.equal(PLATFORMS.length, 10);
   const withLogo = PLATFORMS.filter((p) => p.logo);
-  assert.deepEqual(PLATFORMS.filter((p) => p.wordmark).map((p) => p.name), ['WooCommerce', 'Wix']);
+  assert.equal(withLogo.length, 10, 'a platform is still set as text without its logo');
+  assert.deepEqual(PLATFORMS.filter((p) => p.wordmark).map((p) => p.name), ['WooCommerce', 'OpenCart', 'Wix']);
   assert.match(CSS, /\n\.platform__name--sr \{[^}]*clip-path: inset\(50%\);/, 'the wordmarks\' names are not kept for screen readers');
-  assert.deepEqual(PLATFORMS.filter((p) => !p.logo).map((p) => p.name), ['Tilda', 'OpenCart'],
-    'only Tilda and OpenCart may go without a logo — Simple Icons has none for them');
   // The logos are files beside their CC0 licence and a note on the marks.
   const BRANDS = join(SITE_DIR, 'icons', 'brands');
   const lic = readFileSync(join(BRANDS, 'LICENSE.md'), 'utf8');
   assert.match(lic, /CC0 1\.0 Universal/, 'site/icons/brands/LICENSE.md is not the CC0 text');
+  assert.match(lic, /tilda\.svg[\s\S]*opencart\.svg[\s\S]*NOT covered/, 'LICENSE.md reads as if CC0 covered the Tilda and OpenCart files');
   const readme = readFileSync(join(BRANDS, 'README.md'), 'utf8');
   assert.match(readme, /Simple Icons/);
   assert.match(readme, /belong to their owners/);
   assert.match(readme, /nominative/);
+  assert.match(readme, /static\.tildacdn\.net/, 'README.md does not name where the Tilda mark came from');
+  assert.match(readme, /Wikimedia Commons[\s\S]*public domain/, 'README.md does not name the OpenCart source and licence');
   const files = readdirSync(BRANDS).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4)).sort();
   assert.deepEqual(files, withLogo.map((p) => p.logo).sort(), 'site/icons/brands holds a logo the row does not use, or misses one');
+  // One colour: no fill of its own, no gradient, no style.
+  for (const f of ['tilda', 'opencart']) {
+    const svg = readFileSync(join(BRANDS, f + '.svg'), 'utf8');
+    assert.doesNotMatch(svg, /fill="#|stroke="#|style=|Gradient|<defs/, `${f}.svg is not single-colour`);
+    assert.match(svg, /<title>(Tilda|OpenCart)<\/title>/, `${f}.svg has no title`);
+  }
 
   for (const [code, html, dict] of pages()) {
     const hero = html.match(/<section class="hero">[\s\S]*?\n  <\/section>/)[0];
@@ -294,19 +305,23 @@ test('§4.3: the platform row sits under the first screen, makes no request, nam
       /* Every platform has its name as TEXT — the accessible name of the
          item: visible beside a symbol, screen-reader-only beside a wordmark
          (WooCommerce, Wix — the logo already spells it). */
+      const svg = items[i].match(/<svg[\s\S]*?<\/svg>/);
+      assert.ok(svg, `${code}: ${p.name} has no logo`);
+      assert.doesNotMatch(svg[0], /<title>|fill="#|stroke="#|style=/, `${code}: ${p.name}'s logo carries a title or a colour of its own`);
+      if (p.named) {
+        /* §2: OpenCart's wordmark stands alone — the svg is the item's image,
+           named by aria-label, and there is no second, visible or hidden, name. */
+        assert.match(svg[0], new RegExp(`^<svg class="brand brand--wordmark brand--tall" width="\\d+" height="\\d+" viewBox="[\\d. ]+" fill="currentColor" role="img" aria-label="${p.name}" focusable="false">`),
+          `${code}: ${p.name}'s wordmark is not an image named ${p.name}`);
+        assert.ok(!items[i].includes('platform__name'), `${code}: ${p.name} carries a name beside its wordmark`);
+        return;
+      }
       const nameSpan = p.wordmark ? '<span class="platform__name platform__name--sr">' : '<span class="platform__name">';
       assert.ok(items[i].includes(`${nameSpan}${p.name}</span>`), `${code}: ${p.name} has no name in text`);
-      const svg = items[i].match(/<svg[\s\S]*?<\/svg>/);
-      if (p.logo) {
-        assert.ok(svg, `${code}: ${p.name} has no logo`);
-        assert.match(svg[0], p.wordmark
-          ? /^<svg class="brand brand--wordmark" width="\d+" height="16" viewBox="[\d. ]+" fill="currentColor" aria-hidden="true" focusable="false">/
-          : /^<svg class="brand" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">/,
-          `${code}: ${p.name}'s logo is not a decorative inline currentColor svg`);
-        assert.doesNotMatch(svg[0], /<title>|fill="#|stroke="#/, `${code}: ${p.name}'s logo carries a title or a colour of its own`);
-      } else {
-        assert.equal(svg, null, `${code}: ${p.name} has a logo it should not have`);
-      }
+      assert.match(svg[0], p.wordmark
+        ? /^<svg class="brand brand--wordmark" width="\d+" height="16" viewBox="[\d. ]+" fill="currentColor" aria-hidden="true" focusable="false">/
+        : /^<svg class="brand" width="22" height="22" viewBox="[\d. ]+" fill="currentColor" aria-hidden="true" focusable="false">/,
+        `${code}: ${p.name}'s logo is not a decorative inline currentColor svg`);
     });
     assert.doesNotMatch(row[0], /\b(src|href|srcset)=|url\(|<use\b|<image\b/, `${code}: the platform row asks for a resource`);
     for (const name of ['Cookiebot', 'CookieYes', 'Osano', 'Termly', 'Usercentrics', 'OneTrust',

@@ -93,7 +93,7 @@ export function switchPath(dir) {
  * They are constants rather than literals in three head builders (the
  * template's map and the two law-page head arrays) so /law cannot drift. */
 export const THEME_KEY = 'ck-site-theme';
-export const THEME_COLORS = { dark: '#141414', light: '#F2F0E9' };
+export const THEME_COLORS = { dark: '#141414', light: '#F3F3F1' };
 
 export const THEME_META =
   '<meta name="color-scheme" content="dark">\n' +
@@ -1204,15 +1204,23 @@ export function renderFigures(dict, lang) {
    nominatively — site/icons/brands/README.md). Each logo is inlined (no
    request), monochrome currentColor (the stylesheet paints it --ink-soft in
    both themes), aria-hidden; the platform's name stands beside it as text,
-   so the row reads the same to a screen reader. Tilda and OpenCart have no
-   mark in Simple Icons and are set as their names alone. */
+   so the row reads the same to a screen reader.
+   SPEC V1.30.4 §2: Tilda and OpenCart have their marks too — Tilda's circle
+   from its own site, OpenCart's wordmark from Wikimedia Commons (public
+   domain), both reduced to one currentColor fill. Neither is drawn on Simple
+   Icons' 24×24 grid, so each file's own viewBox is read and kept. */
 export const BRAND_DIR = join(SITE_DIR, 'icons', 'brands');
 export const PLATFORMS = [
-  { name: 'Tilda' },
+  { name: 'Tilda', logo: 'tilda' },
   { name: 'WordPress', logo: 'wordpress' },
   { name: 'WooCommerce', logo: 'woocommerce', wordmark: [0, 9.58, 24, 4.84] },
   { name: 'Shopify', logo: 'shopify' },
-  { name: 'OpenCart' },
+  /* A wordmark with no name span at all (§2: «без отдельной текстовой
+     подписи… с role="img" и доступным именем»): the svg itself is the item's
+     image, named OpenCart. 20 px tall rather than 16: its box includes the
+     «p» descender and the cart's handle, so at 16 its letters stood a size
+     below the names beside it. */
+  { name: 'OpenCart', logo: 'opencart', wordmark: [0, 0, 400, 78], height: 20, named: true },
   { name: 'Wix', logo: 'wix', wordmark: [0, 7.35, 24, 9.29] },
   { name: 'Webflow', logo: 'webflow' },
   { name: 'Squarespace', logo: 'squarespace' },
@@ -1220,32 +1228,49 @@ export const PLATFORMS = [
   { name: 'Google Tag Manager', logo: 'googletagmanager' }
 ];
 
-/* Two of the marks are WORDMARKS (WooCommerce, Wix): the logo already spells
-   the name, so it stands alone, drawn to its own measured box (getBBox of the
-   Simple Icons path, so it is not a sliver in a 24×24 square), and the name
-   stays in the markup for a screen reader only. */
-export function brandSvg(slug, box) {
+/* Wordmarks (WooCommerce, Wix, OpenCart): the logo already spells the name,
+   so it stands alone, drawn to its own measured box (getBBox of the path, so
+   it is not a sliver in a square), and — for the Simple Icons two — the name
+   stays in the markup for a screen reader only. A square mark is drawn at
+   22×22 from the file's own viewBox (24×24 for Simple Icons, the circle's
+   bounds for Tilda). `named` turns the svg from decoration into the item's
+   image, with the platform's name as its accessible name. */
+export function brandSvg(slug, box, opts = {}) {
   if (!/^[a-z0-9]+$/.test(slug)) throw new Error(`bad brand slug "${slug}"`);
   const file = join(BRAND_DIR, slug + '.svg');
   if (!existsSync(file)) throw new Error(`site/icons/brands/${slug}.svg is missing`);
-  const inner = readFileSync(file, 'utf8').match(/<svg\b[^>]*viewBox="0 0 24 24"[^>]*>([\s\S]*?)<\/svg>/);
-  if (!inner) throw new Error(`site/icons/brands/${slug}.svg is not a 24×24 <svg>`);
-  const shapes = inner[1].replace(/<title>[\s\S]*?<\/title>/g, '').trim();
-  if (box) {
-    const h = 16;
-    const w = Math.round((box[2] / box[3]) * h);
-    return '<svg class="brand brand--wordmark" width="' + w + '" height="' + h + '" viewBox="' + box.join(' ') + '" ' +
-      'fill="currentColor" aria-hidden="true" focusable="false">' + shapes + '</svg>';
+  const src = readFileSync(file, 'utf8');
+  const inner = src.match(/<svg\b[^>]*viewBox="([\d. -]+)"[^>]*>([\s\S]*?)<\/svg>/);
+  if (!inner) throw new Error(`site/icons/brands/${slug}.svg has no viewBox`);
+  const vb = inner[1].trim().split(/\s+/).map(Number);
+  if (vb.length !== 4 || vb.some((n) => !Number.isFinite(n)) || vb[2] <= 0 || vb[3] <= 0) {
+    throw new Error(`site/icons/brands/${slug}.svg has a malformed viewBox "${inner[1]}"`);
   }
-  return '<svg class="brand" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ' +
-    'aria-hidden="true" focusable="false">' + shapes + '</svg>';
+  const shapes = inner[2].replace(/<title>[\s\S]*?<\/title>/g, '').trim();
+  // One colour, the page's: a fill, stroke, style or gradient of the file's
+  // own would paint over currentColor.
+  if (/\b(fill|stroke)="(?!none)|style=|<linearGradient|<radialGradient|<image\b|\bhref=/.test(shapes)) {
+    throw new Error(`site/icons/brands/${slug}.svg carries a colour or a reference of its own`);
+  }
+  const a11y = opts.label
+    ? 'role="img" aria-label="' + escapeAttr(opts.label) + '" focusable="false"'
+    : 'aria-hidden="true" focusable="false"';
+  if (box) {
+    const h = opts.height || 16;
+    const w = Math.round((box[2] / box[3]) * h);
+    return '<svg class="brand brand--wordmark' + (opts.height ? ' brand--tall' : '') + '" width="' + w + '" height="' + h + '" viewBox="' + box.join(' ') + '" ' +
+      'fill="currentColor" ' + a11y + '>' + shapes + '</svg>';
+  }
+  return '<svg class="brand" width="22" height="22" viewBox="' + vb.join(' ') + '" fill="currentColor" ' +
+    a11y + '>' + shapes + '</svg>';
 }
 
 export function renderPlatforms() {
-  return PLATFORMS.map(({ name, logo, wordmark }) =>
+  return PLATFORMS.map(({ name, logo, wordmark, height, named }) =>
     '          <li class="platform' + (logo ? '' : ' platform--text') + '">' +
-    (logo ? brandSvg(logo, wordmark) : '') +
-    '<span class="platform__name' + (wordmark ? ' platform__name--sr' : '') + '">' + escapeHtml(name) + '</span></li>').join('\n');
+    (logo ? brandSvg(logo, wordmark, { height, label: named ? name : '' }) : '') +
+    (named ? '' : '<span class="platform__name' + (wordmark ? ' platform__name--sr' : '') + '">' + escapeHtml(name) + '</span>') +
+    '</li>').join('\n');
 }
 
 /* V1.30.1 A2: the six «Что умеет» screenshots, one file per page language

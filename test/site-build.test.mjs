@@ -1671,7 +1671,11 @@ test('the check block is the red band, with the platforms as a plain list', () =
   assert.match(css, /@media \(min-width: 960px\) \{\s*\.check-band \.fit__list \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/,
     'the platform list is not two columns on a desktop');
   const section = html.match(/<section id="check"[\s\S]*?\n  <\/section>/)[0];
-  assert.equal((section.match(/<li\b/g) || []).length, 4, 'the check block does not list four platforms');
+  /* UPDATED for SPEC V1.30.4 §3: the block also holds the check panel, whose
+     steps and figures are list items of their own — the four platforms are
+     counted in their own list. */
+  const fit = section.match(/<ul class="fit__list">[\s\S]*?<\/ul>/)[0];
+  assert.equal((fit.match(/<li\b/g) || []).length, 4, 'the check block does not list four platforms');
   assert.doesNotMatch(section, /class="card/, 'the check block nests cards again');
 
   /* §1.4: on a phone the band is not a full-width slab of red. */
@@ -2243,7 +2247,15 @@ test('the two palettes are one token set, and every text pair is AA in both', ()
   for (const t of ['--accent', '--band', '--accent-deco', '--on-accent', '--on-band']) {
     assert.equal(light[t].toUpperCase(), dark[t].toUpperCase(), `the light theme changes ${t}`);
   }
-  assert.equal(light['--bg'].toUpperCase(), '#F2F0E9', 'the light page is not eClar\'s #F2F0E9');
+  /* UPDATED for SPEC V1.30.4 §1.2 — the owner's neutral #F3F3F1 replaced
+     eClar's warm #F2F0E9, and no light token is left on the warm side. */
+  assert.equal(light['--bg'].toUpperCase(), '#F3F3F1', 'the light page is not the owner\'s #F3F3F1');
+  for (const [k, v] of Object.entries(light)) {
+    const m = /^#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})$/i.exec(v);
+    if (!m || !/^--(bg|cream|surface|surface-2|bg-band|line|line-soft|capsule-hover|capsule-line|hl-chrome|hl-chrome-line|hl-dot)$/.test(k)) continue;
+    const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16));
+    assert.ok(r - b <= 4, `the light ${k} ${v} is still warm (red ${r} vs blue ${b})`);
+  }
   assert.equal(light['--ink'].toUpperCase(), '#141414');
   assert.equal(light['--accent-ink'].toUpperCase(), '#B82E2D');
 });
@@ -2253,10 +2265,10 @@ test('the two palettes are one token set, and every text pair is AA in both', ()
 test('the theme head is built from shared constants', () => {
   assert.equal(THEME_META, '<meta name="color-scheme" content="dark">\n<meta name="theme-color" content="#141414">');
   assert.equal(THEME_COLORS.dark, '#141414');
-  assert.equal(THEME_COLORS.light, '#F2F0E9');
-  assert.match(THEME_BOOT, /content","#F2F0E9"/, 'the boot script does not hand light browsers the light --bg');
+  assert.equal(THEME_COLORS.light, '#F3F3F1');
+  assert.match(THEME_BOOT, /content","#F3F3F1"/, 'the boot script does not hand light browsers the light --bg');
   const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
-  assert.match(app, /var THEME_COLORS = \{ dark: '#141414', light: '#F2F0E9' \};/,
+  assert.match(app, /var THEME_COLORS = \{ dark: '#141414', light: '#F3F3F1' \};/,
     'app.js and the build disagree on the theme-color values');
   for (const f of [...outputs(), ...lawOutputs()]) {
     const html = readFileSync(f.path, 'utf8');

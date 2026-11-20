@@ -1,3 +1,7 @@
+> Scope: this CC0 text covers the eight Simple Icons files in this folder.
+> `tilda.svg` (Tilda's own mark, nominative use) and `opencart.svg` (public
+> domain, Wikimedia Commons) are NOT covered by it; see `README.md`.
+
 # CC0 1.0 Universal
 
 ## Statement of Purpose

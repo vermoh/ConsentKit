@@ -475,7 +475,7 @@ test('§5: the address placeholder clears 4.5:1 on its field', () => {
      --surface on the band, the page ground on the law pages. */
   const dark = CSS.match(/^\s+--placeholder:\s+(#[0-9A-Fa-f]{6});/m)[1];
   const light = CSS.match(/:root\[data-theme="light"\] \{[\s\S]*?--placeholder:\s+(#[0-9A-Fa-f]{6});/)[1];
-  for (const [color, grounds] of [[dark, ['#1F1F1F', '#141414']], [light, ['#FFFFFF', '#F2F0E9']]]) {
+  for (const [color, grounds] of [[dark, ['#1F1F1F', '#141414']], [light, ['#FFFFFF', '#F3F3F1']]]) {
     for (const ground of grounds) {
       assert.ok(ratio(color, ground) >= 4.5,
         `the placeholder ${color} on ${ground} is ${ratio(color, ground).toFixed(2)}:1`);

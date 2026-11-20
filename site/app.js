@@ -888,6 +888,22 @@
     checkDone: 'ok'
   };
 
+  /* V1.30.4 §3: the states the PANEL already shows on screen — the steps
+     while the scan runs, the three numbers when it is done. The status line
+     still SAYS them (it is the form's one live region, and analytics reads
+     its key), but only to a screen reader: printed under the form as well,
+     the result appeared twice, which is what the owner pointed at. */
+  var PANEL_STATES = { checkRunning: true, checkDone: true };
+
+  /* §3.1: outcomes the panel also states, «тот же текст состояния». Copied
+     into the panel's own (non-live) line; where the panel stands beside the
+     form, the stylesheet shows that copy and reads the form's line to screen
+     readers only, and everywhere else it is the other way round — so each
+     width prints the sentence once. checkError counts only before step 2: a
+     failed «Прислать» belongs next to its button. */
+  var MIRROR_STATES = { checkScanError: true, checkLimit: true, checkRecent: true,
+    checkRecentMailed: true, checkRegistered: true, checkError: true };
+
   function setState(form, key, vars) {
     var out = $('.check__state', form);
     if (!out) return;
@@ -897,8 +913,18 @@
         msg = msg.split('{' + k + '}').join(vars[k]);
       });
     }
+    var step2 = $('.check__step--2', form);
+    var mirror = !!MIRROR_STATES[key] && !(key === 'checkError' && step2 && !step2.hidden);
     out.textContent = msg;
-    out.className = 'check__state check__state--' + (STATE_TONE[key] || 'warn');
+    out.className = 'check__state check__state--' + (STATE_TONE[key] || 'warn') +
+      (PANEL_STATES[key] ? ' check__state--sr' : '') + (mirror ? ' check__state--mirrored' : '');
+    var panel = panelOf(form);
+    var copy = panel && $('[data-check-panel-state]', panel);
+    if (copy) {
+      copy.textContent = mirror ? msg : '';
+      copy.className = 'check-panel__state check-panel__state--' + (STATE_TONE[key] || 'warn');
+      copy.hidden = !mirror;
+    }
 
     /* The state KEY, beside the translated sentence (SPEC-V1.26 §2).
        site/analytics.js turns the scan outcome into ck_scan_submit /
@@ -971,16 +997,220 @@
     if (b) b.disabled = !!on;
   }
 
-  /* The teaser sentence: «Готово: N сторонних сервисов, K из них до согласия,
-     M cookie.» Numbers from the server, every word from the dictionary. */
-  function renderTeaser(form, teaser) {
-    var out = $('[data-check-teaser]', form);
-    if (!out) return;
+  /* ── SPEC V1.30.4 §3: the panel beside the form ─────────────────────
+
+     One run per form at a time. `gen` is bumped by every new check and by
+     «Проверить другой сайт», and every poll tick compares it before touching
+     the page — otherwise a first check still polling would write its result
+     into the panel of the second. */
+  function runOf(form) {
+    if (!form.__ckRun) form.__ckRun = { gen: 0, step: 0, started: 0, timer: null, domain: '' };
+    return form.__ckRun;
+  }
+
+  function panelOf(form) {
+    var run = form.parentNode;
+    while (run && run.nodeType === 1 && !run.hasAttribute('data-check-run')) run = run.parentNode;
+    return (run && run.nodeType === 1) ? $('[data-check-panel]', run) : null;
+  }
+
+  /* Phase -> step (§3.3). Unknown phases return 0 and leave the step where it
+     is: the panel never guesses, and never moves backwards. */
+  var PHASE_STEP = {
+    start: 1,
+    crawl: 2, accept: 2, reject: 2, reload: 2, policy: 2, install: 2,
+    readiness: 3, finish: 3
+  };
+
+  function clock(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000));
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function stopTimer(form) {
+    var run = runOf(form);
+    if (run.timer) { clearInterval(run.timer); run.timer = null; }
+  }
+
+  function tickTimer(form) {
+    var panel = panelOf(form);
+    var out = panel && $('[data-check-elapsed]', panel);
+    if (out) out.textContent = clock(Date.now() - runOf(form).started);
+  }
+
+  /* Paint the step list: everything before `step` is done, `step` itself is
+     active (or stopped), everything after it waits. */
+  function paintSteps(panel, step, mode) {
+    $$('[data-check-step]', panel).forEach(function (li) {
+      var n = Number(li.getAttribute('data-check-step'));
+      li.classList.toggle('is-done', mode === 'done' ? true : n < step);
+      li.classList.toggle('is-active', mode === 'running' && n === step);
+      li.classList.toggle('is-stopped', mode === 'stopped' && n === step);
+      if (mode === 'running' && n === step) li.setAttribute('aria-current', 'step');
+      else li.removeAttribute('aria-current');
+    });
+  }
+
+  function paintCount(panel, progress) {
+    var count = $('[data-check-count]', panel);
+    var bar = $('[data-check-bar]', panel);
+    var total = progress && isNum(progress.pagesTotal) && progress.pagesTotal > 0 ? progress.pagesTotal : 0;
+    var on = !!(total && PHASE_STEP[progress.phase] === 2);
+    if (count) {
+      count.hidden = !on;
+      if (on) {
+        var done = Math.min(isNum(progress.pagesDone) ? progress.pagesDone : 0, total);
+        count.textContent = t('panelPages').split('{done}').join(String(done)).split('{total}').join(String(total));
+      }
+    }
+    if (bar) {
+      bar.hidden = !on;
+      var fill = $('i', bar);
+      if (on && fill) fill.style.width = Math.round((Math.min(progress.pagesDone || 0, total) / total) * 100) + '%';
+    }
+  }
+
+  function panelReset(form) {
+    var run = runOf(form);
+    stopTimer(form);
+    run.step = 0;
+    var panel = panelOf(form);
+    if (!panel) return;
+    panel.setAttribute('data-state', 'idle');
+    paintSteps(panel, 0, 'idle');
+    paintCount(panel, null);
+    var hint = $('[data-check-hint]', panel);
+    if (hint) hint.hidden = false;
+    var meta = $('[data-check-meta]', panel);
+    if (meta) meta.hidden = true;
+    var result = $('[data-check-result]', panel);
+    if (result) result.hidden = true;
+    var copy = $('[data-check-panel-state]', panel);
+    if (copy) { copy.textContent = ''; copy.hidden = true; }
+  }
+
+  function panelStart(form, domain) {
+    var run = runOf(form);
+    stopTimer(form);
+    run.step = 1;
+    run.started = Date.now();
+    run.domain = domain;
+    var panel = panelOf(form);
+    if (!panel) return;
+    panel.setAttribute('data-state', 'running');
+    paintSteps(panel, 1, 'running');
+    paintCount(panel, null);
+    var result = $('[data-check-result]', panel);
+    if (result) result.hidden = true;
+    var hint = $('[data-check-hint]', panel);
+    if (hint) hint.hidden = false;
+    var meta = $('[data-check-meta]', panel);
+    if (meta) meta.hidden = false;
+    var site = $('[data-check-site]', panel);
+    if (site) site.textContent = domain;
+    tickTimer(form);
+    run.timer = setInterval(function () { tickTimer(form); }, 1000);
+  }
+
+  /* One poll answer's `progress`. Returns the new step number when the step
+     changed (so the caller announces it once), 0 otherwise. A missing or
+     unknown progress changes nothing: the first step stays active and only
+     the timer moves — no invented percentage (§3.1). */
+  function panelProgress(form, progress) {
+    var run = runOf(form);
+    var panel = panelOf(form);
+    if (!panel || !progress || typeof progress.phase !== 'string') return 0;
+    var mapped = PHASE_STEP[progress.phase] || 0;
+    var step = Math.max(run.step || 1, mapped);
+    var changed = step !== run.step;
+    run.step = step;
+    paintSteps(panel, step, 'running');
+    paintCount(panel, step === 2 ? progress : null);
+    return changed ? step : 0;
+  }
+
+  function panelDone(form, teaser) {
+    var run = runOf(form);
+    stopTimer(form);
+    tickTimer(form);
+    run.step = 3;
+    var panel = panelOf(form);
+    if (!panel) return;
     var s = teaser || {};
-    out.textContent = t('checkDone')
-      .split('{services}').join(groupDigits(isNum(s.services) ? s.services : 0))
-      .split('{before}').join(groupDigits(isNum(s.beforeConsent) ? s.beforeConsent : 0))
-      .split('{cookies}').join(groupDigits(isNum(s.cookies) ? s.cookies : 0));
+    var n = {
+      services: isNum(s.services) ? s.services : 0,
+      before: isNum(s.beforeConsent) ? s.beforeConsent : 0,
+      cookies: isNum(s.cookies) ? s.cookies : 0
+    };
+    panel.setAttribute('data-state', 'done');
+    paintSteps(panel, 3, 'done');
+    paintCount(panel, null);
+    var hint = $('[data-check-hint]', panel);
+    if (hint) hint.hidden = true;
+    ['services', 'before', 'cookies'].forEach(function (k) {
+      var num = $('[data-check-fig="' + k + '"]', panel);
+      if (num) num.textContent = groupDigits(n[k]);
+    });
+    var lab = $('[data-check-fig-label="services"]', panel);
+    if (lab) lab.textContent = plural(n.services, 'panelServices');
+    lab = $('[data-check-fig-label="cookies"]', panel);
+    if (lab) lab.textContent = plural(n.cookies, 'panelCookies');
+    var before = $('[data-check-fig-before]', panel);
+    if (before) before.classList.toggle('check-fig--alert', n.before > 0);
+    var verdict = $('[data-check-verdict]', panel);
+    if (verdict) verdict.textContent = t(n.before > 0 ? 'panelVerdictSome' : 'panelVerdictNone');
+    var result = $('[data-check-result]', panel);
+    if (result) result.hidden = false;
+  }
+
+  /* The scan stopped (error, limit, gave up): the list keeps the mark where
+     it stopped. The words are the status line's, under the form. */
+  function panelStop(form) {
+    var run = runOf(form);
+    stopTimer(form);
+    var panel = panelOf(form);
+    if (!panel || !run.step) return;
+    panel.setAttribute('data-state', 'stopped');
+    paintSteps(panel, run.step, 'stopped');
+    paintCount(panel, null);
+    var hint = $('[data-check-hint]', panel);
+    if (hint) hint.hidden = true;
+  }
+
+  /* §3.2: one primary button in view. While a scan runs (and after it), step
+     1 folds into a line — the address and «Проверить другой сайт». */
+  function setRan(form, on, domain) {
+    var step1 = $('.check__step--1', form);
+    var ran = $('[data-check-ran]', form);
+    if (!ran) return;
+    var active = document.activeElement;
+    // The submit button was disabled while the request ran, which drops the
+    // focus to <body>; that counts as «the focus was on step 1» too.
+    var lost = !active || active === document.body;
+    var fromStep1 = lost || (step1 && step1.contains(active)) || active === $('.check__state', form);
+    var fromRan = lost || ran.contains(active);
+    if (step1) step1.hidden = !!on;
+    ran.hidden = !on;
+    var site = $('[data-check-ran-site]', ran);
+    if (site && on) site.textContent = domain || '';
+    // The control the visitor was on has just been hidden: hand the focus to
+    // the next one rather than letting it fall to <body>.
+    var next = on ? (fromStep1 && $('[data-check-again]', ran))
+                  : (fromRan && $('.check__step--1 button[type="submit"]', form));
+    if (next) { try { next.focus({ preventScroll: true }); } catch (e) { next.focus(); } }
+  }
+
+  /* The numbers analytics.js reports with ck_scan_result. They used to be
+     read back off the teaser line, which no longer exists (§3.2); now they
+     sit on the form as attributes, written before the state that fires the
+     event. */
+  function stampTeaser(form, teaser) {
+    var s = teaser || {};
+    form.setAttribute('data-check-services', String(isNum(s.services) ? s.services : 0));
+    form.setAttribute('data-check-before', String(isNum(s.beforeConsent) ? s.beforeConsent : 0));
+    form.setAttribute('data-check-cookies', String(isNum(s.cookies) ? s.cookies : 0));
   }
 
   /* Poll one check to completion.
@@ -990,27 +1220,42 @@
    * slow server must not be able to extend its own deadline. */
   function pollCheck(form, checkId, domain, announce) {
     var started = Date.now();
+    var run = runOf(form);
+    var gen = run.gen;
 
     // Step 3 reads the id back off the form: the e-mail button is wired once,
     // at boot, and must work for whichever check this instance is currently
     // showing — including a second check the visitor starts on the same page.
     form.setAttribute('data-check-id', checkId);
+    setRan(form, true, domain);
+    panelStart(form, domain);
+
+    // A terminal answer for the scan: the panel keeps the mark where it
+    // stopped and step 1 opens again, so the visitor can try once more.
+    var stop = function (key) {
+      panelStop(form);
+      setRan(form, false);
+      setState(form, key);
+    };
 
     var tick = function () {
+      if (runOf(form).gen !== gen) return;
       askJson(API_BASE + CHECK_PATH + '/' + encodeURIComponent(checkId), null, 10000)
         .then(function (r) {
-          if (r.status === 404) { setState(form, 'checkScanError'); return; }
-          if (r.status === 429) { setState(form, 'checkLimit'); return; }
+          if (runOf(form).gen !== gen) return;
+          if (r.status === 404) { stop('checkScanError'); return; }
+          if (r.status === 429) { stop('checkLimit'); return; }
           if (r.status !== 200 || !r.data) { again(); return; }
 
           var st = r.data.status;
 
           if (st === 'done') {
+            stampTeaser(form, r.data.teaser);
+            panelDone(form, r.data.teaser);
             // hasEmail: the address was given with the first request, or on an
             // earlier visit. There is nothing to ask for, so step 2 stays shut
             // and the visitor is told the mail is already on its way.
             if (r.data.hasEmail) {
-              renderTeaser(form, r.data.teaser);
               showStep2(form, false);
               // `repeat` is set when THIS visit was told «уже проверяли»: the
               // mail went out earlier, so «придёт в несколько минут» would be
@@ -1019,8 +1264,9 @@
                 ? 'checkRecentMailed' : 'checkMailQueued');
               return;
             }
-            renderTeaser(form, r.data.teaser);
             showStep2(form, true);
+            // The numbers are in the panel; the status line says them once,
+            // to a screen reader only (PANEL_STATES).
             setState(form, 'checkDone', {
               services: groupDigits(isNum((r.data.teaser || {}).services) ? r.data.teaser.services : 0),
               before: groupDigits(isNum((r.data.teaser || {}).beforeConsent) ? r.data.teaser.beforeConsent : 0),
@@ -1031,16 +1277,24 @@
             return;
           }
 
-          if (st === 'error') { setState(form, 'checkScanError'); return; }
+          if (st === 'error') { stop('checkScanError'); return; }
 
-          // queued | running | anything unexpected: keep waiting.
+          // queued | running | anything unexpected: keep waiting. A new step
+          // is said ONCE, through the one live region, and only while that
+          // region is speaking for the scan (not over «уже проверяли»).
+          var step = panelProgress(form, r.data.progress);
+          var out = $('.check__state', form);
+          if (step > 1 && out && out.getAttribute('data-check-state') === 'checkRunning') {
+            out.textContent = t('checkRunning').split('{domain}').join(domain) + ' ' + t('panelStep' + step) + '.';
+          }
           again();
         })
         .catch(function () { again(); });
     };
 
     var again = function () {
-      if (Date.now() - started >= POLL_MAX_MS) { setState(form, 'checkScanError'); return; }
+      if (runOf(form).gen !== gen) return;
+      if (Date.now() - started >= POLL_MAX_MS) { stop('checkScanError'); return; }
       setTimeout(tick, POLL_MS);
     };
 
@@ -1068,6 +1322,16 @@
 
     if (typeof fetch !== 'function') { setState(form, 'checkError'); return; }
 
+    // A new run: whatever an earlier check on this form was still polling
+    // stops writing to the page from here on.
+    var gen = ++runOf(form).gen;
+    showStep2(form, false);
+    panelReset(form);
+    // The headline check can submit while step 1 is folded from an earlier
+    // run: open it again, so an answer that never starts a scan (limit, bad
+    // address, already connected) is read beside the address it is about.
+    setRan(form, false);
+
     setState(form, 'checkSending');
     setStep1Disabled(form, true);
 
@@ -1085,6 +1349,7 @@
       })
     }, 10000)
       .then(function (r) {
+        if (runOf(form).gen !== gen) return;
         var id = r.data && r.data.checkId;
         // The server mints an event id for THIS submit — answer key `event_id`,
         // the reviewer's name, kept snake_case end to end (SPEC-V1.26 follow-up,
@@ -1180,6 +1445,24 @@
 
       var mailBtn = $('[data-check-email]', form);
       if (mailBtn) mailBtn.addEventListener('click', function () { submitEmail(form); });
+
+      // «Проверить другой сайт» (V1.30.4 §3.2): drop the current run, open
+      // step 1 again with the last address in it, and put the caret there.
+      var againBtn = $('[data-check-again]', form);
+      if (againBtn) againBtn.addEventListener('click', function () {
+        runOf(form).gen++;
+        form.removeAttribute('data-check-id');
+        form.removeAttribute('data-check-repeat');
+        showStep2(form, false);
+        panelReset(form);
+        setRan(form, false);
+        var out = $('.check__state', form);
+        if (out) { out.textContent = ''; out.className = 'check__state'; out.removeAttribute('data-check-state'); }
+        var wait = $('[data-check-wait]', form);
+        if (wait) wait.hidden = true;
+        var d = $('input[name="domain"]', form);
+        if (d) { try { d.focus(); d.select(); } catch (e) { /* noop */ } }
+      });
 
       // Enter inside the e-mail field means «прислать», not «проверить заново».
       var mailField = $('input[name="email"]', form);
@@ -1773,7 +2056,7 @@
      ══════════════════════════════════════════════════════════════════ */
 
   var THEME_KEY = 'ck-site-theme';
-  var THEME_COLORS = { dark: '#141414', light: '#F2F0E9' };
+  var THEME_COLORS = { dark: '#141414', light: '#F3F3F1' };
 
   function currentTheme() {
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';

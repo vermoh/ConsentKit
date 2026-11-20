@@ -248,7 +248,7 @@
                   <span class="hl-kicker">Colecția de toamnă</span>
                   <span class="hl-h">Obiecte lucrate de mână pentru casă</span>
                   <span class="hl-sub">Ceramică, textile și lămpi din ateliere mici. Livrare în toată țara.</span>
-                  <span class="hl-shopbtn">Vezi colecția</span>
+                  <span class="hl-shopbtn">Vedeți colecția</span>
                 </div>
                 <div class="hl-photo"><i class="hl-shelf"></i><i class="hl-vase hl-vase--1"></i><i class="hl-vase hl-vase--2"></i><i class="hl-vase hl-vase--3"></i></div>
               </div>
@@ -334,6 +334,12 @@
       </div>
 
         <!--CHECKFORM:start-->
+      <!-- SPEC V1.30.4 §3: the form and, beside it, the panel that shows the
+           scan as it runs and the three numbers when it is done. Both inside
+           the CHECKFORM markers, so every law page gets the same pair. On the
+           home page at ≥960 they are two columns; everywhere narrower (and in
+           the law pages' narrow column) the panel stands under the form. -->
+      <div class="check-run" data-check-run>
       <form class="check" data-check-form novalidate>
         <!-- Step 1: the address and the consent tick. No e-mail — SPEC V1.13
              §2.2 asks for it only after the scan has something to report. -->
@@ -356,11 +362,20 @@
           </p>
         </div>
 
+        <!-- V1.30.4 §3.2: once a scan is running, step 1 folds into this one
+             line — the address and a way to start over — so «Проверить» and
+             «Прислать» are never on screen together. -->
+        <p class="check__ran" data-check-ran hidden>
+          <span class="check__ran-site" data-check-ran-site></span>
+          <button type="button" class="check__again" data-check-again data-i18n="checkAgain">Проверить другой сайт</button>
+        </p>
+
         <!-- Step 2: revealed by app.js once the poll reports `done`. Hidden
              with the `hidden` attribute rather than a class, so it is out of
-             the accessibility tree too while there is nothing to send. -->
+             the accessibility tree too while there is nothing to send. The
+             numbers are not repeated here (V1.30.4 §3.2): they live in the
+             panel. -->
         <div class="check__step check__step--2" hidden>
-          <p class="check__teaser" data-check-teaser></p>
           <p class="check__ask" data-i18n="checkAskEmail">Куда прислать подробный результат?</p>
 
           <p class="check__field">
@@ -389,10 +404,56 @@
         <!-- Shown by app.js only while the scan is actually running: a
              «это займёт пару минут» line is reassuring during the wait and
              noise at every other moment. -->
-        <p class="check__wait" data-check-wait hidden data-i18n="checkRunningNote">Обычно занимает пару минут. Страницу можно не закрывать.</p>
+        <p class="check__wait" data-check-wait hidden data-i18n="checkRunningNote">Страницу можно не закрывать.</p>
 
         <p class="check__note" data-i18n="checkNote">Проверяем только открытые страницы. Результат покажем здесь, подробности пришлём на почту.</p>
       </form>
+
+      <!-- The panel. Decorative for no one: it is the scan's real progress
+           (phase and page counts from GET /v1/public/site-check/:id, V1.30.4
+           §3.3) and, when done, the three numbers. No host, no path, no
+           invented percentage: without `progress` the first step stays active
+           and only the timer moves. Not a live region — the form's one status
+           line announces each step change once (app.js). No id= anywhere: the
+           form block is cloned onto every law page. -->
+      <div class="check-panel" data-check-panel data-state="idle">
+        <h3 class="check-panel__title" data-i18n="panelTitle">Как идёт проверка</h3>
+        <ol class="check-steps">
+          <li class="check-step" data-check-step="1">
+            <span class="check-step__mark" aria-hidden="true"></span>
+            <span class="check-step__label" data-i18n="panelStep1">Открываем сайт как новый посетитель</span>
+          </li>
+          <li class="check-step" data-check-step="2">
+            <span class="check-step__mark" aria-hidden="true"></span>
+            <span class="check-step__label" data-i18n="panelStep2">Смотрим страницы до согласия</span>
+            <span class="check-step__count" data-check-count hidden></span>
+            <span class="check-step__bar" data-check-bar hidden><i></i></span>
+          </li>
+          <li class="check-step" data-check-step="3">
+            <span class="check-step__mark" aria-hidden="true"></span>
+            <span class="check-step__label" data-i18n="panelStep3">Считаем сервисы и cookie</span>
+          </li>
+        </ol>
+        <p class="check-panel__hint" data-check-hint data-i18n="panelUsual">Обычно 1–3 минуты</p>
+        <!-- An outcome that stops the scan (error, limit, «уже проверяли»,
+             «уже подключён»): the status line's own words, shown HERE when the
+             panel stands beside the form (≥960 on the home page) and the line
+             under the form is then read to screen readers only — one print,
+             one announcement. Not live: the form's line already speaks. -->
+        <p class="check-panel__state" data-check-panel-state hidden></p>
+        <p class="check-panel__meta" data-check-meta hidden><span class="check-panel__site" data-check-site></span><span class="check-panel__time" data-check-elapsed>0:00</span></p>
+
+        <div class="check-panel__result" data-check-result hidden>
+          <ul class="check-figs">
+            <li class="check-fig"><span class="check-fig__num" data-check-fig="services">0</span><span class="check-fig__label" data-check-fig-label="services"></span></li>
+            <li class="check-fig" data-check-fig-before><span class="check-fig__num" data-check-fig="before">0</span><span class="check-fig__label" data-i18n="panelBefore">из них до согласия</span></li>
+            <li class="check-fig"><span class="check-fig__num" data-check-fig="cookies">0</span><span class="check-fig__label" data-check-fig-label="cookies"></span></li>
+          </ul>
+          <p class="check-panel__verdict" data-check-verdict></p>
+          <p class="check-panel__more" data-i18n="panelMore">Подробный список — на почту</p>
+        </div>
+      </div>
+      </div>
         <!--CHECKFORM:end-->
 
       <!-- The heading is a SIBLING of .fit, not a child of it: the ≥960 grid

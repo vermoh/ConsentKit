@@ -599,15 +599,25 @@
     return 'clean';
   }
 
-  /* The numbers app.js has just rendered into the teaser line, read back off
-     the DOM: the teaser is the one place the payload reaches the page, and it
-     is written before the state key that triggers this. */
+  /* The numbers app.js has just stamped on the form (SPEC V1.30.4 §3.2 took
+     the teaser line out of the form — the numbers live in the side panel —
+     so app.js writes them as data-check-services / -before / -cookies before
+     the state key that triggers this). The old teaser line is still read as
+     a fallback, for a cached app.js from before the change. */
   function teaserFromDom(form) {
     try {
+      var s = form.getAttribute('data-check-services');
+      if (s !== null && s !== '') {
+        return {
+          services: Number(s),
+          beforeConsent: Number(form.getAttribute('data-check-before')),
+          cookies: Number(form.getAttribute('data-check-cookies'))
+        };
+      }
       var out = form.querySelector('[data-check-teaser]');
-      var digits = String(out && out.textContent || '').match(/\d[\d\s ]*/g) || [];
-      var n = digits.map(function (d) { return Number(d.replace(/[\s ]/g, '')); });
-      // renderTeaser fills «N сервисов, K до согласия, M cookie» in that order.
+      var digits = String(out && out.textContent || '').match(/\d[\d\s\u00a0]*/g) || [];
+      var n = digits.map(function (d) { return Number(d.replace(/[\s\u00a0]/g, '')); });
+      // renderTeaser filled «N сервисов, K до согласия, M cookie» in that order.
       return { services: n[0], beforeConsent: n[1], cookies: n[2] };
     } catch (e) { return {}; }
   }

@@ -300,27 +300,30 @@ a:hover { color: var(--accent-ink); }
    Dark stays the default for everyone; this palette applies only when the
    visitor pressed the capsule's toggle and the head's boot script stamped
    data-theme="light" on <html>. The system preference is never consulted.
-   Warm, after eclar.md: page #F2F0E9, white cards, ink #141414. The SAME
-   token set as the dark :root (a test compares the two lists), and every
-   pair is AA (the same test measures them):
-       --ink       #141414  16.2:1 on --bg, 14.9 on --cream, 18.4 on --surface
-       --ink-soft  #5E5B53   5.9:1 on --bg,  5.5 on --cream,  6.8 on --surface
-       --accent-ink #B82E2D  5.3:1 on --bg,  4.9 on --cream (the h1 word)
+   Neutral since V1.30.4 §1.2 (owner, 20.11.2026): page #F3F3F1 instead of
+   eClar's warm #F2F0E9, and every other light token moved the same way, so
+   no beige patch is left (cream, surface-2, lines, capsule hover, the live
+   composition's chrome). White cards, ink #141414. The SAME token set as the
+   dark :root (a test compares the two lists), and every pair is AA (the same
+   test measures them):
+       --ink       #141414  16.4:1 on --bg, 15.3 on --cream, 18.4 on --surface
+       --ink-soft  #5B5B56   6.2:1 on --bg,  5.7 on --cream,  6.8 on --surface
+       --accent-ink #B82E2D  5.5:1 on --bg,  5.0 on --cream (the h1 word)
        #FFFFFF on --accent   4.69:1 — the button is the same red in both
    The reds are the dark theme's, unchanged: the fill, the band and the
    decoration. Only the TEXT red darkens — #FF6B6B on a light page would be
    2.6:1 — to the band's #B82E2D. */
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg:         #F2F0E9;
-  --cream:      #EAE7DE;
+  --bg:         #F3F3F1;
+  --cream:      #EAEAE7;
   --surface:    #FFFFFF;
-  --surface-2:  #F7F5EF;
-  --bg-band:    #F2F0E9;
+  --surface-2:  #F8F8F6;
+  --bg-band:    #F3F3F1;
   --ink:        #141414;
-  --ink-soft:   #5E5B53;
-  --line:       #DDD8CC;
-  --line-soft:  #E8E4DA;
+  --ink-soft:   #5B5B56;
+  --line:       #DBDBD8;
+  --line-soft:  #E7E7E3;
   --accent:     #D63838;
   --accent-ink: #B82E2D;
   --accent-deco:#E63939;
@@ -346,13 +349,13 @@ a:hover { color: var(--accent-ink); }
   --glow:          #FFFFFF;
   --state-ok:      #17603A;  /* 7.6:1 on --surface */
   --state-warn:    #8A4B00;  /* 6.8:1 on --surface */
-  --placeholder:   #6E6B63;  /* 5.3:1 on --surface */
+  --placeholder:   #6B6B66;  /* 5.4:1 on --surface */
   --art-ok:        #178A50;
-  --hl-chrome:      #ECE9E1;
-  --hl-chrome-line: #DDD8CC;
-  --hl-dot:         #CFC9BC;
+  --hl-chrome:      #ECECE9;
+  --hl-chrome-line: #DBDBD8;
+  --hl-dot:         #CCCCC9;
   --hl-url-bg:      #FFFFFF;
-  --hl-url-ink:     #6E6B63;
+  --hl-url-ink:     #6B6B66;
   /* The cabinet's own light theme (cabinet/src/styles.css :root). */
   --hl-card-bg:     #FFFFFF;
   --hl-card-ink:    #1B1F2A;
@@ -366,9 +369,9 @@ a:hover { color: var(--accent-ink); }
   --hl-flash-from:  #7391F5;
   --capsule-bg:       #FFFFFF;
   --capsule-ink:      #141414;  /* 18.4:1 on the white pill */
-  --capsule-ink-soft: #5E5B53;  /* 6.8:1 */
-  --capsule-line:     #DDD8CC;
-  --capsule-hover:    #F2F0E9;
+  --capsule-ink-soft: #5B5B56;  /* 6.8:1 */
+  --capsule-line:     #DBDBD8;
+  --capsule-hover:    #F3F3F1;
 }
 
 /* The pill itself. Painted on its own element, never on .wrap: .wrap's
@@ -1269,7 +1272,6 @@ img { max-width: 100%; height: auto; }
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
-.check__teaser { margin: 0 0 6px; font-weight: 650; }
 .check__ask { margin: 0 0 12px; color: var(--ink-soft); font-size: .93rem; }
 
 /* The four «подходит любому сайту» tiles, inside the same block as the field
@@ -3705,13 +3707,13 @@ body {
 
 /* ── §1 the light theme: what a token cannot say ─────────────────────── */
 
-/* The grain is light specks tuned for a black ground; on the warm light page
+/* The grain is light specks tuned for a black ground; on the light page
    it would read as dust. eClar's light page is flat, so is ours. */
 :root[data-theme="light"] body { background-image: none; }
 
 /* The final screen stays a dark island in the light theme: the owner's
    close-up of the shield has the dark page ground in the picture itself, and
-   on #F2F0E9 it would sit as a black square. The section re-declares the
+   on the light #F3F3F1 it would sit as a black square. The section re-declares the
    dark tokens for itself and becomes a rounded block like #dev. */
 :root[data-theme="light"] .final {
   --bg:         #141414;
@@ -3948,6 +3950,9 @@ body {
 /* A wordmark spells the name itself: it keeps its own width, and the name
    is there for a screen reader only. */
 .platform .brand--wordmark { width: auto; height: 16px; }
+/* V1.30.4 §2: OpenCart's box carries the «p» descender and the cart's handle,
+   so it is drawn taller for its letters to match the names beside it. */
+.platform .brand--tall { height: 20px; }
 .platform__name--sr {
   position: absolute;
   width: 1px;
@@ -3964,7 +3969,287 @@ body {
   .platforms__list { gap: 10px 18px; }
   .platform { font-size: 15px; gap: 6px; }
   .platform .brand { width: 18px; height: 18px; }
+  .platform .brand--wordmark { width: auto; height: 14px; }
+  .platform .brand--tall { height: 18px; }
 }
 @media (max-width: 560px) {
   :root[data-theme="light"] .final { margin: 0 12px 16px; border-radius: 28px; }
 }
+
+/* ══ SPEC V1.30.4 §3 — the panel beside the check form ═══════════════════
+   The form and the panel are one pair (.check-run), authored inside the
+   CHECKFORM markers so the law pages carry it too. On the home page at ≥960
+   they are two columns of the band's grid, the panel at least as tall as the
+   form; everywhere narrower, and in the law pages' narrow column, the panel
+   stands under the form. The panel is the form's twin: the same card, the
+   same surface in either theme. Nothing in it is red except the «до
+   согласия» figure when it is above zero. */
+.check-run { display: grid; gap: 16px; align-items: stretch; }
+.check-run > .check { width: 100%; }
+.check-panel {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 520px;
+  width: 100%;
+  margin: 0;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg);
+  color: var(--ink);
+}
+.check-band .check-panel { background: var(--surface); border-color: transparent; }
+.law-check .check-panel { max-width: none; }
+@media (max-width: 767px) {
+  .check-band .check-panel { border-color: var(--line); }
+  .check-panel { padding: 22px; }
+}
+/* 768–959: the band is red and the pair is stacked (§3.1 puts them side by
+   side from 960). Both take the full width, so no empty red half is left
+   beside a 520px card. */
+@media (min-width: 768px) and (max-width: 959px) {
+  .check-band .check-run > .check,
+  .check-band .check-run > .check-panel { max-width: none; }
+}
+@media (min-width: 960px) {
+  .check-band .check-run {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+    gap: 24px;
+  }
+  /* The form keeps its own height; the panel stretches to the row, so it is
+     never shorter than the form beside it (§3.1). */
+  .check-band .check-run > .check { grid-column: 1; grid-row: 1; align-self: start; }
+  .check-band .check-run > .check-panel { grid-column: 2; grid-row: 1; max-width: none; }
+}
+
+.check-panel__title { margin: 0; font-size: var(--fs-h3); font-weight: 650; line-height: 1.25; color: var(--ink); }
+
+/* The three steps. A mark, the step's words, and on the pages step the real
+   count «3 из 8» with a thin bar under it. Waiting steps are --ink-soft. */
+.check-steps { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.check-step {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+}
+.check-step.is-active,
+.check-step.is-done,
+.check-step.is-stopped { color: var(--ink); }
+.check-step.is-active { font-weight: 600; }
+.check-step__mark {
+  position: relative;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+}
+/* Active: a ring with one open quarter, turning — or, without motion, a
+   filled dot inside the ring. */
+.check-step.is-active .check-step__mark { border-color: var(--ink); border-top-color: transparent; }
+@media (prefers-reduced-motion: no-preference) {
+  .check-step.is-active .check-step__mark { animation: check-spin 1s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .check-step.is-active .check-step__mark { border-top-color: var(--ink); }
+  .check-step.is-active .check-step__mark::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: var(--ink);
+  }
+}
+@keyframes check-spin { to { transform: rotate(360deg); } }
+/* Done: a filled disc with a tick cut in the panel's own colour. */
+.check-step.is-done .check-step__mark { border-color: var(--ink); background: var(--ink); }
+.check-step.is-done .check-step__mark::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--surface);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.law-check .check-step.is-done .check-step__mark::after { border-color: var(--bg); }
+/* Stopped: where the scan ended — a ring in the warning tone with a bar. */
+.check-step.is-stopped .check-step__mark { border-color: var(--state-warn); }
+.check-step.is-stopped .check-step__mark::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 8px;
+  height: 2px;
+  background: var(--state-warn);
+}
+.check-step__count {
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.check-step__bar {
+  grid-column: 2 / -1;
+  display: block;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+.check-step__bar i { display: block; width: 0; height: 100%; background: var(--ink); }
+@media (prefers-reduced-motion: no-preference) {
+  .check-step__bar i { transition: width .4s ease; }
+}
+.check-step__count[hidden],
+.check-step__bar[hidden] { display: none; }
+
+.check-panel__hint { margin: 0; font-size: var(--fs-small); color: var(--ink-soft); }
+.check-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+.check-panel__site { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.check-panel__time { font-variant-numeric: tabular-nums; }
+/* The outcome copy: shown only where the panel stands beside the form. */
+.check-panel__state { display: none; margin: 0; font-size: .9rem; font-weight: 600; }
+.check-panel__state--ok { color: var(--state-ok); }
+.check-panel__state--warn { color: var(--state-warn); }
+.check-panel__state--wait { color: var(--ink-soft); }
+@media (min-width: 960px) {
+  .check-band .check-panel__state:not([hidden]) { display: block; }
+  .check-band .check__state--mirrored {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+.check-panel__meta[hidden],
+.check-panel__hint[hidden],
+.check-panel__result[hidden] { display: none; }
+
+/* Done: three numbers in the data cards' type (40px, 600, tabular), set as
+   columns between rules rather than as cards inside the card. */
+.check-panel__result { display: grid; gap: 16px; }
+.check-figs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.check-fig {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.check-fig__num {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.check-fig__label { font-size: var(--fs-small); line-height: 1.35; color: var(--ink-soft); }
+.check-fig--alert { border-top-color: var(--accent-ink); }
+.check-fig--alert .check-fig__num { color: var(--accent-ink); }
+@container (max-width: 400px) {
+  .check-figs { grid-template-columns: 1fr; gap: 0; }
+  .check-fig { flex-direction: row; align-items: baseline; gap: 12px; padding: 10px 0; }
+  .check-fig__num { flex: none; min-width: 2.2ch; font-size: 32px; }
+}
+.check-panel p { max-width: none; }
+.check-panel__verdict { margin: 0; font-weight: 600; color: var(--ink); text-wrap: pretty; }
+.check-panel__more { margin: 0; font-size: var(--fs-small); color: var(--ink-soft); }
+/* Points at the e-mail field: up where the form is above, left beside it. */
+.check-panel__more::before { content: "↑\00a0" / ""; }
+@media (min-width: 960px) {
+  .check-band .check-panel__more::before { content: "←\00a0" / ""; }
+}
+
+/* The form's half of §3.2: the folded step 1 — the address and «Проверить
+   другой сайт» — and the status line kept for screen readers while the panel
+   shows the same thing on screen. */
+.check__ran {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin: 0;
+}
+.check__ran[hidden] { display: none; }
+.check__ran-site { font-weight: 650; color: var(--ink); overflow-wrap: anywhere; }
+.check__again {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: .93rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.check__again:hover { text-decoration-thickness: 2px; }
+.check__again:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.check__ran + .check__step--2 { margin-top: 12px; }
+.check__state--sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.check { position: relative; }
+
+/* The glass shield (V1.30.2 §2.1) stays the band's decoration, now behind
+   the panel's top corner: smaller and lower, clear of the floating header. */
+@media (min-width: 960px) {
+  .check-shield { width: clamp(220px, 19vw, 280px); top: 40px; right: clamp(8px, 2vw, 40px); }
+  /* Its foot is behind the panel now, so the shade under it has nothing to
+     ground and would only show as a smudge at the panel's edge. */
+  #check::before { display: none; }
+}
+/* The folded row and the fields run to the card's edge however wide the card
+   is (768–959 gives it the full band). */
+.check-run .check__ran,
+.check-run .check__field { max-width: none; }
