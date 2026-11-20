@@ -940,6 +940,12 @@ test('the check form has all its copy in all three dictionaries', () => {
    place (sites from ten, consents from four figures), a static fallback means
    a failed request never leaves zeros, and the build-rendered part is true on
    day one. */
+/* UPDATED for SPEC V1.30.2 §4.5 — the line left the first screen and became
+   the band of big numbers before «Что умеет» (#figures, still id="trust"),
+   four values: consents, services, languages, the 36 readiness points. The
+   site count lost its own slot; its threshold is kept as the gate on the
+   consents figure («прятать, пока мало сайтов»), and the trustSites* forms
+   left the dictionaries with the slot. */
 test('the trust line hides the counts while there are too few sites', () => {
   const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
 
@@ -952,18 +958,24 @@ test('the trust line hides the counts while there are too few sites', () => {
     'the consents count no longer waits for four figures');
   assert.match(app, /stats\.consents\s*>=\s*STATS_MIN_CONSENTS/,
     'the consents count is drawn without checking its threshold');
+  // Both thresholds guard the one live figure, in the same condition.
+  assert.match(app, /stats\.consents\s*>=\s*STATS_MIN_CONSENTS &&\s*isNum\(stats\.sites\) && stats\.sites\s*>=\s*STATS_MIN_SITES\)/,
+    'the consents figure does not wait for ten sites as well');
   // A static fallback, so a failed request never leaves an empty line or zeros.
   assert.match(app, /STATS_FALLBACK/, 'the trust line has no static fallback');
   assert.match(app, /languages:\s*34/, 'the fallback does not carry the language count');
   // The live items go through the page language's plural, never a bare label.
   assert.match(app, /plural\(n, base\)/, 'the live counts are not pluralised');
   assert.match(app, /'trustConsents'/, 'app.js never draws the consents count');
-  assert.match(app, /'trustSites'/, 'app.js never draws the sites count');
+  assert.doesNotMatch(app, /'trustSites'|data-trust="sites"/, 'app.js still draws a sites figure the band has no slot for');
 
   const template = readTemplate();
   for (const { code } of LANGS) {
     const dict = readDict(code);
-    for (const base of ['trustServices', 'trustConsents', 'trustSites']) {
+    for (const key of ['trustSitesOne', 'trustSitesFew', 'trustSitesMany']) {
+      assert.ok(!Object.prototype.hasOwnProperty.call(dict, key), `${code}.json still carries "${key}"`);
+    }
+    for (const base of ['trustServices', 'trustConsents']) {
       for (const form of ['One', 'Few', 'Many']) {
         const key = base + form;
         assert.ok(dict[key] && dict[key].includes('{n}'),
@@ -984,12 +996,19 @@ test('the trust line hides the counts while there are too few sites', () => {
     // said the threshold is met.
     const html = renderPage(template, code);
     const hero = html.match(/<section class="hero">[\s\S]*?\n  <\/section>/)[0];
-    const line = hero.match(/<p class="hero-trust" id="trust">([\s\S]*?)<\/p>/);
-    assert.ok(line, `the ${code} hero has no trust line`);
-    for (const slot of ['consents', 'sites']) {
-      assert.match(line[1], new RegExp(`<span class="trust-item" data-trust="${slot}" hidden></span>`),
-        `the ${code} trust line ships the ${slot} slot filled or visible`);
-    }
+    assert.doesNotMatch(hero, /id="trust"|hero-trust/, `the ${code} first screen still carries the trust line`);
+    const band = html.match(/<section id="figures"[\s\S]*?\n  <\/section>/);
+    assert.ok(band, `the ${code} page has no band of big numbers`);
+    const line = band[0].match(/<div class="figures" id="trust">([\s\S]*?)<\/div>/);
+    assert.ok(line, `the ${code} band has no #trust figures`);
+    assert.match(line[1], /<p class="trust-item" data-trust="consents" hidden><\/p>/,
+      `the ${code} band ships the consents slot filled or visible`);
+    assert.doesNotMatch(line[1], /data-trust="sites"/, `the ${code} band still has a sites slot`);
+    assert.equal((line[1].match(/<p class="trust-item"/g) || []).length, 4, `the ${code} band does not hold four values`);
+    assert.ok(line[1].replace(/<[^>]+>/g, '').includes(dict.figReadiness.replace(/^36 ?/, '')),
+      `the ${code} band does not carry the 36 readiness points`);
+    assert.match(line[1], /<span class="trust-num">36<\/span>/, `the ${code} band does not set 36 apart`);
+    assert.match(line[1], /<span class="trust-num">34<\/span>/, `the ${code} band does not set 34 apart`);
     /* UPDATED for SPEC V1.30.1 B2 — each item's opening number now sits in
        its own <span class="trust-num"> (weight 600, tabular figures), so the
        copy is compared as TEXT, tags removed; the wrap itself is asserted. */
@@ -1524,8 +1543,11 @@ test('the page has one primary button, and it is the free check', () => {
     const html = renderPage(template, code);
 
     const toCheck = (html.match(/href="#check"[^>]*>/g) || []).length;
-    assert.equal(toCheck, 2,
-      `the ${code} page points at #check ${toCheck} times; V1.30 keeps the capsule and the hero only`);
+    /* UPDATED for SPEC V1.30.2 §2.4 — exactly THREE: the capsule, the hero
+       and the new final screen before #dev, which repeats the same button by
+       the owner's decision. Still exact: a fourth copy is the regression. */
+    assert.equal(toCheck, 3,
+      `the ${code} page points at #check ${toCheck} times; V1.30.2 keeps the capsule, the hero and the final screen`);
     assert.doesNotMatch(html, /class="section-cta"/,
       `the ${code} page still repeats the check button under a section`);
 
@@ -1538,7 +1560,7 @@ test('the page has one primary button, and it is the free check', () => {
     const PRIMARY = /<(a|button)\b[^>]*class="btn[^"]*btn--primary[^"]*"[^>]*>/g;
     const form = html.match(/<form class="check" data-check-form[\s\S]*?<\/form>/)[0];
     const outside = [...html.replace(form, '').matchAll(PRIMARY)].map((m) => m[0]);
-    assert.equal(outside.length, 2,
+    assert.equal(outside.length, 3,
       `the ${code} page has ${outside.length} primary buttons outside the form: ${outside.join(' | ')}`);
     for (const tag of outside) {
       assert.match(tag, /href="#check"/, `the ${code} page has a primary button that is not the check: ${tag}`);

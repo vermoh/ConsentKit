@@ -679,7 +679,15 @@
       // faqAnchor() in tools/build-site.mjs produces the same string for the
       // FAQPage markup, so the two cannot drift.
       d.id = 'q' + (i + 1);
-      var s = el('summary', null, qa[0]);
+      /* SPEC V1.30.2 §2.5: «01»…«14» in small monospace left of the
+         question. aria-hidden: a screen reader already announces the
+         position in the list of disclosures, and «ноль один» before every
+         question is noise. The answer is indented to the question's line. */
+      var s = el('summary');
+      var n = el('span', 'qa-n', (i < 9 ? '0' : '') + (i + 1));
+      n.setAttribute('aria-hidden', 'true');
+      s.appendChild(n);
+      s.appendChild(el('span', 'qa-q', qa[0]));
       d.appendChild(s);
       d.appendChild(el('p', null, qa[1]));
       host.appendChild(d);
@@ -776,16 +784,18 @@
     item.hidden = false;
   }
 
-  /* The two swap rules, and nothing else: consents from four figures, sites
-     from ten. Either can appear without the other. */
+  /* UPDATED for SPEC V1.30.2 §4.5 — the line is now the band of big
+     numbers, with four values: consents recorded, services, languages and the
+     36 readiness points. The site count has no tile of its own any more; it
+     survives as the gate it always was — the consents figure appears only
+     from four figures AND only once ten sites stand behind it («прятать, пока
+     мало сайтов»). */
   function renderStats() {
     if (!$('#trust')) return;
 
-    if (isNum(stats.consents) && stats.consents >= STATS_MIN_CONSENTS) {
+    if (isNum(stats.consents) && stats.consents >= STATS_MIN_CONSENTS &&
+        isNum(stats.sites) && stats.sites >= STATS_MIN_SITES) {
       setTrust('consents', stats.consents, 'trustConsents');
-    }
-    if (isNum(stats.sites) && stats.sites >= STATS_MIN_SITES) {
-      setTrust('sites', stats.sites, 'trustSites');
     }
   }
 

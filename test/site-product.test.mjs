@@ -63,6 +63,10 @@ const SHOTS = [
   ['cabinet-preview', 'pshot6Alt']
 ];
 const shotFile = (base, code) => `${base}-${code}.webp`;
+/* SPEC V1.30.2 §0: the owner's glass shield (two widths) and the close-up.
+   The close-up ships at 800 only — the source is 784px, and its 2× upscale
+   added weight, not detail (the spec's own fallback). */
+const SHIELD_FILES = ['shield-glass-600.webp', 'shield-glass-1200.webp', 'shield-closeup-800.webp'];
 
 /* The pixel size of a .webp, read from its header — the three container
    shapes libwebp writes: simple lossy (VP8), lossless (VP8L) and extended
@@ -171,7 +175,10 @@ test('§0 / V1.30.1 A2: site/img/ holds exactly the pictures the pages use', () 
      is a second copy someone can link to. The folder is the six
      per-language screenshots, nothing else (V1.30.1 B1: the hero trio went
      with the picture). */
-  const want = new Set(SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code))));
+  /* UPDATED for SPEC V1.30.2 §0 — plus the owner's two shield pictures,
+     one set for every language (test/site-v1302.test.mjs owns their use). */
+  const want = new Set([...SHOTS.flatMap(([base]) => LANGS.map(({ code }) => shotFile(base, code))),
+    ...SHIELD_FILES]);
   const have = readdirSync(join(SITE_DIR, 'img')).filter((f) => !f.startsWith('.'));
   for (const f of have) assert.ok(want.has(f), `site/img/${f} is not referenced by any page`);
   assert.equal(have.length, want.size, `site/img/ holds ${have.length} files, the pages use ${want.size}`);
@@ -396,7 +403,15 @@ test('§5: the hero has one primary button and no route to the demo', () => {
       `the ${code} hero is not labelled with its own heroShotAlt`);
     assert.match(hero, /<div class="hl" data-hero-live aria-hidden="true" inert>/,
       `the ${code} hero has no live composition`);
-    assert.doesNotMatch(hero, /<img\b/, `the ${code} hero still shows a picture`);
+    /* UPDATED for SPEC V1.30.2 §4.1 — one <img> is allowed back into the
+       first screen: the small glass shield standing in the headline, and it
+       is decoration (alt="", aria-hidden). Nothing else is a picture. */
+    const imgs = hero.match(/<img\b[^>]*>/g) || [];
+    assert.equal(imgs.length, 1, `the ${code} hero has ${imgs.length} pictures — only the shield in the headline`);
+    assert.match(imgs[0], /class="h1-shield" src="\/img\/shield-glass-600\.webp"/);
+    assert.match(imgs[0], /alt="" aria-hidden="true"/, `the ${code} headline shield is not decorative`);
+    assert.ok(hero.indexOf(imgs[0]) > hero.indexOf('<h1>') && hero.indexOf(imgs[0]) < hero.indexOf('</h1>'),
+      `the ${code} shield is not inside the headline`);
     for (const file of OLD_HERO_SHOTS) {
       assert.ok(!html.includes(file), `the ${code} page still references ${file}`);
       assert.ok(!existsSync(join(SITE_DIR, 'img', file)), `site/img/${file} is still there`);

@@ -647,14 +647,16 @@ export function renderLawPage(template, lang, page) {
   const foot = footerFor(template, dict, lang, entry);
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
 
-  /* A nav item on the home page is an in-page #anchor; from /law/<slug> the
+  /* (V1.30.2: an SVG <use href="#…"> is a reference inside THIS document —
+     the footer wordmark points at the capsule's path — so it is left alone.)
+     A nav item on the home page is an in-page #anchor; from /law/<slug> the
      same href has to travel back to the home page first, or «Тарифы» scrolls
      the article to a section it does not have.
 
      SPEC V1.14.1 §1.1 moved «Демо», «Что умеет» and «Разработчикам» out of
      the header and into the FOOTER, where they are authored as the same bare
      anchors — so the footer needs the same rewrite the nav has always had. */
-  const homeAnchors = (html) => html.replace(/href="#([a-z-]+)"/g, (m, id) =>
+  const homeAnchors = (html) => html.replace(/(?<!<use )href="#([a-z-]+)"/g, (m, id) =>
     'href="' + escapeAttr(pagePath(entry.dir)) + '#' + id + '"');
   const nav = homeAnchors(head);
   const footNav = homeAnchors(foot);
@@ -747,7 +749,7 @@ export function renderLawIndex(template, lang) {
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
   /* Same rewrite as the article pages, header and footer alike — see the
      comment in renderLawPage. */
-  const homeAnchors = (html) => html.replace(/href="#([a-z-]+)"/g, (m, id) =>
+  const homeAnchors = (html) => html.replace(/(?<!<use )href="#([a-z-]+)"/g, (m, id) =>
     'href="' + escapeAttr(pagePath(entry.dir)) + '#' + id + '"');
   const nav = homeAnchors(head);
   const footNav = homeAnchors(foot);
@@ -1048,10 +1050,25 @@ export function iconSvg(name) {
    the dictionary: «34 языка баннера» stays one translatable string, and the
    live counts app.js adds later get the same span from setTrust(). Only a
    number that OPENS an item is wrapped; the empty live slots match nothing. */
+/* UPDATED for SPEC V1.30.2 §4.5 — the line became the band of big numbers
+   (<div class="figures" id="trust">, one <p class="trust-item"> per value),
+   and the same span is what the stylesheet sets at 64px over its caption. */
 export function markTrustNumbers(html) {
-  return html.replace(/(<p class="hero-trust" id="trust">)([\s\S]*?)(<\/p>)/, (m, open, body, close) =>
-    open + body.replace(/(<span class="trust-item"[^>]*>)(\d[\d\u00A0]*)/g,
+  return html.replace(/(<div class="figures" id="trust">)([\s\S]*?)(<\/div>)/, (m, open, body, close) =>
+    open + body.replace(/(<p class="trust-item"[^>]*>)(\d[\d\u00A0]*)/g,
       '$1<span class="trust-num">$2</span>') + close);
+}
+
+/* SPEC V1.30.2 §4.3: the «Работает с» row under the first screen — where the
+   one line goes in. Platforms the banner is installed on (nominative use of
+   their names), never a competitor and never a client. Set as type in the
+   page's own font, monochrome --ink-soft: no logo files, so nothing to fetch
+   and nothing to license. Same names in every language. */
+export const PLATFORMS = ['Tilda', 'WordPress', 'WooCommerce', 'Shopify', 'OpenCart', 'Wix',
+  'Webflow', 'Google Tag Manager'];
+
+export function renderPlatforms() {
+  return PLATFORMS.map((name) => '          <li class="platform">' + escapeHtml(name) + '</li>').join('\n');
 }
 
 /* V1.30.1 A2: the six «Что умеет» screenshots, one file per page language
@@ -1102,6 +1119,7 @@ export function renderPage(template, lang) {
     MARQUEE: renderMarquee(dict, lang),
     HERO_CHART: heroChart(),
     HERO_TOTAL: String(HERO_TOTAL),
+    PLATFORMS: renderPlatforms(),
     ...Object.fromEntries(Object.entries(SHOT_BASES).map(([key, base]) => [key, shotImage(base, lang)])),
     I18N_SCRIPT: i18nScript
   };

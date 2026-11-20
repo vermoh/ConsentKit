@@ -51,8 +51,11 @@ test('§3: eight sections, in order, and the folded ones are gone', () => {
     const order = [...main.replace(/<!--[\s\S]*?-->/g, '')
       .matchAll(/\n  <section (?:id="([a-z-]+)"|class="hero")/g)]
       .map((m) => m[1] || 'hero');
+    /* UPDATED for SPEC V1.30.2 — two sections join: the band of big numbers
+       (#figures, §4.5) before «Что умеет», and the final screen (#start,
+       §2.4) before #dev. */
     assert.deepEqual(order,
-      ['hero', 'check', 'demo', 'features', 'how', 'pricing', 'faq', 'dev'],
+      ['hero', 'check', 'demo', 'figures', 'features', 'how', 'pricing', 'faq', 'start', 'dev'],
       `the ${code} page's sections run ${order.join(' → ')}`);
 
     // «Цифры», «Для кого», and the two that merged into their neighbours.
@@ -350,11 +353,17 @@ test('V1.30.1 A3: «Что умеет» is a 12-column bento on a computer, one 
     'the first card\'s screenshot does not run past the right edge');
 });
 
-test('§2.2: one radius scale — 12 fields and buttons, 20 cards, 28 blocks', () => {
+/* UPDATED for SPEC V1.30.2 §4.2 — buttons leave the field radius for a
+   value of their own: a pill (--r-pill, 999px), as on heroui. Fields stay 12. */
+test('§2.2: one radius scale — 12 fields, pill buttons, 20 cards, 28 blocks', () => {
   assert.match(CSS, /--r-field:\s*12px/);
   assert.match(CSS, /--r-card:\s*20px/);
   assert.match(CSS, /--r-block:\s*28px/);
-  assert.match(CSS, /\.btn,\n\.field select,\n\.check__field input \{ border-radius: var\(--r-field\); \}/);
+  assert.match(CSS, /--r-pill:\s*999px/);
+  assert.match(CSS, /\n\.btn \{ border-radius: var\(--r-pill\); \}\n\.field select,\n\.check__field input \{ border-radius: var\(--r-field\); \}/);
+  // Nothing after it hands a button a square corner back.
+  const after = CSS.slice(CSS.indexOf('.btn { border-radius: var(--r-pill); }') + 10);
+  assert.doesNotMatch(after, /\n\.btn[^{,]*\{[^}]*border-radius/, 'a later rule takes the pill off the buttons');
   assert.match(CSS, /\.card,\n\.check,\n\.feat,\n\.step-art,\n\.pcard \{ border-radius: var\(--r-card\); \}/);
 });
 

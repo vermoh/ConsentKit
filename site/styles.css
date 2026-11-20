@@ -107,6 +107,7 @@
   --r-field:    12px;   /* fields and buttons */
   --r-card:     20px;   /* cards */
   --r-block:    28px;   /* large blocks: the check block, #dev */
+  --r-pill:     999px;  /* V1.30.2 §4.2: buttons are pills */
 }
 
 /* ── Onest, self-hosted ─────────────────────────────────────────────────
@@ -2246,8 +2247,9 @@ section { padding: var(--section-y) 0; }
 .section-head h2 { margin-bottom: var(--head-gap); }
 .section-head .section-lede { margin: 0; }
 
-/* The radius scale: 12 fields and buttons, 20 cards, 28 large blocks. */
-.btn,
+/* The radius scale: 12 fields, 20 cards, 28 large blocks — and, since
+   SPEC V1.30.2 §4.2, a pill (--r-pill, 999px) for every button. */
+.btn { border-radius: var(--r-pill); }
 .field select,
 .check__field input { border-radius: var(--r-field); }
 .card,
@@ -3179,3 +3181,410 @@ body {
    in tabular figures (the trust line's whole run is tabular already). */
 .fact-pill__num { font-weight: 600; font-variant-numeric: tabular-nums; }
 .trust-num { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SPEC V1.30.2 — арт-дирекция по разделам, движение при прокрутке, щит
+   ══════════════════════════════════════════════════════════════════════
+   Last, after step B, for the reason every layer above gives: the rules the
+   tests read by name stay where they are and this layer refines them. Still
+   no blurred box-shadow (depth is a gradient on a pseudo-element) and no new
+   red: the red inside the two shield pictures is the owner's photograph, the
+   way the marquee cards carry their clients' accents. */
+
+/* ── §4.2 pill buttons: 52 tall, 44 small ───────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+}
+.btn--sm { min-height: 44px; }
+/* The secondary pill: dark, with a thin light edge instead of the --ink
+   outline that drew a white ring round every table button. */
+.btn--ghost:not(:hover) { border-color: rgba(255, 255, 255, .16); }
+.btn--ghost:hover { border-color: rgba(255, 255, 255, .32); }
+
+/* ── §4.1 the first screen, centred, in two tones ────────────────────── */
+.hero-copy { text-align: center; }
+.hero h1 {
+  max-width: 15em;
+  margin: 0 auto 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.h1-tail { color: var(--ink-soft); }
+/* The glass shield in the line, like heroui's 3D icon between two words:
+   0.9 of the type size, standing on the baseline. The gap before it is a
+   margin, not a space: the template joins it to its word with U+2060. */
+.h1-shield {
+  display: inline-block;
+  width: auto;
+  height: .9em;
+  margin: 0 .02em 0 .24em;
+  vertical-align: -0.04em;
+}
+.hero .lede { max-width: 56ch; margin: 0 auto; }
+.hero-cta { justify-content: center; max-width: none; }
+@media (max-width: 560px) {
+  .h1-shield { height: .85em; }
+}
+
+/* ── §4.3 «Работает с» ───────────────────────────────────────────────── */
+.platforms {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  margin: 72px 0 0;
+}
+.platforms__label {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+.platforms__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.platform {
+  color: var(--ink-soft);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+@media (min-width: 1100px) {
+  .platforms {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 40px;
+  }
+  .platforms__list { column-gap: 24px; }
+  .platforms__list { justify-content: space-between; }
+}
+@media (max-width: 560px) {
+  .platforms { margin-top: 48px; }
+  .platforms__list { gap: 8px 20px; }
+  .platform { font-size: 16px; }
+}
+
+/* ── §4.4 section heads: a label, a two-tone heading, the lede beside ─── */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.kicker .icon { width: 16px; height: 16px; }
+.h2-soft { display: block; color: var(--ink-soft); }
+.section-head--split { display: grid; gap: 8px 64px; max-width: none; }
+.section-head--split h2 { margin: 0; }
+.section-head--split .section-lede { margin: 0; max-width: 44ch; }
+@media (min-width: 960px) {
+  .section-head--split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 44ch);
+    align-items: end;
+  }
+}
+.price-head-note { margin: 12px 0 0; font-size: var(--fs-small); color: var(--ink-soft); }
+
+/* ── §4.5 the band of big numbers ───────────────────────────────────── */
+#figures { padding: 0; }
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-items: end;   /* captions on one line when a figure is smaller */
+  gap: 32px;
+  padding: 56px 48px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: var(--r-block);
+  background: var(--surface);
+  text-align: center;
+}
+#trust .trust-item {
+  margin: 0 auto;
+  max-width: 22ch;
+  color: var(--ink-soft);
+  font-size: var(--fs-small);
+  white-space: normal;
+}
+/* The trust line's middots belong to a line; a grid of tiles has none. */
+#trust .trust-item::before { content: none; }
+#trust .trust-num {
+  display: block;
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+/* The live consents figure can run to seven digits; it alone scales down
+   with its tile (container units) instead of overflowing it. */
+#trust [data-trust="consents"] { container-type: inline-size; width: 100%; max-width: none; }
+#trust [data-trust="consents"] .trust-num { font-size: min(64px, 17cqi); }
+@media (max-width: 560px) {
+  /* Two to a row, and an odd last tile centred under them rather than left
+     hanging (the live consents tile may or may not be shown). */
+  .figures { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px 16px; padding: 36px 20px; }
+  .figures > .trust-item { flex: 0 0 calc(50% - 8px); }
+  #trust .trust-num { font-size: 48px; }
+  #trust [data-trust="consents"] .trust-num { font-size: min(48px, 17cqi); }
+}
+
+/* ── §2.1 the glass shield in the check block ───────────────────────── */
+#check { position: relative; isolation: isolate; overflow: clip; }
+#check > .wrap { position: relative; z-index: 1; }
+.check-shield {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: -48px;
+  width: 200px;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+  /* On a phone the band is the page's own dark ground and the shield sits
+     BEHIND the heading, so it is dimmed until light text over it still
+     clears AA wherever its sway puts it: at .18 even its brightest pixel
+     composited on #141414 leaves --ink-soft at 5.1:1 (--ink 9.4:1). */
+  opacity: .18;
+}
+/* The shade under it: dark, never coloured — a gradient, not a shadow. */
+#check::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse closest-side, #000000, transparent);
+  opacity: .35;
+  display: none;
+}
+@media (min-width: 768px) {
+  .check-shield { opacity: 1; width: 300px; top: -40px; right: -64px; }
+  /* Between 768 and 959 the block is red and stacked: the heading keeps
+     clear of the shield instead of running over it. */
+  .check-head { max-width: min(64ch, calc(100% - 250px)); }
+  #check::before { display: block; width: 320px; height: 120px; right: -60px; top: 230px; }
+}
+@media (min-width: 960px) {
+  .check-shield { width: clamp(320px, 29vw, 420px); top: -48px; right: -56px; }
+  #check::before { width: 440px; height: 150px; right: -64px; top: calc(clamp(320px, 29vw, 420px) * 1.07 - 110px); }
+  .check-head { max-width: 64ch; }
+  /* The platforms go under the form, across the block, two columns. */
+  .check-band .fit__head { grid-column: 1 / -1; grid-row: 3; align-self: auto; margin: 56px 0 8px; }
+  .check-band .fit { grid-column: 1 / -1; grid-row: 4; }
+}
+
+/* ── §2.2 «Как это работает»: a ribbon of steps joined by a line ───────── */
+@media (min-width: 900px) {
+  .steps--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; }
+  .steps--4 > li::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: 40px;
+    right: -16px;
+    height: 1px;
+    background: rgba(255, 255, 255, .12);
+  }
+  .steps--4 > li:last-child::before { content: none; }
+}
+@media (max-width: 899px) {
+  .steps--4 { grid-template-columns: 1fr; gap: 40px; }
+  .steps--4 > li { padding-left: 44px; }
+  .steps--4 .step-head { position: absolute; left: 0; top: 2px; margin: 0; }
+  .steps--4 > li::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 38px;
+    bottom: -32px;
+    width: 1px;
+    background: rgba(255, 255, 255, .12);
+  }
+  .steps--4 > li:last-child::before { content: none; }
+  .steps--4 .step-art { max-width: 400px; }
+}
+
+/* ── §2.3 «Тарифы» ─────────────────────────────────────────────────── */
+#plans .plan-price__num {
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+/* The Starter column: --surface-2 under a light 1px edge. */
+#plans .plan-table .is-featured { border-left-color: rgba(255, 255, 255, .14); border-right-color: rgba(255, 255, 255, .14); }
+#plans .plan-table thead .is-featured { border-top-color: rgba(255, 255, 255, .14); }
+#plans .plan-table tfoot .is-featured { border-bottom-color: rgba(255, 255, 255, .14); }
+/* Rows divided by one visible line (--line-soft vanished on the Starter fill). */
+#plans .plan-table tbody th,
+#plans .plan-table tbody td { border-bottom-color: var(--line); }
+#plans .plan-flag { margin-bottom: 10px; padding: 3px 12px; }
+/* «Почему не бесплатный плагин» as a quote: a vertical line on the left. */
+.cmp-why {
+  margin-top: 56px;
+  padding: 4px 0 4px 28px;
+  border-left: 2px solid var(--line);
+}
+.cmp-why p { font-size: var(--fs-lead); line-height: 1.5; color: var(--ink); }
+
+/* ── §2.5 FAQ numbers ──────────────────────────────────────────────── */
+.qa summary { gap: 16px; }
+.qa-n {
+  flex: none;
+  width: 28px;
+  font: 500 14px/28px ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.qa-q { flex: 1 1 auto; min-width: 0; }
+.qa p { margin-left: 44px; }
+
+/* ── §2.4 the final screen ─────────────────────────────────────────── */
+.final {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  display: flex;
+  align-items: center;
+  min-height: 640px;
+  padding: var(--section-y) 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.final > .wrap { position: relative; z-index: 1; width: 100%; box-sizing: border-box; }
+.final-copy { max-width: 600px; }
+.final-title {
+  margin: 0 0 36px;
+  font-size: clamp(36px, 28.57px + 1.905vw, 56px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.final-cta { margin: 0; }
+.final-art {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: max(-120px, -8vw);
+  width: min(640px, 48vw);
+  margin-top: calc(min(640px, 48vw) / -2);
+  pointer-events: none;
+}
+.final-shield {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* The photo's ground is the page's #141414; the fade only melts its edges
+     into the grain so no square can show. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%), linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 22%), linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
+}
+@media (max-width: 899px) {
+  .final { display: block; min-height: 0; }
+  .final-copy { max-width: none; }
+  .final-art {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: min(560px, 92%);
+    margin: 8px -12% 0 auto;
+  }
+}
+
+/* ── §2.6 the footer wordmark ─────────────────────────────────────── */
+.foot-mark { margin-bottom: 48px; }
+.foot-word {
+  display: block;
+  width: 60%;
+  height: auto;
+  aspect-ratio: 361 / 100;
+  color: var(--line);
+}
+@media (max-width: 700px) {
+  .foot-mark { margin-bottom: 32px; }
+  .foot-word { width: 80%; }
+}
+
+/* ── §1 movement on scroll ─────────────────────────────────────────────
+   CSS scroll-driven animations only, gated twice: the browser has to know
+   `animation-timeline: view()` AND the visitor has not asked for less
+   motion. Anywhere else this whole block is skipped and every element keeps
+   its static place — there is no script fallback. Only transform and
+   opacity move, so nothing reflows. Text moves only as it ENTERS the screen
+   (the trust figures, the prices); the two pictures drift as the block
+   passes, and nobody reads a picture.
+
+   Named timelines are set on an ancestor wherever the moving element sits
+   inside a scroll container of its own (a card is overflow: hidden, the
+   pricing table scrolls sideways): a bare view() there would track that
+   container, not the page. `animation-timeline` and `animation-range`
+   follow the `animation` shorthand, which would otherwise reset them. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .pcard { view-timeline: --sd-card block; }
+    .pcards .pcard__shot {
+      animation: sd-rise linear both;
+      animation-timeline: --sd-card;
+      animation-range: entry 0% cover 40%;
+    }
+    /* A phone shows the screenshots untilted (V1.24 §1): only the rise. */
+    @media (max-width: 700px) {
+      .pcards .pcard__shot { animation-name: sd-lift; }
+    }
+    #check { view-timeline: --sd-check block; }
+    .check-shield {
+      animation: sd-sway linear both;
+      animation-timeline: --sd-check;
+      animation-range: cover 0% cover 100%;
+    }
+    #trust .trust-item {
+      animation: sd-appear linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 100%;
+    }
+    #plans { view-timeline: --sd-plans block; }
+    #plans .plan-price__num {
+      animation: sd-appear linear both;
+      animation-timeline: --sd-plans;
+      animation-range: entry 0% entry 60%;
+    }
+    .final { view-timeline: --sd-final block; }
+    .final-shield {
+      animation: sd-drift linear both;
+      animation-timeline: --sd-final;
+      animation-range: cover 0% cover 100%;
+    }
+    @keyframes sd-rise {
+      from { transform: translateY(24px) rotate(-2deg); }
+      to   { transform: translateY(0) rotate(0deg); }
+    }
+    @keyframes sd-lift {
+      from { transform: translateY(24px); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes sd-sway {
+      from { transform: translateY(-20px) rotate(-6deg); }
+      to   { transform: translateY(20px) rotate(6deg); }
+    }
+    @keyframes sd-appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes sd-drift {
+      from { transform: translateY(-20px) scale(1.06); }
+      to   { transform: translateY(20px) scale(1); }
+    }
+  }
+}
