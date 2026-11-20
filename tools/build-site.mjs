@@ -229,6 +229,49 @@ export function updatedText(dict, iso = BUILD_DATE) {
     .split('{year}').join(m[1]);
 }
 
+/* SPEC V1.30 §3.2 — the trust line under the first screen's button.
+ *
+ * The plural rule is the same one site/app.js applies at runtime (plural()),
+ * repeated here because the build renders the services count into the markup
+ * itself: a crawler and a visitor without JavaScript read the same line as
+ * everyone else, and «86 сервисов» needs the Russian «many» form that a single
+ * label could never carry for every count stats.json may hold.
+ *   ru — one / few / many off the last digit, with the 11–19 exception;
+ *   ro — 1 / 2–19 / 20+ per hundred, the «de» linker living in the Many form;
+ *   en — singular / plural (Few carries the same text as Many). */
+export function pluralForm(lang, n) {
+  const abs = Math.abs(n);
+  if (lang === 'ru') {
+    const r100 = abs % 100;
+    const r10 = r100 % 10;
+    if (r100 > 10 && r100 < 20) return 'Many';
+    if (r10 === 1) return 'One';
+    if (r10 >= 2 && r10 <= 4) return 'Few';
+    return 'Many';
+  }
+  if (lang === 'ro') {
+    const m100 = abs % 100;
+    if (abs === 1) return 'One';
+    if (m100 === 0 || (m100 >= 20 && m100 <= 99)) return 'Many';
+    return 'Few';
+  }
+  return abs === 1 ? 'One' : 'Many';
+}
+
+/* «1 234» with a non-breaking space, the grouping app.js's groupDigits()
+   uses for the live counts, so the build's numbers and the runtime's match. */
+export function groupDigits(n) {
+  return String(Math.max(0, Math.floor(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+}
+
+export function trustServicesText(dict, lang, n = SITE_STATS.services) {
+  const key = 'trustServices' + pluralForm(lang, n);
+  if (typeof dict[key] !== 'string') {
+    throw new Error(`site/src/i18n/${lang}.json has no "${key}" (trust line)`);
+  }
+  return dict[key].split('{n}').join(groupDigits(n));
+}
+
 /* site/vercel.json sets cleanUrls:true and trailingSlash:false, so Vercel
    serves site/ru/index.html at /ru and redirects /ru/ -> /ru. Canonical,
    hreflang, the sitemap and the switcher links must all use the form Vercel
@@ -572,6 +615,18 @@ function slice(template, marker) {
   return template.slice(a + open.length, b);
 }
 
+/* The footer slice for a law page. Since V1.30 §3 it carries the banner
+   version and the build date (the line that replaced the «Цифры» version
+   tile), so the slice needs the same two substitutions the home page's map
+   makes — the leftover-placeholder guard below each renderer would otherwise
+   refuse the page. */
+function footerFor(template, dict, lang, entry) {
+  return applyDict(slice(template, 'FOOTER'), dict, lang)
+    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)))
+    .split('{{VERSION}}').join(escapeHtml(VERSION))
+    .split('{{BUILD_DATE}}').join(escapeHtml(updatedText(dict)));
+}
+
 export function renderLawPage(template, lang, page) {
   const entry = LANGS.find((l) => l.code === lang);
   if (!entry) throw new Error(`unknown language ${lang}`);
@@ -588,8 +643,7 @@ export function renderLawPage(template, lang, page) {
   const head = applyDict(slice(template, 'HEADER'), dict, lang)
     .replace('{{LANG_SWITCH}}', langSwitch(lang, paths))
     .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
-  const foot = applyDict(slice(template, 'FOOTER'), dict, lang)
-    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
+  const foot = footerFor(template, dict, lang, entry);
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
 
   /* A nav item on the home page is an in-page #anchor; from /law/<slug> the
@@ -688,8 +742,7 @@ export function renderLawIndex(template, lang) {
   const head = applyDict(slice(template, 'HEADER'), dict, lang)
     .replace('{{LANG_SWITCH}}', langSwitch(lang, paths))
     .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
-  const foot = applyDict(slice(template, 'FOOTER'), dict, lang)
-    .split('{{LAW_HOME}}').join(escapeAttr(lawIndexPath(entry.dir)));
+  const foot = footerFor(template, dict, lang, entry);
   const form = applyDict(slice(template, 'CHECKFORM'), dict, lang);
   /* Same rewrite as the article pages, header and footer alike — see the
      comment in renderLawPage. */
@@ -938,7 +991,7 @@ export function renderPage(template, lang) {
     DATALAYER_BOOT,
     LAW_HOME: escapeAttr(lawIndexPath(entry.dir)),
     VERSION: escapeHtml(VERSION),
-    SERVICES: String(SITE_STATS.services),
+    TRUST_SERVICES: escapeHtml(trustServicesText(dict, lang)),
     BUILD_DATE: escapeHtml(updatedText(dict)),
     JSON_LD: faqJsonLd(dict),
     MARQUEE: renderMarquee(dict, lang),

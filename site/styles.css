@@ -88,7 +88,25 @@
   --ok-ink:     #7DDCA8;
   --ok-line:    #24462F;
   --radius:     12px;     /* §1: buttons and cards round at 12px */
-  --wrap:       1120px;
+  --wrap:       1200px;   /* V1.30 §2.2: a 1200px container */
+
+  /* SPEC V1.30 §2.1 — the type scale. Each step runs linearly from its phone
+     value at 390px to its desktop value at 1440px through clamp(), so there
+     is no breakpoint at which the page jumps a size. */
+  --fs-display: clamp(40px, 28.11px + 3.048vw, 72px);   /* 40 → 72 */
+  --fs-h2:      clamp(30px, 24.8px + 1.333vw, 44px);    /* 30 → 44 */
+  --fs-h3:      clamp(19px, 17.89px + .286vw, 22px);    /* 19 → 22 */
+  --fs-lead:    clamp(18px, 17.26px + .19vw, 20px);     /* 18 → 20 */
+  --fs-body:    clamp(16px, 15.63px + .095vw, 17px);    /* 16 → 17 */
+  --fs-small:   14px;   /* the floor for any text on the page */
+
+  /* §2.2 — rhythm on an 8px step, one radius scale, no shadows. */
+  --section-y:  clamp(44px, 33.6px + 2.667vw, 72px);    /* 88 → 144 between sections */
+  --head-gap:   16px;   /* heading → its text */
+  --content-gap:48px;   /* text → the content it introduces */
+  --r-field:    12px;   /* fields and buttons */
+  --r-card:     20px;   /* cards */
+  --r-block:    28px;   /* large blocks: the check block, #dev */
 }
 
 /* ── Onest, self-hosted ─────────────────────────────────────────────────
@@ -164,20 +182,13 @@ body {
 .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
 .wrap--narrow { max-width: 780px; }
 
-/* #faq is the exception. `.wrap--narrow` caps the wrap itself and a wrap is
-   `margin: 0 auto`, so on a law PAGE — which is one column of prose from top
-   to bottom — centring is right, but inside the home page it made #faq's
-   heading start ~170px to the right of every other section's. The FAQ keeps
-   the page's own left edge and applies the reading measure to its contents. */
-#faq .wrap--narrow { max-width: var(--wrap); }
-#faq .wrap--narrow > * { max-width: 780px; margin-right: auto; }
-
 section { padding: 72px 0; }
 /* V1.14.1 §2. `.band` used to paint every marked section sand, which is how
    five sections in a row ended up warm and the page lost its rhythm. The
    class stays — it marks the sections that are allowed a background at all —
    but its default is now the page's own white. The two sections that really
-   are coloured say so themselves: `.check-band` (red) and `.band--cream`. */
+   are coloured say so themselves: `.check-band` (red), and since V1.30 the
+   hero's own lift is the only other tone a whole section takes. */
 .band { background: var(--bg-band); }
 
 h1, h2, h3 { line-height: 1.22; margin: 0 0 .5em; letter-spacing: -0.01em; }
@@ -193,7 +204,7 @@ a { color: var(--ink); text-decoration: underline; }
 a:hover { color: var(--accent-ink); }
 
 .section-lede {
-  max-width: 62ch;
+  max-width: 64ch;
   color: var(--ink-soft);
   font-size: 1.05rem;
   margin-bottom: 2em;
@@ -268,9 +279,9 @@ a:hover { color: var(--accent-ink); }
   border-radius: 16px;
   background: var(--capsule-bg);
   color: var(--capsule-ink);
-  /* Dark-only since 14.09.2026: the deeper, blacker shadow that used to be
-     the dark twin. A warm low-alpha shadow is invisible on a black page. */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .30);
+  /* V1.30 §2.2: no shadows. The capsule is set off the page by its own
+     lifted tone and a 1px rule, the way every other surface is. */
+  border: 1px solid var(--capsule-line);
 }
 
 /* Left: the disclosure button. */
@@ -338,9 +349,8 @@ a:hover { color: var(--accent-ink); }
   border-radius: 16px;
   background: var(--capsule-bg);
   color: var(--capsule-ink);
-  /* Dark-only since 14.09.2026: the former dark twin, for the same reason as
-     the capsule's — a warm shadow does not read against black. */
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .50), 0 2px 6px rgba(0, 0, 0, .30);
+  /* V1.30 §2.2: no shadow; the same 1px rule as the capsule. */
+  border: 1px solid var(--capsule-line);
 }
 
 /* All seven section links. They wrap into as many rows as they need — the
@@ -440,12 +450,16 @@ a:hover { color: var(--accent-ink); }
    #main is included: the skip link lands there. */
 section[id],
 #main,
+#looks,
+#compare,
 [id^="who-"] {
   scroll-margin-top: 92px;
 }
 @media (max-width: 560px) {
   section[id],
   #main,
+  #looks,
+  #compare,
   [id^="who-"] {
     scroll-margin-top: 76px;
   }
@@ -496,12 +510,6 @@ section[id],
 /* §2's rhythm starts here: the hero is one of exactly two cream sections on
    the page (the other is «Цифры»). Everything between them is white. */
 .hero { padding: calc(76px + var(--head-overlay)) 0 68px; background: var(--cream); }
-.hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
-  gap: 52px;
-  align-items: center;
-}
 
 .eyebrow {
   color: var(--ink-soft);
@@ -513,10 +521,8 @@ section[id],
 }
 /* ~70 characters is the readable maximum the audit asked for; 56ch was already
    inside it, and 62ch is the ceiling every other body paragraph now shares. */
-.lede { font-size: 1.09rem; color: var(--ink-soft); max-width: 56ch; }
-.hero-note { max-width: 62ch; }
-.hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin: 28px 0 14px; }
-.hero-note { font-size: .9rem; color: var(--ink-soft); margin: 0; }
+.lede { font-size: var(--fs-lead); line-height: 1.5; color: var(--ink-soft); max-width: 56ch; }
+.hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin: 32px 0 16px; }
 
 /* ── hero mockup ────────────────────────────────────────────────────── */
 
@@ -542,7 +548,6 @@ section[id],
    purpose — it depicts a visitor's website, not this page, and a mockup that
    followed the reader's own dark mode would stop reading as a screenshot of
    somewhere else. The marquee shows both themes side by side for that reason. */
-.hero-shot,
 .shot {
   /* The §1 brand red, read from the token rather than repeated: the palette
      is the one place that decides what «our red» is. */
@@ -572,12 +577,6 @@ section[id],
   --shot-skeleton-2: #3A322A;
 }
 
-.hero-shot {
-  background: var(--shot-chrome);
-  border: 1px solid var(--shot-chrome-line);
-  border-radius: var(--radius);
-  padding: 10px;
-}
 .shot-frame {
   position: relative;
   background: var(--shot-paper);
@@ -611,7 +610,6 @@ section[id],
   border: 1px solid var(--shot-paper-line);
   border-radius: var(--radius);
   padding: 18px;
-  box-shadow: 0 6px 24px rgba(30, 30, 30, .12);
 }
 .shot-banner__title {
   margin: 0 0 8px;
@@ -690,7 +688,7 @@ section[id],
 }
 .dev-grid h2 { margin-bottom: .5em; }
 .dev-grid .section-lede { margin-bottom: 1em; }
-.dev-facts { color: var(--ink-soft); font-size: .95rem; max-width: 62ch; }
+.dev-facts { color: var(--ink-soft); font-size: .95rem; max-width: 64ch; }
 .dev-links { display: flex; gap: 20px; flex-wrap: wrap; margin: 0; }
 .dev-links a { font-size: .95rem; font-weight: 600; }
 
@@ -844,8 +842,8 @@ section[id],
 }
 /* .95rem = 15.2px, comfortably over the 14px floor the audit set for card body
    text, and capped at ~70 characters like every other paragraph. */
-.card p { color: var(--ink-soft); font-size: .95rem; margin: 0; max-width: 62ch; }
-.steps p { max-width: 62ch; }
+.card p { color: var(--ink-soft); font-size: .95rem; margin: 0; max-width: 64ch; }
+.steps p { max-width: 64ch; }
 
 /* ── pricing ────────────────────────────────────────────────────────── */
 
@@ -1061,7 +1059,7 @@ section[id],
 .qa p {
   margin: 0 0 16px;
   color: var(--ink-soft);
-  max-width: 68ch;
+  max-width: 64ch;
 }
 
 /* ── footer ─────────────────────────────────────────────────────────── */
@@ -1096,10 +1094,6 @@ section[id],
 /* ── narrow screens ─────────────────────────────────────────────────── */
 
 @media (max-width: 900px) {
-  .hero-grid { grid-template-columns: 1fr; gap: 34px; }
-}
-
-@media (max-width: 900px) {
   .dev-grid { grid-template-columns: 1fr; gap: 28px; }
 }
 
@@ -1128,19 +1122,8 @@ section[id],
   .capsule-cta { padding: 8px 11px; font-size: .84rem; }
   .menu-panel { padding: 12px; }
 
-  /* The mockup is the first screen's illustration, not its content: capped so
-     the headline and both buttons stay above the fold on a phone. */
-  .hero-shot { padding: 8px; }
-  .shot-frame { min-height: 0; height: min(58vh, 420px); }
-  /* V1.24 put a real screenshot in the hero frame, and a screenshot has its
-     own height: the cap above (written for the skeleton mockup) held a 216px
-     picture inside a 420px frame and left a cream void under it on every
-     phone (owner, 12.09.2026). The picture's aspect ratio is the frame's
-     height now, the same rule the desktop already follows. */
-  .hero-shot .shot-frame { height: auto; }
-  /* …but not the demo window: it holds a wrapping toolbar and a footer strip,
-     and .shot-frame clips its overflow, so a fixed height would cut the
-     controls off exactly where a phone has the least room to spare. */
+  /* The demo window holds a wrapping toolbar and a footer strip, and
+     .shot-frame clips its overflow, so it never takes a fixed height. */
   .demo-win { height: auto; }
   .shot-page { padding: 18px 18px 0; }
   .shot-banner { left: 10px; right: 10px; bottom: 10px; padding: 15px; }
@@ -1165,7 +1148,7 @@ img { max-width: 100%; height: auto; }
 
 /* The band used to set its own 60/60 padding, which put it out of step with
    the 72px every other section uses. Same rhythm as the rest of the page. */
-.check-head { max-width: 62ch; margin: 0 0 22px; }
+.check-head { max-width: 64ch; margin: 0 0 22px; }
 .check-head h2 { margin-bottom: .35em; }
 .check-head .section-lede { margin: 0; }
 
@@ -1198,13 +1181,7 @@ img { max-width: 100%; height: auto; }
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
 }
-.fit__list li {
-  margin: 0;
-  padding: 16px 18px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
+.fit__list li { margin: 0; }
 .fit__title { display: block; font-weight: 650; margin-bottom: 5px; }
 .fit__text { display: block; color: var(--ink-soft); font-size: .91rem; }
 
@@ -1500,28 +1477,8 @@ img { max-width: 100%; height: auto; }
   flex: 1 1 auto;
   background: #FFFFFF;
 }
-.shot-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin: 6px 0;
-}
-.shot-card {
-  display: block;
-  height: 74px;
-  border-radius: 9px;
-  /* Warm neutral, not the old blue-grey: the placeholder blocks sit on the
-     window's white page and used to be the one cool colour on the page. */
-  background: #EDE6DA;
-}
-/* No dark-mode rule for .shot-card: the frame it sits in is light-locked on
-   purpose (see .shot-frame), so a card that followed the reader's own theme
-   became a dark rectangle on a white page. The frame is a picture of somebody
-   else's browser, and everything inside it stays in that picture's palette. */
-@media (max-width: 560px) {
-  .shot-card { height: 52px; }
-  .shot-page--lg { padding: 18px 18px 22px; }
-}
+/* The example page inside the window (.demo-page) is styled in the V1.30
+   layer at the end of this file. */
 
 /* Five accent swatches. A real radiogroup: one tab stop, arrow keys between
    the options, and — because the colour lives on the <span>, not on an
@@ -1582,37 +1539,8 @@ img { max-width: 100%; height: auto; }
   margin: 6px 0 0;
   font-size: .84rem;
   color: var(--ink-soft);
-  max-width: 68ch;
+  max-width: 64ch;
 }
-
-/* ── «Цифры» ────────────────────────────────────────────────────────── */
-
-.stats {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin: 0;
-}
-.stat { margin: 0; }
-.stat__num {
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-.stat__label { margin: 4px 0 0; color: var(--ink-soft); font-size: .93rem; }
-.stat__label:empty { display: none; }
-/* The «обновлено …» line under the version. Quieter than the caption above it:
-   it dates the number, it is not a second fact about the product. */
-.stat__sub { margin: 2px 0 0; color: var(--ink-soft); font-size: .82rem; opacity: .85; }
-/* The «работаем с сентября 2026» tile carries a phrase where the others carry
-   a numeral, so it is set at a size the words can live at. */
-.stat__num--sm { font-size: 1.25rem; font-weight: 650; color: var(--ink-soft); }
-/* Four tiles that keep their shape: the numeral sits at the top of each tile
-   and the label under it, so a swapped tile does not shift the row. */
-.stats { align-items: start; }
-
-.price-cheap { font-weight: 650; margin: 18px 0 0; }
 
 /* ── law pages ──────────────────────────────────────────────────────── */
 
@@ -1646,7 +1574,6 @@ img { max-width: 100%; height: auto; }
   .check { padding: 18px; }
   .check__submit .btn { width: 100%; }
   .law-article { padding: calc(36px + var(--head-overlay)) 0 8px; }
-  .stat__num { font-size: 1.7rem; }
 }
 
 /* The nav's old width rules are gone with the bar they lived in: inside the
@@ -1668,11 +1595,10 @@ section { padding: 96px 0; }
    single button after the content. The lede's 62ch measure is kept; only its
    auto margins change, so the line length stays readable while the block
    sits in the middle of the page. */
-.section-head { text-align: center; margin: 0 auto 34px; max-width: 62ch; }
+.section-head { text-align: center; margin: 0 auto 34px; max-width: 64ch; }
 .section-head h2 { margin-bottom: .4em; }
 .section-head .section-lede { margin: 0 auto; }
 
-.section-cta { margin: 40px 0 0; text-align: center; }
 
 /* ── §2.3 promise chip and the accented headline word ───────────────── */
 
@@ -1736,8 +1662,6 @@ section { padding: 96px 0; }
 }
 
 /* ── §2.1 banner marquee ───────────────────────────────────────────── */
-
-.marquee-section { padding-bottom: 96px; }
 
 /* The viewport is full-bleed, so it lives outside .wrap. `overflow-x: auto`
    contains its own scrolling — the strip is wider than the screen by design,
@@ -1870,12 +1794,7 @@ section { padding: 96px 0; }
   border-color: var(--line);
 }
 
-/* The four «подходит любому сайту» tiles: white cards on the red band. */
-.check-band .fit__list li {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: transparent;
-}
+/* The platform rows on the band: see the V1.30 layer at the end. */
 .check-band .fit__text { color: var(--ink-soft); }
 
 /* On the red BAND a red button would vanish, so a button sitting directly on
@@ -1897,40 +1816,15 @@ section { padding: 96px 0; }
 }
 .check-band .check .btn--primary:hover { background: var(--accent-ink); }
 
-/* «Цифры» — the second of the page's two cream sections. V1.14 painted it
-   sand; V1.14.1 §2 fixes the rhythm as белый → крем (hero) → белый → красная
-   полоса → белый → крем (цифры) → белый, so cream is what it takes. */
-.band--cream { background: var(--cream); }
-
-/* ── §1.4 + §2: the check block on a phone ─────────────────────────────
-   The red band is a full-bleed slab of colour. On a 375 screen it stops
-   being an accent and becomes the screen, which is what §1.4 objects to:
-   «На 375 красная полоса проверки — не на весь экран». Below 768 the block
-   goes white like the rest of the page and the red survives as a small
-   caption above the heading — a red the width of two words instead of a red
-   the width of the phone. Above 768 the band is unchanged. */
-.check-caption {
-  display: none;
-  margin: 0 0 10px;
-  font-size: .78rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--accent-ink);
-}
-
 @media (max-width: 767px) {
   .check-band { background: transparent; color: var(--ink); }
   .check-band h2,
   .check-band .fit__head { color: var(--ink); }
   .check-band .section-lede { color: var(--ink-soft); }
-  .check-caption { display: block; }
 
-  /* With the band gone the form is a white card on a white page, so it needs
-     its border back to stay a card at all; the tiles need theirs for the
-     same reason. */
+  /* With the band gone the form is a card on the page's own ground, so it
+     needs its border back to stay a card at all. */
   .check-band .check { border-color: var(--line); }
-  .check-band .fit__list li { border-color: var(--line); }
 
   /* And the submit button goes back to the page's ordinary red fill: the
      white-on-band inversion exists only because of the band. */
@@ -1941,77 +1835,11 @@ section { padding: 96px 0; }
   .check-band .btn--primary:hover { background: #B82E2D; }
 }
 
-/* ── §2.7 Starter card ─────────────────────────────────────────────── */
-
-.starter {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: 1fr;
-  margin: 0 0 40px;
-}
-@media (min-width: 860px) {
-  .starter { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: stretch; }
-}
-.starter:empty { display: none; }
-
-.starter__card,
-.starter__facts {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 24px;
-}
-
-/* §2: «Карточка Starter — белая с тёмной рамкой, цена чёрная, галочки
-   чёрные, кнопка красная (это одна из "главных")». */
-.starter__card { border-color: var(--ink); }
-
-.starter__name { margin: 0 0 6px; font-size: 1.15rem; }
-.starter__price { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; margin: 0 0 14px; }
-.starter__num { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.02em; }
-.starter__unit { color: var(--ink-soft); font-size: .92rem; }
-
-.starter__points { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 9px; }
-.starter__points li {
-  position: relative;
-  padding-left: 26px;
-  font-size: .94rem;
-  color: var(--ink-soft);
-}
-.starter__points li::before {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: .42em;
-  width: 11px;
-  height: 6px;
-  border: 2px solid var(--ink);
-  border-top: 0;
-  border-right: 0;
-  transform: rotate(-45deg);
-}
-
-.starter__facts { display: flex; flex-direction: column; gap: 4px; }
-.starter__facts-head { margin: 0 0 10px; font-size: 1.02rem; }
-.starter__fact { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; }
-.starter__fact + .starter__fact { border-top: 1px solid var(--line-soft); }
-.starter__fact-num {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  min-width: 2.6ch;
-  color: var(--ink);
-}
-.starter__fact-label { color: var(--ink-soft); font-size: .92rem; }
-
 /* ── §3 mobile ─────────────────────────────────────────────────────── */
 
 @media (max-width: 760px) {
-  section { padding: 64px 0; }
-  .marquee-section { padding-bottom: 64px; }
   .marquee__item { width: 262px; }
   .marquee__item .shot-frame { height: 196px; }
-  .starter__card, .starter__facts { padding: 18px; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -2038,7 +1866,7 @@ section { padding: 96px 0; }
   overflow: hidden;
   background: var(--ink);
   color: var(--bg);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.2;
   /* The pill is a run of two <span>s inside a <p>; without this it inherits
      the paragraph's 1em bottom margin twice over on the cards. */
@@ -2070,31 +1898,6 @@ section { padding: 96px 0; }
   color: var(--ink);
 }
 .pcard--dark .fact-pill__num { background: rgba(0, 0, 0, .10); }
-
-/* The hero's two pills, where the chip used to be. */
-.pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0 0 18px;
-}
-.pills .fact-pill { margin: 0; }
-
-/* ── §5 the hero screenshot ─────────────────────────────────────────── */
-
-/* The frame is the same window it always was; what changed is that the page
-   inside it is a photograph instead of a skeleton, so the frame no longer
-   needs a min-height to hold a shape up — the image's own aspect ratio does
-   that, and `height: auto` (global img rule) keeps it undistorted next to the
-   width/height attributes that reserve its box before it loads. */
-.hero-shot .shot-frame { min-height: 0; }
-.shot-img {
-  display: block;
-  width: 100%;
-  /* The window's top bar has square-ish shoulders of its own; the picture
-     rounds only where it meets the frame's bottom corners. */
-  border-radius: 0 0 8px 8px;
-}
 
 /* ── §1 the six product cards ───────────────────────────────────────── */
 
@@ -2185,9 +1988,9 @@ section { padding: 96px 0; }
   transform-origin: 50% 0;
   border-radius: 12px;
   overflow: hidden;
-  /* The shadow is what lifts the picture off a card of the same family of
-     tones; a border would fight the tilt at the corners. */
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  /* V1.30 §2.2: a 1px rule instead of the shadow that used to lift the
+     picture off the card. */
+  border: 1px solid rgba(0, 0, 0, .14);
 }
 .pcard__shot img {
   display: block;
@@ -2238,7 +2041,7 @@ section { padding: 96px 0; }
   padding: 18px 20px;
 }
 .feat h3 { font-size: .99rem; margin: 0 0 .45em; }
-.feat p { color: var(--ink-soft); font-size: .92rem; margin: 0; max-width: 62ch; }
+.feat p { color: var(--ink-soft); font-size: .92rem; margin: 0; max-width: 64ch; }
 
 /* ── §4 «Своими силами / ConsentKit» ───────────────────────────────── */
 
@@ -2313,41 +2116,36 @@ section { padding: 96px 0; }
   border-radius: 0 0 var(--radius) var(--radius);
 }
 
-/* SPEC-V1.28 §7: «Почему не бесплатный плагин» — one plain .card under the
-   table, spaced off it; no colour of its own. */
-.cmp-why { margin-top: 28px; }
-.cmp-why h3 { font-size: 1.05rem; margin: 0 0 .45em; }
+/* SPEC-V1.28 §7: «Почему не бесплатный плагин». A paragraph with its own
+   small heading under the table (V1.30: not a card inside the section). */
+.cmp-why { margin-top: 40px; max-width: 64ch; }
+.cmp-why h3 { font-size: var(--fs-h3); margin: 0 0 8px; }
+.cmp-why p { color: var(--ink-soft); margin: 0; }
 
 /* ── §3 rounded blocks instead of full-bleed strips ─────────────────── */
 
-/* V1.14.1 painted #check red and #numbers cream edge to edge. §1.24 keeps
-   both colours and changes the GEOMETRY: each becomes a rounded card sitting
-   on the page's own background, with the same 24px rhythm between them. The
+/* V1.14.1 painted #check red edge to edge. §1.24 kept the colour and
+   changed the GEOMETRY: a rounded block sitting on the page's own background.
+   V1.30 §2.2 puts the radius on its scale (28 for large blocks) and leaves
+   two such blocks on the page, the check and #dev; «Цифры» and «Для кого»
+   are gone. The
    paint stays on the section itself — moving it onto .wrap would collide with
    the ≥960 grid the check block already builds there.
 
    The section's vertical padding becomes the card's inner padding, so the
    space between two cards is the gap below plus nothing else. */
 #check,
-#numbers,
-#who,
 #dev {
   max-width: calc(var(--wrap) + 48px);
   margin: 0 auto 24px;
-  border-radius: 24px;
-  padding: 48px 0;
+  border-radius: 28px;
+  padding: 72px 0;
 }
 /* The first card follows the hero, whose cream ground runs edge to edge: with
    no top margin the red card sat flush against the cream and read as a second
    band, not a card on the page (owner, 08.09.2026). The same 24px as between
    the cards, so the page background shows above it. */
 #check { margin-top: 24px; }
-/* #who and #dev were `.band`, i.e. the page's own white, and as rounded cards
-   on a white page they would be invisible. §1.24 gives them the two remaining
-   tones — sand and ink — so the page reads cream → red → cream → sand → ink
-   rather than four white slabs with rounded corners. */
-#who { background: var(--surface-2); }
-
 /* #dev is the page's one block set apart by VALUE rather than by hue, and the
    naive way to write that — `background: var(--ink)` — is exactly wrong here:
    --ink on a dark page is the light TEXT colour, so the block would flip to a
@@ -2373,22 +2171,419 @@ section { padding: 96px 0; }
    rather than a hole. */
 #dev .code-block { border: 1px solid rgba(255, 255, 255, .12); }
 
-/* The #who cards take the page ground and its soft rule, so they read as
-   separate objects on the section's lifted surface without a loud edge. */
-#who .card { background: var(--bg); border-color: var(--line-soft); }
-
 @media (max-width: 760px) {
   #check,
-  #numbers,
-  #who,
   #dev {
     /* §3: on mobile the radius drops to 16 and the padding to 24/20. The
        card also gives up its 24px side inset, because on a 375 screen an
        inset card plus .wrap's own 24px padding leaves the text a 300px
        column. */
     max-width: 100%;
-    border-radius: 16px;
-    padding: 24px 0;
+    border-radius: 20px;
+    padding: 40px 0;
     margin-bottom: 20px;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   SPEC V1.30 — «дорогой» вид: fewer things, a larger scale, more air
+   ══════════════════════════════════════════════════════════════════════
+   Everything below sits on the tokens declared on :root (type scale, rhythm,
+   radii). It comes last so it wins over the older layers above without
+   !important; the rules it supersedes were left where tests read them by
+   name. No shadows anywhere (§2.2): depth is the surface tone and a 1px line. */
+
+/* ── §2.1 type ──────────────────────────────────────────────────────── */
+
+body { font-size: var(--fs-body); line-height: 1.55; }
+h1, h2, h3 { text-wrap: balance; }
+h1 {
+  font-size: var(--fs-display);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--head-gap);
+}
+h3 { font-size: var(--fs-h3); line-height: 1.25; }
+p, li, summary, figcaption { text-wrap: pretty; }
+/* §2.1: no line of running text longer than 64 characters. */
+p { max-width: 64ch; }
+.section-lede {
+  font-size: var(--fs-lead);
+  line-height: 1.5;
+  max-width: 64ch;
+  margin: 0 0 var(--content-gap);
+}
+
+/* ── §2.2 grid and rhythm ───────────────────────────────────────────── */
+
+.wrap { padding-left: 24px; padding-right: 24px; }
+@media (max-width: 560px) { .wrap { padding-left: 16px; padding-right: 16px; } }
+
+/* The law pages share this stylesheet. An article title is a heading of
+   prose, not a first screen: it takes the step between h2 and the display. */
+/* The «Правила» hub opens with a plain section, which the floating capsule
+   would cover at the rhythm's 72px; it pays the overlay back like the hero. */
+main.law > section:first-child { padding-top: calc(48px + var(--head-overlay)); }
+main.law h1 {
+  font-size: clamp(32px, 26.06px + 1.524vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* 144px between two sections on a desktop, 88px on a phone. */
+section { padding: var(--section-y) 0; }
+
+/* Headings sit on the page's left edge, like every other line of copy: one
+   edge for the whole page is what reads as a grid. */
+.section-head { text-align: left; margin: 0 0 var(--content-gap); max-width: 64ch; }
+.section-head h2 { margin-bottom: var(--head-gap); }
+.section-head .section-lede { margin: 0; }
+
+/* The radius scale: 12 fields and buttons, 20 cards, 28 large blocks. */
+.btn,
+.field select,
+.check__field input { border-radius: var(--r-field); }
+.card,
+.check,
+.feat,
+.step-art,
+.pcard { border-radius: var(--r-card); }
+
+/* Tabular figures wherever numbers line up or sit side by side. */
+.hero-trust,
+.plan-table,
+.cmp-table,
+.plan-price,
+.foot-version { font-variant-numeric: tabular-nums; }
+
+/* §5: 14px is the floor for any text the page itself sets. (The marquee's
+   miniature banners are a picture of the client at card size and hidden
+   from assistive tech; the Creem badge is the vendor's own asset.) */
+.field label,
+.field__label,
+.panel-hint,
+.demo-tools .panel-hint,
+.panel-status,
+.panel-gcm-note,
+.plan-table__caption,
+.plan-table tbody th,
+.plan-table tfoot th,
+.plan-table__corner,
+.plan-flag,
+.plan-note,
+.plan-price__unit,
+.plan-scroll__hint,
+.price-note,
+.check__field label,
+.check__agree label,
+.check__note,
+.check__state,
+.foot-small,
+.foot-links a,
+.law-dated,
+.law-crumb,
+.cmp-table tbody th,
+.lang-btn,
+.capsule-cta,
+.code-block code,
+.dev-facts,
+.dev-links a { font-size: var(--fs-small); }
+
+/* ── first screen ───────────────────────────────────────────────────── */
+
+.hero { padding: calc(56px + var(--head-overlay)) 0 var(--section-y); }
+.hero h1 { max-width: 20ch; margin: 0 0 24px; }
+.hero .lede { max-width: 52ch; margin: 0; }
+.hero-cta { margin: 40px 0 0; }
+.hero-cta .btn { padding: 16px 28px; font-size: 17px; }
+
+/* §3.2: one line, the numbers in tabular figures, dots between the items
+   that are actually shown (a hidden live count leaves no stray separator). */
+.hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: none;
+  margin: 20px 0 0;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+}
+.trust-item { white-space: nowrap; }
+.trust-item:not([hidden]) ~ .trust-item:not([hidden])::before {
+  content: "\00B7";
+  margin: 0 10px;
+  color: var(--ink-soft);
+}
+/* On a phone the line cannot stay one line, and a dot that wraps to the
+   start of the next row reads as a stray mark: the items stack instead. */
+@media (max-width: 560px) {
+  .hero-trust { flex-direction: column; gap: 4px; }
+  .trust-item:not([hidden]) ~ .trust-item:not([hidden])::before { content: none; }
+}
+
+/* §3.1: the picture runs the full width of the container: 1152px at 1440,
+   so the banner inside it is shown at its own size and reads. */
+.hero-shot { margin: 64px 0 0; }
+.hero-img { display: block; width: 100%; height: auto; }
+@media (max-width: 560px) {
+  .hero { padding-top: calc(32px + var(--head-overlay)); }
+  .hero-cta { margin-top: 32px; }
+  .hero-shot { margin-top: 40px; }
+}
+
+/* ── #check ─────────────────────────────────────────────────────────── */
+
+.check-head { margin: 0 0 var(--content-gap); max-width: 64ch; }
+.check-head h2 { margin-bottom: var(--head-gap); }
+.check { padding: 32px; }
+.check__field input { min-height: 48px; }
+/* §5: the placeholder at 4.9:1 on the field (#8C8C8C on #1F1F1F). */
+.check__field input::placeholder { color: #8C8C8C; opacity: 1; }
+
+/* The platforms: a list with rules between the rows, not four cards inside
+   the block (§2.2). Two columns from 960 up, beside the form. */
+.fit__head { font-size: var(--fs-h3); }
+.fit__list { gap: 0 32px; grid-template-columns: 1fr; }
+.fit__list li,
+.check-band .fit__list li {
+  padding: 18px 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(253, 225, 185, .32);
+  border-radius: 0;
+  color: inherit;
+}
+.check-band .fit__title { color: var(--on-band-strong); }
+.check-band .fit__text { color: var(--on-band); }
+@media (min-width: 960px) {
+  .check-band .fit__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .check-band .fit__list li { border-top-color: var(--line); }
+  .check-band .fit__title { color: var(--ink); }
+  .check-band .fit__text { color: var(--ink-soft); }
+}
+
+/* #dev: «остаётся перед подвалом, компактнее». */
+#dev { padding: 56px 0; }
+@media (max-width: 760px) { #dev { padding: 40px 0; } }
+
+/* ── how it looks + the live demo ───────────────────────────────────── */
+
+/* The marquee, moved in and made shorter (§6.1). */
+.looks { margin: 0 0 48px; }
+.marquee__item { width: 296px; }
+.marquee__item .shot-frame { height: 188px; }
+@media (max-width: 760px) {
+  .marquee__item { width: 252px; }
+  .marquee__item .shot-frame { height: 176px; }
+}
+/* §5: the outline button's text on a DARK replica. On a light card it keeps
+   --shot-accent-ink (#B82E2D, 6.0:1 on white); on a dark card none of the
+   five accents reaches 4.5:1 against the paper, so it takes the card's own
+   title ink (16.6:1) and the accent stays on the outline. */
+.shot--dark .shot-btn--settings { color: var(--shot-title); }
+
+.demo-stage { margin: 0 0 16px; }
+
+/* The example page inside the window: a small wordless shop, at most 420px. */
+.demo-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 420px;
+  overflow: hidden;
+  padding: 22px 26px 26px;
+  background: #FBF9F5;
+}
+.demo-page i,
+.demo-page b { display: block; }
+.demo-page__top {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #ECE5DA;
+}
+.demo-page__logo {
+  margin-right: auto;
+  color: #23201C;
+  font: 600 18px/1 Georgia, "Times New Roman", serif;
+  letter-spacing: .02em;
+}
+.demo-page__nav { display: flex; gap: 14px; }
+.demo-page__nav i { width: 44px; height: 8px; border-radius: 4px; background: #E3DBCF; }
+.demo-page__cart { width: 64px; height: 28px; border: 1px solid #23201C; border-radius: 999px; }
+.demo-page__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+.demo-page__copy { display: flex; flex-direction: column; gap: 10px; }
+.demo-page__copy i { border-radius: 6px; }
+.demo-page__kicker { width: 30%; height: 8px; background: #CDBFA9; }
+.demo-page__title { width: 92%; height: 22px; background: #2B2723; }
+.demo-page__title--short { width: 64%; }
+.demo-page__line { width: 80%; height: 10px; margin-top: 4px; background: #E3DBCF; }
+.demo-page__copy .demo-page__btn {
+  width: 124px;
+  height: 36px;
+  margin-top: 8px;
+  border-radius: 10px;
+  background: #1F3D33;
+}
+.demo-page__photo {
+  position: relative;
+  height: 168px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: radial-gradient(120% 90% at 30% 20%, #E9DCC8 0%, #D9C4A6 55%, #C7AE8B 100%);
+}
+.demo-page__photo i { position: absolute; bottom: 18px; }
+.demo-page__photo i:nth-child(1) { left: 16%; width: 60px; height: 96px; border-radius: 48% 48% 40% 40% / 60% 60% 34% 34%; background: #F2ECE2; }
+.demo-page__photo i:nth-child(2) { left: 44%; width: 78px; height: 66px; border-radius: 50% 50% 44% 44% / 58% 58% 40% 40%; background: #2F4A40; }
+.demo-page__photo i:nth-child(3) { left: 72%; width: 44px; height: 120px; border-radius: 40% 40% 36% 36% / 30% 30% 22% 22%; background: #A0603F; }
+.demo-page__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.demo-page__item { display: flex; flex-direction: column; gap: 8px; }
+.demo-page__item i { height: 88px; border-radius: 12px; }
+.demo-page__item:nth-child(1) i { background: linear-gradient(150deg, #E6EDE8, #C9D7CE); }
+.demo-page__item:nth-child(2) i { background: linear-gradient(150deg, #F1E3D6, #DFC3A9); }
+.demo-page__item:nth-child(3) i { background: linear-gradient(150deg, #E4E1EC, #C9C3D9); }
+.demo-page__item:nth-child(4) i { background: linear-gradient(150deg, #EFE8D9, #D9CBAE); }
+.demo-page__item b { width: 70%; height: 8px; border-radius: 4px; background: #E3DBCF; }
+@media (max-width: 560px) {
+  .demo-page { padding: 16px 16px 20px; gap: 14px; }
+  .demo-page__nav { display: none; }
+  .demo-page__hero { grid-template-columns: 1fr; gap: 16px; }
+  .demo-page__photo { height: 112px; }
+  .demo-page__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .demo-page__item i { height: 64px; }
+}
+
+/* ── «Что умеет» ────────────────────────────────────────────────────── */
+
+.pcards { gap: 24px; }
+.pcard { padding: 40px 40px 0; }
+/* The card is a flex column, which stretched the pill to the card's width. */
+.pcard .fact-pill { align-self: flex-start; }
+.pcard h3 { font-size: var(--fs-h3); max-width: 26ch; }
+.pcard > p:not(.fact-pill) { font-size: var(--fs-body); line-height: 1.55; }
+/* «скриншоты крупнее»: more of each picture is shown before the card clips it. */
+.pcard__shot { max-height: 360px; }
+@media (max-width: 700px) {
+  .pcard { padding: 28px 24px 0; }
+  .pcard__shot { max-height: 280px; }
+}
+.feat-more__head { margin: 72px 0 24px; font-size: var(--fs-h3); color: var(--ink); }
+.feat-more { gap: 24px; }
+.feat { padding: 24px; }
+.feat h3 { font-size: var(--fs-lead); margin: 0 0 8px; }
+.feat p { font-size: var(--fs-body); line-height: 1.55; }
+
+/* ── «Как это работает» ─────────────────────────────────────────────── */
+
+.steps--4 { gap: 32px; }
+.steps h3 { font-size: var(--fs-h3); }
+.steps p { font-size: var(--fs-body); }
+
+/* ── «Тарифы»: plans, compare, why ──────────────────────────────────── */
+
+.plan-table { font-size: 15px; }
+.price-cheap { font-weight: 650; margin: 24px 0 0; }
+.price-note { margin-top: 8px; }
+.price-badge { margin-top: 16px; }
+.compare { margin-top: 112px; }
+.compare-head { margin: 0 0 var(--content-gap); max-width: 64ch; }
+.compare-title {
+  font-size: clamp(24px, 19.54px + 1.143vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--head-gap);
+}
+.compare-head .section-lede { margin: 0; }
+.cmp-table { font-size: var(--fs-body); }
+@media (max-width: 560px) { .compare { margin-top: 72px; } }
+
+/* ── FAQ: two columns on a desktop ──────────────────────────────────── */
+
+.faq-grid { display: grid; gap: 32px; }
+@media (min-width: 960px) {
+  .faq-grid {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: 64px;
+    align-items: start;
+  }
+  .faq-aside { position: sticky; top: 112px; }
+}
+.faq-aside h2 { margin-bottom: var(--head-gap); }
+.faq-lede { color: var(--ink-soft); font-size: var(--fs-lead); line-height: 1.5; margin: 0 0 16px; }
+.faq-write { margin: 0; }
+.faq-write a { font-weight: 600; }
+/* Questions as rows between rules, not boxes. */
+.faq { gap: 0; border-top: 1px solid var(--line); }
+.qa {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+.qa summary { padding: 22px 0; font-size: var(--fs-lead); line-height: 1.4; font-weight: 600; }
+.qa p { margin: 0 0 24px; font-size: var(--fs-body); line-height: 1.6; }
+
+/* ── footer ─────────────────────────────────────────────────────────── */
+
+.site-foot { padding: 56px 0; }
+.foot-version { margin-top: 8px; }
+
+/* ── §5 touch targets: 44×44 on a phone ─────────────────────────────── */
+
+@media (max-width: 760px) {
+  .capsule-menu,
+  .capsule-cta,
+  .head-nav a,
+  .head-link,
+  .btn--sm,
+  .field select { min-height: 44px; }
+  .capsule-menu,
+  .lang-btn { min-width: 44px; min-height: 44px; }
+  .capsule-cta,
+  .head-nav a,
+  .btn--sm { display: inline-flex; align-items: center; justify-content: center; }
+  .capsule { min-height: 56px; }
+  .foot-links a,
+  .dev-links a,
+  .faq-write a,
+  .law-crumb a,
+  .foot-brand a { display: inline-flex; align-items: center; min-height: 44px; }
+  .foot-links a,
+  .dev-links a { min-width: 44px; }
+  .capsule-brand { min-height: 44px; }
+  .foot-links { gap: 4px 22px; }
+  .swatch { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+  .swatches__row { gap: 2px; }
+  .check__agree label { min-height: 44px; align-items: center; }
+}
+
+/* ── §2.3 the one animation ─────────────────────────────────────────── */
+
+/* A section below the first screen rises 12px and fades in, once, the first
+   time it scrolls into view. app.js adds `.reveal` only when it can also
+   take it away (IntersectionObserver present) and only under this same
+   media query, so without JavaScript, or for a visitor who asked for less
+   motion, every section is simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal { opacity: 0; transform: translateY(12px); }
+  .reveal.is-shown {
+    opacity: 1;
+    transform: none;
+    transition: opacity 400ms cubic-bezier(.2, .7, .2, 1), transform 400ms cubic-bezier(.2, .7, .2, 1);
   }
 }

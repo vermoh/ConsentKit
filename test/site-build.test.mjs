@@ -23,6 +23,7 @@ import {
   readPages, pageSiblings, lawUrl, lawPath, lawIndexUrl, lawOutputs,
   renderLawPage, renderLawIndex, bodyWords, faqJsonLd,
   VERSION, BUILD_DATE, updatedText,
+  SITE_STATS, pluralForm, trustServicesText,
   MARQUEE_CARDS, renderMarquee, readClientLocales,
   VERSIONED_ASSETS, assetHash, THEME_META
 } from '../tools/build-site.mjs';
@@ -159,7 +160,14 @@ test('no dictionary key is unused', () => {
                          build-site.mjs) read all five mock* keys. Until 08.09.2026 the
                          before/after slider's template used three of them too, which is
                          why only two were listed here; the slider is gone. */
-                      'mockTitle', 'mockText', 'mockAccept', 'mockReject', 'mockSettings'];
+                      'mockTitle', 'mockText', 'mockAccept', 'mockReject', 'mockSettings',
+                      /* SPEC V1.30 §3.2: the trust line's services item is
+                         rendered by the build (trustServicesText) in the page
+                         language's plural form, so its three forms are read
+                         there and never by the template or app.js. The
+                         consents and sites forms ARE read by app.js through
+                         plural(n, 'trustConsents' / 'trustSites'). */
+                      'trustServicesOne', 'trustServicesFew', 'trustServicesMany'];
 
   const used = new Set(BUILD_KEYS);
   for (const m of template.matchAll(/\bdata-i18n="([^"]+)"/g)) used.add(m[1]);
@@ -908,30 +916,80 @@ test('the check form has all its copy in all three dictionaries', () => {
 
 /* ----------------------------------------------------------- the numbers */
 
-test('the numbers block hides the counts while there are too few sites', () => {
+/* UPDATED for SPEC V1.30 §3.2 — the four «Цифры» tiles became one trust
+   line under the first screen's button. What this test protected moves with
+   it unchanged: the live counts stay hidden until they have earned their
+   place (sites from ten, consents from four figures), a static fallback means
+   a failed request never leaves zeros, and the build-rendered part is true on
+   day one. */
+test('the trust line hides the counts while there are too few sites', () => {
   const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
 
   assert.match(app, /\/v1\/public\/stats/, 'app.js does not read the stats endpoint');
   assert.match(app, /STATS_MIN_SITES\s*=\s*10/,
     'the «show nothing under ten sites» threshold is not 10');
   assert.match(app, /stats\.sites\s*>=\s*STATS_MIN_SITES/,
-    'the counts are drawn without checking the threshold');
-  // A static fallback, so a failed request never leaves an empty block or zeros.
-  assert.match(app, /STATS_FALLBACK/, 'the numbers block has no static fallback');
+    'the site count is drawn without checking the threshold');
+  assert.match(app, /STATS_MIN_CONSENTS\s*=\s*1000/,
+    'the consents count no longer waits for four figures');
+  assert.match(app, /stats\.consents\s*>=\s*STATS_MIN_CONSENTS/,
+    'the consents count is drawn without checking its threshold');
+  // A static fallback, so a failed request never leaves an empty line or zeros.
+  assert.match(app, /STATS_FALLBACK/, 'the trust line has no static fallback');
   assert.match(app, /languages:\s*34/, 'the fallback does not carry the language count');
+  // The live items go through the page language's plural, never a bare label.
+  assert.match(app, /plural\(n, base\)/, 'the live counts are not pluralised');
+  assert.match(app, /'trustConsents'/, 'app.js never draws the consents count');
+  assert.match(app, /'trustSites'/, 'app.js never draws the sites count');
 
+  const template = readTemplate();
   for (const { code } of LANGS) {
     const dict = readDict(code);
-    for (const key of ['statsTitle', 'statsSites', 'statsConsents', 'statsLanguages',
-                       'statsVersion', 'statsUpdated']) {
-      assert.ok(dict[key] && dict[key].trim(), `${code}.json has no "${key}"`);
+    for (const base of ['trustServices', 'trustConsents', 'trustSites']) {
+      for (const form of ['One', 'Few', 'Many']) {
+        const key = base + form;
+        assert.ok(dict[key] && dict[key].includes('{n}'),
+          `${code}.json has no "${key}" with an {n}`);
+      }
     }
+    assert.ok(dict.trustLanguages && /34/.test(dict.trustLanguages),
+      `${code}.json has no "trustLanguages" carrying 34`);
     for (const token of ['{day}', '{month}', '{year}']) {
       assert.ok(dict.statsUpdated.includes(token),
         `"statsUpdated" in ${code}.json does not interpolate ${token}`);
     }
     assert.ok(Array.isArray(dict.statsMonths) && dict.statsMonths.length === 12,
       `${code}.json needs twelve month names for the «обновлено …» line`);
+
+    // In the served HTML: the build's two facts are there, the live counts
+    // are present as EMPTY hidden slots — never a number before the API has
+    // said the threshold is met.
+    const html = renderPage(template, code);
+    const hero = html.match(/<section class="hero">[\s\S]*?\n  <\/section>/)[0];
+    const line = hero.match(/<p class="hero-trust" id="trust">([\s\S]*?)<\/p>/);
+    assert.ok(line, `the ${code} hero has no trust line`);
+    for (const slot of ['consents', 'sites']) {
+      assert.match(line[1], new RegExp(`<span class="trust-item" data-trust="${slot}" hidden></span>`),
+        `the ${code} trust line ships the ${slot} slot filled or visible`);
+    }
+    assert.ok(line[1].includes(trustServicesText(dict, code)),
+      `the ${code} trust line does not carry the build's services count`);
+    assert.ok(line[1].includes(String(SITE_STATS.services)),
+      `the ${code} trust line does not show stats.json's ${SITE_STATS.services}`);
+    assert.ok(line[1].includes(dict.trustLanguages),
+      `the ${code} trust line does not carry the language count`);
+    // The «Цифры» section is gone, not merely hidden.
+    assert.doesNotMatch(html, /id="numbers"|id="stats"/,
+      `the ${code} page still carries the «Цифры» block`);
+  }
+
+  // The build's plural rule is the one app.js's plural() applies.
+  for (const [lang, n, form] of [
+    ['ru', 1, 'One'], ['ru', 3, 'Few'], ['ru', 11, 'Many'], ['ru', 21, 'One'], ['ru', 86, 'Many'],
+    ['ro', 1, 'One'], ['ro', 19, 'Few'], ['ro', 20, 'Many'], ['ro', 86, 'Many'], ['ro', 101, 'Few'],
+    ['en', 1, 'One'], ['en', 2, 'Many'], ['en', 86, 'Many']
+  ]) {
+    assert.equal(pluralForm(lang, n), form, `pluralForm(${lang}, ${n}) is not ${form}`);
   }
 });
 
@@ -943,24 +1001,32 @@ test('the numbers block hides the counts while there are too few sites', () => {
  * about determinism — see the BUILD_DATE comment in tools/build-site.mjs — so
  * it checks that what lands in the markup is package.json's own version and a
  * date the dictionary formatted, in all three languages. */
-test('the fourth tile carries the package version and the build date', () => {
+/* UPDATED for SPEC V1.30 §3 row 9 — the version and the build date moved
+   from the fourth «Цифры» tile into the footer, as one line: «ConsentKit
+   0.5.30 · обновлено 5 октября 2026». The guard is the same: both values are
+   the BUILD's (package.json and the README's dated size table), rendered into
+   the markup, never fetched or computed in the browser. The footer is sliced
+   into the law pages too, so the line is asserted there as well. */
+test('the footer carries the package version and the build date', () => {
   const template = readTemplate();
   const version = JSON.parse(readFileSync(join(SRC_DIR, '..', '..', 'package.json'), 'utf8')).version;
 
   assert.equal(VERSION, version, 'build-site.mjs does not read package.json’s version');
 
   for (const { code } of LANGS) {
-    const html = renderPage(template, code);
     const dict = readDict(code);
-
-    assert.ok(html.includes(`<dt class="stat__num">${version}</dt>`),
-      `the ${code} page does not show the package version in the fourth tile`);
-    assert.ok(html.includes(dict.statsVersion),
-      `the ${code} page has no «версия баннера» caption`);
-
     const want = updatedText(dict, BUILD_DATE);
-    assert.ok(html.includes(want),
-      `the ${code} page does not carry the build date («${want}»)`);
+    const line = `<p class="foot-small foot-version">ConsentKit ${version} · ${want}</p>`;
+
+    for (const [where, html] of [
+      [`${code} home`, renderPage(template, code)],
+      [`${code}/law`, renderLawIndex(template, code)],
+      [`${code}/law/<article>`, renderLawPage(template, code, readPages(code)[0])]
+    ]) {
+      const foot = html.match(/<footer[\s\S]*?<\/footer>/)[0];
+      assert.ok(foot.includes(line),
+        `the ${where} footer does not carry «ConsentKit ${version} · ${want}»`);
+    }
 
     // The month must be the dictionary's own name, not a number: RU needs the
     // genitive («сентября»), which no date formatter would produce.
@@ -972,7 +1038,7 @@ test('the fourth tile carries the package version and the build date', () => {
   // Nothing computes either value in the browser.
   const app = readFileSync(join(SITE_DIR, 'app.js'), 'utf8');
   assert.doesNotMatch(app, /statsUpdated|statsMonths/,
-    'app.js reads the build-time date keys — the tile must be rendered by the build');
+    'app.js reads the build-time date keys — the line must be rendered by the build');
 });
 
 /* -------------------------------------------------------------- the FAQ */
@@ -1004,6 +1070,30 @@ test('the FAQ has the five V1.11 questions and valid FAQPage markup', () => {
         `FAQPage answer ${i + 1} is not the visible answer`);
     });
     assert.doesNotMatch(m[1], /<\/script/i, 'the FAQPage block can break out of its <script>');
+  }
+});
+
+/* SPEC V1.30 §4: two new questions, «Уже стоит другой баннер — как
+   перейти?» and «Как вы зарабатываете?». APPENDED: the anchors are positional
+   (q1..qN), so a question inserted mid-list would repoint every support reply
+   that links to a later answer. The FAQPage markup is checked against the
+   whole array by the test above, so the two travel into it automatically. */
+test('V1.30: the FAQ gains its two questions at the end, keeping q1..q12', () => {
+  const WANT = {
+    ru: [/другой баннер/, /зарабатываете/],
+    ro: [/alt banner/, /câștigați/],
+    en: [/another banner/, /make money/]
+  };
+  for (const { code } of LANGS) {
+    const faq = readDict(code).faq;
+    assert.equal(faq.length, 14, `${code}.json has ${faq.length} FAQ entries, V1.30 makes it 14`);
+    assert.match(faq[12][0], WANT[code][0], `${code}: question 13 is not «how do I switch banners»`);
+    assert.match(faq[13][0], WANT[code][1], `${code}: question 14 is not «how do you make money»`);
+    // The switching answer names no other product (§0: no competitor names).
+    for (const name of ['Cookiebot', 'CookieYes', 'Osano', 'Termly', 'Usercentrics',
+                        'OneTrust', 'Iubenda', 'Complianz', 'KookiOk', 'Didomi']) {
+      assert.ok(!faq[12][1].includes(name), `${code}: the switching answer names ${name}`);
+    }
   }
 });
 
@@ -1395,17 +1485,39 @@ test('the marquee stops for prefers-reduced-motion and pauses on hover', () => {
 
 /* ------------------------------------------------------- §2.3/§2.4 CTAs */
 
+/* UPDATED for SPEC V1.30 §4 — «одна на странице как главная; остальные
+   повторы этой кнопки убираются». The repeats under «Как это работает» and
+   under the pricing table are gone, so #check is reached from exactly two
+   places: the capsule (short label) and the hero (full label). The count is
+   EXACT now rather than a floor: a third copy coming back is the regression. */
 test('the page has one primary button, and it is the free check', () => {
   const template = readTemplate();
   for (const { code } of LANGS) {
     const dict = readDict(code);
     const html = renderPage(template, code);
 
-    // Header, hero, end of «Как это работает», after the pricing table.
-    const primaries = html.match(/class="btn[^"]*btn--primary[^"]*"[^>]*>/g) || [];
     const toCheck = (html.match(/href="#check"[^>]*>/g) || []).length;
-    assert.ok(toCheck >= 4,
-      `the ${code} page points at #check ${toCheck} times, §2.4 asks for four places`);
+    assert.equal(toCheck, 2,
+      `the ${code} page points at #check ${toCheck} times; V1.30 keeps the capsule and the hero only`);
+    assert.doesNotMatch(html, /class="section-cta"/,
+      `the ${code} page still repeats the check button under a section`);
+
+    /* Every primary button in the SERVED markup is the check: the two links
+       to #check, and — inside the check form itself — its two steps' own
+       buttons («Проверить», then «Прислать»). The demo's «Показать снова» is
+       a secondary control since V1.30. (The pricing table is drawn by app.js
+       at runtime and is not covered here: its featured Starter column still
+       carries a primary «Открыть кабинет», as it did before V1.30.) */
+    const PRIMARY = /<(a|button)\b[^>]*class="btn[^"]*btn--primary[^"]*"[^>]*>/g;
+    const form = html.match(/<form class="check" data-check-form[\s\S]*?<\/form>/)[0];
+    const outside = [...html.replace(form, '').matchAll(PRIMARY)].map((m) => m[0]);
+    assert.equal(outside.length, 2,
+      `the ${code} page has ${outside.length} primary buttons outside the form: ${outside.join(' | ')}`);
+    for (const tag of outside) {
+      assert.match(tag, /href="#check"/, `the ${code} page has a primary button that is not the check: ${tag}`);
+    }
+    assert.equal([...form.matchAll(PRIMARY)].length, 2,
+      `the ${code} check form does not carry exactly its two step buttons`);
 
     // Every one of those buttons says the same thing.
     const cta = dict.ctaCheck;
@@ -1423,8 +1535,6 @@ test('the page has one primary button, and it is the free check', () => {
     // The footer keeps its own text link.
     const foot = html.match(/<footer[\s\S]*?<\/footer>/)[0];
     assert.match(foot, /app\.ecomconsult\.net/, `the ${code} footer lost the dashboard link`);
-
-    assert.ok(primaries.length >= 1);
   }
 });
 
@@ -1432,86 +1542,107 @@ test('the page has one primary button, and it is the free check', () => {
    facts, so the `heroChip` half of this assertion describes copy that no longer
    exists. The accented-word half is untouched: §5 explicitly leaves the
    headline and the lede alone. */
-test('the hero leads with two fact pills and one accented word', () => {
+/* UPDATED for SPEC V1.30 §3 row 2 / §4 — the first screen is the headline,
+   one line, the button and the trust line. The two fact pills (V1.24 §2) and
+   the «бесплатный тариф навсегда» note are gone: the pills repeated the
+   «10 минут» the line now says and a price the pricing table carries. What
+   stays is the accented word, split into two keys so each language can put
+   its own word under the accent; and the compliance promise is gone from the
+   headline («Сайт соответствует правилам ЕС», §1). */
+test('the hero leads with one accented word, without pills or a compliance promise', () => {
   const template = readTemplate();
   for (const { code } of LANGS) {
     const dict = readDict(code);
     const html = renderPage(template, code);
     const hero = html.match(/<section class="hero">[\s\S]*?\n  <\/section>/)[0];
 
-    assert.ok(!Object.prototype.hasOwnProperty.call(dict, 'heroChip'),
-      `${code}.json still carries "heroChip" — §2 replaces it with two pills`);
-    for (const n of [1, 2]) {
-      assert.ok(hero.includes(dict[`heroPill${n}Num`]) && hero.includes(dict[`heroPill${n}Label`]),
-        `the ${code} hero is missing fact pill ${n}`);
+    for (const key of ['heroChip', 'heroNote', 'heroPill1Num', 'heroPill1Label',
+                       'heroPill2Num', 'heroPill2Label']) {
+      assert.ok(!Object.prototype.hasOwnProperty.call(dict, key),
+        `${code}.json still carries "${key}" — V1.30 drops it from the first screen`);
     }
-    // Two keys, so each language can put its own word under the accent.
+    assert.doesNotMatch(hero, /fact-pill|hero-note/, `the ${code} hero still carries pills or the note`);
+
     assert.ok(hero.includes(dict.heroTitleLead) && hero.includes(dict.heroTitleAccent),
       `the ${code} headline is not split into lead + accent`);
     assert.match(hero, /class="h1-accent"/);
+    assert.ok(hero.includes(dict.heroLine1), `the ${code} hero has lost its line`);
+
+    const h1 = dict.heroTitleLead + ' ' + dict.heroTitleAccent;
+    assert.doesNotMatch(h1, /соответству|respectă regulile|follows EU rules/i,
+      `the ${code} headline still promises compliance`);
   }
 });
 
 /* ----------------------------------------------------------- §2.6 bands */
 
-test('the check block is the red band and «Цифры» is the cream one', () => {
+/* UPDATED for SPEC V1.30 §3 row 3 — «красный блок остаётся; площадки —
+   простой список в две колонки с разделителями, без карточек; надпись над
+   заголовком убрать». The «Цифры» cream band is gone with its section. The red
+   block, the button inversions and the phone rule are asserted as before. */
+test('the check block is the red band, with the platforms as a plain list', () => {
   const template = readTemplate();
   const html = renderPage(template, DEFAULT_LANG);
 
   assert.match(html, /<section id="check" class="band check-band">/);
-  assert.match(html, /<section id="numbers" class="band band--cream">/);
+  assert.doesNotMatch(html, /<section id="numbers"/, '«Цифры» is still a section');
 
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
   assert.match(css, /\.check-band \{[\s\S]*?background:\s*var\(--band\)/);
-  // V1.14.1 §2: «Цифры» is cream, not sand — the page's rhythm is
-  // белый → крем (hero) → белый → красная полоса → белый → крем → белый.
-  assert.match(css, /\.band--cream \{\s*background:\s*var\(--cream\)/);
   // On a red band the primary button cannot also be red.
   assert.match(css, /\.check-band \.btn--primary \{[\s\S]*?color:\s*#B82E2D/);
-  // The form and the tiles stay white cards on the band.
+  // The form stays a card on the band.
   assert.match(css, /\.check-band \.check \{[\s\S]*?background:\s*var\(--surface\)/);
-  assert.match(css, /\.check-band \.fit__list li \{[\s\S]*?background:\s*var\(--surface\)/);
 
-  /* §1.4: on a phone the band is not a full-width slab of red. Below 768 the
-     block goes white and a small red caption above the heading carries the
-     accent instead. The base rule above is untouched, so ≥768 is unchanged. */
+  // The platforms are rows between rules: no fill, no radius, a top rule.
+  const li = css.match(/\.fit__list li,\n\.check-band \.fit__list li \{[^}]*\}/);
+  assert.ok(li, 'the platform rows have no rule of their own');
+  assert.match(li[0], /background:\s*transparent/, 'the platform rows are still filled cards');
+  assert.match(li[0], /border-radius:\s*0/, 'the platform rows are still rounded cards');
+  assert.match(li[0], /border-top:\s*1px solid/, 'the platform rows have no rule between them');
+  assert.match(css, /@media \(min-width: 960px\) \{\s*\.check-band \.fit__list \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/,
+    'the platform list is not two columns on a desktop');
+  const section = html.match(/<section id="check"[\s\S]*?\n  <\/section>/)[0];
+  assert.equal((section.match(/<li\b/g) || []).length, 4, 'the check block does not list four platforms');
+  assert.doesNotMatch(section, /class="card/, 'the check block nests cards again');
+
+  /* §1.4: on a phone the band is not a full-width slab of red. */
   assert.match(css, /@media \(max-width: 767px\) \{[\s\S]*?\.check-band \{\s*background:\s*transparent/,
     'the check band is still full-width red on a phone');
-  assert.match(html, /class="check-caption"/,
-    'the mobile red caption above the check heading is missing');
+  // V1.30: the caption above the heading is gone.
+  assert.doesNotMatch(html, /class="check-caption"/, 'the caption above the check heading is back');
+  assert.doesNotMatch(css, /\.check-caption/, 'styles.css still styles the removed check caption');
 });
 
 /* --------------------------------------------------------- §2.7 Starter */
 
-test('the Starter card reads the same data as the pricing table', () => {
+/* UPDATED for SPEC V1.30 §3 row 7 — «один раздел «Тарифы»: таблица тарифов
+   (колонка Starter выделена) → «Сделать самому или взять готовое» (6 строк) →
+   абзац «Почему не бесплатный плагин». Карточки Starter и «Коротко о продукте»
+   убрать». The card existed to repeat the table's Starter column, which is
+   what this test used to keep in sync; with the card gone, the guard is that
+   it stays gone and that the table still highlights Starter. */
+test('«Тарифы» is one section: the plans, then the comparison, then why', () => {
   const app = readFileSync(join(SRC_DIR, '..', 'app.js'), 'utf8');
-
-  assert.match(app, /function renderStarter/, 'app.js has no Starter card');
-  // It must read the shared `plans` array, not its own literals.
-  assert.match(app, /function renderStarter\(\)[\s\S]*?plans\[i\]\.plan === 'starter'/,
-    'renderStarter does not read the shared plans array');
-  assert.doesNotMatch(
-    app.match(/function renderStarter\(\)[\s\S]*?\n  \}/)[0],
-    /\u20AC\s*9|['"]9['"]/,
-    'the Starter card hard-codes a price instead of reading the payload'
-  );
-  // A fresh payload has to move both.
-  assert.match(app, /renderPricing\(\);\s*\n\s*renderStarter\(\);/,
-    'loadPricing does not refresh the Starter card');
+  assert.doesNotMatch(app, /function renderStarter|#starter/, 'app.js still renders the Starter card');
+  assert.match(app, /var FEATURED = 'starter';/, 'the pricing table no longer highlights Starter');
 
   const template = readTemplate();
-  const html = renderPage(template, DEFAULT_LANG);
-  const pricing = html.match(/<section id="pricing"[\s\S]*?<\/section>/)[0];
-  // Above the table, per §2.7.
-  assert.ok(pricing.indexOf('id="starter"') < pricing.indexOf('id="plans"'),
-    'the Starter card must sit above the pricing table');
-
   for (const { code } of LANGS) {
+    const html = renderPage(template, code);
+    const pricing = html.match(/<section id="pricing"[\s\S]*?\n  <\/section>/)[0];
+    const at = (needle) => pricing.indexOf(needle);
+    assert.ok(at('id="plans"') > -1, `the ${code} pricing section has no table`);
+    assert.ok(at('id="plans"') < at('id="compare"'), `the ${code} comparison does not follow the plans`);
+    assert.ok(at('id="compare"') < at('class="cmp-why"'), `the ${code} «why» paragraph is not last`);
+    assert.doesNotMatch(pricing, /id="starter"|starter__|class="card/,
+      `the ${code} pricing section still carries the Starter card or a card`);
+    assert.doesNotMatch(html, /<section id="compare"/, `the ${code} comparison is still its own section`);
+
     const dict = readDict(code);
-    for (const k of ['starterTitle', 'starterPriceUnit', 'starterPoint1',
-                     'starterPoint2', 'starterPoint3', 'factsTitle',
-                     'factCheckFree', 'factCheckFreeNum']) {
-      assert.ok(dict[k] && String(dict[k]).trim(), `${code}.json has no "${k}"`);
+    for (const k of ['starterTitle', 'starterPriceUnit', 'starterPoint1', 'starterPoint2',
+                     'starterPoint3', 'factsTitle', 'factCheckFree', 'factCheckFreeNum']) {
+      assert.ok(!Object.prototype.hasOwnProperty.call(dict, k), `${code}.json still carries "${k}"`);
     }
   }
 });
@@ -1787,8 +1918,8 @@ test('§2: the elements that stopped being red have not become red again', () =>
     '.brand-mark',            // the logo shield: its red lives inside the SVG (the brand, 08.09.2026), never from the accent token
     '.chip',                  // §2: sand fill, dark text
     '.btn--ghost',            // §2: white fill, dark 1px outline
-    '.plan-flag',             // §2: «чёрный с белым текстом»
-    '.starter__fact-num'
+    '.plan-flag'              // §2: «чёрный с белым текстом»
+    /* '.starter__fact-num' left this list with the Starter card (V1.30 §3). */
   ]) {
     const rule = block(sel);
     assert.ok(!/var\(--accent(-ink)?\)/.test(rule),

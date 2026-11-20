@@ -3,7 +3,8 @@
  * No frameworks, no build step, and no third-party font or beacon: the page
  * that argues for privacy must not load one. The three off-origin requests
  * THIS file makes all go to {API_BASE}, which is ours: GET /v1/public/pricing
- * for the prices, GET /v1/public/stats for the «Цифры» block, and the
+ * for the prices, GET /v1/public/stats for the trust line under the first
+ * screen's button, and the
  * POST /v1/public/site-check the «Проверить сайт» form sends.
  *
  * Since 0.5.22 one more off-origin request exists on this page, and it is not
@@ -521,88 +522,6 @@
     return c;
   }
 
-  /* ══════════════════════════════════════════════════════════════════
-     SPEC V1.14 §2.7 — Starter on its own card, above the table
-
-     Reads the SAME `plans` array renderPricing() draws from — the live
-     GET /v1/public/pricing payload when it answers, the PRICES/SITE_LIMITS
-     constants when it does not — so the card and the Starter column of the
-     table cannot show different money. loadPricing() re-runs both.
-
-     §2.7 asks for a testimonial beside it. There is none, and §3 forbids
-     inventing one, so the second column is three facts instead — and they are
-     the numbers «Цифры» already carries, read from the same dictionary keys,
-     so the two blocks cannot disagree either.
-     ══════════════════════════════════════════════════════════════════ */
-
-  function renderStarter() {
-    var host = $('#starter');
-    if (!host) return;
-    host.textContent = '';
-
-    var d = null;
-    for (var i = 0; i < plans.length; i++) {
-      if (plans[i].plan === 'starter') { d = plans[i]; break; }
-    }
-    // No Starter in the payload: leave the block empty. `.starter:empty` is
-    // display:none, so the section closes up rather than showing a hole.
-    if (!d || d.priceEur === null) return;
-
-    /* ---- the card ---- */
-    var card = el('div', 'starter__card');
-    card.appendChild(el('h3', 'starter__name', t('starterTitle')));
-
-    var price = el('p', 'starter__price');
-    price.appendChild(el('span', 'starter__num', '\u20AC' + d.priceEur));
-    // The unit comes from the payload, not from a literal: Starter is the one
-    // plan sold per site, and priceUnit is what says so.
-    price.appendChild(el('span', 'starter__unit',
-      d.priceUnit === 'site_month' ? t('starterPriceUnit') : t('perMonth')));
-    card.appendChild(price);
-
-    var points = el('ul', 'starter__points');
-    ['starterPoint1', 'starterPoint2', 'starterPoint3'].forEach(function (k) {
-      points.appendChild(el('li', '', t(k)));
-    });
-    card.appendChild(points);
-
-    // §2.7: this card's button is the dashboard, not the check — it is the
-    // one place on the page where «Открыть кабинет» is the next real step.
-    var cta = el('a', 'btn btn--primary');
-    cta.href = CABINET_URL;
-    cta.textContent = t('ctaCabinet');
-    // Same hook as the table's per-plan buttons — this card IS the Starter
-    // plan, so a click on it is a plan click, not a generic dashboard CTA.
-    cta.setAttribute('data-plan', 'starter');
-    cta.setAttribute('data-plan-price', String(PRICES.starter));
-    card.appendChild(cta);
-
-    /* ---- the three facts ---- */
-    var facts = el('div', 'starter__facts');
-    facts.appendChild(el('h3', 'starter__facts-head', t('factsTitle')));
-
-    // The services count comes from the «Цифры» block's data-services, which
-    // the build filled from site/src/stats.json — never a literal here: the
-    // literal «64» this replaces was two releases behind the tile above it.
-    var statsHost = $('#stats');
-    var services = statsHost && statsHost.getAttribute('data-services');
-    [
-      ['34', t('statsLanguages')],
-      [services || '', t('statsServices')],
-      [t('factCheckFreeNum'), t('factCheckFree')]
-    ].forEach(function (row) {
-      if (!row[0]) return;
-      var f = el('div', 'starter__fact');
-      f.appendChild(el('span', 'starter__fact-num', row[0]));
-      f.appendChild(el('span', 'starter__fact-label', row[1]));
-      facts.appendChild(f);
-    });
-
-    host.appendChild(card);
-    host.appendChild(facts);
-  }
-
-
   /* P3-8: one comparison table instead of four cards, so a reader compares
      along a row instead of re-reading four columns for the same seven labels.
      A real <table> with <caption> and <th scope> in both directions: the row
@@ -729,11 +648,9 @@
         var next = normalisePayload(data);
         if (!next) return;
         plans = next;
-        // renderPricing() and the Starter card alone, not renderPage():
-        // re-running the latter would reset the demo the visitor may already
-        // be playing with. Both read `plans`, so both have to follow it.
+        // renderPricing() alone, not renderPage(): running that again
+        // would reset the demo the visitor may already be playing with.
         renderPricing();
-        renderStarter();
       })
       .catch(function () { /* offline, timed out, blocked: keep the constants */ })
       .then(function () { clearTimeout(timer); });
@@ -786,92 +703,74 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════
-     «Цифры» — GET /v1/public/stats
+     The trust line — GET /v1/public/stats
 
-     SPEC V1.11 §3. Two rules do the work here:
+     SPEC V1.30 §3.2: what used to be four «Цифры» tiles is one line under the
+     first screen's button. The build renders the two facts that are true on
+     day one (the catalogue count and the language count), so the line is
+     never empty and never flashes zeros. Two rules do the rest, and they are
+     the tiles' rules, unchanged:
 
-     — Never show a zero. The block starts from the static fallback below and
-       loadStats() only ever REPLACES it, so a slow or failed request leaves
-       plausible copy on screen rather than an empty <dl> or a row of noughts.
+     — Never show a zero. The line starts from the build's facts and
+       loadStats() only ever ADDS to it; a slow or failed request leaves it as
+       it was.
 
-     — While `sites` is under ten, the counts are not drawn at all: only the
-       language count and «работаем с …». A service that advertises "3 sites
-       connected" is arguing against itself, and the honest way to say "we are
-       new" is to say what does not depend on being big.
+     — While `sites` is under ten the site count is not drawn at all, and the
+       consents count waits for four figures. A service that advertises
+       "3 sites connected" is arguing against itself, and the honest way to say
+       "we are new" is to say what does not depend on being big.
      ══════════════════════════════════════════════════════════════════ */
 
   var STATS_MIN_SITES = 10;
 
   // Below this, «M согласий записано» stays off: a four-figure number is the
-  // point of the tile, and «60 согласий» argues against itself exactly the way
+  // point of the item, and «60 согласий» argues against itself exactly the way
   // «3 сайта» does.
   var STATS_MIN_CONSENTS = 1000;
 
-  // What is true regardless of uptake. The fourth tile — the banner version
-  // and its build date — is rendered by tools/build-site.mjs and needs nothing
-  // from here unless there are enough sites to replace it.
+  // What is true regardless of uptake, and what the build already rendered.
   var STATS_FALLBACK = { sites: 0, consents: 0, languages: 34 };
 
   var stats = STATS_FALLBACK;
 
-  /* «1 234» — a thin non-breaking space every three digits, which is the
+  /* «1 234» — a non-breaking space every three digits, which is the
      grouping all three languages use and the one that never reads as a decimal
-     point. toLocaleString would follow the BROWSER's locale, not the page's. */
+     point. toLocaleString would follow the BROWSER's locale, not the page's.
+     tools/build-site.mjs groups the services count the same way. */
   function groupDigits(n) {
     var s = String(Math.max(0, Math.floor(n)));
     var out = '';
     for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 === 0) out += ' ';
+      if (i > 0 && (s.length - i) % 3 === 0) out += '\u00A0';
       out += s.charAt(i);
     }
     return out;
   }
 
-  /* Overwrite one tile in place — the number and its label together, because a
-     tile showing a new count under an old label is worse than either.
-
-     The version tile carries a second line («обновлено 6 сентября 2026»)
-     that captions the version and nothing else. When that tile is replaced by
-     a live count the line has to go with it, or «N сайтов подключено» ends up
-     captioned with the build date. */
-  function setStat(i, value, label, small) {
-    var host = $('#stats');
-    if (!host) return;
-    var tile = host.children[i];
-    if (!tile) return;
-    var dt = $('.stat__num', tile);
-    var dd = $('.stat__label', tile);
-    if (!dt || !dd) return;
-    dt.textContent = value;
-    dt.className = 'stat__num' + (small ? ' stat__num--sm' : '');
-    dd.textContent = label;
-    dd.hidden = false;
-    var sub = $('.stat__sub', tile);
-    if (sub) sub.hidden = true;
+  /* Show one live item, number and label together, in the page language's
+     plural form; the build composes the services item with the same rule. */
+  function setTrust(name, n, base) {
+    var item = document.querySelector('#trust [data-trust="' + name + '"]');
+    if (!item) return;
+    item.textContent = plural(n, base).replace(String(n), groupDigits(n));
+    item.hidden = false;
   }
 
-  /* SPEC V1.13 §2.5 and owner remark 3 — the two swap rules, and nothing else.
-   *
-   * The version tile is the DEFAULT fourth tile: it is true on day one, needs
-   * no API and is rendered by the build. The live counts take tiles in the
-   * order the owner set — «10 минут» goes first, to «M согласий записано» at
-   * four figures; only then does the version tile give way to «N сайтов
-   * подключено» at ten sites. So a service with sites but few consents shows
-   * the sites count and keeps the version; one with both shows both counts.
-   * Four tiles are filled in every one of those states. */
+  /* The two swap rules, and nothing else: consents from four figures, sites
+     from ten. Either can appear without the other. */
   function renderStats() {
-    if (!$('#stats')) return;
+    if (!$('#trust')) return;
 
     if (isNum(stats.consents) && stats.consents >= STATS_MIN_CONSENTS) {
-      setStat(2, groupDigits(stats.consents), t('statsConsents'), false);
+      setTrust('consents', stats.consents, 'trustConsents');
     }
     if (isNum(stats.sites) && stats.sites >= STATS_MIN_SITES) {
-      setStat(3, groupDigits(stats.sites), t('statsSites'), false);
+      setTrust('sites', stats.sites, 'trustSites');
     }
   }
 
   function loadStats() {
-    if (!$('#stats') || typeof fetch !== 'function') return;
+    if (!$('#trust') || typeof fetch !== 'function') return;
 
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 2000);
@@ -1652,9 +1551,9 @@
      applyLang() had nothing left to apply. */
   function renderPage() {
     renderPricing();
-    renderStarter();
     renderFaq();
     renderStats();
+    wireReveal();
     wireCheckForms();
     fillLanguageSelect();
     fillPositionSelect();
@@ -1713,6 +1612,43 @@
     var timer = setInterval(function () {
       if (placeFab() || ++tries > 20) clearInterval(timer);
     }, 50);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     SPEC V1.30 §2.3 — the one animation on the page
+
+     Each section below the first screen fades up 12px the first time it
+     scrolls into view, once. The class that hides a section is added HERE,
+     by script, so a visitor without JavaScript (or without
+     IntersectionObserver) sees every section as authored, and a visitor who
+     asked for less motion gets nothing at all: the styles live only inside
+     the stylesheet's `prefers-reduced-motion: no-preference` block, and this
+     function checks the same query before it marks anything.
+
+     A section that is already on screen when the page loads (an anchor link
+     straight to #faq, a reload halfway down) is never hidden first.
+     ══════════════════════════════════════════════════════════════════ */
+
+  function wireReveal() {
+    if (typeof IntersectionObserver !== 'function' || !window.matchMedia) return;
+    if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+    if (!document.getElementById('main')) return;
+
+    var sections = $$('#main > section:not(.hero)');
+    var view = window.innerHeight || document.documentElement.clientHeight || 0;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('is-shown');
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px' });
+
+    sections.forEach(function (sec) {
+      if (sec.getBoundingClientRect().top < view) return;   // already on screen
+      sec.classList.add('reveal');
+      io.observe(sec);
+    });
   }
 
   /* ══════════════════════════════════════════════════════════════════

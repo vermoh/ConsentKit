@@ -5,9 +5,11 @@
  * «Своими силами / ConsentKit» table. All three depend on files and structure
  * that nothing else in the suite watches:
  *
- *   · seven .webp screenshots in site/img/, referenced from the built pages;
+ *   · seven .webp screenshots in site/img/, referenced from the built pages
+ *     (since V1.30 the hero's is hero-v130.webp, a composed picture);
  *   · six .pcard articles, each with a fact pill, a heading and an image;
- *   · #compare with six rows, in three languages, no Cyrillic in ro/en;
+ *   · #compare with six rows, in three languages, no Cyrillic in ro/en
+ *     (since V1.30 a block inside «Тарифы», not a section of its own);
  *   · a hero with exactly one primary button and no route to #demo.
  *
  * The existing test/site-build.test.mjs stays the owner of the rendered
@@ -31,8 +33,12 @@ import {
    belongs to. Listed here rather than globbed: a file that quietly stops
    being referenced would still be «present» to a glob, and a file the
    template names but nobody shipped is the failure that matters. */
+/* V1.30 §3.1: the hero's screenshot of a client site (hero-site.webp) is
+   replaced by hero-v130.webp — a fictional shop running our real banner, with
+   the dashboard's answers card in front. A new name, because site/img/ is not
+   content-hashed (§0). */
 const SHOTS = [
-  ['hero-site.webp', 'heroShotAlt'],
+  ['hero-v130.webp', 'heroShotAlt'],
   ['cabinet-readiness.webp', 'pshot1Alt'],
   ['cabinet-scan.webp', 'pshot2Alt'],
   ['cabinet-stats.webp', 'pshot3Alt'],
@@ -160,7 +166,9 @@ test('§1/§2: the card tones and the pill are built from existing tokens only',
   assert.match(pill, /background: var\(--ink\)/, '§2: the pill is not the ink fill');
   assert.match(pill, /color: var\(--bg\)/, '§2: the pill text is not the page ground');
   assert.match(pill, /border-radius: 10px/, '§2: the pill radius is not 10');
-  assert.match(pill, /font-size: 13px/, '§2: the pill is not 13px');
+  /* UPDATED for SPEC V1.30 §5 — «минимум 14 px для любого текста»: the pill
+     was 13px and is the page's smallest type, so it moves up to the floor. */
+  assert.match(pill, /font-size: 14px/, '§2 / V1.30 §5: the pill is not 14px');
 
   /* §1: «Красного в карточках нет.» The whole product section, pill included,
      must not spend the accent — the page's red budget is the primary button,
@@ -189,14 +197,20 @@ test('§1/§2: the card tones and the pill are built from existing tokens only',
 
 /* --------------------------------------------------------- §4 the table */
 
+/* UPDATED for SPEC V1.30 §3 row 7 — #compare moved into «Тарифы» as the
+   block after the plans table. Everything below is asserted on that block
+   exactly as it was on the section: six rows, seven highlighted cells, three
+   languages, no competitor named, no frightening words. */
 test('§4: #compare is six rows of facts, in all three languages', () => {
   const template = readTemplate();
 
   for (const { code } of LANGS) {
     const html = renderPage(template, code);
     const dict = readDict(code);
-    const section = html.match(/<section id="compare">([\s\S]*?)\n  <\/section>/);
-    assert.ok(section, `the ${code} page has no <section id="compare">`);
+    const pricing = html.match(/<section id="pricing"[\s\S]*?\n  <\/section>/);
+    assert.ok(pricing, `the ${code} page has no <section id="pricing">`);
+    const section = pricing[0].match(/<div class="compare" id="compare">([\s\S]*)$/);
+    assert.ok(section, `the ${code} pricing section has no #compare block`);
 
     // Exactly six rows, and each carries this language's own three strings.
     const rows = [...section[1].matchAll(/<tr>\s*<th scope="row"[\s\S]*?<\/tr>/g)];
@@ -289,34 +303,45 @@ test('§5: the hero has one primary button and no route to the demo', () => {
     assert.match(html, /<nav class="head-nav"[\s\S]*?href="#demo"/,
       `the ${code} menu no longer offers the demo`);
 
-    /* §5: the window frame keeps its three dots and gains the real banner. */
-    assert.match(hero, /<div class="shot-bar" aria-hidden="true">/,
-      `the ${code} hero window lost its title bar`);
-    assert.match(hero, /<img class="shot-img" src="\/img\/hero-site\.webp"/,
-      `the ${code} hero does not show the real banner screenshot`);
-    /* The old skeleton replica must be gone, not merely hidden behind it —
-       two banners in one frame is what §5 replaces. */
+    /* UPDATED for SPEC V1.30 §3.1 — the hero picture is a composition of our
+       real banner on a fictional shop page with the dashboard card in front.
+       The browser window and its three dots are drawn INTO the picture, so the
+       page no longer wraps it in a frame of its own. It is the first screen's
+       image: eager, high priority, its box reserved by width and height. */
+    const img = hero.match(/<img class="hero-img" src="\/img\/hero-v130\.webp"[^>]*>/);
+    assert.ok(img, `the ${code} hero does not show hero-v130.webp`);
+    assert.match(img[0], /loading="eager"/, `the ${code} hero picture is lazy`);
+    assert.match(img[0], /fetchpriority="high"/, `the ${code} hero picture is not high priority`);
+    assert.match(img[0], /width="1152" height="700"/, `the ${code} hero picture has no reserved box`);
+    /* The old screenshot of a client's site is gone from the page, and the
+       skeleton replica before it must not come back either. */
+    assert.ok(!html.includes('hero-site.webp'), `the ${code} page still references hero-site.webp`);
     assert.ok(!/class="shot-banner"/.test(hero),
-      `the ${code} hero still carries the skeleton replica beside the screenshot`);
+      `the ${code} hero carries a skeleton replica beside the picture`);
   }
 });
 
 /* ------------------------------------------------------- §3 the geometry */
 
+/* UPDATED for SPEC V1.30 — «Цифры» (#numbers) and «Для кого» (#who) are no
+   longer sections, so the shared rule shapes the two blocks that remain, and
+   the radius follows §2.2's scale: 28 for large blocks, 20 on a phone. The
+   assertions are otherwise the ones V1.24 §3 made. */
 test('§3: the coloured blocks are rounded cards, not full-bleed strips', () => {
   const css = readFileSync(join(SITE_DIR, 'styles.css'), 'utf8');
 
-  /* One rule for all four, so their radius and rhythm cannot drift apart. */
-  const card = css.match(/\n#check,\n#numbers,\n#who,\n#dev \{[\s\S]*?\n\}/);
-  assert.ok(card, '§3: the four blocks are not shaped by a shared rule');
-  assert.match(card[0], /border-radius: 24px/, '§3: the block radius is not 24');
+  /* One rule for both, so their radius and rhythm cannot drift apart. */
+  const card = css.match(/\n#check,\n#dev \{[\s\S]*?\n\}/);
+  assert.ok(card, '§3: the blocks are not shaped by a shared rule');
+  assert.match(card[0], /border-radius: 28px/, 'V1.30 §2.2: the block radius is not 28');
   assert.match(card[0], /margin: 0 auto 24px/, '§3: the 24px rhythm between blocks is missing');
   assert.match(card[0], /max-width: calc\(var\(--wrap\) \+ 48px\)/,
     '§3: the blocks still run the full width of the page');
+  assert.doesNotMatch(css, /#numbers|#who\b/, 'styles.css still shapes the removed sections');
 
-  /* §3: «на мобильном радиус 16, отступы 24/20.» */
-  assert.match(css, /@media \(max-width: 760px\) \{[\s\S]*?#check,\n  #numbers,\n  #who,\n  #dev \{[\s\S]*?border-radius: 16px/,
-    '§3: the blocks keep their 24px radius on a phone');
+  /* On a phone the radius steps down to the card radius (20). */
+  assert.match(css, /@media \(max-width: 760px\) \{[\s\S]*?#check,\n  #dev \{[\s\S]*?border-radius: 20px/,
+    '§3: the blocks keep their desktop radius on a phone');
 
   /* And the one thing §3 insists must NOT change: the check block is still
      red. The band test in site-build.test.mjs owns this too; it is repeated
@@ -328,8 +353,11 @@ test('§3: the coloured blocks are rounded cards, not full-bleed strips', () => 
 /* ---------------------------------------------------------- §6 languages */
 
 test('§6: the new strings exist in all three languages, ro and en without Cyrillic', () => {
+  /* V1.30: the hero pills are gone (their keys with them); the trust line
+     and the FAQ's side column bring keys of their own. */
   const KEYS = [
-    'heroPill1Num', 'heroPill1Label', 'heroPill2Num', 'heroPill2Label', 'heroShotAlt',
+    'heroShotAlt', 'heroTitleLead', 'heroTitleAccent', 'heroLine1',
+    'trustLanguages', 'faqLede',
     'featMoreTitle', 'compareTitle', 'compareLede', 'cmpColSelf', 'cmpColUs',
     'cmpTableCaption', 'pcard5Title', 'pcard5Text'
   ];
@@ -355,8 +383,7 @@ test('§6: the new strings exist in all three languages, ro and en without Cyril
   /* §6: «Плашки с числами одинаковы во всех языках, подписи переводятся.»
      The digits are the same everywhere — 36, 34, 1 — while «10 минут» and
      «каждую неделю» are sentences and are translated with the labels. */
-  for (const [key, digits] of [['pcard1Num', '36'], ['pcard4Num', '34'], ['pcard5Num', '1'],
-                               ['heroPill2Num', '€0']]) {
+  for (const [key, digits] of [['pcard1Num', '36'], ['pcard4Num', '34'], ['pcard5Num', '1']]) {
     for (const { code } of LANGS) {
       assert.equal(readDict(code)[key], digits,
         `"${key}" differs in ${code}.json — §6 keeps the numbers identical`);
