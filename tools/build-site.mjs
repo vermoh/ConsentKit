@@ -974,10 +974,34 @@ export function renderMarquee(dict, lang) {
 /* V1.30 §3.1, owner 20.11.2026: the hero picture shows our banner and the
    cabinet's «Как отвечают посетители» card, so each page language gets its
    own composition — a Russian card on the Romanian page read as a mistake.
-   site/img/ is not content-hashed (§0), hence a name per language. */
+   site/img/ is not content-hashed (§0), hence a name per language.
+   V1.30.1 A2: the card in it is re-shot in the cabinet's dark theme, and a
+   changed picture is a new name (hero-v130-* → hero-v1301-*). */
+export const SHOT_LANGS = ['ro', 'ru', 'en'];
+
 export function heroImage(lang) {
-  if (!['ro', 'ru', 'en'].includes(lang)) throw new Error(`no hero picture for ${lang}`);
-  return '/img/hero-v130-' + lang + '.webp';
+  if (!SHOT_LANGS.includes(lang)) throw new Error(`no hero picture for ${lang}`);
+  return '/img/hero-v1301-' + lang + '.webp';
+}
+
+/* V1.30.1 A2: the six «Что умеет» screenshots, one file per page language
+   like the hero — the cabinet in its dark theme speaking the page's language
+   (the declaration stays the light public page it is). Each placeholder in
+   the template names its base; every language's file has the same pixel
+   size, so the width/height the template carries hold for all three. */
+export const SHOT_BASES = {
+  SHOT_READINESS: 'cabinet-readiness',
+  SHOT_SCAN: 'cabinet-scan',
+  SHOT_STATS: 'cabinet-stats',
+  SHOT_TEXTS: 'cabinet-texts',
+  SHOT_DECLARATION: 'declaration',
+  SHOT_PREVIEW: 'cabinet-preview'
+};
+
+export function shotImage(base, lang) {
+  if (!SHOT_LANGS.includes(lang)) throw new Error(`no screenshots for ${lang}`);
+  if (!Object.values(SHOT_BASES).includes(base)) throw new Error(`unknown screenshot ${base}`);
+  return '/img/' + base + '-' + lang + '.webp';
 }
 
 export function renderPage(template, lang) {
@@ -1007,6 +1031,7 @@ export function renderPage(template, lang) {
     JSON_LD: faqJsonLd(dict),
     MARQUEE: renderMarquee(dict, lang),
     HERO_IMG: heroImage(lang),
+    ...Object.fromEntries(Object.entries(SHOT_BASES).map(([key, base]) => [key, shotImage(base, lang)])),
     I18N_SCRIPT: i18nScript
   };
 

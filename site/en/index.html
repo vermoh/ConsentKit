@@ -34,7 +34,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#141414">
 <script>window.dataLayer = window.dataLayer || [];</script>
-<link rel="stylesheet" href="/styles.css?v=8cfcdb7b">
+<link rel="stylesheet" href="/styles.css?v=a89ffb28">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is cookie consent and why is it needed?","acceptedAnswer":{"@type":"Answer","text":"A cookie is a small note a site leaves in your visitor’s browser. Under EU rules anything not needed to run the site itself may only start after the visitor agrees, and you have to be able to prove they did. ConsentKit asks, waits for the answer and saves the decision for you."}},{"@type":"Question","name":"Does ConsentKit really block everything before consent?","acceptedAnswer":{"@type":"Answer","text":"Almost everything, right away: the official Google Analytics, Yandex Metrica, Meta, TikTok and Hotjar snippets are stopped automatically, and Google receives Consent Mode v2 signals before any tag loads. Rarer are trackers written into the page by hand as a plain \u003cscript src\u003e tag: the browser starts fetching those, so each one has to be marked once with type=\"text/plain\". The dashboard shows you exactly which ones and explains what to do."}},{"@type":"Question","name":"Where is the data stored?","acceptedAnswer":{"@type":"Answer","text":"On servers in Lithuania, in the European Union. The company: E-COM CONSULT PLUS, Moldova. We store the fact of consent and what the person chose, not information about the visitor."}},{"@type":"Question","name":"Can I use it without the dashboard?","acceptedAnswer":{"@type":"Answer","text":"Yes, and free of charge. The software is open under the MIT licence: download the files, put them on your site and set it up by hand, with no sign-up. The dashboard is for people who would rather press buttons than edit files."}},{"@type":"Question","name":"How do I turn off the “Made by E-COM Consult” line?","acceptedAnswer":{"@type":"Answer","text":"On paid plans a switch in the site settings turns it off; on the free plan it stays. If you installed the banner yourself, without the dashboard, you can remove the line in your own copy’s settings. We charge for the dashboard, the scans and keeping the log, not for hiding a line."}},{"@type":"Question","name":"What about scanning sites that are not mine?","acceptedAnswer":{"@type":"Answer","text":"You may only scan your own sites, or client sites you have been asked to look after. That is why a site has to be verified in the dashboard before the first scan. The scanner treads lightly and does not put load on your site."}},{"@type":"Question","name":"What counts as one site?","acceptedAnswer":{"@type":"Answer","text":"One site is one domain with everything on it: example.com and all of its pages. A separate domain is a separate site, even if it belongs to you and looks the same."}},{"@type":"Question","name":"What about subdomains?","acceptedAnswer":{"@type":"Answer","text":"Subdomains of a connected domain, such as shop.example.com or blog.example.com, are covered by the same site and do not use up your limit. They share the banner and the consent log with the main domain."}},{"@type":"Question","name":"VAT and invoices?","acceptedAnswer":{"@type":"Answer","text":"Payment goes through Creem, which issues the invoice and handles VAT for your country. Prices on this page are excluding VAT; the final amount is shown at checkout, and the invoice arrives by email."}},{"@type":"Question","name":"Can I cancel?","acceptedAnswer":{"@type":"Answer","text":"Yes, from the dashboard, at any time. The plan stays active until the end of the period you have already paid for, and nothing is charged after that."}},{"@type":"Question","name":"Does moving to a cheaper plan break anything?","acceptedAnswer":{"@type":"Answer","text":"Nothing breaks: the banner keeps working and decisions keep being recorded. Scheduled scans stop, the developer line comes back, and the consent log keeps the shorter retention of the new plan. On Free, in addition, the banner shows one language, the log is limited to 3 000 decisions a month and on-demand scans to 2 a month. The site itself never goes down."}},{"@type":"Question","name":"What happens if a site goes over 3 000 decisions a month?","acceptedAnswer":{"@type":"Answer","text":"A decision is one visitor’s answer to the banner: accept, reject or withdrawal of consent. Above 3 000 a month the banner keeps working exactly as before, and every decision is still recorded in the log, so nothing changes on your site. Only the dashboard changes: until the 1st of next month, or until you move to a paid plan, the log, the answer statistics and on-demand scans are closed there. We email you twice: at 80% and at 100% of the limit. This applies to the Free plan only: paid plans have no monthly cap on decisions."}},{"@type":"Question","name":"How do I switch if another banner is already installed?","acceptedAnswer":{"@type":"Answer","text":"Remove the old banner’s code, paste the ConsentKit line and run a scan. If the scanner still sees another consent banner on the site, the dashboard will tell you."}},{"@type":"Question","name":"How do you make money?","acceptedAnswer":{"@type":"Answer","text":"From the paid plans. The free plan stays free, and its banner shows the developer line. We do not sell visitor data and do not build advertising on it."}}]}</script>
 </head>
 <body>
@@ -185,11 +185,12 @@
            dashboard's «Как отвечают посетители» card in front of it. One
            picture per page language (owner 20.11.2026): the banner and the
            cabinet card speak the page's language, so the build fills the
-           src with hero-v130-<ro|ru|en>.webp. The window frame is part of the
+           src with hero-v1301-<ro|ru|en>.webp (V1.30.1: the card re-shot in
+           the cabinet's dark theme). The window frame is part of the
            picture, so the page draws none.
            eager + fetchpriority="high": it is the first screen's own image. -->
       <figure class="hero-shot">
-        <img class="hero-img" src="/img/hero-v130-en.webp"
+        <img class="hero-img" src="/img/hero-v1301-en.webp"
              width="1152" height="700"
              loading="eager" decoding="async" fetchpriority="high"
              alt="An example shop site running the ConsentKit banner, with the dashboard card “How visitors answer” in front" data-i18n-alt="heroShotAlt">
@@ -900,7 +901,11 @@
        something larger rather than as a framed thumbnail.
 
        Tones cycle cream / sand / dark from the tokens the page already has;
-       §1 forbids introducing a colour, and there is no red in this section. -->
+       §1 forbids introducing a colour, and there is no red in this section.
+
+       V1.30.1 A3: on a computer the six sit in a 12-column bento, rows
+       [7 | 5] [5 | 7] [6 | 6], placed by position in styles.css; the
+       screenshots are per page language (A2), filled in by the build. -->
   <section id="features">
     <div class="wrap">
       <h2 data-i18n="featTitle">Features</h2>
@@ -913,7 +918,7 @@
           <h3 data-i18n="feat10Title">Ready for the law, point by point</h3>
           <p data-i18n="feat10Text">36 checks in the dashboard: the scanner confirms some of them, the rest is a short to-do list with hints.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/cabinet-readiness.webp" width="1600" height="1202"
+            <img src="/img/cabinet-readiness-en.webp" width="1600" height="1202"
                  loading="lazy" decoding="async"
                  alt="The “GDPR readiness” card in the dashboard: seven areas and the list of points" data-i18n-alt="pshot1Alt">
           </div>
@@ -926,7 +931,7 @@
           <h3 data-i18n="feat2Title">The scanner finds cookies and keeps the declaration current</h3>
           <p data-i18n="feat2Text">The scanner walks your pages, collects the cookies and trackers, and refreshes the list every week. When a new service appears on the site, you read about it in the dashboard.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/cabinet-scan.webp" width="1600" height="763"
+            <img src="/img/cabinet-scan-en.webp" width="1600" height="762"
                  loading="lazy" decoding="async"
                  alt="Connecting a site: the scanner works through its phases and shows what it found" data-i18n-alt="pshot2Alt">
           </div>
@@ -939,7 +944,7 @@
           <h3 data-i18n="feat3Title">Consent you can prove</h3>
           <p data-i18n="feat3Text">Every visitor answer is stored in case you are ever asked. Log entries cannot be changed after the fact.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/cabinet-stats.webp" width="1600" height="714"
+            <img src="/img/cabinet-stats-en.webp" width="1600" height="922"
                  loading="lazy" decoding="async"
                  alt="How visitors answer: shares, bars and a chart by day" data-i18n-alt="pshot3Alt">
           </div>
@@ -952,7 +957,7 @@
           <h3 data-i18n="feat7Title">Your words, your company</h3>
           <p data-i18n="feat7Text">Your company details, the address for requests and the links to your policies appear in the banner and in the settings window. On paid plans you can set your own text in any of the 34 languages; the rest the visitor sees in their own.</p>
           <div class="pcard__shot">
-            <img src="/img/cabinet-texts.webp" width="1114" height="1240"
+            <img src="/img/cabinet-texts-en.webp" width="1120" height="1242"
                  loading="lazy" decoding="async"
                  alt="Banner texts in the dashboard: the language picker and the title and description fields" data-i18n-alt="pshot4Alt">
           </div>
@@ -965,7 +970,7 @@
           <h3 data-i18n="pcard5Title">A cookie declaration on a public page of its own</h3>
           <p data-i18n="pcard5Text">The list of cookies, with what each one is for and how long it is kept, lives on its own page. The link goes in the site footer and in the banner settings window.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/declaration.webp" width="1600" height="1017"
+            <img src="/img/declaration-en.webp" width="1600" height="1016"
                  loading="lazy" decoding="async"
                  alt="The public “Cookies on this site” page with the list of cookies" data-i18n-alt="pshot5Alt">
           </div>
@@ -978,7 +983,7 @@
           <h3 data-i18n="feat6Title">Installs on any site in 10 minutes</h3>
           <p data-i18n="feat6Text">A site builder, WordPress, a shop, a tag manager or plain HTML. The dashboard shows straight away what the visitor will see.</p>
           <div class="pcard__shot">
-            <img src="/img/cabinet-preview.webp" width="1114" height="1410"
+            <img src="/img/cabinet-preview-en.webp" width="1120" height="1352"
                  loading="lazy" decoding="async"
                  alt="The “What the visitor sees” preview: the live banner inside the editor" data-i18n-alt="pshot6Alt">
           </div>

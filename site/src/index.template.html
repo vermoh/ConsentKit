@@ -177,7 +177,8 @@
            dashboard's «Как отвечают посетители» card in front of it. One
            picture per page language (owner 20.11.2026): the banner and the
            cabinet card speak the page's language, so the build fills the
-           src with hero-v130-<ro|ru|en>.webp. The window frame is part of the
+           src with hero-v1301-<ro|ru|en>.webp (V1.30.1: the card re-shot in
+           the cabinet's dark theme). The window frame is part of the
            picture, so the page draws none.
            eager + fetchpriority="high": it is the first screen's own image. -->
       <figure class="hero-shot">
@@ -447,7 +448,11 @@
        something larger rather than as a framed thumbnail.
 
        Tones cycle cream / sand / dark from the tokens the page already has;
-       §1 forbids introducing a colour, and there is no red in this section. -->
+       §1 forbids introducing a colour, and there is no red in this section.
+
+       V1.30.1 A3: on a computer the six sit in a 12-column bento, rows
+       [7 | 5] [5 | 7] [6 | 6], placed by position in styles.css; the
+       screenshots are per page language (A2), filled in by the build. -->
   <section id="features">
     <div class="wrap">
       <h2 data-i18n="featTitle">Что умеет</h2>
@@ -460,7 +465,7 @@
           <h3 data-i18n="feat10Title">Готовность к закону по пунктам</h3>
           <p data-i18n="feat10Text">36 проверок в кабинете: часть подтверждает сканер, остальное — короткий список дел с подсказками.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/cabinet-readiness.webp" width="1600" height="1202"
+            <img src="{{SHOT_READINESS}}" width="1600" height="1202"
                  loading="lazy" decoding="async"
                  alt="Карточка «Готовность к GDPR» в кабинете: семь зон и список пунктов" data-i18n-alt="pshot1Alt">
           </div>
@@ -473,7 +478,7 @@
           <h3 data-i18n="feat2Title">Сканер сам находит cookie и обновляет декларацию</h3>
           <p data-i18n="feat2Text">Обходим страницы сайта, собираем список cookie и трекеров и обновляем его каждую неделю. Новый сервис на сайте — вы узнаёте о нём из кабинета.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/cabinet-scan.webp" width="1600" height="763"
+            <img src="{{SHOT_SCAN}}" width="1600" height="762"
                  loading="lazy" decoding="async"
                  alt="Подключение сайта: сканер идёт по фазам и показывает найденное" data-i18n-alt="pshot2Alt">
           </div>
@@ -486,7 +491,7 @@
           <h3 data-i18n="feat3Title">Согласие можно доказать</h3>
           <p data-i18n="feat3Text">Каждый ответ посетителя сохраняется на случай проверки.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/cabinet-stats.webp" width="1600" height="714"
+            <img src="{{SHOT_STATS}}" width="1600" height="922"
                  loading="lazy" decoding="async"
                  alt="Как отвечают посетители: доли ответов, полосы и график по дням" data-i18n-alt="pshot3Alt">
           </div>
@@ -499,7 +504,7 @@
           <h3 data-i18n="feat7Title">Тексты ваши, оператор ваш</h3>
           <p data-i18n="feat7Text">Реквизиты компании, адрес для запросов и ссылки на политики — в баннере и в окне настроек. На платных тарифах — свой текст на любом из 34 языков, остальные посетитель видит на своём.</p>
           <div class="pcard__shot">
-            <img src="/img/cabinet-texts.webp" width="1114" height="1240"
+            <img src="{{SHOT_TEXTS}}" width="1120" height="1242"
                  loading="lazy" decoding="async"
                  alt="Тексты баннера в кабинете: выбор языка и поля заголовка и описания" data-i18n-alt="pshot4Alt">
           </div>
@@ -512,7 +517,7 @@
           <h3 data-i18n="pcard5Title">Декларация cookie — своя публичная страница</h3>
           <p data-i18n="pcard5Text">Список cookie с назначением и сроком хранения живёт на отдельной странице. Ссылку ставят в подвал сайта и в окно настроек баннера.</p>
           <div class="pcard__shot pcard__shot--wide">
-            <img src="/img/declaration.webp" width="1600" height="1017"
+            <img src="{{SHOT_DECLARATION}}" width="1600" height="1016"
                  loading="lazy" decoding="async"
                  alt="Публичная страница «Cookie на этом сайте» со списком cookie" data-i18n-alt="pshot5Alt">
           </div>
@@ -525,7 +530,7 @@
           <h3 data-i18n="feat6Title">Ставится на любой сайт за 10 минут</h3>
           <p data-i18n="feat6Text">Конструктор, WordPress, магазин, диспетчер тегов или обычный HTML. В кабинете сразу видно, как баннер увидит посетитель.</p>
           <div class="pcard__shot">
-            <img src="/img/cabinet-preview.webp" width="1114" height="1410"
+            <img src="{{SHOT_PREVIEW}}" width="1120" height="1352"
                  loading="lazy" decoding="async"
                  alt="Предпросмотр «Как увидит посетитель»: живой баннер в редакторе" data-i18n-alt="pshot6Alt">
           </div>

@@ -195,15 +195,149 @@ test('§2.2: no shadows — depth is a surface tone and a 1px line', () => {
   /* A blurred box-shadow is what §2.2 rules out. Two zero-blur uses survive
      on purpose: the swatches' selection ring (0 0 0 2px, an outline that
      follows the circle) and the Creem badge, which is the vendor's own asset
-     drawn the way they ship it. */
+     drawn the way they ship it.
+     UPDATED for SPEC V1.30.1 A1 — the cards' top highlight, `inset 0 1px 0`,
+     is a 1px line drawn INSIDE the border, not a shadow: the rule is about
+     outer blurred shadows. So an inset layer is allowed only in exactly that
+     shape (no blur, no spread, one pixel down), and every outer layer must
+     still have no blur. The colour is not parsed for lengths: the old check
+     read the first three numbers of the layer, which for an inset layer
+     written with an rgba() would have read the colour's channels. */
   const code = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
+  let insets = 0;
   for (const m of code.matchAll(/box-shadow:\s*([^;]+);/g)) {
-    for (const layer of m[1].split(/,(?![^(]*\))/)) {
-      const lengths = layer.trim().match(/-?\d*\.?\d+(px)?/g) || [];
+    for (const raw of m[1].split(/,(?![^(]*\))/)) {
+      const layer = raw.trim();
+      const geometry = layer.replace(/(rgba?|hsla?|var)\([^)]*\)|#[0-9a-f]{3,8}\b/gi, '').trim();
+      if (/^inset\b/.test(geometry)) {
+        assert.match(geometry, /^inset 0 1px 0$/,
+          `an inset box-shadow other than the 1px top highlight: box-shadow: ${m[1]}`);
+        insets++;
+        continue;
+      }
+      const lengths = geometry.match(/-?\d*\.?\d+(px)?/g) || [];
       const blur = lengths.length >= 3 ? parseFloat(lengths[2]) : 0;
       assert.equal(blur, 0, `styles.css still casts a shadow: box-shadow: ${m[1]}`);
     }
   }
+  assert.ok(insets >= 1, 'the V1.30.1 card highlight is gone — the inset branch of this test is dead');
+});
+
+/* ------------------------------------------------- V1.30.1 A1 light, depth */
+
+/* The V1.30.1 layer, read on its own: it is the last word on the rules below. */
+const LAYER_1301 = CSS.slice(CSS.indexOf('SPEC V1.30.1 — шаг A'));
+
+test('V1.30.1 A1: the grain is one inline SVG noise on body, at 3–5%', () => {
+  assert.ok(LAYER_1301.length > 0 && CSS.includes('SPEC V1.30.1 — шаг A'), 'styles.css has no V1.30.1 layer');
+  const body = LAYER_1301.match(/\nbody \{[^}]*\}/);
+  assert.ok(body, 'the V1.30.1 layer has no body rule');
+  const url = body[0].match(/background-image:\s*url\("([^"]+)"\)/);
+  assert.ok(url, 'the grain is not a background-image on body');
+  /* Inline, so no request of any kind — the «no off-origin» rule — and not
+     a file in site/img/ either. */
+  assert.match(url[1], /^data:image\/svg\+xml,/, 'the grain is not an inline SVG data URI');
+  const svg = decodeURIComponent(url[1].slice('data:image/svg+xml,'.length));
+  assert.match(svg, /<feTurbulence\b/, 'the grain is not feTurbulence noise');
+  assert.doesNotMatch(svg.replace(/xmlns='[^']*'/, ''), /https?:/, 'the grain SVG reaches for a URL');
+  // The strength is the rect's opacity, the one alpha in the tile.
+  const op = svg.match(/<rect\b[^>]*opacity='([\d.]+)'/);
+  assert.ok(op, 'the grain has no opacity of its own');
+  assert.ok(Number(op[1]) >= 0.03 && Number(op[1]) <= 0.05,
+    `the grain is at ${op[1]} — the spec allows 0.03 to 0.05`);
+  // The page ground is still painted underneath, by the token.
+  assert.match(CSS, /\nbody \{[^}]*background: var\(--bg\)/, 'body no longer paints --bg under the grain');
+});
+
+test('V1.30.1 A1: the glows are pointer-less gradients behind the content', () => {
+  const rule = (sel) => {
+    const m = LAYER_1301.match(new RegExp('\\n' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\{[^}]*\\}'));
+    assert.ok(m, `the V1.30.1 layer has no ${sel} rule`);
+    return m[0];
+  };
+  // The shared part: out of flow, no pointer, behind the section's content.
+  const shared = LAYER_1301.match(/\n\.hero-shot::before,\n#features::before,\n#pricing::before \{[^}]*\}/);
+  assert.ok(shared, 'the three glow layers do not share one rule');
+  assert.match(shared[0], /position: absolute/);
+  assert.match(shared[0], /z-index: -1/);
+  assert.match(shared[0], /pointer-events: none/);
+  // Their sections isolate (the glow sits above their fill) and clip (it can
+  // never widen the page on a phone, nor add height).
+  const host = LAYER_1301.match(/\n\.hero,\n#features,\n#pricing \{[^}]*\}/);
+  assert.ok(host, 'the glow sections have no shared rule');
+  assert.match(host[0], /isolation: isolate/);
+  assert.match(host[0], /overflow: clip/);
+
+  // Under the hero picture: the brand decoration red, at most .14.
+  const hero = rule('.hero-shot::before');
+  assert.match(hero, /radial-gradient\(ellipse closest-side, var\(--accent-deco\), transparent\)/,
+    'the hero glow is not --accent-deco fading out');
+  assert.ok(Number(hero.match(/opacity: ([\d.]+)/)[1]) <= 0.14, 'the hero glow is stronger than .14');
+  // Behind «Что умеет» and «Тарифы»: neutral white, at most .05.
+  // (Its own rule, after a comment — not the shared one that opens with the hero.)
+  const neutral = (LAYER_1301.match(/\*\/\n#features::before,\n#pricing::before \{[^}]*\}/) || [''])[0];
+  assert.match(neutral, /radial-gradient\(ellipse closest-side, #FFFFFF, transparent\)/,
+    'the section glows are not neutral white');
+  assert.ok(Number(neutral.match(/opacity: ([\d.]+)/)[1]) <= 0.05, 'the section glows are stronger than .05');
+  // The glow under each screenshot is pointer-less too.
+  assert.match(rule('.pcard::before'), /pointer-events: none/);
+});
+
+test('V1.30.1 A1: text over the glows still clears AA', () => {
+  /* The glow's PEAK composited over its ground, against the page's text
+     colours: the arithmetic in the comment of the glow block, kept honest. */
+  const mix = (top, a, ground) => '#' + [0, 2, 4].map((i) => {
+    const t = parseInt(top.slice(1 + i, 3 + i), 16);
+    const g = parseInt(ground.slice(1 + i, 3 + i), 16);
+    return Math.round(t * a + g * (1 - a)).toString(16).padStart(2, '0');
+  }).join('');
+  const heroPeak = mix('#E63939', 0.14, '#1B1B1B');   // the hero lift
+  for (const ink of ['#F2F2F2', '#B3B3B3', '#FF6B6B']) {
+    assert.ok(ratio(ink, heroPeak) >= 4.5, `${ink} over the hero glow is ${ratio(ink, heroPeak).toFixed(2)}:1`);
+  }
+  const pagePeak = mix('#FFFFFF', 0.05, '#141414');   // «Что умеет», «Тарифы»
+  for (const ink of ['#F2F2F2', '#B3B3B3', '#FF6B6B']) {
+    assert.ok(ratio(ink, pagePeak) >= 4.5, `${ink} over the section glow is ${ratio(ink, pagePeak).toFixed(2)}:1`);
+  }
+});
+
+test('V1.30.1 A1: cards have a translucent edge and a 1px top highlight', () => {
+  const edge = LAYER_1301.match(/\n\.pcard,\n\.feat \{[^}]*\}/);
+  assert.ok(edge, 'the card edge rule is missing');
+  assert.match(edge[0], /border: 1px solid rgba\(255, 255, 255, \.08\)/);
+  assert.match(edge[0], /box-shadow: inset 0 1px 0 rgba\(255, 255, 255, \.06\)/);
+  // The screenshot frame: 1px, white at .1, radius 12.
+  const shot = LAYER_1301.match(/\n\.pcards \.pcard__shot \{[^}]*\}/);
+  assert.ok(shot, 'the screenshot frame rule is missing');
+  assert.match(shot[0], /border: 1px solid rgba\(255, 255, 255, \.1\)/);
+  assert.match(shot[0], /border-radius: 12px/);
+});
+
+/* ------------------------------------------------------- V1.30.1 A3 bento */
+
+test('V1.30.1 A3: «Что умеет» is a 12-column bento on a computer, one column on a phone', () => {
+  const desk = LAYER_1301.match(/@media \(min-width: 900px\) \{([\s\S]*?)\n\}/);
+  assert.ok(desk, 'the bento has no desktop block');
+  assert.match(desk[1], /\.pcards \{ grid-template-columns: repeat\(12, minmax\(0, 1fr\)\); \}/,
+    'the product grid is not 12 columns');
+  /* The spans, card by card: [7 | 5] [5 | 7] and the last row halved — the
+     spec's [4 | 4 | 4] needs a seventh card the six-card test does not allow. */
+  const span = {};
+  for (const m of desk[1].matchAll(/((?:\.pcard:nth-child\(\d\),?\s*)+)\{ grid-column: span (\d+); \}/g)) {
+    for (const n of m[1].matchAll(/nth-child\((\d)\)/g)) span[n[1]] = Number(m[2]);
+  }
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map((n) => span[n]), [7, 5, 5, 7, 6, 6],
+    'the bento rows are not [7 | 5] [5 | 7] [6 | 6]');
+  // Each row fills the twelve columns exactly — no dead cell.
+  assert.equal(span[1] + span[2], 12);
+  assert.equal(span[3] + span[4], 12);
+  assert.equal(span[5] + span[6], 12);
+  // The base rule (outside any query) is still the phone's single column.
+  assert.match(CSS, /\n\.pcards \{\n  display: grid;\n  grid-template-columns: 1fr;/,
+    'the phone no longer gets one column');
+  // The big first card: its screenshot runs out past the right edge.
+  assert.match(LAYER_1301, /\.pcard:nth-child\(1\) \.pcard__shot \{ margin-right: calc\(-/,
+    'the first card\'s screenshot does not run past the right edge');
 });
 
 test('§2.2: one radius scale — 12 fields and buttons, 20 cards, 28 blocks', () => {
