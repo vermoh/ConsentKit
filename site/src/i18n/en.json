@@ -249,7 +249,7 @@
   "panelStep1": "Opening the site as a new visitor",
   "panelStep2": "Looking at pages before consent",
   "panelStep3": "Counting services and cookies",
-  "panelUsual": "Usually 1–3 minutes",
+  "panelUsual": "Usually under a minute",
   "panelPages": "{done} of {total}",
   "panelServicesOne": "third-party service",
   "panelServicesFew": "third-party services",

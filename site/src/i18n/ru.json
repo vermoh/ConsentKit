@@ -249,7 +249,7 @@
   "panelStep1": "Открываем сайт как новый посетитель",
   "panelStep2": "Смотрим страницы до согласия",
   "panelStep3": "Считаем сервисы и cookie",
-  "panelUsual": "Обычно 1–3 минуты",
+  "panelUsual": "Обычно меньше минуты",
   "panelPages": "{done} из {total}",
   "panelServicesOne": "сторонний сервис",
   "panelServicesFew": "сторонних сервиса",

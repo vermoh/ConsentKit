@@ -1110,6 +1110,8 @@
     if (meta) meta.hidden = false;
     var site = $('[data-check-site]', panel);
     if (site) site.textContent = domain;
+    var elapsed = $('[data-check-elapsed]', panel);
+    if (elapsed) elapsed.hidden = false;
     tickTimer(form);
     run.timer = setInterval(function () { tickTimer(form); }, 1000);
   }
@@ -1134,10 +1136,13 @@
   function panelDone(form, teaser) {
     var run = runOf(form);
     stopTimer(form);
-    tickTimer(form);
     run.step = 3;
     var panel = panelOf(form);
     if (!panel) return;
+    // Owner 20.11.2026: the result shows no elapsed time — the timer is for
+    // the wait only.
+    var elapsed = $('[data-check-elapsed]', panel);
+    if (elapsed) elapsed.hidden = true;
     var s = teaser || {};
     var n = {
       services: isNum(s.services) ? s.services : 0,
