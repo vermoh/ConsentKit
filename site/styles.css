@@ -2587,3 +2587,10 @@ section { padding: var(--section-y) 0; }
     transition: opacity 400ms cubic-bezier(.2, .7, .2, 1), transform 400ms cubic-bezier(.2, .7, .2, 1);
   }
 }
+
+/* V1.30 follow-up (slop-scan on the preview, 20.11.2026): 64ch of English body
+   copy still runs ~90 characters a line, because Latin text averages narrower
+   than the «0» the ch unit measures. The two long-form blocks get a tighter
+   measure so a line stays under ~80 characters in every language. */
+#faq details > p,
+.cmp-why > p { max-width: 56ch; }
