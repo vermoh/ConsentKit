@@ -195,9 +195,6 @@ const ICONS = {
   how: ['code-xml', 'circle-check', 'scan-search', 'sliders-horizontal'],
   more: ['circle-pause', 'megaphone', 'languages', 'users'],
   fit: ['layout-template', 'plug', 'shopping-bag', 'building-2'],
-  /* UPDATED for SPEC V1.30.2 §4.4 — the labels over the section headings:
-     #demo, #features, #how, #pricing, #faq. */
-  kicker: ['app-window', 'layout-grid', 'route', 'tag', 'message-circle-question'],
   /* SPEC V1.30.3 §1 — the capsule's theme toggle: the sun while the page is
      dark, the moon while it is light. */
   toggle: ['sun', 'moon']
@@ -223,7 +220,7 @@ test('B2: icons are inline, 24px, stroke 1.5, hidden from assistive tech, never 
   for (const { code } of LANGS) {
     const html = renderPage(template, code);
     const icons = html.match(/<svg class="icon"[\s\S]*?<\/svg>/g) || [];
-    assert.equal(icons.length, 19, `the ${code} page has ${icons.length} icons, not 19 (12 + five section labels + the toggle's two)`);
+    assert.equal(icons.length, 14, `the ${code} page has ${icons.length} icons, not 14 (12 + the toggle's two; the section labels were removed 21.11.2026)`);
     for (const svg of icons) {
       assert.match(svg, /^<svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1\.5"/);
       assert.match(svg, /aria-hidden="true" focusable="false"/);

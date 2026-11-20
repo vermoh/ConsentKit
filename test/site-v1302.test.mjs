@@ -338,22 +338,23 @@ test('§4.3: the platform row sits under the first screen, makes no request, nam
 /* --------------------------------------------------- §4.4 section heads */
 
 const HEADS = [
-  ['demo', 'kickerDemo', 'demoTitle', 'demoTitle2'],
-  ['features', 'kickerFeatures', 'featTitle', 'featTitle2'],
-  ['how', 'kickerHow', 'howTitle', 'howTitle2'],
-  ['pricing', 'kickerPricing', 'priceTitle', 'priceTitle2'],
-  ['faq', 'kickerFaq', 'faqTitle', 'faqTitle2']
+  ['demo', 'demoTitle', 'demoTitle2'],
+  ['features', 'featTitle', 'featTitle2'],
+  ['how', 'howTitle', 'howTitle2'],
+  ['pricing', 'priceTitle', 'priceTitle2'],
+  ['faq', 'faqTitle', 'faqTitle2']
 ];
 
-test('§4.4: five section heads carry a label and a two-tone heading, in three languages', () => {
+/* UPDATED 21.11.2026: the owner removed the small labels over the section
+   headings («надо убрать»). The heads keep the two-tone heading. */
+test('§4.4: five section heads carry a two-tone heading and no label above it, in three languages', () => {
   for (const [code, html, dict] of pages()) {
-    for (const [id, kicker, title, title2] of HEADS) {
+    for (const [id, title, title2] of HEADS) {
       const sec = sectionOf(html, id);
-      assert.match(sec, new RegExp(`<p class="kicker"><svg class="icon"[\\s\\S]*?</svg><span data-i18n="${kicker}">${esc(dict[kicker])}</span></p>`),
-        `${code} #${id}: no label with an icon`);
+      assert.doesNotMatch(sec, /class="kicker"/, `${code} #${id}: a label over the heading is back`);
       assert.ok(sec.includes(`<h2><span data-i18n="${title}">${esc(dict[title])}</span> <span class="h2-soft" data-i18n="${title2}">${esc(dict[title2])}</span></h2>`),
         `${code} #${id}: the heading is not two-tone`);
-      for (const k of [kicker, title2]) {
+      for (const k of [title2]) {
         assert.ok(dict[k] && dict[k].trim(), `${code}.json has no ${k}`);
         assert.doesNotMatch(dict[k], /[—–]/, `${code}: ${k} carries a dash`);
         if (code !== 'ru') assert.doesNotMatch(dict[k], CYRILLIC, `${code}: ${k} has Cyrillic`);
@@ -366,7 +367,7 @@ test('§4.4: five section heads carry a label and a two-tone heading, in three l
   }
   assert.match(LAYER, /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 44ch\);/);
   assert.match(LAYER, /\n\.h2-soft \{[^}]*color: var\(--ink-soft\)/);
-  assert.match(LAYER, /\n\.kicker \{[^}]*font-size: var\(--fs-small\)[^}]*color: var\(--ink-soft\)/);
+  assert.doesNotMatch(LAYER, /\n\.kicker \{/);
 });
 
 /* --------------------------------------------- §4.5 the band of numbers */

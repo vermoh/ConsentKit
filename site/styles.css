@@ -3380,17 +3380,8 @@ body {
   .platform { font-size: 16px; }
 }
 
-/* ── §4.4 section heads: a label, a two-tone heading, the lede beside ─── */
-.kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--ink-soft);
-}
-.kicker .icon { width: 16px; height: 16px; }
+/* ── §4.4 section heads: a two-tone heading, the lede beside (labels removed
+   by the owner 21.11.2026) ── */
 .h2-soft { display: block; color: var(--ink-soft); }
 .section-head--split { display: grid; gap: 8px 64px; max-width: none; }
 .section-head--split h2 { margin: 0; }
